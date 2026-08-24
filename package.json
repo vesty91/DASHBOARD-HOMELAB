@@ -1,0 +1,29 @@
+{
+  "name": "homelab-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.23.0"
+  },
+  "scripts": {
+    "dev": "turbo dev --filter=@dashboard/web",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:e2e": "pnpm --filter @dashboard/web test:e2e",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "eslint": "10.8.1",
+    "prettier": "3.9.6",
+    "turbo": "2.10.10",
+    "typescript": "7.0.2",
+    "typescript-eslint": "8.67.0"
+  }
+}

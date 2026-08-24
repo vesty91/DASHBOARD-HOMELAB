@@ -1,0 +1,183 @@
+# 13 — Contrats API
+
+## 1. Style
+
+tRPC interne.
+
+Les noms doivent suivre un domaine clair :
+
+```text
+board.list
+board.get
+board.create
+board.update
+board.delete
+board.layout.updateBatch
+
+app.list
+app.create
+app.update
+app.delete
+
+integration.list
+integration.create
+integration.update
+integration.setSecret
+integration.test
+integration.delete
+
+widget.catalog
+widget.data
+
+admin.users.*
+admin.groups.*
+admin.settings.*
+```
+
+## 2. Erreurs métier
+
+Format logique :
+
+```ts
+type AppErrorCode =
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "CONFLICT"
+  | "INTEGRATION_UNREACHABLE"
+  | "INTEGRATION_TIMEOUT"
+  | "INTEGRATION_UNAUTHORIZED"
+  | "INTERNAL_ERROR";
+```
+
+Le client reçoit un message safe.
+
+Les détails sensibles restent logs serveur.
+
+## 3. Board create
+
+Input :
+
+```json
+{
+  "name": "Infrastructure",
+  "slug": "infrastructure"
+}
+```
+
+Output :
+
+```json
+{
+  "id": "...",
+  "slug": "infrastructure",
+  "revision": 1
+}
+```
+
+## 4. Layout update batch
+
+Input conceptuel :
+
+```json
+{
+  "boardId": "...",
+  "layoutId": "...",
+  "expectedRevision": 12,
+  "items": [
+    {"itemId": "...", "x": 0, "y": 0, "w": 3, "h": 2}
+  ]
+}
+```
+
+Validation :
+
+- coordonnées entières ;
+- bornes ;
+- appartenance item/board ;
+- permission ;
+- collision selon moteur.
+
+## 5. Integration setSecret
+
+Ne jamais utiliser `integration.update` pour retourner/modifier secrets comme config ordinaire.
+
+Input :
+
+```json
+{
+  "integrationId": "...",
+  "key": "apiKey",
+  "value": "..."
+}
+```
+
+Output :
+
+```json
+{
+  "configured": true
+}
+```
+
+Une lecture renvoie :
+
+```json
+{
+  "apiKey": {
+    "configured": true
+  }
+}
+```
+
+Jamais la valeur.
+
+## 6. Integration test
+
+Output :
+
+```json
+{
+  "ok": true,
+  "latencyMs": 81,
+  "metadata": {
+    "version": "..."
+  }
+}
+```
+
+ou :
+
+```json
+{
+  "ok": false,
+  "code": "TIMEOUT"
+}
+```
+
+## 7. Widget data
+
+Ne pas créer une endpoint générique permettant d'invoquer n'importe quelle méthode d'intégration côté client.
+
+Le widget appelle une procédure métier contrôlée.
+
+## 8. Pagination
+
+Toutes les grandes listes utilisent curseur ou page stable.
+
+Logs Docker : curseur/timestamp + limite.
+
+Audit : pagination obligatoire.
+
+## 9. Timeouts
+
+Chaque route externe a un timeout.
+
+Le timeout client ne doit pas être plus court sans raison que le timeout serveur.
+
+## 10. Idempotence
+
+Actions de configuration critiques peuvent accepter un idempotency key future.
+
+Board layout batch doit être sûr à rejouer si revision identique/non modifiée.

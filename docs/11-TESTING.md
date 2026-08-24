@@ -1,0 +1,169 @@
+# 11 — Stratégie de tests
+
+## 1. Pyramide
+
+### Unit
+
+Rapides, domaine pur.
+
+### Integration
+
+DB, crypto, adapters mock server.
+
+### E2E
+
+Parcours essentiels.
+
+## 2. Unit tests
+
+Couvrir :
+
+- permission resolver ;
+- layout validation ;
+- board revision ;
+- widget registry ;
+- integration registry ;
+- encryption/decryption ;
+- error normalization ;
+- URL validation.
+
+## 3. DB integration
+
+Avec DB éphémère.
+
+PostgreSQL via Testcontainers pour CI si possible.
+
+Tests :
+
+- migrations ;
+- FK ;
+- unique ;
+- transactions ;
+- rollback ;
+- repositories.
+
+## 4. Adapter integration
+
+Utiliser mock HTTP contrôlé.
+
+Tester :
+
+- success ;
+- 401 ;
+- 403 ;
+- timeout ;
+- 429 ;
+- 500 ;
+- invalid JSON ;
+- missing fields ;
+- huge response.
+
+## 5. E2E Playwright
+
+### E2E-001 onboarding
+
+- instance vierge ;
+- création admin ;
+- accès dashboard.
+
+### E2E-002 auth
+
+- login ;
+- logout ;
+- session refusée après logout.
+
+### E2E-003 board
+
+- créer ;
+- ouvrir ;
+- renommer.
+
+### E2E-004 widget
+
+- ajouter Clock ;
+- déplacer ;
+- resize ;
+- reload ;
+- vérifier position.
+
+### E2E-005 integration
+
+- créer intégration mock ;
+- test connection ;
+- widget connecté.
+
+### E2E-006 permissions
+
+- viewer voit ;
+- viewer ne modifie pas ;
+- API renvoie forbidden.
+
+### E2E-007 Docker action
+
+- user sans action : forbidden ;
+- admin autorisé sur mock.
+
+### E2E-008 backup
+
+- export ;
+- manifest valide.
+
+## 6. Tests non fonctionnels
+
+### Performance
+
+Board 50 widgets :
+
+- interaction fluide ;
+- pas de requêtes en boucle ;
+- mémoire bornée.
+
+### Resilience
+
+- Redis down ;
+- worker down ;
+- intégration down ;
+- DB reconnect.
+
+## 7. CI gates
+
+Obligatoires :
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Option :
+
+```bash
+pnpm test:e2e
+```
+
+sur PR ou nightly selon coût.
+
+## 8. Coverage
+
+Ne pas viser 100 % artificiel.
+
+Cibles :
+
+- domaine critique > 85 % ;
+- crypto/permissions proche de 100 % de branches ;
+- UI de présentation moins prioritaire.
+
+## 9. Fixtures
+
+Ne pas faire dépendre tests d'APIs publiques réelles.
+
+Utiliser fixtures versionnées et serveurs mock.
+
+## 10. Migration tests
+
+Pour chaque release DB :
+
+- upgrade N-1 -> N ;
+- création DB vide -> N ;
+- données principales conservées.

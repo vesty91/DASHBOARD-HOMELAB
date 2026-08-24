@@ -1,0 +1,40 @@
+{
+  "snapshotDate": "2026-08-24",
+  "projectType": "self-hosted homelab dashboard",
+  "referenceProduct": "Homarr",
+  "referenceRepository": "https://github.com/homarr-labs/homarr",
+  "referenceBranch": "dev",
+  "implementationPolicy": "original implementation; no branding/assets copying",
+  "stack": {
+    "monorepo": "pnpm + Turborepo",
+    "web": "Next.js App Router + React + TypeScript strict",
+    "ui": "Tailwind CSS + shadcn/ui",
+    "api": "tRPC + Zod",
+    "data": "Drizzle ORM",
+    "devDatabase": "SQLite",
+    "prodDatabase": "PostgreSQL",
+    "auth": "Auth.js",
+    "cacheJobs": "Redis optional/simple-mode, recommended production",
+    "realtime": "WebSocket or SSE",
+    "tests": [
+      "Vitest",
+      "Playwright"
+    ],
+    "deployment": "Docker Compose"
+  },
+  "mvpIntegrations": [
+    "Docker",
+    "Synology DSM",
+    "Jellyfin",
+    "Immich",
+    "Beszel",
+    "Uptime Kuma",
+    "Prometheus"
+  ],
+  "qualityGates": [
+    "lint",
+    "typecheck",
+    "test",
+    "build"
+  ]
+}

@@ -1,0 +1,29 @@
+# Dependencies / build
+node_modules/
+.next/
+.turbo/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Runtime
+appdata/
+*.sqlite
+*.sqlite3
+
+# External reference repository
+/reference/homarr/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
