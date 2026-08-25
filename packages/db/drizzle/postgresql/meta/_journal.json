@@ -8,6 +8,13 @@
       "when": 1787667517001,
       "tag": "0000_kind_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787672260972,
+      "tag": "0001_slim_kabuki",
+      "breakpoints": true
     }
   ]
 }

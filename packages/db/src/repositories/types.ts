@@ -1,5 +1,6 @@
 export interface UserCreate {
   username: string;
+  usernameCanonical?: string;
   email?: string | null;
   displayName?: string | null;
   isSystemAdmin?: boolean;

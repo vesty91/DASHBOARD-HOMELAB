@@ -23,6 +23,8 @@ export function createPostgresqlRepositories(client: PostgresqlClient) {
         .values({
           id: randomUUID(),
           username: input.username,
+          usernameCanonical:
+            input.usernameCanonical ?? input.username.normalize("NFKC").toLowerCase(),
           email: input.email ?? null,
           displayName: input.displayName ?? null,
           isSystemAdmin: input.isSystemAdmin ?? false,

@@ -174,6 +174,11 @@ describe("SQLite database foundation", () => {
       integrations: sqliteSchema.integrations,
       integration_secrets: sqliteSchema.integrationSecrets,
       server_settings: sqliteSchema.serverSettings,
+      user_credentials: sqliteSchema.userCredentials,
+      roles: sqliteSchema.roles,
+      role_permissions: sqliteSchema.rolePermissions,
+      user_roles: sqliteSchema.userRoles,
+      group_roles: sqliteSchema.groupRoles,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -187,6 +192,11 @@ describe("SQLite database foundation", () => {
       integrations: postgresqlSchema.integrations,
       integration_secrets: postgresqlSchema.integrationSecrets,
       server_settings: postgresqlSchema.serverSettings,
+      user_credentials: postgresqlSchema.userCredentials,
+      roles: postgresqlSchema.roles,
+      role_permissions: postgresqlSchema.rolePermissions,
+      user_roles: postgresqlSchema.userRoles,
+      group_roles: postgresqlSchema.groupRoles,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

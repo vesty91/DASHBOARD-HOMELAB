@@ -8,9 +8,15 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "pnpm dev",
+    command: "node e2e/prepare.mjs && pnpm dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
+    env: {
+      DB_DRIVER: "sqlite",
+      DATABASE_URL: "./.e2e-auth.sqlite",
+      AUTH_SECRET: "phase-3-e2e-secret-value-at-least-32-characters",
+      APP_URL: "http://localhost:3000",
+    },
   },
   projects: [
     {

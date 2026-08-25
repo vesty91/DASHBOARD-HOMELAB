@@ -357,3 +357,20 @@ migration lorsque des réglages persistants apparaîtront.
 Les repositories User, Group, Board, App et Integration exposent `findById`, `list` et `create` pour
 les deux dialectes. La création board + layouts utilise une transaction réelle et son rollback est
 testé. Aucun driver SQL n'est exporté vers `apps/web`.
+
+## 9. Extension Phase 3
+
+La Phase 3 ajoute `usernameCanonical`, `authVersion`, `user_credentials`, `roles`,
+`role_permissions`, `user_roles`, `group_roles` et l'état typé `onboardingCompleted`. Les migrations
+`0001` SQLite/PostgreSQL conservent les données Phase 2 et initialisent les cinq rôles. L'onboarding
+SQLite utilise `BEGIN IMMEDIATE`; PostgreSQL utilise transaction, verrou de ligne et verrou advisory.
+
+Avant le backfill de `usernameCanonical`, l'upgrade refuse explicitement une base Phase 2 contenant
+plusieurs usernames qui deviennent identiques en minuscules. Chaque fichier de migration est exécuté
+dans une transaction : en cas de `USERNAME_CANONICAL_COLLISION`, aucun utilisateur n'est renommé ou
+supprimé et aucun changement Phase 3 n'est conservé. L'administrateur doit résoudre manuellement les
+doublons dans la base Phase 2, puis relancer la migration.
+
+La création d'un groupe avec son rôle et son membre initial optionnel est également une opération
+repository atomique pour SQLite et PostgreSQL. Une référence de rôle ou d'utilisateur invalide annule
+l'ensemble de la création.

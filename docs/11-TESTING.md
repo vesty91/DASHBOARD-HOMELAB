@@ -173,3 +173,13 @@ Pour chaque release DB :
 - upgrade N-1 -> N ;
 - création DB vide -> N ;
 - données principales conservées.
+
+## 11. Couverture Phase 3
+
+`packages/auth` et `packages/permissions` ont désormais de vrais tests sans `--passWithNoTests`.
+Les tests DB couvrent l'upgrade Phase 2→3, l'onboarding, l'invalidation et la protection du dernier
+system admin. Ils vérifient aussi le refus transactionnel d'un upgrade avec collision canonique et le
+rollback de la création atomique groupe/rôle/membre dans les deux dialectes. Le scénario E2E utilise
+une base SQLite temporaire dédiée et couvre setup, erreur
+générique, login, admin, logout et route protégée. Les autres packages métier vides conservent
+`--passWithNoTests` et n'ont toujours aucune couverture métier.

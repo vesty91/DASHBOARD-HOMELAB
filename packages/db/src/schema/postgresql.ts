@@ -21,10 +21,12 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey(),
     username: text("username").notNull().unique(),
+    usernameCanonical: text("username_canonical").notNull().unique(),
     email: text("email").unique(),
     displayName: text("display_name"),
     status: text("status").notNull().default("active"),
     isSystemAdmin: boolean("is_system_admin").notNull().default(false),
+    authVersion: integer("auth_version").notNull().default(1),
     ...timestamps,
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
@@ -207,7 +209,56 @@ export const serverSettings = pgTable(
     id: text("id").primaryKey().default("global"),
     schemaVersion: integer("schema_version").notNull().default(1),
     instanceName: text("instance_name"),
+    onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
     ...timestamps,
   },
   (t) => [check("server_settings_singleton", sql`${t.id} = 'global'`)],
+);
+export const userCredentials = pgTable("user_credentials", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true }).notNull(),
+  ...timestamps,
+});
+export const roles = pgTable("roles", {
+  id: uuid("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  ...timestamps,
+});
+export const rolePermissions = pgTable(
+  "role_permissions",
+  {
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permission: text("permission").notNull(),
+  },
+  (t) => [uniqueIndex("role_permissions_role_permission_uq").on(t.roleId, t.permission)],
+);
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("user_roles_user_role_uq").on(t.userId, t.roleId)],
+);
+export const groupRoles = pgTable(
+  "group_roles",
+  {
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("group_roles_group_role_uq").on(t.groupId, t.roleId)],
 );
