@@ -1,9 +1,8 @@
-import { requireServerPermission } from "@/lib/server/auth";
+import { requireAdminPagePermission } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
 import { createGroupAction } from "./actions";
-import { redirect } from "next/navigation";
 export default async function GroupsPage() {
-  if (!(await requireServerPermission("group.read").catch(() => null))) redirect("/login");
+  await requireAdminPagePermission("group.read");
   const { authStore } = await getDatabase();
   const [groups, users] = await Promise.all([authStore.listGroups(), authStore.listUsers()]);
   return (

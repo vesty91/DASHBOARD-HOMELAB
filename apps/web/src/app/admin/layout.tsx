@@ -5,6 +5,5 @@ export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await requireSession().catch(() => null);
   if (!session) redirect("/login");
-  if (!session.user.isSystemAdmin) redirect("/forbidden");
   return children;
 }

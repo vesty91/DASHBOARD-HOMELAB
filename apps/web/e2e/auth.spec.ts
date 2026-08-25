@@ -18,8 +18,26 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByRole("button", { name: "Connexion" }).click();
   await expect(page).toHaveURL(/\/admin/);
   await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
+
+  await page.goto("/admin/users");
+  await page.getByPlaceholder("Identifiant").fill("viewer");
+  await page.getByPlaceholder("Mot de passe initial").fill("viewer password is secure");
+  await page.getByRole("button", { name: "Créer" }).click();
+  await expect(page.getByText("viewer — active")).toBeVisible();
+
+  await page.goto("/admin");
   await page.getByRole("button", { name: "Déconnexion" }).click();
   await expect(page).toHaveURL(/\/login/);
+
+  await page.getByLabel("Identifiant").fill("viewer");
+  await page.getByLabel("Mot de passe").fill("viewer password is secure");
+  await page.getByRole("button", { name: "Connexion" }).click();
+  await expect(page).toHaveURL(/\/forbidden/);
+  for (const path of ["/admin/users", "/admin/groups"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/forbidden/);
+  }
+
   await context.clearCookies();
   await page.goto("/admin/users");
   await expect(page).toHaveURL(/\/login/);

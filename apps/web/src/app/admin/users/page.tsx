@@ -1,9 +1,8 @@
 import { getDatabase } from "@/lib/server/database";
-import { requireServerPermission } from "@/lib/server/auth";
+import { requireAdminPagePermission } from "@/lib/server/auth";
 import { createUserAction, setStatusAction } from "./actions";
-import { redirect } from "next/navigation";
 export default async function UsersPage() {
-  if (!(await requireServerPermission("user.read").catch(() => null))) redirect("/login");
+  await requireAdminPagePermission("user.read");
   const { authStore } = await getDatabase();
   const users = await authStore.listUsers();
   return (

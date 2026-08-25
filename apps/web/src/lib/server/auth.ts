@@ -8,7 +8,12 @@ import {
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { requirePermission as assertPermission, type Permission } from "@dashboard/permissions";
+import {
+  PermissionError,
+  requirePermission as assertPermission,
+  type Permission,
+} from "@dashboard/permissions";
+import { redirect } from "next/navigation";
 import { getDatabase } from "./database";
 
 if (!process.env.NEXTAUTH_URL && process.env.APP_URL)
@@ -100,4 +105,14 @@ export async function requireServerPermission(permission: Permission) {
   if (!subject) throw new Error("AUTH_REQUIRED");
   assertPermission(subject, permission);
   return session;
+}
+
+export async function requireAdminPagePermission(permission: Permission) {
+  try {
+    return await requireServerPermission(permission);
+  } catch (error) {
+    if (error instanceof PermissionError) redirect("/forbidden");
+    if (error instanceof Error && error.message === "AUTH_REQUIRED") redirect("/login");
+    throw error;
+  }
 }
