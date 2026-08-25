@@ -14,23 +14,22 @@ import {
   type Permission,
 } from "@dashboard/permissions";
 import { redirect } from "next/navigation";
+import { getAuthSessionConfiguration, serverEnv } from "../env";
 import { getDatabase } from "./database";
 
-if (!process.env.NEXTAUTH_URL && process.env.APP_URL)
-  process.env.NEXTAUTH_URL = process.env.APP_URL;
+if (!process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = serverEnv.APP_URL;
 
 function authSecret(): string {
-  const value = process.env.AUTH_SECRET;
-  if (!value || value.length < 32)
+  if (!serverEnv.AUTH_SECRET)
     throw new Error("AUTH_SECRET must contain at least 32 characters when authentication is used");
-  return value;
+  return serverEnv.AUTH_SECRET;
 }
-const maxAge = Number(process.env.AUTH_SESSION_MAX_AGE_SECONDS ?? 86_400);
+const sessionConfiguration = getAuthSessionConfiguration(serverEnv);
 const loginProtection = createInMemoryLoginAttemptProtection();
 export const authOptions: NextAuthOptions = {
-  ...(process.env.AUTH_SECRET ? { secret: process.env.AUTH_SECRET } : {}),
-  session: { strategy: "jwt", maxAge, updateAge: Math.min(3600, Math.floor(maxAge / 4)) },
-  jwt: { maxAge },
+  ...(serverEnv.AUTH_SECRET ? { secret: serverEnv.AUTH_SECRET } : {}),
+  session: { strategy: "jwt", ...sessionConfiguration },
+  jwt: { maxAge: sessionConfiguration.maxAge },
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({

@@ -1,11 +1,49 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createPostgresqlClient } from "./client/postgresql";
-import { migratePostgresql } from "./migrations";
+import { executePostgresqlMigration, migratePostgresql } from "./migrations";
 import { createPostgresqlRepositories } from "./repositories/postgresql";
 import { createPostgresqlAuthStore } from "./repositories/auth";
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
+  it("rejects canonical username collisions and rolls back the Phase 3 migration", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await client.pool.query(
+        await readFile(
+          new URL("../drizzle/postgresql/0000_kind_pride.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      await client.pool.query(
+        "insert into users(id,username,status,is_system_admin,created_at,updated_at) values($1,'Alice','active',false,now(),now()),($2,'alice','active',false,now(),now())",
+        ["00000000-0000-4000-8000-000000000091", "00000000-0000-4000-8000-000000000092"],
+      );
+      const migration = await readFile(
+        new URL("../drizzle/postgresql/0001_slim_kabuki.sql", import.meta.url),
+        "utf8",
+      );
+      await expect(executePostgresqlMigration(client.pool, migration)).rejects.toThrow(
+        "USERNAME_CANONICAL_COLLISION",
+      );
+      expect(await client.pool.query("select id,username from users order by id")).toMatchObject({
+        rows: [
+          { id: "00000000-0000-4000-8000-000000000091", username: "Alice" },
+          { id: "00000000-0000-4000-8000-000000000092", username: "alice" },
+        ],
+      });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from information_schema.columns where table_schema='public' and table_name='users' and column_name='username_canonical'",
+        ),
+      ).toMatchObject({ rows: [{ count: 0 }] });
+    } finally {
+      await client.close();
+    }
+  });
+
   it("runs real migrations, repositories, constraints and rollback", async () => {
     const client = createPostgresqlClient(connectionString!);
     try {
@@ -65,6 +103,34 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect((await auth.resolvePermissionSubject(admin.id))?.groupPermissions).toContain(
         "app.read",
       );
+      const group = await auth.createGroupWithRoleAndOptionalMember({
+        name: "PG operators",
+        roleName: "VIEWER",
+        userId: admin.id,
+      });
+      expect(
+        await client.pool.query("select count(*)::int count from group_roles where group_id=$1", [
+          group.id,
+        ]),
+      ).toMatchObject({ rows: [{ count: 1 }] });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from group_members where group_id=$1 and user_id=$2",
+          [group.id, admin.id],
+        ),
+      ).toMatchObject({ rows: [{ count: 1 }] });
+      const groupsBeforeRollback = (await auth.listGroups()).length;
+      await expect(
+        auth.createGroupWithRoleAndOptionalMember({ name: "Missing role", roleName: "MISSING" }),
+      ).rejects.toMatchObject({ code: "ROLE_NOT_FOUND" });
+      await expect(
+        auth.createGroupWithRoleAndOptionalMember({
+          name: "Missing member",
+          roleName: "VIEWER",
+          userId: "00000000-0000-4000-8000-000000000098",
+        }),
+      ).rejects.toThrow();
+      expect(await auth.listGroups()).toHaveLength(groupsBeforeRollback);
     } finally {
       await client.close();
     }

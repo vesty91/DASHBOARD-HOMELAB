@@ -16,8 +16,16 @@ export interface FirstAdminInput {
   displayName?: string | null;
   passwordHash: string;
 }
+export interface GroupWithRoleInput {
+  name: string;
+  description?: string | null;
+  roleName: string;
+  userId?: string | null;
+}
 export class AuthRepositoryError extends Error {
-  constructor(readonly code: "ONBOARDING_ALREADY_COMPLETED" | "LAST_SYSTEM_ADMIN") {
+  constructor(
+    readonly code: "ONBOARDING_ALREADY_COMPLETED" | "LAST_SYSTEM_ADMIN" | "ROLE_NOT_FOUND",
+  ) {
     super(code);
   }
 }
@@ -118,6 +126,31 @@ export function createSqliteAuthStore(database: DatabaseSync) {
           "INSERT OR IGNORE INTO group_roles(group_id,role_id) SELECT ?,id FROM roles WHERE name=?",
         )
         .run(groupId, roleName);
+    },
+    async createGroupWithRoleAndOptionalMember(input: GroupWithRoleInput) {
+      const id = randomUUID();
+      const now = Date.now();
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database
+          .prepare(
+            "INSERT INTO groups(id,name,description,created_at,updated_at) VALUES(?,?,?,?,?)",
+          )
+          .run(id, input.name, input.description ?? null, now, now);
+        const role = database
+          .prepare("INSERT INTO group_roles(group_id,role_id) SELECT ?,id FROM roles WHERE name=?")
+          .run(id, input.roleName);
+        if (role.changes !== 1) throw new AuthRepositoryError("ROLE_NOT_FOUND");
+        if (input.userId)
+          database
+            .prepare("INSERT INTO group_members(group_id,user_id,created_at) VALUES(?,?,?)")
+            .run(id, input.userId, now);
+        database.exec("COMMIT");
+        return { id, name: input.name, description: input.description ?? null };
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
     },
     async isOnboardingCompleted() {
       return Boolean(
@@ -337,6 +370,34 @@ export function createPostgresqlAuthStore(pool: Pool) {
         "INSERT INTO group_roles(group_id,role_id) SELECT $1,id FROM roles WHERE name=$2 ON CONFLICT DO NOTHING",
         [groupId, roleName],
       );
+    },
+    async createGroupWithRoleAndOptionalMember(input: GroupWithRoleInput) {
+      const client = await pool.connect();
+      const id = randomUUID();
+      try {
+        await client.query("BEGIN");
+        const group = await client.query(
+          "INSERT INTO groups(id,name,description,created_at,updated_at) VALUES($1,$2,$3,now(),now()) RETURNING id,name,description",
+          [id, input.name, input.description ?? null],
+        );
+        const role = await client.query(
+          "INSERT INTO group_roles(group_id,role_id) SELECT $1,id FROM roles WHERE name=$2",
+          [id, input.roleName],
+        );
+        if (role.rowCount !== 1) throw new AuthRepositoryError("ROLE_NOT_FOUND");
+        if (input.userId)
+          await client.query(
+            "INSERT INTO group_members(group_id,user_id,created_at) VALUES($1,$2,now())",
+            [id, input.userId],
+          );
+        await client.query("COMMIT");
+        return group.rows[0] as { id: string; name: string; description: string | null };
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     },
     async isOnboardingCompleted() {
       const result = await pool.query(

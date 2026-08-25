@@ -1,3 +1,20 @@
+CREATE TEMP TABLE `_phase3_username_canonical_guard` (`value` integer NOT NULL);
+--> statement-breakpoint
+CREATE TEMP TRIGGER `_phase3_username_canonical_collision`
+BEFORE INSERT ON `_phase3_username_canonical_guard`
+WHEN EXISTS (
+	SELECT 1 FROM `users` GROUP BY lower(`username`) HAVING count(*) > 1
+)
+BEGIN
+	SELECT RAISE(ABORT, 'USERNAME_CANONICAL_COLLISION');
+END;
+--> statement-breakpoint
+INSERT INTO `_phase3_username_canonical_guard` (`value`) VALUES (1);
+--> statement-breakpoint
+DROP TRIGGER `_phase3_username_canonical_collision`;
+--> statement-breakpoint
+DROP TABLE `_phase3_username_canonical_guard`;
+--> statement-breakpoint
 CREATE TABLE `group_roles` (
 	`group_id` text NOT NULL,
 	`role_id` text NOT NULL,

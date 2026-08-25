@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseServerEnv } from "./env";
+import { getAuthSessionConfiguration, parseServerEnv } from "./env";
 
 describe("server environment", () => {
   it("uses Phase 1 defaults when future services are not configured", () => {
@@ -40,5 +40,18 @@ describe("server environment", () => {
         INTEGRATION_DEFAULT_TIMEOUT_MS: "0",
       }),
     ).toThrow();
+  });
+
+  it("provides a finite validated Auth.js session duration", () => {
+    const configuration = getAuthSessionConfiguration(
+      parseServerEnv({ AUTH_SESSION_MAX_AGE_SECONDS: "86400" }),
+    );
+    expect(configuration).toEqual({ maxAge: 86400, updateAge: 3600 });
+    expect(Number.isFinite(configuration.maxAge)).toBe(true);
+    expect(configuration.maxAge).toBeGreaterThan(0);
+  });
+
+  it.each(["", "24h", "299", "2592001"])("rejects invalid session maximum age %j", (value) => {
+    expect(() => parseServerEnv({ AUTH_SESSION_MAX_AGE_SECONDS: value })).toThrow();
   });
 });

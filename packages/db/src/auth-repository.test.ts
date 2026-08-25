@@ -75,4 +75,69 @@ describe("SQLite authentication repository", () => {
       client.close();
     }
   });
+
+  it("creates a group, role and optional member atomically", async () => {
+    const { client, store } = await setup();
+    try {
+      const admin = await store.createFirstAdmin({
+        username: "Admin",
+        usernameCanonical: "admin",
+        passwordHash: "hash",
+      });
+      const group = await store.createGroupWithRoleAndOptionalMember({
+        name: "Operators",
+        description: "Operations team",
+        roleName: "VIEWER",
+        userId: admin.id,
+      });
+      expect(
+        client.sqlite.prepare("SELECT name FROM groups WHERE id=?").get(group.id),
+      ).toMatchObject({ name: "Operators" });
+      expect(
+        client.sqlite
+          .prepare("SELECT count(*) count FROM group_roles WHERE group_id=?")
+          .get(group.id)?.count,
+      ).toBe(1);
+      expect(
+        client.sqlite
+          .prepare("SELECT count(*) count FROM group_members WHERE group_id=? AND user_id=?")
+          .get(group.id, admin.id)?.count,
+      ).toBe(1);
+    } finally {
+      client.close();
+    }
+  });
+
+  it("rolls back group creation when the role does not exist", async () => {
+    const { client, store } = await setup();
+    try {
+      await expect(
+        store.createGroupWithRoleAndOptionalMember({ name: "Orphan", roleName: "MISSING" }),
+      ).rejects.toMatchObject({ code: "ROLE_NOT_FOUND" });
+      expect(await store.listGroups()).toHaveLength(0);
+      expect(client.sqlite.prepare("SELECT count(*) count FROM group_roles").get()?.count).toBe(0);
+    } finally {
+      client.close();
+    }
+  });
+
+  it("rolls back the group and role when the optional user does not exist", async () => {
+    const { client, store } = await setup();
+    try {
+      await expect(
+        store.createGroupWithRoleAndOptionalMember({
+          name: "Orphan",
+          roleName: "VIEWER",
+          userId: "00000000-0000-4000-8000-000000000099",
+        }),
+      ).rejects.toThrow();
+      expect(await store.listGroups()).toHaveLength(0);
+      expect(client.sqlite.prepare("SELECT count(*) count FROM group_roles").get()?.count).toBe(0);
+      expect(client.sqlite.prepare("SELECT count(*) count FROM group_members").get()?.count).toBe(
+        0,
+      );
+    } finally {
+      client.close();
+    }
+  });
 });

@@ -1,20 +1,29 @@
 "use server";
-import { ROLE_NAMES } from "@dashboard/permissions";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireServerPermission } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
+
+const createGroupInputSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z
+    .string()
+    .trim()
+    .max(500)
+    .transform((value) => value || null),
+  roleName: z.enum(["VIEWER", "USER", "EDITOR", "ADMIN"]),
+  userId: z.union([z.uuid(), z.literal("")]).transform((value) => value || null),
+});
+
 export async function createGroupAction(formData: FormData) {
   await requireServerPermission("group.manage");
-  const { authStore } = await getDatabase();
-  const group = await authStore.createGroup({
-    name: String(formData.get("name") ?? "").trim(),
-    description: String(formData.get("description") ?? "") || null,
+  const input = createGroupInputSchema.parse({
+    name: String(formData.get("name") ?? ""),
+    description: String(formData.get("description") ?? ""),
+    roleName: String(formData.get("role") ?? "VIEWER"),
+    userId: String(formData.get("userId") ?? ""),
   });
-  const role = String(formData.get("role") ?? "VIEWER");
-  if (!ROLE_NAMES.includes(role as (typeof ROLE_NAMES)[number]) || role === "SYSTEM_ADMIN")
-    throw new Error("Invalid role");
-  await authStore.assignGroupRole(group.id, role);
-  const userId = String(formData.get("userId") ?? "");
-  if (userId) await authStore.addGroupMember(group.id, userId);
+  const { authStore } = await getDatabase();
+  await authStore.createGroupWithRoleAndOptionalMember(input);
   revalidatePath("/admin/groups");
 }

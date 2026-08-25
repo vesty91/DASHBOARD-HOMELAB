@@ -1,3 +1,14 @@
+DO $$
+BEGIN
+	IF EXISTS (
+		SELECT 1 FROM "users" GROUP BY lower("username") HAVING count(*) > 1
+	) THEN
+		RAISE EXCEPTION USING
+			ERRCODE = '23505',
+			MESSAGE = 'USERNAME_CANONICAL_COLLISION';
+	END IF;
+END $$;
+--> statement-breakpoint
 CREATE TABLE "group_roles" (
 	"group_id" uuid NOT NULL,
 	"role_id" uuid NOT NULL

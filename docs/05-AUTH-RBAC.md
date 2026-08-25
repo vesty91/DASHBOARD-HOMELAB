@@ -26,6 +26,10 @@ Les sessions JWT expirent après `AUTH_SESSION_MAX_AGE_SECONDS` (24 h par défau
 vérifié en base à chaque résolution serveur ; les permissions ne sont jamais une source de vérité du
 JWT. Voir ADR 0003.
 
+Le schéma Zod de l'environnement serveur est l'unique source de vérité pour cette durée. Les valeurs
+doivent être des secondes entières comprises entre 300 et 2 592 000 ; une valeur vide, non numérique
+ou hors limites empêche le démarrage au lieu de transmettre une durée invalide à Auth.js.
+
 La limitation login de Phase 3 est volontairement en mémoire et mono-processus. Elle ne fait pas
 confiance aux en-têtes forwarded. Redis et la politique proxy distribuée restent au hardening.
 

@@ -28,4 +28,9 @@ export function parseServerEnv(
   return serverEnvSchema.parse(environment);
 }
 
+export function getAuthSessionConfiguration(environment: ServerEnv) {
+  const maxAge = environment.AUTH_SESSION_MAX_AGE_SECONDS;
+  return { maxAge, updateAge: Math.min(3600, Math.floor(maxAge / 4)) };
+}
+
 export const serverEnv = parseServerEnv(process.env);
