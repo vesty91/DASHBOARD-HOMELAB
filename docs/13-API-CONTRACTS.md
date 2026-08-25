@@ -85,9 +85,7 @@ Input conceptuel :
   "boardId": "...",
   "layoutId": "...",
   "expectedRevision": 12,
-  "items": [
-    {"itemId": "...", "x": 0, "y": 0, "w": 3, "h": 2}
-  ]
+  "items": [{ "itemId": "...", "x": 0, "y": 0, "w": 3, "h": 2 }]
 }
 ```
 

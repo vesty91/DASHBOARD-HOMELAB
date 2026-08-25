@@ -15,12 +15,10 @@ export default function HomePage() {
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-zinc-400">
             Phase 1 bootstrap
           </p>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Homelab Dashboard
-          </h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Homelab Dashboard</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-400">
-            Le squelette est prêt. Codex doit maintenant auditer la documentation,
-            valider la stack et terminer les fondations avant toute fonctionnalité métier.
+            Le squelette est prêt. Codex doit maintenant auditer la documentation, valider la stack
+            et terminer les fondations avant toute fonctionnalité métier.
           </p>
         </div>
 

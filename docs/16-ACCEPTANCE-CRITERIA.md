@@ -85,9 +85,11 @@ Aucun test de connexion ne laisse apparaître API key/token dans les logs.
 Toute release doit passer :
 
 ```bash
+pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:e2e
 pnpm build
 ```
 

@@ -1,34 +1,40 @@
-# État du bootstrap à auditer par Codex
+# État du bootstrap — Phase 1
 
-## Fourni
+Mise à jour : 25 août 2026.
 
-- [x] documentation produit ;
-- [x] AGENTS.md ;
-- [x] monorepo pnpm déclaré ;
-- [x] Turborepo déclaré ;
-- [x] Next.js minimal ;
-- [x] Tailwind minimal ;
-- [x] Vitest minimal ;
-- [x] Playwright minimal ;
+## Fourni et validé
+
+- [x] documentation produit et `AGENTS.md` ;
+- [x] monorepo pnpm et Turborepo ;
+- [x] application Next.js et Tailwind minimales ;
 - [x] packages métier créés comme frontières ;
-- [x] worker/realtime stubs ;
-- [x] scripts Windows/Linux ;
-- [x] CI initiale ;
-- [x] `.env.example`.
+- [x] worker et realtime limités à des stubs ;
+- [x] TypeScript strict, ESLint, Prettier, Vitest et Playwright ;
+- [x] scripts Windows/Linux et CI ;
+- [x] `.env.example` sans secret réel ;
+- [x] `pnpm-lock.yaml` généré et validé ;
+- [x] dépendances installées avec pnpm 11.23.0 ;
+- [x] validation typée des variables d'environnement connues ;
+- [x] contrôle léger des frontières architecturales ;
+- [x] configuration Vitest ESM sans migration globale du monorepo ;
+- [x] Chromium Playwright installé localement et dans la CI.
 
-## À faire par Codex avant Phase 2
+## Gates de fin de Phase 1
 
-- [ ] vérifier compatibilité exacte de toutes les versions ;
-- [ ] appliquer la release sécurité Next.js disponible au moment de l'exécution ;
-- [ ] générer `pnpm-lock.yaml` ;
-- [ ] installer les dépendances ;
-- [ ] corriger les éventuels peers ;
-- [ ] décider/configurer lint Next.js final ;
-- [ ] décider stratégie de config partagée ;
-- [ ] valider `pnpm lint` ;
-- [ ] valider `pnpm typecheck` ;
-- [ ] valider `pnpm test` ;
-- [ ] valider `pnpm build` ;
-- [ ] ajouter ADR si un choix structurel change.
+- [x] `pnpm format` ;
+- [x] `pnpm lint` ;
+- [x] `pnpm typecheck` ;
+- [x] `pnpm test` ;
+- [x] `pnpm test:e2e` ;
+- [x] `pnpm build`.
 
-Ne pas commencer la DB tant que les quatre gates ne sont pas verts.
+## Limites explicites du bootstrap
+
+- Les packages métier sont encore des frontières sans logique métier.
+- Ils conservent temporairement `vitest run --passWithNoTests` et n'ont donc aucune couverture métier.
+- Les variables DB, Auth, chiffrement et Redis sont validées lorsqu'elles sont définies, mais restent
+  optionnelles jusqu'aux phases qui les utilisent.
+- Next.js 16.3.2 doit rester sous surveillance jusqu'à la publication de la mise à jour de sécurité
+  annoncée pour le 26 août 2026.
+
+La Phase 2 DB n'est pas commencée.

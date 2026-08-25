@@ -164,6 +164,11 @@ shared -> db
 shared -> next
 ```
 
+La Phase 1 vérifie ces quatre interdictions dans les manifests avec
+`scripts/check-architecture-boundaries.mjs`. Le contrôle est intégré à `pnpm lint`. Cette approche
+légère et ses limites sont documentées dans
+`docs/adr/0001-lightweight-package-boundary-check.md`.
+
 ## 4. API
 
 tRPC comme API interne typée.

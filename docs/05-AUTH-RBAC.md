@@ -117,15 +117,15 @@ Ne pas donner `docker.manage` aux simples viewers.
 
 ## 9. Matrice initiale
 
-| Action | Viewer | User | Editor | Admin | System Admin |
-|---|---:|---:|---:|---:|---:|
-| Voir board autorisé | oui | oui | oui | oui | oui |
-| Modifier board autorisé | non | non | oui | oui | oui |
-| Créer board | non | oui | oui | oui | oui |
-| Gérer intégrations | non | non | non | oui | oui |
-| Gérer utilisateurs | non | non | non | oui | oui |
-| Paramètres système | non | non | non | non | oui |
-| Backup/restore | non | non | non | non | oui |
+| Action                  | Viewer | User | Editor | Admin | System Admin |
+| ----------------------- | -----: | ---: | -----: | ----: | -----------: |
+| Voir board autorisé     |    oui |  oui |    oui |   oui |          oui |
+| Modifier board autorisé |    non |  non |    oui |   oui |          oui |
+| Créer board             |    non |  oui |    oui |   oui |          oui |
+| Gérer intégrations      |    non |  non |    non |   oui |          oui |
+| Gérer utilisateurs      |    non |  non |    non |   oui |          oui |
+| Paramètres système      |    non |  non |    non |   non |          oui |
+| Backup/restore          |    non |  non |    non |   non |          oui |
 
 La matrice finale est configurable via permissions explicites.
 

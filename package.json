@@ -10,13 +10,13 @@
   "scripts": {
     "dev": "turbo dev --filter=@dashboard/web",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "node scripts/check-architecture-boundaries.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "pnpm --filter @dashboard/web test:e2e",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

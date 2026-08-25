@@ -16,10 +16,7 @@
     "auth": "Auth.js",
     "cacheJobs": "Redis optional/simple-mode, recommended production",
     "realtime": "WebSocket or SSE",
-    "tests": [
-      "Vitest",
-      "Playwright"
-    ],
+    "tests": ["Vitest", "Playwright"],
     "deployment": "Docker Compose"
   },
   "mvpIntegrations": [
@@ -31,10 +28,5 @@
     "Uptime Kuma",
     "Prometheus"
   ],
-  "qualityGates": [
-    "lint",
-    "typecheck",
-    "test",
-    "build"
-  ]
+  "qualityGates": ["lint", "typecheck", "test", "build"]
 }

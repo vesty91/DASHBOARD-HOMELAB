@@ -32,9 +32,9 @@ type WidgetDefinition<TConfig> = {
 ## 2. Registry
 
 ```ts
-widgetRegistry.register(definition)
-widgetRegistry.get(id)
-widgetRegistry.list()
+widgetRegistry.register(definition);
+widgetRegistry.get(id);
+widgetRegistry.list();
 ```
 
 Une définition dupliquée est une erreur au démarrage/test.

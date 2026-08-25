@@ -8,8 +8,8 @@ export default tseslint.config(
       "**/dist/**",
       "**/coverage/**",
       "**/playwright-report/**",
-      "reference/homarr/**"
-    ]
+      "reference/homarr/**",
+    ],
   },
   ...tseslint.configs.recommended,
   {
@@ -18,8 +18,8 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
-      ]
-    }
-  }
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 );

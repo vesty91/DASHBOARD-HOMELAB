@@ -130,19 +130,20 @@ Board 50 widgets :
 Obligatoires :
 
 ```bash
+pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:e2e
 pnpm build
 ```
 
-Option :
+En Phase 1, le scénario E2E vérifie uniquement le rendu du bootstrap. Chromium est installé
+explicitement dans la CI avant son exécution.
 
-```bash
-pnpm test:e2e
-```
-
-sur PR ou nightly selon coût.
+Les packages métier encore vides exécutent Vitest avec `--passWithNoTests`. Cela valide le câblage du
+runner, mais ne constitue pas une couverture métier. Des tests seront ajoutés avec chaque capacité des
+phases suivantes.
 
 ## 8. Coverage
 
