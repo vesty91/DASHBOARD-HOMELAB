@@ -22,6 +22,8 @@ export function createSqliteRepositories(client: SqliteClient) {
       const row = {
         id: randomUUID(),
         username: input.username,
+        usernameCanonical:
+          input.usernameCanonical ?? input.username.normalize("NFKC").toLowerCase(),
         email: input.email ?? undefined,
         displayName: input.displayName ?? undefined,
         isSystemAdmin: input.isSystemAdmin ?? false,

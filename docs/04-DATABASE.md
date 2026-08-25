@@ -357,3 +357,10 @@ migration lorsque des réglages persistants apparaîtront.
 Les repositories User, Group, Board, App et Integration exposent `findById`, `list` et `create` pour
 les deux dialectes. La création board + layouts utilise une transaction réelle et son rollback est
 testé. Aucun driver SQL n'est exporté vers `apps/web`.
+
+## 9. Extension Phase 3
+
+La Phase 3 ajoute `usernameCanonical`, `authVersion`, `user_credentials`, `roles`,
+`role_permissions`, `user_roles`, `group_roles` et l'état typé `onboardingCompleted`. Les migrations
+`0001` SQLite/PostgreSQL conservent les données Phase 2 et initialisent les cinq rôles. L'onboarding
+SQLite utilise `BEGIN IMMEDIATE`; PostgreSQL utilise transaction, verrou de ligne et verrou advisory.

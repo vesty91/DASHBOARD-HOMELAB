@@ -24,6 +24,7 @@ jobs:
           --health-retries 10
     env:
       POSTGRES_TEST_URL: postgresql://dashboard:dashboard@localhost:5432/dashboard_test
+      AUTH_SECRET: phase-3-ci-secret-value-at-least-32-characters
     steps:
       - uses: actions/checkout@v4
 

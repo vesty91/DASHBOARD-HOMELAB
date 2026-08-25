@@ -8,6 +8,7 @@ const redisUrlSchema = z.url().refine((value) => {
 export const serverEnvSchema = z.object({
   APP_URL: z.url().default("http://localhost:3000"),
   AUTH_SECRET: z.string().min(32).optional(),
+  AUTH_SESSION_MAX_AGE_SECONDS: z.coerce.number().int().min(300).max(2_592_000).default(86_400),
   SECRET_ENCRYPTION_KEY: z
     .string()
     .regex(/^[0-9a-fA-F]{64}$/)

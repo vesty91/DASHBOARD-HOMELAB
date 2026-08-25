@@ -6,6 +6,7 @@ describe("server environment", () => {
   it("uses Phase 1 defaults when future services are not configured", () => {
     expect(parseServerEnv({})).toEqual({
       APP_URL: "http://localhost:3000",
+      AUTH_SESSION_MAX_AGE_SECONDS: 86400,
       LOG_LEVEL: "info",
     });
   });
@@ -15,6 +16,7 @@ describe("server environment", () => {
       parseServerEnv({
         APP_URL: "https://dashboard.example.test",
         AUTH_SECRET: "a".repeat(32),
+        AUTH_SESSION_MAX_AGE_SECONDS: "3600",
         SECRET_ENCRYPTION_KEY: "a".repeat(64),
         DB_DRIVER: "sqlite",
         DATABASE_URL: "./appdata/dashboard.sqlite",

@@ -6,12 +6,14 @@ export const users = sqliteTable(
   {
     id: text("id").primaryKey(),
     username: text("username").notNull().unique(),
+    usernameCanonical: text("username_canonical").notNull().unique(),
     email: text("email").unique(),
     displayName: text("display_name"),
     status: text("status", { enum: ["active", "disabled"] })
       .notNull()
       .default("active"),
     isSystemAdmin: integer("is_system_admin", { mode: "boolean" }).notNull().default(false),
+    authVersion: integer("auth_version").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
     lastLoginAt: integer("last_login_at", { mode: "timestamp_ms" }),
@@ -208,8 +210,61 @@ export const serverSettings = sqliteTable(
     id: text("id").primaryKey().default("global"),
     schemaVersion: integer("schema_version").notNull().default(1),
     instanceName: text("instance_name"),
+    onboardingCompleted: integer("onboarding_completed", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (t) => [check("server_settings_singleton", sql`${t.id} = 'global'`)],
+);
+export const userCredentials = sqliteTable("user_credentials", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  passwordUpdatedAt: integer("password_updated_at", { mode: "timestamp_ms" }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+export const roles = sqliteTable("roles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+export const rolePermissions = sqliteTable(
+  "role_permissions",
+  {
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permission: text("permission").notNull(),
+  },
+  (t) => [uniqueIndex("role_permissions_role_permission_uq").on(t.roleId, t.permission)],
+);
+export const userRoles = sqliteTable(
+  "user_roles",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("user_roles_user_role_uq").on(t.userId, t.roleId)],
+);
+export const groupRoles = sqliteTable(
+  "group_roles",
+  {
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("group_roles_group_role_uq").on(t.groupId, t.roleId)],
 );

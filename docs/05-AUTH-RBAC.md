@@ -9,6 +9,10 @@ Password hashing :
 
 Ne jamais stocker un mot de passe réversible.
 
+Implémentation Phase 3 : NextAuth.js stable 4.24.15, Credentials username/password, Argon2id
+(`m=65536`, `t=3`, `p=1`, 32 octets), mots de passe de 12 à 256 caractères. Le username canonique
+est NFKC + minuscules et possède une contrainte unique portable.
+
 ## 2. Sessions
 
 - cookies HttpOnly ;
@@ -17,6 +21,13 @@ Ne jamais stocker un mot de passe réversible.
 - rotation ;
 - invalidation ;
 - expiration configurable.
+
+Les sessions JWT expirent après `AUTH_SESSION_MAX_AGE_SECONDS` (24 h par défaut). `authVersion` est
+vérifié en base à chaque résolution serveur ; les permissions ne sont jamais une source de vérité du
+JWT. Voir ADR 0003.
+
+La limitation login de Phase 3 est volontairement en mémoire et mono-processus. Elle ne fait pas
+confiance aux en-têtes forwarded. Redis et la politique proxy distribuée restent au hardening.
 
 ## 3. OIDC
 

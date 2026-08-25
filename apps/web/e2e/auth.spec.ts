@@ -1,0 +1,26 @@
+import { expect, test } from "@playwright/test";
+test("onboarding, login, protected admin and logout", async ({ page, context }) => {
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/login/);
+  await page.goto("/setup");
+  await page.getByLabel("Identifiant").fill("Vesty");
+  await page.getByLabel("Nom affiché").fill("Administrator");
+  await page.getByLabel("Mot de passe").fill("correct horse battery staple");
+  await page.getByRole("button", { name: "Initialiser" }).click();
+  await expect(page).toHaveURL(/\/login\?setup=complete/);
+  await page.goto("/setup");
+  await expect(page).toHaveURL(/\/login/);
+  await page.getByLabel("Identifiant").fill("VESTY");
+  await page.getByLabel("Mot de passe").fill("incorrect password");
+  await page.getByRole("button", { name: "Connexion" }).click();
+  await expect(page.getByText("Identifiant ou mot de passe invalide.")).toBeVisible();
+  await page.getByLabel("Mot de passe").fill("correct horse battery staple");
+  await page.getByRole("button", { name: "Connexion" }).click();
+  await expect(page).toHaveURL(/\/admin/);
+  await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
+  await page.getByRole("button", { name: "Déconnexion" }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await context.clearCookies();
+  await page.goto("/admin/users");
+  await expect(page).toHaveURL(/\/login/);
+});

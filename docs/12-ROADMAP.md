@@ -55,6 +55,8 @@ Livrables :
 
 ## Phase 3 — Auth/RBAC
 
+Statut : implémentée sur la branche `phase-3-auth-rbac`, en attente de revue et de fusion.
+
 Livrables :
 
 - onboarding admin ;

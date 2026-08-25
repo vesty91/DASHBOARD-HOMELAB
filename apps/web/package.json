@@ -12,7 +12,11 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@dashboard/auth": "workspace:*",
+    "@dashboard/db": "workspace:*",
+    "@dashboard/permissions": "workspace:*",
     "next": "16.3.2",
+    "next-auth": "4.24.15",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "4.4.3"
