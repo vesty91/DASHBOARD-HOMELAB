@@ -327,3 +327,33 @@ Le manifest doit contenir :
   "createdAt": "..."
 }
 ```
+
+## 8. Implémentation Phase 2
+
+Les schémas sources sont `packages/db/src/schema/sqlite.ts` et
+`packages/db/src/schema/postgresql.ts`. Les migrations initiales versionnées se trouvent dans
+`packages/db/drizzle/{sqlite,postgresql}`.
+
+La Phase 2 implémente uniquement : users, groups, group_members, boards, layouts, items, item_layouts,
+apps, integrations, integration_secrets et server_settings. Auth.js, permissions métier, jobs,
+monitoring et backup restent hors périmètre.
+
+### Suppressions et relations
+
+- user supprimé : memberships en cascade ; propriétaire de board et créateur d'intégration à NULL ;
+- board supprimé : layouts et items en cascade, puis placements en cascade ;
+- layout ou item supprimé : placements correspondants en cascade ;
+- intégration supprimée : secrets en cascade ; références apps/items à NULL ;
+- groupe supprimé : memberships en cascade.
+
+### Server settings
+
+`server_settings` est un singleton contrôlé (`id = global`) avec colonnes typées `schemaVersion` et
+`instanceName`. Ce choix évite une table key/value libre ; de nouvelles colonnes seront ajoutées par
+migration lorsque des réglages persistants apparaîtront.
+
+### Repositories et transactions
+
+Les repositories User, Group, Board, App et Integration exposent `findById`, `list` et `create` pour
+les deux dialectes. La création board + layouts utilise une transaction réelle et son rollback est
+testé. Aucun driver SQL n'est exporté vers `apps/web`.

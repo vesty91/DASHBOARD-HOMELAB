@@ -1,10 +1,8 @@
-/**
- * Database schema, migrations and repositories.
- *
- * Phase 1 intentionally exposes only a typed bootstrap marker.
- * Codex must implement this package according to docs/ and AGENTS.md.
- */
-export const DbPackage = {
-  name: "@dashboard/db",
-  phase: "bootstrap",
-} as const;
+export * from "./client";
+export * from "./config";
+export * from "./errors";
+export * from "./health";
+export * from "./migrations";
+export * from "./repositories";
+export * from "./schema/shared";
+export * from "./transactions";

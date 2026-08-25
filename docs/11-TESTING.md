@@ -42,6 +42,11 @@ Tests :
 - rollback ;
 - repositories.
 
+Depuis la Phase 2, SQLite applique la migration SQL sur une base en mémoire et teste repositories,
+contraintes, FK et rollback. La CI démarre un service PostgreSQL réel, applique sa migration puis
+exécute `pnpm --filter @dashboard/db test:postgres`. Le test PostgreSQL est ignoré localement lorsque
+`POSTGRES_TEST_URL` est absent ; cette absence n'est pas assimilée à une validation PostgreSQL locale.
+
 ## 4. Adapter integration
 
 Utiliser mock HTTP contrôlé.

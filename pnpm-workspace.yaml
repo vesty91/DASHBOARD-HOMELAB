@@ -3,3 +3,5 @@ packages:
   - "packages/*"
 minimumReleaseAgeExclude:
   - "@types/react-dom@19.2.5"
+allowBuilds:
+  esbuild: true

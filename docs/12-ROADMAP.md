@@ -42,6 +42,8 @@ verts.
 
 ## Phase 2 — DB
 
+Statut : implémentée le 25 août 2026 ; validation finale des gates requise avant Phase 3.
+
 Livrables :
 
 - Drizzle ;

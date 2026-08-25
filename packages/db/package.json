@@ -8,9 +8,23 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "test:postgres": "vitest run src/database.postgres.test.ts",
+    "db:generate:sqlite": "drizzle-kit generate --config=drizzle.sqlite.config.ts",
+    "db:generate:postgres": "drizzle-kit generate --config=drizzle.postgresql.config.ts",
+    "db:migrate:sqlite": "drizzle-kit migrate --config=drizzle.sqlite.config.ts",
+    "db:migrate:postgres": "drizzle-kit migrate --config=drizzle.postgresql.config.ts",
+    "db:check:sqlite": "drizzle-kit check --config=drizzle.sqlite.config.ts",
+    "db:check:postgres": "drizzle-kit check --config=drizzle.postgresql.config.ts"
   },
   "devDependencies": {
+    "@types/pg": "8.15.5",
+    "drizzle-kit": "0.31.10",
     "vitest": "4.1.11"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "pg": "8.16.3",
+    "zod": "4.4.3"
   }
 }

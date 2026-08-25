@@ -8,6 +8,22 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: dashboard
+          POSTGRES_PASSWORD: dashboard
+          POSTGRES_DB: dashboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dashboard -d dashboard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_TEST_URL: postgresql://dashboard:dashboard@localhost:5432/dashboard_test
     steps:
       - uses: actions/checkout@v4
 
@@ -33,8 +49,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Validate database migrations
+        run: pnpm --filter @dashboard/db db:check:sqlite && pnpm --filter @dashboard/db db:check:postgres
+
       - name: Unit tests
         run: pnpm test
+
+      - name: PostgreSQL integration tests
+        run: pnpm --filter @dashboard/db test:postgres
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium

@@ -37,4 +37,10 @@ Mise à jour : 25 août 2026.
 - Next.js 16.3.2 doit rester sous surveillance jusqu'à la publication de la mise à jour de sécurité
   annoncée pour le 26 août 2026.
 
-La Phase 2 DB n'est pas commencée.
+## Phase 2 — Database Foundation
+
+Les deux schémas Drizzle, migrations SQL, repositories minimaux, transactions, erreurs normalisées,
+readiness DB et tests SQLite/PostgreSQL ont été ajoutés. La Phase 3 Auth/RBAC n'est pas commencée.
+
+La validation PostgreSQL réelle s'exécute en CI. Elle n'a pas été exécutée localement le 25 août 2026
+car Docker/PostgreSQL ne sont pas installés sur la machine de développement.

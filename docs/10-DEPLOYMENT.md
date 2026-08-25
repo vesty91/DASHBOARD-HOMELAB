@@ -99,6 +99,16 @@ Option recommandée :
 
 Éviter plusieurs réplicas lançant une migration concurrente sans verrou.
 
+Commandes Phase 2 :
+
+```bash
+pnpm --filter @dashboard/db db:migrate:sqlite
+pnpm --filter @dashboard/db db:migrate:postgres
+```
+
+`DB_DRIVER` et `DATABASE_URL` sont obligatoires au moment de créer un client DB. SQLite active les
+foreign keys à chaque connexion. PostgreSQL utilise un pool borné avec timeout de connexion.
+
 ## 8. Upgrade
 
 Procédure :
