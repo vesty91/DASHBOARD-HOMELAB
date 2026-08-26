@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { BoardError, type BoardService } from "@dashboard/boards";
+import {
+  BoardError,
+  createBoardService,
+  type BoardRepository,
+  type BoardService,
+} from "@dashboard/boards";
 import { createCaller } from "./index";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -47,5 +52,33 @@ describe("board tRPC router", () => {
         items: [{ itemId: "00000000-0000-4000-8000-000000000004", x: 0, y: 0, w: 1, h: 1 }],
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  it("enforces visibility management through a manual tRPC mutation", async () => {
+    const board = {
+      id: "00000000-0000-4000-8000-000000000002",
+      slug: "home",
+      name: "Home",
+      description: null,
+      visibility: "private" as const,
+      ownerUserId: "00000000-0000-4000-8000-000000000099",
+      revision: 1,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+    const repository = {
+      findSnapshotById: async () => ({ board, layouts: [], items: [], placements: [] }),
+      resolveResourcePermissions: async () => ["board.edit"],
+      updateBoard: vi.fn(async () => 2),
+    } as unknown as BoardRepository;
+    await expect(
+      createCaller({ actor, boards: createBoardService(repository) }).board.update({
+        boardId: board.id,
+        expectedRevision: 1,
+        name: board.name,
+        description: "",
+        visibility: "authenticated",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(repository.updateBoard).not.toHaveBeenCalled();
   });
 });
