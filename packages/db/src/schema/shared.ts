@@ -15,6 +15,8 @@ export const TABLE_NAMES = [
   "role_permissions",
   "user_roles",
   "group_roles",
+  "board_user_permissions",
+  "board_group_permissions",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
@@ -50,4 +52,6 @@ export const SCHEMA_CONTRACT = {
   role_permissions: ["roleId", "permission"],
   user_roles: ["userId", "roleId"],
   group_roles: ["groupId", "roleId"],
+  board_user_permissions: ["boardId", "userId", "permission"],
+  board_group_permissions: ["boardId", "groupId", "permission"],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;
