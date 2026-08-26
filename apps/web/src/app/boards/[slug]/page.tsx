@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 import { getBoardCaller } from "../../../lib/server/board-api";
-import { BoardReadGrid } from "../board-read-grid";
+import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
 export default async function BoardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -17,17 +17,12 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     if (error instanceof TRPCError && error.code === "FORBIDDEN") redirect("/forbidden");
     throw error;
   }
-  const desktop = snapshot.layouts.find((layout) => layout.breakpoint === "desktop")!;
   return (
     <main>
       <h1>{snapshot.board.name}</h1>
       {snapshot.board.description && <p>{snapshot.board.description}</p>}
       <Link href={`/boards/${slug}/edit`}>Modifier</Link>
-      <BoardReadGrid
-        layout={desktop}
-        items={snapshot.items}
-        placements={snapshot.placements.filter((p) => p.layoutId === desktop.id)}
-      />
+      <ResponsiveBoardReadGrid snapshot={snapshot} />
     </main>
   );
 }

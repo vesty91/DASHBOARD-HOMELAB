@@ -105,12 +105,16 @@ export function createBoardService(repository: BoardRepository) {
       },
       actor: BoardActor,
     ) {
+      const current = await repository.findSnapshotById(input.boardId);
+      if (!current) throw new BoardError("NOT_FOUND", "Board not found");
+      const visibilityChanged =
+        input.visibility !== undefined && input.visibility !== current.board.visibility;
       const snapshot = await requireAccess(
-        await repository.findSnapshotById(input.boardId),
+        current,
         actor,
-        input.visibility === undefined ? "board.edit" : "board.manage",
+        visibilityChanged ? "board.manage" : "board.edit",
       );
-      if (input.visibility === "public" && snapshot.items.length > 0)
+      if (visibilityChanged && input.visibility === "public" && snapshot.items.length > 0)
         throw new BoardError(
           "VALIDATION_ERROR",
           "Boards containing items cannot be public before Widget Engine public-safe policy",

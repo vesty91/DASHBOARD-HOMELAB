@@ -97,4 +97,71 @@ describe("board domain", () => {
       message: "Board revision conflict",
     });
   });
+  it.each([
+    ["name", { name: "Renamed", description: null }, "board.edit"],
+    ["description", { name: "Home", description: "Changed" }, "board.edit"],
+    [
+      "unchanged visibility",
+      { name: "Renamed", description: null, visibility: "private" as const },
+      "board.edit",
+    ],
+    [
+      "changed visibility",
+      { name: "Home", description: null, visibility: "authenticated" as const },
+      "board.manage",
+    ],
+  ])("allows %s with the required resource grant", async (_name, changes, grant) => {
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    let updated = false;
+    const repository = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => [grant],
+      updateBoard: async () => {
+        updated = true;
+        return 2;
+      },
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(repository).update(
+        { boardId: "b", expectedRevision: 1, ...changes },
+        { userId: "editor", subject: active },
+      ),
+    ).resolves.toBe(2);
+    expect(updated).toBe(true);
+  });
+  it("rejects a real visibility change for board.edit, including manual API-shaped input", async () => {
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    const repository = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => ["board.edit"],
+      updateBoard: async () => 2,
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(repository).update(
+        {
+          boardId: "b",
+          expectedRevision: 1,
+          name: "Home",
+          description: null,
+          visibility: "authenticated",
+        },
+        { userId: "editor", subject: active },
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("does not let board.edit delete a board", async () => {
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    let deleted = false;
+    const repository = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => ["board.edit"],
+      deleteBoard: async () => {
+        deleted = true;
+      },
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(repository).delete("b", { userId: "editor", subject: active }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(deleted).toBe(false);
+  });
 });

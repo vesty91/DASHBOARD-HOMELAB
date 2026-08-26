@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBoardCaller } from "../../../../lib/server/board-api";
 import { BoardEditor } from "../../board-editor";
 import { deleteBoardAction, updateBoardAction } from "../../actions";
+import { DeleteBoardControl } from "../../delete-board-control";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 export default async function EditBoardPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -43,9 +44,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         <button type="submit">Enregistrer les métadonnées</button>
       </form>
       <BoardEditor snapshot={snapshot} />
-      <form action={deleteBoardAction.bind(null, snapshot.board.id)}>
-        <button type="submit">Supprimer le board</button>
-      </form>
+      <DeleteBoardControl action={deleteBoardAction.bind(null, snapshot.board.id)} />
     </main>
   );
 }

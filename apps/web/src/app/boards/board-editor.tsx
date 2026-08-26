@@ -10,10 +10,40 @@ export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
   const revision = useRef(snapshot.board.revision);
   const queue = useRef(Promise.resolve());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef<{
+    layoutId: string;
+    items: { itemId: string; x: number; y: number; w: number; h: number }[];
+  } | null>(null);
+  const conflictRef = useRef(false);
   const [breakpoint, setBreakpoint] = useState("desktop");
   const [status, setStatus] = useState("Sauvegardé");
   const [conflict, setConflict] = useState(false);
   const active = snapshot.layouts.find((l) => l.breakpoint === breakpoint)!;
+  const flushPending = () => {
+    if (!pending.current || conflictRef.current) return;
+    const save = pending.current;
+    pending.current = null;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setStatus("Sauvegarde…");
+    queue.current = queue.current.then(async () => {
+      if (conflictRef.current) return;
+      try {
+        revision.current = await saveLayoutAction({
+          boardId: snapshot.board.id,
+          layoutId: save.layoutId,
+          expectedRevision: revision.current,
+          items: save.items,
+        });
+        setStatus("Sauvegardé");
+      } catch {
+        conflictRef.current = true;
+        pending.current = null;
+        setConflict(true);
+        setStatus("Le board a été modifié ailleurs.");
+      }
+    });
+  };
   useEffect(() => {
     if (!root.current) return;
     const grid = GridStack.init(
@@ -26,11 +56,12 @@ export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
       root.current,
     )!;
     const persist = (_event: Event, nodes: GridStackNode[]) => {
-      if (conflict) return;
+      if (conflictRef.current) return;
       setStatus("Modifications en attente");
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        const items = nodes
+      pending.current = {
+        layoutId: active.id,
+        items: nodes
           .filter((n) => n.el?.dataset.itemId)
           .map((n) => ({
             itemId: n.el!.dataset.itemId!,
@@ -38,30 +69,16 @@ export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
             y: n.y ?? 0,
             w: n.w ?? 1,
             h: n.h ?? 1,
-          }));
-        setStatus("Sauvegarde…");
-        queue.current = queue.current.then(async () => {
-          try {
-            revision.current = await saveLayoutAction({
-              boardId: snapshot.board.id,
-              layoutId: active.id,
-              expectedRevision: revision.current,
-              items,
-            });
-            setStatus("Sauvegardé");
-          } catch {
-            setConflict(true);
-            setStatus("Le board a été modifié ailleurs.");
-          }
-        });
-      }, BOARD_AUTOSAVE_DEBOUNCE_MS);
+          })),
+      };
+      timer.current = setTimeout(flushPending, BOARD_AUTOSAVE_DEBOUNCE_MS);
     };
     grid.on("change", persist);
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      flushPending();
       grid.destroy(false);
     };
-  }, [active, conflict, snapshot.board.id]);
+  }, [active, snapshot.board.id]);
   const placements = snapshot.placements.filter((p) => p.layoutId === active.id);
   return (
     <section>
