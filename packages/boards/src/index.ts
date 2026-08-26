@@ -1,10 +1,6 @@
-/**
- * Board and layout domain services.
- *
- * Phase 1 intentionally exposes only a typed bootstrap marker.
- * Codex must implement this package according to docs/ and AGENTS.md.
- */
-export const BoardsPackage = {
-  name: "@dashboard/boards",
-  phase: "bootstrap",
-} as const;
+export * from "./errors";
+export * from "./layout";
+export * from "./policy";
+export * from "./schemas";
+export * from "./service";
+export * from "./types";

@@ -179,3 +179,9 @@ Le timeout client ne doit pas être plus court sans raison que le timeout serveu
 Actions de configuration critiques peuvent accepter un idempotency key future.
 
 Board layout batch doit être sûr à rejouer si revision identique/non modifiée.
+
+# Board API — Phase 4
+
+Le routeur tRPC interne expose `board.list`, `board.get`, `board.create`, `board.update`, `board.delete` et `board.layout.updateBatch`. Le contexte résout la session, le sujet RBAC et le service Board côté serveur. Tous les inputs sont validés par Zod.
+
+`board.layout.updateBatch` reçoit `boardId`, `layoutId`, `expectedRevision` et une liste bornée de placements. Une révision obsolète produit `BOARD_REVISION_CONFLICT`, mappé en `CONFLICT`, afin que le client recharge. Les erreurs SQL et stack traces ne font pas partie du DTO.

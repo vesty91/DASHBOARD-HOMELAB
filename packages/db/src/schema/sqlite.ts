@@ -268,3 +268,47 @@ export const groupRoles = sqliteTable(
   },
   (t) => [uniqueIndex("group_roles_group_role_uq").on(t.groupId, t.roleId)],
 );
+export const boardUserPermissions = sqliteTable(
+  "board_user_permissions",
+  {
+    boardId: text("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permission: text("permission", {
+      enum: ["board.view", "board.edit", "board.manage"],
+    }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("board_user_permissions_uq").on(t.boardId, t.userId, t.permission),
+    index("board_user_permissions_user_idx").on(t.userId, t.boardId),
+    check(
+      "board_user_permissions_valid",
+      sql`${t.permission} IN ('board.view','board.edit','board.manage')`,
+    ),
+  ],
+);
+export const boardGroupPermissions = sqliteTable(
+  "board_group_permissions",
+  {
+    boardId: text("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    permission: text("permission", {
+      enum: ["board.view", "board.edit", "board.manage"],
+    }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("board_group_permissions_uq").on(t.boardId, t.groupId, t.permission),
+    index("board_group_permissions_group_idx").on(t.groupId, t.boardId),
+    check(
+      "board_group_permissions_valid",
+      sql`${t.permission} IN ('board.view','board.edit','board.manage')`,
+    ),
+  ],
+);

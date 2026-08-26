@@ -4,6 +4,7 @@ import { createPostgresqlClient } from "./client/postgresql";
 import { executePostgresqlMigration, migratePostgresql } from "./migrations";
 import { createPostgresqlRepositories } from "./repositories/postgresql";
 import { createPostgresqlAuthStore } from "./repositories/auth";
+import { createPostgresqlBoardStore } from "./board-runtime";
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
@@ -60,6 +61,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         ]),
       ).rejects.toThrow();
       expect(await r.boards.list()).toHaveLength(0);
+      const boardStore = createPostgresqlBoardStore(client.pool);
       const auth = createPostgresqlAuthStore(client.pool);
       const attempts = await Promise.allSettled([
         auth.createFirstAdmin({
@@ -80,6 +82,34 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
           Awaited<ReturnType<typeof auth.createFirstAdmin>>
         >
       ).value;
+      const persistedBoard = await boardStore.createBoardWithLayouts({
+        slug: "pg-board",
+        name: "PG Board",
+        description: null,
+        visibility: "private",
+        ownerUserId: admin.id,
+        layouts: [
+          { name: "Desktop", breakpoint: "desktop", columns: 12, rowHeight: 72, sortOrder: 0 },
+          { name: "Mobile", breakpoint: "mobile", columns: 4, rowHeight: 72, sortOrder: 1 },
+        ],
+      });
+      expect(persistedBoard.layouts).toHaveLength(2);
+      await expect(
+        boardStore.updateBoard({
+          boardId: persistedBoard.board.id,
+          expectedRevision: 1,
+          name: "Updated",
+          description: null,
+        }),
+      ).resolves.toBe(2);
+      await expect(
+        boardStore.updateBoard({
+          boardId: persistedBoard.board.id,
+          expectedRevision: 1,
+          name: "Stale",
+          description: null,
+        }),
+      ).rejects.toMatchObject({ code: "BOARD_REVISION_CONFLICT" });
       expect((await auth.findCredential(admin.username.toLowerCase()))?.passwordHash).toMatch(
         /^hash-/,
       );

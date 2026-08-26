@@ -15,6 +15,13 @@
       "when": 1787672260972,
       "tag": "0001_slim_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787742107947,
+      "tag": "0002_brief_captain_america",
+      "breakpoints": true
     }
   ]
 }

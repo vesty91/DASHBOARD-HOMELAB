@@ -179,6 +179,8 @@ describe("SQLite database foundation", () => {
       role_permissions: sqliteSchema.rolePermissions,
       user_roles: sqliteSchema.userRoles,
       group_roles: sqliteSchema.groupRoles,
+      board_user_permissions: sqliteSchema.boardUserPermissions,
+      board_group_permissions: sqliteSchema.boardGroupPermissions,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -197,6 +199,8 @@ describe("SQLite database foundation", () => {
       role_permissions: postgresqlSchema.rolePermissions,
       user_roles: postgresqlSchema.userRoles,
       group_roles: postgresqlSchema.groupRoles,
+      board_user_permissions: postgresqlSchema.boardUserPermissions,
+      board_group_permissions: postgresqlSchema.boardGroupPermissions,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];
