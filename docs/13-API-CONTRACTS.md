@@ -61,6 +61,10 @@ Les détails sensibles restent logs serveur.
 retourne uniquement status, latence, status HTTP et code sûr. Le résultat est conditionné à la
 révision de configuration afin d'éviter une écriture stale.
 
+`app.list` utilise un curseur UUID stable et une limite comprise entre 1 et 100. La réponse contient
+`items` et `nextCursor`; l'interface expose la page suivante au lieu de masquer les Apps au-delà d'un
+plafond global.
+
 ## 3. Board create
 
 Input :

@@ -46,6 +46,14 @@ export function isAllowedHealthAddress(address: string): boolean {
     );
   if (family === 6) {
     const ip = address.toLowerCase().split("%")[0] ?? "";
+    const dottedMapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(ip);
+    if (dottedMapped?.[1]) return isAllowedHealthAddress(dottedMapped[1]);
+    const hexadecimalMapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip);
+    if (hexadecimalMapped?.[1] && hexadecimalMapped[2]) {
+      const high = Number.parseInt(hexadecimalMapped[1], 16);
+      const low = Number.parseInt(hexadecimalMapped[2], 16);
+      return isAllowedHealthAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+    }
     return !(ip === "::" || ip === "::1" || /^(fe[89ab]|ff)/.test(ip));
   }
   return false;
@@ -68,18 +76,35 @@ const failure = (
 
 export async function probeHttp(options: ProbeOptions): Promise<ProbeResult> {
   const started = performance.now();
+  const deadline = started + options.timeoutMs;
   if (!["http:", "https:"].includes(options.url.protocol))
     return failure(started, "error", "TARGET_BLOCKED");
-  const hostname = options.url.hostname.toLowerCase();
+  const hostname = options.url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (hostname === "localhost" || hostname.endsWith(".localhost"))
     return failure(started, "error", "TARGET_BLOCKED");
   let addresses: readonly ResolvedAddress[];
   try {
-    addresses = net.isIP(hostname)
-      ? [{ address: hostname, family: net.isIP(hostname) as 4 | 6 }]
-      : await (options.resolver ?? systemResolver)(hostname);
-  } catch {
-    return failure(started, "error", "DNS_ERROR");
+    const resolution = net.isIP(hostname)
+      ? Promise.resolve([{ address: hostname, family: net.isIP(hostname) as 4 | 6 }])
+      : (options.resolver ?? systemResolver)(hostname);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      addresses = await Promise.race([
+        resolution,
+        new Promise<never>((_resolve, reject) => {
+          timeout = setTimeout(
+            () => reject(Object.assign(new Error("timeout"), { code: "ETIMEDOUT" })),
+            Math.max(1, deadline - performance.now()),
+          );
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  } catch (error) {
+    return (error as { code?: unknown }).code === "ETIMEDOUT" || performance.now() >= deadline
+      ? failure(started, "timeout", "TIMEOUT")
+      : failure(started, "error", "DNS_ERROR");
   }
   const allow = options.allowAddress ?? isAllowedHealthAddress;
   if (!addresses.length || addresses.some(({ address }) => !allow(address)))
@@ -97,7 +122,7 @@ export async function probeHttp(options: ProbeOptions): Promise<ProbeResult> {
     const requestOptions = {
       method: options.method,
       headers: { "user-agent": "Dashboard-Healthcheck/1", accept: "*/*" },
-      timeout: options.timeoutMs,
+      timeout: Math.max(1, deadline - performance.now()),
       autoSelectFamily: false,
       servername: options.url.protocol === "https:" ? hostname : undefined,
       lookup: (

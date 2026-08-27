@@ -86,7 +86,16 @@ export const appsRouter = t.router({
   canManage: t.procedure.query(({ ctx }) =>
     ctx.actor.subject ? hasPermission(ctx.actor.subject, "app.manage") : false,
   ),
-  list: t.procedure.query(({ ctx }) => procedure(() => ctx.apps.list(ctx.actor))),
+  list: t.procedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(50),
+          cursor: z.uuid().optional(),
+        })
+        .default({ limit: 50 }),
+    )
+    .query(({ ctx, input }) => procedure(() => ctx.apps.list(ctx.actor, input))),
   get: t.procedure
     .input(z.object({ id: z.uuid() }))
     .query(({ ctx, input }) => procedure(() => ctx.apps.get(input.id, ctx.actor))),

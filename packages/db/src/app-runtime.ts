@@ -46,7 +46,7 @@ interface AppCreateInput {
 }
 type AppUpdateInput = { id: string } & Partial<AppCreateInput>;
 interface AppStore {
-  list(limit: number): Promise<AppDto[]>;
+  list(limit: number, cursor?: string): Promise<AppDto[]>;
   findById(id: string): Promise<AppDto | undefined>;
   create(input: AppCreateInput): Promise<AppDto>;
   update(input: AppUpdateInput): Promise<AppDto | undefined>;
@@ -126,19 +126,20 @@ export function createSqliteAppStore(db: DatabaseSync): AppStore {
       : undefined;
   };
   return {
-    async list(limit) {
-      return db
-        .prepare("SELECT * FROM apps ORDER BY name,id LIMIT ?")
-        .all(limit)
-        .map((row) =>
-          dto(
-            row,
-            db
-              .prepare("SELECT value FROM app_tags WHERE app_id=? ORDER BY canonical_value")
-              .all(String(row.id))
-              .map((tag) => String(tag.value)),
-          ),
-        );
+    async list(limit, cursor) {
+      return (
+        cursor
+          ? db.prepare("SELECT * FROM apps WHERE id>? ORDER BY id LIMIT ?").all(cursor, limit)
+          : db.prepare("SELECT * FROM apps ORDER BY id LIMIT ?").all(limit)
+      ).map((row) =>
+        dto(
+          row,
+          db
+            .prepare("SELECT value FROM app_tags WHERE app_id=? ORDER BY canonical_value")
+            .all(String(row.id))
+            .map((tag) => String(tag.value)),
+        ),
+      );
     },
     async findById(id) {
       return find(id);
@@ -180,7 +181,7 @@ export function createSqliteAppStore(db: DatabaseSync): AppStore {
       db.exec("BEGIN IMMEDIATE");
       try {
         db.prepare(
-          `UPDATE apps SET name=?,description=?,url=?,icon_ref=?,color=?,target=?,healthcheck_enabled=?,healthcheck_config_json=?,health_status=?,last_checked_at=?,last_latency_ms=?,last_http_status=?,last_health_error_code=?,health_config_revision=?,updated_at=? WHERE id=?`,
+          `UPDATE apps SET name=?,description=?,url=?,icon_ref=?,color=?,target=?,healthcheck_enabled=?,healthcheck_config_json=?,health_status=?,last_checked_at=?,last_latency_ms=?,last_http_status=?,last_health_error_code=?,health_config_revision=health_config_revision+?,updated_at=? WHERE id=?`,
         ).run(
           next.name,
           next.description,
@@ -195,7 +196,7 @@ export function createSqliteAppStore(db: DatabaseSync): AppStore {
           reset ? null : current.lastLatencyMs,
           reset ? null : current.lastHttpStatus,
           reset ? null : current.lastHealthErrorCode,
-          current.healthConfigRevision + (reset ? 1 : 0),
+          reset ? 1 : 0,
           Date.now(),
           input.id,
         );
@@ -251,8 +252,10 @@ export function createPostgresqlAppStore(pool: Pool): AppStore {
     );
   };
   return {
-    async list(limit) {
-      const rows = await pool.query("SELECT * FROM apps ORDER BY name,id LIMIT $1", [limit]);
+    async list(limit, cursor) {
+      const rows = cursor
+        ? await pool.query("SELECT * FROM apps WHERE id>$1 ORDER BY id LIMIT $2", [cursor, limit])
+        : await pool.query("SELECT * FROM apps ORDER BY id LIMIT $1", [limit]);
       return Promise.all(
         rows.rows.map(async (row) =>
           dto(
@@ -312,7 +315,7 @@ export function createPostgresqlAppStore(pool: Pool): AppStore {
       try {
         await client.query("BEGIN");
         await client.query(
-          "UPDATE apps SET name=$1,description=$2,url=$3,icon_ref=$4,color=$5,target=$6,healthcheck_enabled=$7,healthcheck_config_json=$8,health_status=$9,last_checked_at=$10,last_latency_ms=$11,last_http_status=$12,last_health_error_code=$13,health_config_revision=$14,updated_at=now() WHERE id=$15",
+          "UPDATE apps SET name=$1,description=$2,url=$3,icon_ref=$4,color=$5,target=$6,healthcheck_enabled=$7,healthcheck_config_json=$8,health_status=$9,last_checked_at=$10,last_latency_ms=$11,last_http_status=$12,last_health_error_code=$13,health_config_revision=health_config_revision+CASE WHEN $14::boolean THEN 1 ELSE 0 END,updated_at=now() WHERE id=$15",
           [
             next.name,
             next.description,
@@ -327,7 +330,7 @@ export function createPostgresqlAppStore(pool: Pool): AppStore {
             reset ? null : current.lastLatencyMs,
             reset ? null : current.lastHttpStatus,
             reset ? null : current.lastHealthErrorCode,
-            current.healthConfigRevision + (reset ? 1 : 0),
+            reset,
             input.id,
           ],
         );

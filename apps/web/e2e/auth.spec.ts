@@ -171,7 +171,7 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await expect(page.getByRole("heading", { name: "NAS Portal Updated" })).not.toBeVisible();
   await page.getByRole("link", { name: "Ajouter une App" }).click();
   await page.getByLabel("Nom").fill("Viewer Visible App");
-  await page.getByLabel("URL", { exact: true }).fill("https://example.com/");
+  await page.getByLabel("URL", { exact: true }).fill("http://192.168.1.10/");
   await page.getByRole("button", { name: "Enregistrer" }).click();
 
   await page.goto("/admin/users");

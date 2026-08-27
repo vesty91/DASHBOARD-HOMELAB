@@ -90,7 +90,8 @@ Ajouter tests contre :
 Attention : le LAN est une cible légitime du produit. La politique doit distinguer admin autorisé et source externe non fiable.
 
 La Phase 5 applique la politique détaillée par l'ADR 0005 : résolution complète, validation de toutes
-les adresses, DNS pinning, redirects manuels, TLS normal et blocage loopback/link-local/metadata.
+les adresses, normalisation des IPv4 mappées en IPv6, DNS pinning, résolution bornée par le timeout,
+redirects manuels, TLS normal et blocage loopback/link-local/metadata.
 
 ## 8. Uploads
 

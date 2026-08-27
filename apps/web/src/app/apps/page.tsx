@@ -11,11 +11,20 @@ const labels = {
   timeout: "Timeout",
   error: "Erreur",
 } as const;
-export default async function AppsPage() {
+export default async function AppsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cursor?: string }>;
+}) {
   let caller;
   try {
     caller = await getBoardCaller();
-    const [apps, canManage] = await Promise.all([caller.app.list(), caller.app.canManage()]);
+    const { cursor } = await searchParams;
+    const [page, canManage] = await Promise.all([
+      caller.app.list({ limit: 50, cursor }),
+      caller.app.canManage(),
+    ]);
+    const apps = page.items;
     return (
       <main>
         <h1>Apps</h1>
@@ -57,6 +66,7 @@ export default async function AppsPage() {
             ))}
           </ul>
         )}
+        {page.nextCursor && <Link href={`/apps?cursor=${page.nextCursor}`}>Page suivante</Link>}
       </main>
     );
   } catch (error) {

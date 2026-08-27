@@ -157,7 +157,7 @@ export interface AppDto {
   updatedAt: Date;
 }
 export interface AppStore {
-  list(limit: number): Promise<AppDto[]>;
+  list(limit: number, cursor?: string): Promise<AppDto[]>;
   findById(id: string): Promise<AppDto | undefined>;
   create(input: AppCreateInput): Promise<AppDto>;
   update(input: AppUpdateInput): Promise<AppDto | undefined>;
@@ -201,9 +201,12 @@ const requireAccess = (actor: AppActor, permission: "app.read" | "app.manage") =
 
 export function createAppService(store: AppStore) {
   return {
-    async list(actor: AppActor) {
+    async list(actor: AppActor, input: { limit: number; cursor?: string | undefined }) {
       requireAccess(actor, "app.read");
-      return store.list(100);
+      const rows = await store.list(input.limit + 1, input.cursor);
+      const hasMore = rows.length > input.limit;
+      const items = hasMore ? rows.slice(0, input.limit) : rows;
+      return { items, nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null };
     },
     async get(id: string, actor: AppActor) {
       requireAccess(actor, "app.read");

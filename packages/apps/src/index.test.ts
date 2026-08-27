@@ -35,21 +35,71 @@ describe("app RBAC", () => {
       userId: crypto.randomUUID(),
       subject: { status: "active" as const, isSystemAdmin: false, directPermissions: ["app.read"] },
     };
-    await expect(service.list(actor)).resolves.toEqual([]);
+    await expect(service.list(actor, { limit: 50 })).resolves.toEqual({
+      items: [],
+      nextCursor: null,
+    });
     await expect(
       service.create(appCreateSchema.parse({ name: "App", url: "https://example.com" }), actor),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+  it("returns a stable bounded page and cursor", async () => {
+    const rows = [
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+      "00000000-0000-4000-8000-000000000003",
+    ].map((id) => ({
+      id,
+      name: id,
+      description: null,
+      url: "https://example.com/",
+      iconRef: null,
+      color: null,
+      target: "new-tab" as const,
+      tags: [],
+      healthcheckEnabled: false,
+      healthcheckConfig: {
+        path: "/",
+        method: "GET" as const,
+        timeoutMs: 5000,
+        expectedStatusMin: 200,
+        expectedStatusMax: 399,
+      },
+      healthStatus: "unknown" as const,
+      lastCheckedAt: null,
+      lastLatencyMs: null,
+      lastHttpStatus: null,
+      lastHealthErrorCode: null,
+      healthConfigRevision: 1,
+      integrationId: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }));
+    const pagedStore = { ...store, list: vi.fn(async () => rows) } as unknown as AppStore;
+    const actor = {
+      userId: crypto.randomUUID(),
+      subject: { status: "active" as const, isSystemAdmin: false, directPermissions: ["app.read"] },
+    };
+    await expect(
+      createAppService(pagedStore).list(actor, { limit: 2, cursor: rows[0]!.id }),
+    ).resolves.toEqual({ items: rows.slice(0, 2), nextCursor: rows[1]!.id });
+    expect(pagedStore.list).toHaveBeenCalledWith(3, rows[0]!.id);
+  });
   it("denies anonymous and disabled actors", async () => {
     const service = createAppService(store);
-    await expect(service.list({ userId: null, subject: null })).rejects.toMatchObject({
+    await expect(
+      service.list({ userId: null, subject: null }, { limit: 50 }),
+    ).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
     await expect(
-      service.list({
-        userId: crypto.randomUUID(),
-        subject: { status: "disabled", isSystemAdmin: true },
-      }),
+      service.list(
+        {
+          userId: crypto.randomUUID(),
+          subject: { status: "disabled", isSystemAdmin: true },
+        },
+        { limit: 50 },
+      ),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
   it("requires app.manage for testing and returns only a safe blocked-target result", async () => {

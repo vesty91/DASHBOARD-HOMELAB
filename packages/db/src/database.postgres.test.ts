@@ -205,6 +205,11 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         tags: ["Storage"],
         integrationId: null,
       });
+      await Promise.all([
+        appStore.update({ id: app.id, url: "http://192.168.1.7/" }),
+        appStore.update({ id: app.id, url: "http://192.168.1.8/" }),
+      ]);
+      expect((await appStore.findById(app.id))?.healthConfigRevision).toBe(4);
       expect(await appStore.delete(app.id)).toBe(true);
       expect((await client.pool.query("select count(*)::int count from app_tags")).rows[0]).toEqual(
         { count: 0 },
