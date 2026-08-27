@@ -41,6 +41,9 @@ importers:
       '@dashboard/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@dashboard/apps':
+        specifier: workspace:*
+        version: link:../../packages/apps
       '@dashboard/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -108,6 +111,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@dashboard/apps':
+        specifier: workspace:*
+        version: link:../apps
       '@dashboard/boards':
         specifier: workspace:*
         version: link:../boards
@@ -121,6 +127,28 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.2.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/apps:
+    dependencies:
+      '@dashboard/monitoring':
+        specifier: workspace:*
+        version: link:../monitoring
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@26.2.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
@@ -187,6 +215,9 @@ importers:
 
   packages/monitoring:
     devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@26.2.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))

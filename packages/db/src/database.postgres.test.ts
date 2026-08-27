@@ -5,6 +5,7 @@ import { executePostgresqlMigration, migratePostgresql } from "./migrations";
 import { createPostgresqlRepositories } from "./repositories/postgresql";
 import { createPostgresqlAuthStore } from "./repositories/auth";
 import { createPostgresqlBoardStore } from "./board-runtime";
+import { createPostgresqlAppStore } from "./app-runtime";
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
@@ -161,6 +162,58 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         }),
       ).rejects.toThrow();
       expect(await auth.listGroups()).toHaveLength(groupsBeforeRollback);
+      const appStore = createPostgresqlAppStore(client.pool);
+      const app = await appStore.create({
+        name: "PG App",
+        description: "preserved",
+        url: "http://192.168.1.5/",
+        iconRef: null,
+        color: "#123456",
+        target: "new-tab",
+        tags: ["NAS"],
+        healthcheckEnabled: true,
+        healthcheckConfig: {
+          path: "/health",
+          method: "GET",
+          timeoutMs: 5000,
+          expectedStatusMin: 200,
+          expectedStatusMax: 399,
+        },
+      });
+      expect(app.tags).toEqual(["NAS"]);
+      expect(
+        await appStore.persistHealthResult(app.id, 1, {
+          status: "up",
+          latencyMs: 8,
+          httpStatus: 204,
+          errorCode: null,
+        }),
+      ).toBe(true);
+      expect(
+        await appStore.persistHealthResult(app.id, 2, {
+          status: "down",
+          latencyMs: 8,
+          httpStatus: 500,
+          errorCode: "HTTP_STATUS",
+        }),
+      ).toBe(false);
+      expect(
+        await appStore.update({ id: app.id, tags: ["Storage"], url: "http://192.168.1.6/" }),
+      ).toMatchObject({
+        healthStatus: "unknown",
+        healthConfigRevision: 2,
+        tags: ["Storage"],
+        integrationId: null,
+      });
+      await Promise.all([
+        appStore.update({ id: app.id, url: "http://192.168.1.7/" }),
+        appStore.update({ id: app.id, url: "http://192.168.1.8/" }),
+      ]);
+      expect((await appStore.findById(app.id))?.healthConfigRevision).toBe(4);
+      expect(await appStore.delete(app.id)).toBe(true);
+      expect((await client.pool.query("select count(*)::int count from app_tags")).rows[0]).toEqual(
+        { count: 0 },
+      );
     } finally {
       await client.close();
     }

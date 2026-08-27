@@ -1,6 +1,7 @@
 import "server-only";
 import { createBoardService } from "@dashboard/boards";
 import { createCaller, type BoardApiContext } from "@dashboard/api";
+import { createAppService } from "@dashboard/apps";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { getDatabase } from "./database";
@@ -15,6 +16,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   return {
     actor: { userId, subject },
     boards: createBoardService(database.boardStore),
+    apps: createAppService(database.appStore),
   };
 }
 

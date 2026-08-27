@@ -144,6 +144,9 @@ Ne pas donner `docker.manage` aux simples viewers.
 
 La matrice finale est configurable via permissions explicites.
 
+En Phase 5, `app.read` autorise uniquement liste/lecture et `app.manage` autorise CRUD et test manuel.
+`app.test` reste interdit au lecteur afin de ne pas transformer le serveur en scanner réseau.
+
 ## 10. Audit
 
 Actions à journaliser :

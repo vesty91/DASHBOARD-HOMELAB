@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 const forbiddenDependencies = new Map([
   ["packages/db/package.json", new Set(["@dashboard/web"])],
   ["packages/integrations/package.json", new Set(["@dashboard/web"])],
+  ["packages/apps/package.json", new Set(["@dashboard/web", "next", "drizzle-orm"])],
+  ["packages/monitoring/package.json", new Set(["@dashboard/web", "next"])],
   ["packages/shared/package.json", new Set(["@dashboard/db", "next"])],
 ]);
 

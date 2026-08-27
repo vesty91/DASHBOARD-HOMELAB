@@ -122,3 +122,9 @@ La migration DB d'une version précédente testée conserve les données de boar
 ## AC-025 Reverse proxy
 
 Le produit fonctionne derrière un reverse proxy HTTPS avec WebSocket/realtime si activé.
+
+## AC-026 Apps
+
+Une App validée persiste avec ses tags et son target. Un lecteur ne peut ni muter ni tester. Le test
+manuel ne suit pas les redirects, bloque loopback/metadata, autorise le LAN et ne remplace jamais
+l'état d'une configuration plus récente.

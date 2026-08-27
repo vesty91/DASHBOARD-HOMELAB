@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@dashboard/api": "workspace:*",
+    "@dashboard/apps": "workspace:*",
     "@dashboard/auth": "workspace:*",
     "@dashboard/boards": "workspace:*",
     "@dashboard/db": "workspace:*",
