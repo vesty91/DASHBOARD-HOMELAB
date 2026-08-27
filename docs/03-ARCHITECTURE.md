@@ -19,6 +19,7 @@ packages/
   permissions/
   secrets/
   monitoring/
+  apps/
   ui/
   shared/
 
@@ -129,6 +130,12 @@ reference/
 - status ;
 - history ;
 - metrics internes.
+
+### packages/apps
+
+- contrats et validation App ;
+- service CRUD et orchestration du test manuel ;
+- dépend de repositories injectés et des primitives réseau de monitoring.
 
 ### packages/ui
 

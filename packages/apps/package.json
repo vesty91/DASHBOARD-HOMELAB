@@ -1,5 +1,5 @@
 {
-  "name": "@dashboard/monitoring",
+  "name": "@dashboard/apps",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,11 @@
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@dashboard/monitoring": "workspace:*",
+    "@dashboard/permissions": "workspace:*",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "26.2.0",

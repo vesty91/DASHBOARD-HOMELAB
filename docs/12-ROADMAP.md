@@ -42,7 +42,7 @@ verts.
 
 ## Phase 2 — DB
 
-Statut : implémentée le 25 août 2026 ; validation finale des gates requise avant Phase 3.
+Statut : COMPLETE.
 
 Livrables :
 
@@ -55,7 +55,7 @@ Livrables :
 
 ## Phase 3 — Auth/RBAC
 
-Statut : implémentée sur la branche `phase-3-auth-rbac`, en attente de revue et de fusion.
+Statut : COMPLETE.
 
 Livrables :
 
@@ -67,6 +67,8 @@ Livrables :
 - pages admin minimales.
 
 ## Phase 4 — Board Engine
+
+Statut : COMPLETE.
 
 Livrables :
 
@@ -82,6 +84,8 @@ Milestone : premier board réellement utilisable.
 
 ## Phase 5 — Apps
 
+Statut : implémentée sur la branche `phase-5-apps`, en attente de review.
+
 Livrables :
 
 - CRUD app ;
@@ -90,6 +94,8 @@ Livrables :
 - health status.
 
 ## Phase 6 — Widget Engine
+
+Statut : non commencée.
 
 Livrables :
 

@@ -172,6 +172,10 @@ createdAt
 updatedAt
 ```
 
+La Phase 5 ajoute `target`, le dernier état health persistant, `healthConfigRevision` et `app_tags`.
+Les tags sont uniques par `(appId, canonicalValue)` et supprimés en cascade. Les migrations `0003`
+SQLite/PostgreSQL conservent les Apps Phase 4 et initialisent leur état à `unknown`.
+
 ## integrations
 
 ```text

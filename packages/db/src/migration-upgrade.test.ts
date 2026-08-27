@@ -6,6 +6,7 @@ import { executeSqliteMigration } from "./migrations";
 const phase2Migration = new URL("../drizzle/sqlite/0000_last_spyke.sql", import.meta.url);
 const phase3Migration = new URL("../drizzle/sqlite/0001_sharp_doomsday.sql", import.meta.url);
 const phase4Migration = new URL("../drizzle/sqlite/0002_wooden_callisto.sql", import.meta.url);
+const phase5Migration = new URL("../drizzle/sqlite/0003_loud_titanium_man.sql", import.meta.url);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -71,6 +72,50 @@ describe("Phase 2 to Phase 3 migration", () => {
           .prepare("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='roles'")
           .get()?.count,
       ).toBe(0);
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 4 to Phase 5 migration", () => {
+  it("preserves existing App fields and applies safe health defaults", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      database
+        .prepare(
+          "INSERT INTO integrations(id,type,name,base_url,config_json,status,created_at,updated_at) VALUES('11111111-1111-4111-8111-111111111111','test','Test','https://example.com','{}','unknown',1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO apps(id,name,description,url,icon_ref,color,healthcheck_enabled,healthcheck_config_json,integration_id,created_at,updated_at) VALUES('22222222-2222-4222-8222-222222222222','Existing','Kept','http://192.168.1.5:3000','https://example.com/icon.png','#123456',1,'{\"path\":\"/health\"}','11111111-1111-4111-8111-111111111111',1,1)",
+        )
+        .run();
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      expect(
+        database
+          .prepare(
+            "SELECT name,description,url,icon_ref,color,healthcheck_enabled,healthcheck_config_json,integration_id,target,health_status,health_config_revision FROM apps",
+          )
+          .get(),
+      ).toMatchObject({
+        name: "Existing",
+        description: "Kept",
+        url: "http://192.168.1.5:3000",
+        icon_ref: "https://example.com/icon.png",
+        color: "#123456",
+        healthcheck_enabled: 1,
+        healthcheck_config_json: '{"path":"/health"}',
+        integration_id: "11111111-1111-4111-8111-111111111111",
+        target: "new-tab",
+        health_status: "unknown",
+        health_config_revision: 1,
+      });
     } finally {
       database.close();
     }

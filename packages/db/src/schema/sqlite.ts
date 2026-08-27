@@ -179,13 +179,47 @@ export const apps = sqliteTable(
       .notNull()
       .default(false),
     healthcheckConfigJson: text("healthcheck_config_json"),
+    target: text("target", { enum: ["same-tab", "new-tab"] })
+      .notNull()
+      .default("new-tab"),
+    healthStatus: text("health_status", { enum: ["unknown", "up", "down", "timeout", "error"] })
+      .notNull()
+      .default("unknown"),
+    lastCheckedAt: integer("last_checked_at", { mode: "timestamp_ms" }),
+    lastLatencyMs: integer("last_latency_ms"),
+    lastHttpStatus: integer("last_http_status"),
+    lastHealthErrorCode: text("last_health_error_code"),
+    healthConfigRevision: integer("health_config_revision").notNull().default(1),
     integrationId: text("integration_id").references(() => integrations.id, {
       onDelete: "set null",
     }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
-  (t) => [index("apps_name_idx").on(t.name), index("apps_integration_idx").on(t.integrationId)],
+  (t) => [
+    index("apps_name_idx").on(t.name),
+    index("apps_integration_idx").on(t.integrationId),
+    check("apps_target_valid", sql`${t.target} IN ('same-tab','new-tab')`),
+    check(
+      "apps_health_status_valid",
+      sql`${t.healthStatus} IN ('unknown','up','down','timeout','error')`,
+    ),
+    check("apps_health_revision_positive", sql`${t.healthConfigRevision} > 0`),
+  ],
+);
+export const appTags = sqliteTable(
+  "app_tags",
+  {
+    appId: text("app_id")
+      .notNull()
+      .references(() => apps.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    canonicalValue: text("canonical_value").notNull(),
+  },
+  (t) => [
+    uniqueIndex("app_tags_app_canonical_uq").on(t.appId, t.canonicalValue),
+    index("app_tags_canonical_idx").on(t.canonicalValue),
+  ],
 );
 export const integrationSecrets = sqliteTable(
   "integration_secrets",

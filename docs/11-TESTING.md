@@ -183,3 +183,9 @@ rollback de la création atomique groupe/rôle/membre dans les deux dialectes. L
 une base SQLite temporaire dédiée et couvre setup, erreur
 générique, login, admin, logout et route protégée. Les autres packages métier vides conservent
 `--passWithNoTests` et n'ont toujours aucune couverture métier.
+
+## 12. Couverture Phase 5
+
+Les packages Apps et Monitoring ont de vrais tests. Ils couvrent validation, RBAC, politique IP,
+DNS pinning, statuses HTTP, redirects et timeout. Les repositories couvrent transactions, tags,
+reset de health et rejet d'un résultat stale ; l'upgrade Phase 4→5 conserve une App existante.

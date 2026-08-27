@@ -180,12 +180,42 @@ export const apps = pgTable(
     color: text("color"),
     healthcheckEnabled: boolean("healthcheck_enabled").notNull().default(false),
     healthcheckConfigJson: jsonb("healthcheck_config_json"),
+    target: text("target").notNull().default("new-tab"),
+    healthStatus: text("health_status").notNull().default("unknown"),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    lastLatencyMs: integer("last_latency_ms"),
+    lastHttpStatus: integer("last_http_status"),
+    lastHealthErrorCode: text("last_health_error_code"),
+    healthConfigRevision: integer("health_config_revision").notNull().default(1),
     integrationId: uuid("integration_id").references(() => integrations.id, {
       onDelete: "set null",
     }),
     ...timestamps,
   },
-  (t) => [index("apps_name_idx").on(t.name), index("apps_integration_idx").on(t.integrationId)],
+  (t) => [
+    index("apps_name_idx").on(t.name),
+    index("apps_integration_idx").on(t.integrationId),
+    check("apps_target_valid", sql`${t.target} IN ('same-tab','new-tab')`),
+    check(
+      "apps_health_status_valid",
+      sql`${t.healthStatus} IN ('unknown','up','down','timeout','error')`,
+    ),
+    check("apps_health_revision_positive", sql`${t.healthConfigRevision} > 0`),
+  ],
+);
+export const appTags = pgTable(
+  "app_tags",
+  {
+    appId: uuid("app_id")
+      .notNull()
+      .references(() => apps.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    canonicalValue: text("canonical_value").notNull(),
+  },
+  (t) => [
+    uniqueIndex("app_tags_app_canonical_uq").on(t.appId, t.canonicalValue),
+    index("app_tags_canonical_idx").on(t.canonicalValue),
+  ],
 );
 export const integrationSecrets = pgTable(
   "integration_secrets",

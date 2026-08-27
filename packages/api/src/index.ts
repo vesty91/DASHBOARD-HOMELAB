@@ -9,14 +9,23 @@ import {
 } from "@dashboard/boards";
 import { z } from "zod";
 import { hasPermission } from "@dashboard/permissions";
+import {
+  AppError,
+  appCreateSchema,
+  appUpdateSchema,
+  type AppActor,
+  type AppService,
+} from "@dashboard/apps";
 
-export interface BoardApiContext {
-  actor: BoardActor;
+export interface ApiContext {
+  actor: BoardActor & AppActor;
   boards: BoardService;
+  apps: AppService;
 }
-const t = initTRPC.context<BoardApiContext>().create();
+export type BoardApiContext = ApiContext;
+const t = initTRPC.context<ApiContext>().create();
 const mapError = (error: unknown): never => {
-  if (error instanceof BoardError) {
+  if (error instanceof BoardError || error instanceof AppError) {
     const code =
       error.code === "UNAUTHORIZED"
         ? "UNAUTHORIZED"
@@ -73,6 +82,28 @@ export const boardRouter = t.router({
       ),
   }),
 });
-export const appRouter = t.router({ board: boardRouter });
-export type AppRouter = typeof appRouter;
-export const createCaller = (context: BoardApiContext) => appRouter.createCaller(context);
+export const appsRouter = t.router({
+  canManage: t.procedure.query(({ ctx }) =>
+    ctx.actor.subject ? hasPermission(ctx.actor.subject, "app.manage") : false,
+  ),
+  list: t.procedure.query(({ ctx }) => procedure(() => ctx.apps.list(ctx.actor))),
+  get: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .query(({ ctx, input }) => procedure(() => ctx.apps.get(input.id, ctx.actor))),
+  create: t.procedure
+    .input(appCreateSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.apps.create(input, ctx.actor))),
+  update: t.procedure
+    .input(appUpdateSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.apps.update(input, ctx.actor))),
+  delete: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.apps.delete(input.id, ctx.actor))),
+  test: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.apps.test(input.id, ctx.actor))),
+});
+export const dashboardRouter = t.router({ board: boardRouter, app: appsRouter });
+export const appRouter = dashboardRouter;
+export type AppRouter = typeof dashboardRouter;
+export const createCaller = (context: ApiContext) => dashboardRouter.createCaller(context);
