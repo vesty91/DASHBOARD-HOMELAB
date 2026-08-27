@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bookmarksConfigSchema } from "./bookmarks";
+import { createEmptyBookmarkLink } from "./runtime/bookmarks-form";
 import { parseHttpUrl } from "./urls";
 
 describe("bookmarks widget", () => {
@@ -36,5 +37,17 @@ describe("bookmarks widget", () => {
       expect(parseHttpUrl(url)).toBeNull();
       expect(bookmarksConfigSchema.safeParse({ links: [{ ...link, url }] }).success).toBe(false);
     }
+  });
+
+  it("starts a new bookmark with a blank URL that cannot be persisted", () => {
+    const draft = createEmptyBookmarkLink();
+    expect(draft.url).toBe("");
+    expect(draft.url).not.toContain("example.com");
+    expect(bookmarksConfigSchema.safeParse({ links: [draft] }).success).toBe(false);
+    expect(
+      bookmarksConfigSchema.safeParse({
+        links: [{ ...draft, title: "Docs", url: "https://example.com/docs" }],
+      }).success,
+    ).toBe(true);
   });
 });

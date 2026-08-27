@@ -1,5 +1,11 @@
-export type { AppTileConfig, AppTileData, AppTileView } from "./app-tile";
-export { appTileConfigSchema, appTileContract, appTileDefaultConfig } from "./app-tile";
+export type { AppTileConfig, AppTileData, AppTileDraftConfig, AppTileView } from "./app-tile";
+export {
+  APP_TILE_UNSET_APP_ID,
+  appTileConfigSchema,
+  appTileContract,
+  appTileDefaultConfig,
+  appTileDraftConfig,
+} from "./app-tile";
 export type { BookmarkLink, BookmarksConfig } from "./bookmarks";
 export {
   bookmarkLinkSchema,

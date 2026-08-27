@@ -185,6 +185,8 @@ La policy resource-level applique la hiérarchie `board.manage > board.edit > bo
 
 Un board devient public seulement si tous ses items sont d'un type connu, d'une version supportée, d'une config Zod valide et `publicSafe`. Clock est publiable. Bookmarks et App Tile bloquent la publication. En lecture anonyme d'un board public, les items unsafe, inconnus ou invalides sont omis avec leurs placements (ADR 0006).
 
-`board.item.create`, `board.item.update` et `board.item.delete` exigent `board.edit`, consomment `expectedRevision` et incrémentent `board.revision` une seule fois dans une transaction. Un placement first-fit déterministe est créé pour chaque layout existant. L'éditeur sérialise autosave layout et mutations d'items sur une seule file.
+`board.item.create`, `board.item.update`, `board.item.delete` et `board.update` (métadonnées) exigent les permissions board correspondantes, consomment `expectedRevision` et incrémentent `board.revision` une seule fois dans une transaction. Un placement first-fit déterministe est créé pour chaque layout existant.
+
+L'éditeur possède un seul propriétaire de `board.revision` : `BoardEditWorkspace` séquence layout autosave, métadonnées, `item.create`, `item.update` et `item.delete` sur la même file. Un `CONFLICT` de révision gèle le coordinateur et exige un reload. Une `VALIDATION_ERROR`, `FORBIDDEN` ou erreur métier ordinaire n'est pas un conflit : le formulaire reste utilisable et la révision n'est pas incrémentée.
 
 La duplication et l'export restent reportés : l'import/backup appartient à la Phase 14.

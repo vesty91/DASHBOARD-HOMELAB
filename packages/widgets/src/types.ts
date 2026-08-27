@@ -27,18 +27,18 @@ export type WidgetItemStatus =
 export type WidgetConfigMigration = (config: unknown) => unknown;
 
 export interface WidgetContract<TConfig = unknown> {
-  id: string;
-  version: number;
-  name: string;
-  description: string;
-  category: string;
-  defaultSize: WidgetSize;
-  minSize: WidgetSize;
-  maxSize: WidgetSize;
-  defaultConfig: TConfig;
-  configSchema: z.ZodType<TConfig>;
-  publicSafe: boolean;
-  migrations?: Readonly<Record<number, WidgetConfigMigration>>;
+  readonly id: string;
+  readonly version: number;
+  readonly name: string;
+  readonly description: string;
+  readonly category: string;
+  readonly defaultSize: Readonly<WidgetSize>;
+  readonly minSize: Readonly<WidgetSize>;
+  readonly maxSize: Readonly<WidgetSize>;
+  readonly defaultConfig: TConfig;
+  readonly configSchema: z.ZodType<TConfig>;
+  readonly publicSafe: boolean;
+  readonly migrations?: Readonly<Record<number, WidgetConfigMigration>>;
 }
 
 export interface WidgetCatalogEntry {

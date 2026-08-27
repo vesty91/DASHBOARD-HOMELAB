@@ -21,6 +21,11 @@ async function loginAdmin(page: Page) {
   await expect(page).toHaveURL(/\/(admin|boards)/);
 }
 
+async function releaseGridDrag(page: Page) {
+  await page.mouse.up();
+  await expect(page.locator(".grid-stack-placeholder")).toHaveCount(0);
+}
+
 function boardRevision(slug: string) {
   const database = new DatabaseSync(databasePath);
   try {
@@ -57,7 +62,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 140, box.y + box.height / 2, { steps: 8 });
-  await page.mouse.up();
+  await releaseGridDrag(page);
   await page.getByRole("button", { name: "Mobile" }).click();
   await expect.poll(() => boardRevision("phase-6-widgets")).toBeGreaterThan(2);
   await page.getByRole("button", { name: "Desktop" }).click();
@@ -140,7 +145,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.mouse.move(clockBox.x + clockBox.width / 2 + 120, clockBox.y + clockBox.height / 2, {
     steps: 6,
   });
-  await page.mouse.up();
+  await releaseGridDrag(page);
   await page.getByRole("button", { name: "Configurer" }).click();
   await page.getByLabel("Afficher les secondes").check();
   await page.getByRole("button", { name: "Enregistrer la configuration" }).click();
@@ -169,9 +174,90 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
   await expect(
-    page.getByText(
-      "Public boards may only contain known public-safe widgets with valid configuration",
-    ),
+    page.getByRole("alert").filter({
+      hasText: "Public boards may only contain known public-safe widgets with valid configuration",
+    }),
   ).toBeVisible();
   expect(desktopX).toBeGreaterThanOrEqual(0);
+});
+
+test("shared revision coordinates layout, metadata and widget config", async ({ page }) => {
+  await loginAdmin(page);
+  await page.goto("/boards");
+  await page.getByLabel("Nom").fill("Phase 6 Coordination");
+  await page.getByLabel("Slug").fill("phase-6-coordination");
+  await page.getByRole("button", { name: "Créer" }).click();
+  await expect(page).toHaveURL(/\/boards\/phase-6-coordination\/edit/);
+
+  await page.getByRole("button", { name: "Ajouter un widget" }).click();
+  await page.getByRole("button", { name: "Ajouter Horloge" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+
+  const clockItem = page.locator(".grid-stack-item").first();
+  const origin = await clockItem.getAttribute("gs-x");
+  const box = await clockItem.boundingBox();
+  if (!box) throw new Error("Clock was not rendered");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 140, box.y + box.height / 2, { steps: 8 });
+  await releaseGridDrag(page);
+  await page.getByLabel("Nom").fill("Coordination Renamed");
+  await page.getByLabel("Description").fill("Layout then metadata");
+  await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect(page.getByText("Le board a été modifié ailleurs.")).toHaveCount(0);
+  const movedX = await page.locator(".grid-stack-item").first().getAttribute("gs-x");
+  await page.reload();
+  await expect(page.getByLabel("Nom")).toHaveValue("Coordination Renamed");
+  await expect(page.getByLabel("Description")).toHaveValue("Layout then metadata");
+  await expect(page.locator(".grid-stack-item").first()).toHaveAttribute("gs-x", movedX ?? "");
+  expect(movedX).not.toBe(origin);
+
+  await page.getByLabel("Description").fill("Metadata then config");
+  await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await page.getByRole("button", { name: "Configurer" }).click();
+  await page.getByLabel("Fuseau horaire").selectOption("America/New_York");
+  await page.getByRole("button", { name: "Enregistrer la configuration" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect(page.getByText("Le board a été modifié ailleurs.")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("Description")).toHaveValue("Metadata then config");
+  await expect(page.locator("[data-clock-timezone='America/New_York']")).toBeVisible();
+});
+
+test("bookmark validation does not freeze the editor", async ({ page }) => {
+  await loginAdmin(page);
+  await page.goto("/boards");
+  await page.getByLabel("Nom").fill("Phase 6 Bookmarks Validation");
+  await page.getByLabel("Slug").fill("phase-6-bookmark-validation");
+  await page.getByRole("button", { name: "Créer" }).click();
+  await expect(page).toHaveURL(/\/boards\/phase-6-bookmark-validation\/edit/);
+
+  await page.getByRole("button", { name: "Ajouter un widget" }).click();
+  await page.getByRole("button", { name: "Ajouter Signets" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await page.getByRole("button", { name: "Configurer" }).click();
+  await page.getByRole("button", { name: "Ajouter un lien" }).click();
+  await expect(page.getByRole("group", { name: "Lien 1" }).getByLabel("URL")).toHaveValue("");
+  await page.getByRole("group", { name: "Lien 1" }).getByLabel("Titre").fill("Docs");
+  await page.getByRole("group", { name: "Lien 1" }).getByLabel("URL").fill("javascript:alert(1)");
+  await page.getByRole("button", { name: "Enregistrer la configuration" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Unknown widget or invalid configuration" }),
+  ).toBeVisible();
+  await expect(page.getByText("Le board a été modifié ailleurs.")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recharger le board" })).toHaveCount(0);
+  await page
+    .getByRole("group", { name: "Lien 1" })
+    .getByLabel("URL")
+    .fill("https://example.com/docs");
+  await page.getByRole("button", { name: "Enregistrer la configuration" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect(page.getByText("Le board a été modifié ailleurs.")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("link", { name: "Docs" })).toHaveAttribute(
+    "href",
+    "https://example.com/docs",
+  );
 });

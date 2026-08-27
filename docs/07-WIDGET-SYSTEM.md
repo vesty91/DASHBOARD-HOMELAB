@@ -151,10 +151,10 @@ Commencer par des widgets compilés dans le monorepo.
 
 # État Phase 6
 
-Le package `@dashboard/widgets` expose un `WidgetRegistry` immuable après initialisation, un contrat `WidgetContract` (sans React) et une policy injectable. Les IDs built-in persistants sont `clock`, `bookmarks` et `app-tile`, tous en version 1.
+Le package `@dashboard/widgets` expose un `WidgetRegistry` immuable après initialisation : `register` est refusé, et les metadata (`publicSafe`, tailles, `defaultConfig` JSON) sont gelées. `configSchema` et les fonctions de migration ne sont pas deep-freeze. Les IDs built-in persistants sont `clock`, `bookmarks` et `app-tile`, tous en version 1.
 
-Le flux de config est : parse JSON → lookup → migrations in-memory → Zod → rendu. Une lecture ne mute pas la DB. Une version future produit `incompatible-version`. Un type inconnu n'est jamais `publicSafe`.
+Le flux de config est : parse JSON → lookup → migrations in-memory → Zod → rendu. Une lecture ne mute pas la DB. Une version future produit `incompatible-version`. Une étape de migration qui lève une exception produit `invalid-config` (version théoriquement migrable, donnée/migration inutilisable) sans faire tomber le board. Un type inconnu n'est jamais `publicSafe`.
 
-Clock est `publicSafe` et se met à jour localement via `Intl.DateTimeFormat`. Bookmarks et App Tile ne le sont pas. Bookmarks refuse `javascript:`, `data:`, `file:`, `blob:`, `ftp:` et les URLs avec credentials. App Tile lit le catalogue Apps Phase 5 via `app.read` et n'appelle jamais `app.test`.
+Clock est `publicSafe` et se met à jour localement via `Intl.DateTimeFormat`. Bookmarks et App Tile ne le sont pas. Bookmarks refuse `javascript:`, `data:`, `file:`, `blob:`, `ftp:` et les URLs avec credentials. Un nouveau lien commence avec une URL vide ; Zod refuse de la persister. App Tile lit le catalogue Apps Phase 5 via `app.read` et n'appelle jamais `app.test`. L'UI utilise un brouillon `appId=""` ; le `defaultConfig` du registry contient un UUID sentinelle non persistable ; l'API refuse ce sentinelle et exige une App réelle accessible.
 
-Le runtime standardise les états `ready`, `loading`, `empty`, `error`, `stale`, `disconnected`, `permission-denied` et `configuration-missing`. Une exception React est isolée par widget. `widget.data` générique n'existe pas.
+Le runtime standardise les états `ready`, `loading`, `empty`, `error`, `stale`, `disconnected`, `permission-denied` et `configuration-missing`. Une exception React est isolée par widget et le boundary se réinitialise quand `item.id` / version / config changent. Une erreur locale de résolution App Tile n'affecte pas Clock ni les autres widgets. `widget.data` générique n'existe pas.

@@ -1,27 +1,36 @@
 "use client";
-import { useState } from "react";
-import { updateBoardAction } from "./actions";
+import type { BoardMutationResult } from "./mutation-result";
 
 export function BoardMetaForm({
-  boardId,
-  revision,
   name,
   description,
   visibility,
+  conflict,
+  onSave,
 }: {
-  boardId: string;
-  revision: number;
   name: string;
   description: string;
   visibility: "private" | "authenticated" | "public";
+  conflict: boolean;
+  onSave: (input: {
+    name: string;
+    description: string;
+    visibility: "private" | "authenticated" | "public";
+  }) => Promise<BoardMutationResult<{ revision: number }>>;
 }) {
-  const [error, setError] = useState<string | null>(null);
   return (
     <form
-      action={async (formData) => {
-        setError(null);
-        const result = await updateBoardAction(boardId, revision, formData);
-        if (result.error) setError(result.error);
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (conflict) return;
+        const form = event.currentTarget;
+        const data = new FormData(form);
+        void onSave({
+          name: String(data.get("name") ?? ""),
+          description: String(data.get("description") ?? ""),
+          visibility: String(data.get("visibility") ?? "private") as
+            "private" | "authenticated" | "public",
+        });
       }}
     >
       <label>
@@ -38,8 +47,9 @@ export function BoardMetaForm({
           <option value="public">Public</option>
         </select>
       </label>
-      {error ? <p role="alert">{error}</p> : null}
-      <button type="submit">Enregistrer les métadonnées</button>
+      <button type="submit" disabled={conflict}>
+        Enregistrer les métadonnées
+      </button>
     </form>
   );
 }

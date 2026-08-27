@@ -1,13 +1,21 @@
 import type { WidgetContract, WidgetItemStatus, WidgetResolveResult } from "./types";
 
-function migrate(definition: WidgetContract, version: number, config: unknown): unknown | null {
+function migrate(
+  definition: WidgetContract,
+  version: number,
+  config: unknown,
+): { status: "ok"; config: unknown } | { status: "missing-step" } | { status: "failed" } {
   let current = config;
   for (let from = version; from < definition.version; from += 1) {
     const step = definition.migrations?.[from];
-    if (!step) return null;
-    current = step(current);
+    if (!step) return { status: "missing-step" };
+    try {
+      current = step(current);
+    } catch {
+      return { status: "failed" };
+    }
   }
-  return current;
+  return { status: "ok", config: current };
 }
 
 export function resolveWidgetConfig(
@@ -20,9 +28,13 @@ export function resolveWidgetConfig(
   if (parseFailed) return { status: "configuration-missing" };
   if (!Number.isInteger(version) || version < 1) return { status: "invalid-config" };
   if (version > definition.version) return { status: "incompatible-version" };
-  const migrated = version === definition.version ? config : migrate(definition, version, config);
-  if (migrated === null) return { status: "incompatible-version" };
-  const parsed = definition.configSchema.safeParse(migrated);
+  const migrated =
+    version === definition.version
+      ? { status: "ok" as const, config }
+      : migrate(definition, version, config);
+  if (migrated.status === "missing-step") return { status: "incompatible-version" };
+  if (migrated.status === "failed") return { status: "invalid-config" };
+  const parsed = definition.configSchema.safeParse(migrated.config);
   if (!parsed.success) return { status: "invalid-config" };
   return {
     status: "ready",

@@ -1,11 +1,19 @@
 "use client";
-import type { BookmarkLink, BookmarksConfig } from "../bookmarks";
 
-function emptyLink(): BookmarkLink {
+export type BookmarkLinkDraft = {
+  id: string;
+  title: string;
+  url: string;
+  target: "same-tab" | "new-tab";
+};
+
+export type BookmarksDraftConfig = { links: BookmarkLinkDraft[] };
+
+export function createEmptyBookmarkLink(): BookmarkLinkDraft {
   return {
     id: crypto.randomUUID(),
     title: "",
-    url: "https://example.com",
+    url: "",
     target: "new-tab",
   };
 }
@@ -14,10 +22,10 @@ export function BookmarksForm({
   config,
   onChange,
 }: {
-  config: BookmarksConfig;
-  onChange: (config: BookmarksConfig) => void;
+  config: BookmarksDraftConfig;
+  onChange: (config: BookmarksDraftConfig) => void;
 }) {
-  const update = (index: number, patch: Partial<BookmarkLink>) => {
+  const update = (index: number, patch: Partial<BookmarkLinkDraft>) => {
     onChange({
       links: config.links.map((link, current) =>
         current === index ? { ...link, ...patch } : link,
@@ -64,7 +72,7 @@ export function BookmarksForm({
             <select
               value={link.target}
               onChange={(event) =>
-                update(index, { target: event.target.value as BookmarkLink["target"] })
+                update(index, { target: event.target.value as BookmarkLinkDraft["target"] })
               }
             >
               <option value="same-tab">Même onglet</option>
@@ -94,7 +102,7 @@ export function BookmarksForm({
       <button
         type="button"
         disabled={config.links.length >= 50}
-        onClick={() => onChange({ links: [...config.links, emptyLink()] })}
+        onClick={() => onChange({ links: [...config.links, createEmptyBookmarkLink()] })}
       >
         Ajouter un lien
       </button>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getBoardCaller } from "../../../../lib/server/board-api";
-import { BoardEditor } from "../../board-editor";
-import { BoardMetaForm } from "../../board-meta-form";
+import { BoardEditWorkspace } from "../../board-edit-workspace";
 import { deleteBoardAction } from "../../actions";
 import { DeleteBoardControl } from "../../delete-board-control";
 import { resolveAppTileViews } from "../../resolve-app-tiles";
@@ -35,14 +34,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     <main>
       <h1>Modifier {snapshot.board.name}</h1>
       <Link href={`/boards/${slug}`}>Quitter le mode édition</Link>
-      <BoardMetaForm
-        boardId={snapshot.board.id}
-        revision={snapshot.board.revision}
-        name={snapshot.board.name}
-        description={snapshot.board.description ?? ""}
-        visibility={snapshot.board.visibility}
-      />
-      <BoardEditor
+      <BoardEditWorkspace
         snapshot={snapshot}
         catalog={catalog}
         appViews={appViews}

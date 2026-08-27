@@ -193,7 +193,10 @@ reset de health et rejet d'un résultat stale ; l'upgrade Phase 4→5 conserve u
 ## 13. Couverture Phase 6
 
 `@dashboard/widgets` n'utilise plus `--passWithNoTests`. Les tests couvrent registry, duplicate id,
-config/version/migrations, publicSafe, schémas Clock/Bookmarks/App Tile et l'isolation d'erreur
-React. Boards/API/DB couvrent first-fit, CRUD item, CAS de révision, projection publique et
-concurrence PostgreSQL. L'E2E étend le parcours admin avec ajout/config/reload des trois widgets,
-publicSafe et le coordinateur autosave/item.
+immutabilité des metadata, config/version/migrations (y compris migration qui throw), publicSafe,
+schémas Clock/Bookmarks/App Tile, URL Bookmarks vide, isolation d'erreur React et recovery du
+boundary. Boards/API/DB couvrent first-fit, CRUD item, CAS de révision, projection publique et
+concurrence PostgreSQL. L'éditeur web teste le coordinateur : CONFLICT vs VALIDATION_ERROR,
+mutation valide après erreur ordinaire, et séquence layout/métadonnées/item sur une seule
+révision. L'E2E étend le parcours admin avec ajout/config/reload des trois widgets, publicSafe,
+coordinateur autosave/item/métadonnées, et validation Bookmarks sans faux conflit.

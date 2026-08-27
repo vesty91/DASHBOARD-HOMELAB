@@ -76,4 +76,29 @@ describe("widget config resolution", () => {
   it("treats unknown widgets as an explicit result", () => {
     expect(resolveWidgetConfig(undefined, 1, {})).toEqual({ status: "unknown" });
   });
+
+  it("isolates a throwing migration as invalid-config without leaking the exception", () => {
+    const exploding: WidgetContract<{ label: string }> = {
+      id: "exploding",
+      version: 2,
+      name: "Exploding",
+      description: "Throws during migration",
+      category: "test",
+      defaultSize: { w: 2, h: 2 },
+      minSize: { w: 1, h: 1 },
+      maxSize: { w: 4, h: 4 },
+      defaultConfig: { label: "ok" },
+      configSchema: z.object({ label: z.string() }),
+      publicSafe: true,
+      migrations: {
+        1: () => {
+          throw new Error("boom");
+        },
+      },
+    };
+    expect(resolveWidgetConfig(exploding, 1, { label: "old" })).toEqual({
+      status: "invalid-config",
+    });
+    expect(resolveWidgetConfig(migrating, 2, { label: "now", extra: "kept" }).status).toBe("ready");
+  });
 });

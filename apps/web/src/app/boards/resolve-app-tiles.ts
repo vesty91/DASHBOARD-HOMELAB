@@ -1,9 +1,26 @@
 import { TRPCError } from "@trpc/server";
 import type { AppTileView } from "@dashboard/widgets";
 import type { BoardSnapshot } from "@dashboard/boards";
-import { getBoardCaller } from "../../lib/server/board-api";
 
-type BoardCaller = Awaited<ReturnType<typeof getBoardCaller>>;
+export interface AppTileAppRecord {
+  id: string;
+  name: string;
+  url: string;
+  iconRef: string | null;
+  color: string | null;
+  target: "same-tab" | "new-tab";
+  healthcheckEnabled: boolean;
+  healthStatus: "unknown" | "up" | "down" | "timeout" | "error";
+  lastCheckedAt: Date | null;
+  lastLatencyMs: number | null;
+  lastHttpStatus: number | null;
+}
+
+export interface AppTileBoardCaller {
+  app: {
+    get: (input: { id: string }) => Promise<AppTileAppRecord>;
+  };
+}
 
 function asAppTileConfig(config: unknown): { appId: string } | null {
   if (!config || typeof config !== "object" || !("appId" in config)) return null;
@@ -13,7 +30,7 @@ function asAppTileConfig(config: unknown): { appId: string } | null {
 
 export async function resolveAppTileViews(
   snapshot: BoardSnapshot,
-  caller: BoardCaller,
+  caller: AppTileBoardCaller,
 ): Promise<Record<string, AppTileView>> {
   const views: Record<string, AppTileView> = {};
   for (const item of snapshot.items) {
@@ -49,7 +66,7 @@ export async function resolveAppTileViews(
         (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
       )
         views[item.id] = { status: "permission-denied" };
-      else throw error;
+      else views[item.id] = { status: "error" };
     }
   }
   return views;

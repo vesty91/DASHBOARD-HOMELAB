@@ -30,6 +30,7 @@ export function AppTileWidget({
   if (!view || view.status === "loading") return <p role="status">Chargement…</p>;
   if (view.status === "permission-denied") return <p role="status">Permission insuffisante</p>;
   if (view.status === "empty") return <p role="status">App introuvable</p>;
+  if (view.status === "error") return <p role="status">Ce widget a rencontré une erreur</p>;
   const app = view.app;
   const link =
     app.target === "new-tab" ? (

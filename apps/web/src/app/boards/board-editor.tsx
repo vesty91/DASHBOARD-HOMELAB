@@ -1,10 +1,17 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
-import { BOARD_AUTOSAVE_DEBOUNCE_MS } from "@dashboard/boards";
 import type { AppTileView, WidgetCatalogEntry } from "@dashboard/widgets";
 import {
-  appTileDefaultConfig,
+  APP_TILE_UNSET_APP_ID,
+  appTileDraftConfig,
   bookmarksDefaultConfig,
   clockDefaultConfig,
 } from "@dashboard/widgets";
@@ -15,10 +22,9 @@ import {
   createBoardItemAction,
   deleteBoardItemAction,
   listAppsForWidgetAction,
-  saveLayoutAction,
   updateBoardItemAction,
 } from "./actions";
-import { createBoardMutationCoordinator } from "./mutation-coordinator";
+import type { createBoardMutationCoordinator } from "./mutation-coordinator";
 
 function defaultConfig(widgetType: string): unknown {
   switch (widgetType) {
@@ -27,28 +33,39 @@ function defaultConfig(widgetType: string): unknown {
     case "bookmarks":
       return bookmarksDefaultConfig;
     case "app-tile":
-      return appTileDefaultConfig;
+      return appTileDraftConfig;
     default:
       return {};
   }
 }
+
+type BoardCoordinator = ReturnType<typeof createBoardMutationCoordinator>;
 
 export function BoardEditor({
   snapshot,
   catalog,
   appViews,
   canReadApps,
+  conflict,
+  conflictRef,
+  coordinator,
+  setCurrent,
+  setStatus,
+  setMutationError,
 }: {
   snapshot: BoardSnapshot;
   catalog: readonly WidgetCatalogEntry[];
   appViews: Record<string, AppTileView>;
   canReadApps: boolean;
+  conflict: boolean;
+  conflictRef: MutableRefObject<boolean>;
+  coordinator: BoardCoordinator;
+  setCurrent: Dispatch<SetStateAction<BoardSnapshot>>;
+  setStatus: Dispatch<SetStateAction<string>>;
+  setMutationError: Dispatch<SetStateAction<string | null>>;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [current, setCurrent] = useState(snapshot);
   const [breakpoint, setBreakpoint] = useState("desktop");
-  const [status, setStatus] = useState("Sauvegardé");
-  const [conflict, setConflict] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -57,39 +74,17 @@ export function BoardEditor({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
-  const conflictRef = useRef(false);
-  const coordinator = useMemo(
-    () =>
-      createBoardMutationCoordinator({
-        initialRevision: snapshot.board.revision,
-        debounceMs: BOARD_AUTOSAVE_DEBOUNCE_MS,
-        saveLayout: async (input) => {
-          setStatus("Sauvegarde…");
-          const revision = await saveLayoutAction({
-            boardId: snapshot.board.id,
-            ...input,
-          });
-          setStatus("Sauvegardé");
-          return revision;
-        },
-        onConflict: () => {
-          conflictRef.current = true;
-          setConflict(true);
-          setStatus("Le board a été modifié ailleurs.");
-        },
-      }),
-    [snapshot.board.id],
-  );
+  const current = snapshot;
   const active = current.layouts.find((layout) => layout.breakpoint === breakpoint)!;
   useEffect(() => {
-    setCurrent(snapshot);
-  }, [snapshot]);
-  useEffect(() => {
     if (!root.current) return;
+    const layoutId = active.id;
+    const columns = active.columns;
+    const rowHeight = active.rowHeight;
     const grid = GridStack.init(
       {
-        column: active.columns,
-        cellHeight: active.rowHeight,
+        column: columns,
+        cellHeight: rowHeight,
         margin: 8,
         float: true,
       },
@@ -99,7 +94,7 @@ export function BoardEditor({
       if (conflictRef.current) return;
       setStatus("Modifications en attente");
       coordinator.scheduleLayout({
-        layoutId: active.id,
+        layoutId,
         items: nodes
           .filter((node) => node.el?.dataset.itemId)
           .map((node) => ({
@@ -116,79 +111,93 @@ export function BoardEditor({
       void coordinator.flushLayout();
       grid.destroy(false);
     };
-  }, [active, coordinator, gridEpoch, snapshot.board.id]);
+  }, [
+    active.id,
+    active.columns,
+    active.rowHeight,
+    coordinator,
+    conflictRef,
+    gridEpoch,
+    setStatus,
+    snapshot.board.id,
+  ]);
 
   const addWidget = async (widgetType: string, config: unknown) => {
+    setMutationError(null);
     setStatus("Sauvegarde…");
-    await coordinator.runItemMutation(async (expectedRevision) => {
-      const result = await createBoardItemAction({
+    const result = await coordinator.runMutation(async (expectedRevision) =>
+      createBoardItemAction({
         boardId: snapshot.board.id,
         expectedRevision,
         widgetType,
         config,
-      });
-      setCurrent(result.snapshot);
-      setGridEpoch((value) => value + 1);
-      setStatus("Sauvegardé");
-      router.refresh();
-      return result.revision;
-    });
+      }),
+    );
+    if (!result.ok) return;
+    setCurrent(result.snapshot);
+    setGridEpoch((value) => value + 1);
+    setStatus("Sauvegardé");
     setCatalogOpen(false);
     setPendingAppTile(false);
+    router.refresh();
   };
 
   const saveItem = async () => {
     if (!editingId) return;
+    setMutationError(null);
     setStatus("Sauvegarde…");
-    await coordinator.runItemMutation(async (expectedRevision) => {
-      const revision = await updateBoardItemAction({
+    const result = await coordinator.runMutation(async (expectedRevision) =>
+      updateBoardItemAction({
         boardId: snapshot.board.id,
         itemId: editingId,
         expectedRevision,
         title: draftTitle,
         config: draftConfig,
-      });
-      setCurrent((value) => ({
-        ...value,
-        board: { ...value.board, revision },
-        items: value.items.map((item) =>
-          item.id === editingId
-            ? { ...item, title: draftTitle || null, config: draftConfig }
-            : item,
-        ),
-      }));
-      setStatus("Sauvegardé");
-      router.refresh();
-      return revision;
-    });
+      }),
+    );
+    if (!result.ok) return;
+    setCurrent((value) => ({
+      ...value,
+      board: { ...value.board, revision: result.revision },
+      items: value.items.map((item) =>
+        item.id === editingId ? { ...item, title: draftTitle || null, config: draftConfig } : item,
+      ),
+    }));
+    setStatus("Sauvegardé");
     setEditingId(null);
+    router.refresh();
   };
 
   const removeItem = async (itemId: string) => {
+    setMutationError(null);
     setStatus("Sauvegarde…");
-    await coordinator.runItemMutation(async (expectedRevision) => {
-      const revision = await deleteBoardItemAction({
+    const result = await coordinator.runMutation(async (expectedRevision) =>
+      deleteBoardItemAction({
         boardId: snapshot.board.id,
         itemId,
         expectedRevision,
-      });
-      setCurrent((value) => ({
-        ...value,
-        board: { ...value.board, revision },
-        items: value.items.filter((item) => item.id !== itemId),
-        placements: value.placements.filter((placement) => placement.itemId !== itemId),
-      }));
-      setGridEpoch((value) => value + 1);
-      setStatus("Sauvegardé");
-      router.refresh();
-      return revision;
-    });
+      }),
+    );
+    if (!result.ok) return;
+    setCurrent((value) => ({
+      ...value,
+      board: { ...value.board, revision: result.revision },
+      items: value.items.filter((item) => item.id !== itemId),
+      placements: value.placements.filter((placement) => placement.itemId !== itemId),
+    }));
+    setGridEpoch((value) => value + 1);
+    setStatus("Sauvegardé");
     setDeleteId(null);
+    router.refresh();
   };
 
   const placements = current.placements.filter((placement) => placement.layoutId === active.id);
   const editing = current.items.find((item) => item.id === editingId);
   const isPublic = current.board.visibility === "public";
+  const selectedAppId =
+    typeof (draftConfig as { appId?: string } | null)?.appId === "string"
+      ? (draftConfig as { appId: string }).appId
+      : "";
 
   return (
     <section>
@@ -208,12 +217,6 @@ export function BoardEditor({
           Mobile
         </button>
       </nav>
-      <p role="status">{status}</p>
-      {conflict && (
-        <button type="button" onClick={() => location.reload()}>
-          Recharger le board
-        </button>
-      )}
       <button type="button" onClick={() => setCatalogOpen((value) => !value)}>
         Ajouter un widget
       </button>
@@ -223,12 +226,12 @@ export function BoardEditor({
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void addWidget("app-tile", draftConfig ?? appTileDefaultConfig);
+                void addWidget("app-tile", draftConfig ?? appTileDraftConfig);
               }}
             >
               <WidgetConfigForm
                 widgetType="app-tile"
-                config={draftConfig ?? appTileDefaultConfig}
+                config={draftConfig ?? appTileDraftConfig}
                 onChange={setDraftConfig}
                 permissionDenied={!canReadApps}
                 loadApps={listAppsForWidgetAction}
@@ -237,11 +240,10 @@ export function BoardEditor({
                 type="submit"
                 disabled={
                   !canReadApps ||
-                  typeof (draftConfig as { appId?: string } | null)?.appId !== "string" ||
-                  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                    (draftConfig as { appId: string }).appId,
-                  ) ||
-                  (draftConfig as { appId: string }).appId === appTileDefaultConfig.appId
+                  selectedAppId === APP_TILE_UNSET_APP_ID ||
+                  !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                    selectedAppId,
+                  )
                 }
               >
                 Ajouter la tuile
@@ -273,7 +275,7 @@ export function BoardEditor({
                         : {})}
                       onClick={() => {
                         if (entry.id === "app-tile") {
-                          setDraftConfig(appTileDefaultConfig);
+                          setDraftConfig(appTileDraftConfig);
                           setPendingAppTile(true);
                           return;
                         }

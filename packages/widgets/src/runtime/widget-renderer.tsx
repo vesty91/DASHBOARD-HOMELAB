@@ -3,6 +3,7 @@ import type { AppTileConfig, AppTileView } from "../app-tile";
 import type { BookmarksConfig } from "../bookmarks";
 import type { ClockConfig } from "../clock";
 import { builtInWidgetRegistry } from "../built-in";
+import { serializeWidgetConfig } from "../config";
 import type { WidgetItemStatus } from "../types";
 import { AppTileWidget } from "./app-tile-widget";
 import { BookmarksWidget } from "./bookmarks-widget";
@@ -66,7 +67,9 @@ export function WidgetRenderer({ item, appView }: { item: WidgetItemView; appVie
   const blocked = frameForStatus(item);
   if (blocked) return blocked;
   return (
-    <WidgetBoundary>
+    <WidgetBoundary
+      resetKey={`${item.id}:${item.widgetVersion}:${serializeWidgetConfig(item.config)}`}
+    >
       <WidgetFrame title={titleOf(item)} state="ready">
         <ReadyWidget item={item} appView={appView} />
       </WidgetFrame>

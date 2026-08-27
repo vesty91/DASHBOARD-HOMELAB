@@ -9,8 +9,23 @@ export const appTileConfigSchema = z.object({
 
 export type AppTileConfig = z.infer<typeof appTileConfigSchema>;
 
+/** Registry-only placeholder so defaultConfig satisfies Zod. Never persist this id. */
+export const APP_TILE_UNSET_APP_ID = "00000000-0000-4000-8000-000000000000";
+
 export const appTileDefaultConfig: AppTileConfig = {
-  appId: "00000000-0000-4000-8000-000000000001",
+  appId: APP_TILE_UNSET_APP_ID,
+  showStatus: true,
+  showLatency: false,
+};
+
+export type AppTileDraftConfig = {
+  appId: string;
+  showStatus: boolean;
+  showLatency: boolean;
+};
+
+export const appTileDraftConfig: AppTileDraftConfig = {
+  appId: "",
   showStatus: true,
   showLatency: false,
 };
@@ -47,4 +62,5 @@ export type AppTileView =
   | { status: "ready"; app: AppTileData }
   | { status: "permission-denied" }
   | { status: "empty" }
-  | { status: "loading" };
+  | { status: "loading" }
+  | { status: "error" };

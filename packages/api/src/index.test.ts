@@ -236,6 +236,47 @@ describe("widget tRPC router", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(repository.createItem).not.toHaveBeenCalled();
   });
+
+  it("rejects App Tile persistence when the App does not exist", async () => {
+    const createItem = vi.fn();
+    const get = vi.fn(async () => {
+      throw new AppError("NOT_FOUND", "App not found");
+    });
+    await expect(
+      createCaller({
+        actor,
+        boards: service({ createItem }),
+        apps: { get } as unknown as AppService,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "app-tile",
+        config: {
+          appId: "00000000-0000-4000-8000-000000000000",
+          showStatus: true,
+          showLatency: false,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(createItem).not.toHaveBeenCalled();
+    await expect(
+      createCaller({
+        actor,
+        boards: service({ createItem }),
+        apps: { get } as unknown as AppService,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "app-tile",
+        config: {
+          appId: "22222222-2222-4222-8222-222222222222",
+          showStatus: true,
+          showLatency: false,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(createItem).not.toHaveBeenCalled();
+  });
 });
 
 describe("app tRPC router", () => {

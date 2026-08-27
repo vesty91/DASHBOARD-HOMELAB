@@ -1,9 +1,8 @@
 "use client";
-import type { AppTileConfig } from "../app-tile";
-import type { BookmarksConfig } from "../bookmarks";
+import type { AppTileDraftConfig } from "../app-tile";
 import type { ClockConfig } from "../clock";
 import { AppTileForm, type AppOption } from "./app-tile-form";
-import { BookmarksForm } from "./bookmarks-form";
+import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
 
 export function WidgetConfigForm({
@@ -23,12 +22,12 @@ export function WidgetConfigForm({
     case "clock":
       return <ClockForm config={config as ClockConfig} onChange={onChange} />;
     case "bookmarks":
-      return <BookmarksForm config={config as BookmarksConfig} onChange={onChange} />;
+      return <BookmarksForm config={config as BookmarksDraftConfig} onChange={onChange} />;
     case "app-tile":
       if (!loadApps) return <p role="status">Permission insuffisante</p>;
       return (
         <AppTileForm
-          config={config as AppTileConfig}
+          config={config as AppTileDraftConfig}
           onChange={onChange}
           {...(permissionDenied ? { permissionDenied: true } : {})}
           loadApps={loadApps}

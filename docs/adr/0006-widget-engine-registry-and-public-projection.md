@@ -16,7 +16,7 @@ La Phase 6 introduit un registry de widgets, une validation de `configJson`, un 
 
 Une lecture applique les migrations séquentielles en mémoire, puis Zod. Aucun `UPDATE` n'est émis pendant un GET. La version et la config courantes sont persistées seulement lors d'une sauvegarde ultérieure (create/update item).
 
-Une version stockée supérieure à la définition courante n'est pas devinée : état `incompatible-version`.
+Une version stockée supérieure à la définition courante n'est pas devinée : état `incompatible-version`. Une fonction de migration qui throw produit `invalid-config` : la version est dans la plage migrable, mais la donnée n'est pas utilisable. Aucun message interne n'est exposé.
 
 ### 3. Projection publique par filtrage
 
@@ -25,6 +25,14 @@ Un board public n'est publiable que si tous les items sont connus, de version su
 En lecture anonyme (ou sans `board.edit`) d'un board public, les items unsafe/inconnus/invalides et leurs placements sont omis. Le board reste lisible. Les `configJson` unsafe ne quittent pas le serveur.
 
 Clock est `publicSafe`. Bookmarks et App Tile ne le sont pas : ils peuvent révéler des URLs ou une infrastructure interne.
+
+### 4. Propriétaire unique de `board.revision`
+
+Toutes les mutations d'éditeur (layout, métadonnées, items) partagent un coordinateur. Seul un `CONFLICT` de révision gèle la file. Les erreurs de validation ou de permission restent récupérables.
+
+### 5. Immutabilité du registry
+
+Après `register`, les metadata (`publicSafe`, tailles, `defaultConfig` JSON-compatible) sont gelées. Zod et les fonctions de migration ne sont pas deep-freeze.
 
 ## Conséquences
 

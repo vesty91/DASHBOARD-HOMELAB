@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { AppTileConfig } from "../app-tile";
+import type { AppTileDraftConfig } from "../app-tile";
 
 export interface AppOption {
   id: string;
@@ -13,8 +13,8 @@ export function AppTileForm({
   permissionDenied = false,
   loadApps,
 }: {
-  config: AppTileConfig;
-  onChange: (config: AppTileConfig) => void;
+  config: AppTileDraftConfig;
+  onChange: (config: AppTileDraftConfig) => void;
   permissionDenied?: boolean;
   loadApps: (cursor?: string) => Promise<{
     items: AppOption[];

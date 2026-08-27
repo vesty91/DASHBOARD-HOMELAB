@@ -15,5 +15,6 @@ describe("app tile widget", () => {
       showLatency: true,
     });
     expect(appTileConfigSchema.safeParse({ appId: "not-a-uuid" }).success).toBe(false);
+    expect(appTileConfigSchema.safeParse({ appId: "" }).success).toBe(false);
   });
 });

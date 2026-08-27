@@ -4,6 +4,7 @@ import { appTileContract } from "./app-tile";
 import { bookmarksContract } from "./bookmarks";
 import { createBuiltInWidgetRegistry } from "./built-in";
 import { clockContract } from "./clock";
+import { createWidgetPolicy } from "./policy";
 import { createWidgetRegistry } from "./registry";
 import type { WidgetContract } from "./types";
 
@@ -62,6 +63,21 @@ describe("widget registry", () => {
     expect(registry.get("bookmarks")?.publicSafe).toBe(false);
     expect(registry.get("app-tile")?.publicSafe).toBe(false);
     expect(() => registry.register(clockContract)).toThrow(/immutable/);
+  });
+
+  it("seals registered metadata so consumers cannot mutate publicSafe or sizing", () => {
+    const registry = createBuiltInWidgetRegistry();
+    const clock = registry.get("clock");
+    expect(clock).toBeDefined();
+    expect(() => {
+      (clock as { publicSafe: boolean }).publicSafe = false;
+    }).toThrow();
+    expect(() => {
+      (clock!.defaultSize as { w: number }).w = 99;
+    }).toThrow();
+    expect(registry.get("clock")?.publicSafe).toBe(true);
+    expect(registry.get("clock")?.defaultSize).toEqual({ w: 4, h: 2 });
+    expect(createWidgetPolicy(registry).catalog()[2]?.publicSafe).toBe(true);
   });
 
   it("exposes built-in contracts at version 1", () => {
