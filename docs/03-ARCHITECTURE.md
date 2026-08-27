@@ -276,3 +276,9 @@ Exemples :
 - Redis obligatoire ou non ;
 - protocole realtime ;
 - stratégie secrets.
+
+# État Phase 6
+
+`packages/widgets` est le Widget Engine. Le domaine (registry, schémas, policy) est séparé du runtime
+React. `packages/boards` reçoit une `BoardWidgetPolicy` injectée ; aucun cycle `boards <-> widgets`.
+`apps/web` compose la policy built-in. Voir ADR 0006.

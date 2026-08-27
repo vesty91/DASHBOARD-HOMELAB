@@ -195,3 +195,11 @@ Board layout batch doit être sûr à rejouer si revision identique/non modifié
 Le routeur tRPC interne expose `board.list`, `board.get`, `board.create`, `board.update`, `board.delete` et `board.layout.updateBatch`. Le contexte résout la session, le sujet RBAC et le service Board côté serveur. Tous les inputs sont validés par Zod.
 
 `board.layout.updateBatch` reçoit `boardId`, `layoutId`, `expectedRevision` et une liste bornée de placements. Une révision obsolète produit `BOARD_REVISION_CONFLICT`, mappé en `CONFLICT`, afin que le client recharge. Les erreurs SQL et stack traces ne font pas partie du DTO.
+
+# Widget API — Phase 6
+
+`widget.catalog` retourne les métadonnées stables du registry built-in (`id`, `version`, `name`, `description`, `category`, tailles, `publicSafe`). Aucun composant React, schéma Zod interne ou fonction de migration n'est exposé.
+
+`board.item.create`, `board.item.update` et `board.item.delete` exigent `board.edit` et `expectedRevision`. Le client ne peut pas changer `widgetType`, `widgetVersion`, `boardId` ni `integrationId` via update. La config est validée par le registry. Un item d'un autre board est rejeté.
+
+`widget.data` générique n'est pas implémenté. Clock et Bookmarks n'ont aucune query réseau. App Tile réutilise `app.get` / `app.list`.

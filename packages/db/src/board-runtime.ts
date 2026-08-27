@@ -30,6 +30,9 @@ export interface ItemRow {
   widgetType: string;
   widgetVersion: number;
   title: string | null;
+  configJson: unknown;
+  configParseFailed: boolean;
+  integrationId: string | null;
 }
 export interface PlacementRow {
   id: string;
@@ -39,6 +42,33 @@ export interface PlacementRow {
   y: number;
   w: number;
   h: number;
+  minW: number | null;
+  minH: number | null;
+  maxW: number | null;
+  maxH: number | null;
+}
+export interface CreateItemInput {
+  boardId: string;
+  expectedRevision: number;
+  item: {
+    id: string;
+    widgetType: string;
+    widgetVersion: number;
+    title: string | null;
+    configJson: unknown;
+    integrationId: null;
+  };
+  placements: readonly {
+    layoutId: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    minW: number | null;
+    minH: number | null;
+    maxW: number | null;
+    maxH: number | null;
+  }[];
 }
 export interface BoardSnapshotRow {
   board: BoardRow;
@@ -80,12 +110,25 @@ const layout = (r: AnyRow): LayoutRow => ({
   rowHeight: Number(r.row_height),
   sortOrder: Number(r.sort_order),
 });
+const readJson = (value: unknown): { configJson: unknown; configParseFailed: boolean } => {
+  if (value == null) return { configJson: {}, configParseFailed: false };
+  if (typeof value === "string") {
+    try {
+      return { configJson: JSON.parse(value), configParseFailed: false };
+    } catch {
+      return { configJson: null, configParseFailed: true };
+    }
+  }
+  return { configJson: value, configParseFailed: false };
+};
 const item = (r: AnyRow): ItemRow => ({
   id: String(r.id),
   boardId: String(r.board_id),
   widgetType: String(r.widget_type),
   widgetVersion: Number(r.widget_version),
   title: r.title == null ? null : String(r.title),
+  ...readJson(r.config_json),
+  integrationId: r.integration_id == null ? null : String(r.integration_id),
 });
 const placement = (r: AnyRow): PlacementRow => ({
   id: String(r.id),
@@ -95,6 +138,10 @@ const placement = (r: AnyRow): PlacementRow => ({
   y: Number(r.y),
   w: Number(r.w),
   h: Number(r.h),
+  minW: r.min_w == null ? null : Number(r.min_w),
+  minH: r.min_h == null ? null : Number(r.min_h),
+  maxW: r.max_w == null ? null : Number(r.max_w),
+  maxH: r.max_h == null ? null : Number(r.max_h),
 });
 
 export function createSqliteBoardStore(db: DatabaseSync) {
@@ -266,6 +313,111 @@ export function createSqliteBoardStore(db: DatabaseSync) {
         throw e;
       }
     },
+    async createItem(input: CreateItemInput) {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const now = Date.now();
+        const changed = db
+          .prepare("UPDATE boards SET revision=revision+1,updated_at=? WHERE id=? AND revision=?")
+          .run(now, input.boardId, input.expectedRevision);
+        if (changed.changes !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        db.prepare(
+          "INSERT INTO items(id,board_id,widget_type,widget_version,title,config_json,integration_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+        ).run(
+          input.item.id,
+          input.boardId,
+          input.item.widgetType,
+          input.item.widgetVersion,
+          input.item.title,
+          JSON.stringify(input.item.configJson),
+          input.item.integrationId,
+          now,
+          now,
+        );
+        const add = db.prepare(
+          "INSERT INTO item_layouts(id,item_id,layout_id,x,y,w,h,min_w,min_h,max_w,max_h) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        );
+        for (const p of input.placements) {
+          if (
+            !db
+              .prepare("SELECT 1 FROM layouts WHERE id=? AND board_id=?")
+              .get(p.layoutId, input.boardId)
+          )
+            throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
+          add.run(
+            randomUUID(),
+            input.item.id,
+            p.layoutId,
+            p.x,
+            p.y,
+            p.w,
+            p.h,
+            p.minW,
+            p.minH,
+            p.maxW,
+            p.maxH,
+          );
+        }
+        db.exec("COMMIT");
+        return input.expectedRevision + 1;
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
+    },
+    async updateItem(input: {
+      boardId: string;
+      itemId: string;
+      expectedRevision: number;
+      title: string | null;
+      configJson: unknown;
+      widgetVersion: number;
+    }) {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const now = Date.now();
+        const changed = db
+          .prepare("UPDATE boards SET revision=revision+1,updated_at=? WHERE id=? AND revision=?")
+          .run(now, input.boardId, input.expectedRevision);
+        if (changed.changes !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        const updated = db
+          .prepare(
+            "UPDATE items SET title=?,config_json=?,widget_version=?,updated_at=? WHERE id=? AND board_id=?",
+          )
+          .run(
+            input.title,
+            JSON.stringify(input.configJson),
+            input.widgetVersion,
+            now,
+            input.itemId,
+            input.boardId,
+          );
+        if (updated.changes !== 1) throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
+        db.exec("COMMIT");
+        return input.expectedRevision + 1;
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
+    },
+    async deleteItem(input: { boardId: string; itemId: string; expectedRevision: number }) {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const changed = db
+          .prepare("UPDATE boards SET revision=revision+1,updated_at=? WHERE id=? AND revision=?")
+          .run(Date.now(), input.boardId, input.expectedRevision);
+        if (changed.changes !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        const deleted = db
+          .prepare("DELETE FROM items WHERE id=? AND board_id=?")
+          .run(input.itemId, input.boardId);
+        if (deleted.changes !== 1) throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
+        db.exec("COMMIT");
+        return input.expectedRevision + 1;
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
+    },
     async deleteBoard(id: string) {
       db.prepare("DELETE FROM boards WHERE id=?").run(id);
     },
@@ -425,6 +577,112 @@ export function createPostgresqlBoardStore(pool: Pool) {
             "INSERT INTO item_layouts(id,item_id,layout_id,x,y,w,h) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(item_id,layout_id) DO UPDATE SET x=excluded.x,y=excluded.y,w=excluded.w,h=excluded.h",
             [randomUUID(), p.itemId, input.layoutId, p.x, p.y, p.w, p.h],
           );
+        await c.query("COMMIT");
+        return Number(changed.rows[0].revision);
+      } catch (e) {
+        await c.query("ROLLBACK");
+        throw e;
+      } finally {
+        c.release();
+      }
+    },
+    async createItem(input: CreateItemInput) {
+      const c = await pool.connect();
+      try {
+        await c.query("BEGIN");
+        const changed = await c.query(
+          "UPDATE boards SET revision=revision+1,updated_at=now() WHERE id=$1 AND revision=$2 RETURNING revision",
+          [input.boardId, input.expectedRevision],
+        );
+        if (changed.rowCount !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        await c.query(
+          "INSERT INTO items(id,board_id,widget_type,widget_version,title,config_json,integration_id,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,now(),now())",
+          [
+            input.item.id,
+            input.boardId,
+            input.item.widgetType,
+            input.item.widgetVersion,
+            input.item.title,
+            input.item.configJson,
+            input.item.integrationId,
+          ],
+        );
+        for (const p of input.placements) {
+          const layout = await c.query("SELECT 1 FROM layouts WHERE id=$1 AND board_id=$2", [
+            p.layoutId,
+            input.boardId,
+          ]);
+          if (!layout.rows[0]) throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
+          await c.query(
+            "INSERT INTO item_layouts(id,item_id,layout_id,x,y,w,h,min_w,min_h,max_w,max_h) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+            [
+              randomUUID(),
+              input.item.id,
+              p.layoutId,
+              p.x,
+              p.y,
+              p.w,
+              p.h,
+              p.minW,
+              p.minH,
+              p.maxW,
+              p.maxH,
+            ],
+          );
+        }
+        await c.query("COMMIT");
+        return Number(changed.rows[0].revision);
+      } catch (e) {
+        await c.query("ROLLBACK");
+        throw e;
+      } finally {
+        c.release();
+      }
+    },
+    async updateItem(input: {
+      boardId: string;
+      itemId: string;
+      expectedRevision: number;
+      title: string | null;
+      configJson: unknown;
+      widgetVersion: number;
+    }) {
+      const c = await pool.connect();
+      try {
+        await c.query("BEGIN");
+        const changed = await c.query(
+          "UPDATE boards SET revision=revision+1,updated_at=now() WHERE id=$1 AND revision=$2 RETURNING revision",
+          [input.boardId, input.expectedRevision],
+        );
+        if (changed.rowCount !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        const updated = await c.query(
+          "UPDATE items SET title=$1,config_json=$2,widget_version=$3,updated_at=now() WHERE id=$4 AND board_id=$5",
+          [input.title, input.configJson, input.widgetVersion, input.itemId, input.boardId],
+        );
+        if (updated.rowCount !== 1) throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
+        await c.query("COMMIT");
+        return Number(changed.rows[0].revision);
+      } catch (e) {
+        await c.query("ROLLBACK");
+        throw e;
+      } finally {
+        c.release();
+      }
+    },
+    async deleteItem(input: { boardId: string; itemId: string; expectedRevision: number }) {
+      const c = await pool.connect();
+      try {
+        await c.query("BEGIN");
+        const changed = await c.query(
+          "UPDATE boards SET revision=revision+1,updated_at=now() WHERE id=$1 AND revision=$2 RETURNING revision",
+          [input.boardId, input.expectedRevision],
+        );
+        if (changed.rowCount !== 1) throw new BoardRepositoryError("BOARD_REVISION_CONFLICT");
+        const deleted = await c.query("DELETE FROM items WHERE id=$1 AND board_id=$2", [
+          input.itemId,
+          input.boardId,
+        ]);
+        if (deleted.rowCount !== 1) throw new BoardRepositoryError("BOARD_RELATION_MISMATCH");
         await c.query("COMMIT");
         return Number(changed.rows[0].revision);
       } catch (e) {

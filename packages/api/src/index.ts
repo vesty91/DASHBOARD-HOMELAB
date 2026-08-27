@@ -1,7 +1,10 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import {
   BoardError,
+  createBoardItemSchema,
   createBoardSchema,
+  deleteBoardItemSchema,
+  updateBoardItemSchema,
   updateBoardSchema,
   updateLayoutBatchSchema,
   type BoardActor,
@@ -81,6 +84,42 @@ export const boardRouter = t.router({
         procedure(() => ctx.boards.updateLayoutBatch(input, ctx.actor)),
       ),
   }),
+  item: t.router({
+    create: t.procedure.input(createBoardItemSchema).mutation(({ ctx, input }) =>
+      procedure(() =>
+        ctx.boards.createItem(
+          {
+            boardId: input.boardId,
+            expectedRevision: input.expectedRevision,
+            widgetType: input.widgetType,
+            config: input.config,
+            ...(input.title === undefined ? {} : { title: input.title }),
+          },
+          ctx.actor,
+        ),
+      ),
+    ),
+    update: t.procedure.input(updateBoardItemSchema).mutation(({ ctx, input }) =>
+      procedure(() =>
+        ctx.boards.updateItem(
+          {
+            boardId: input.boardId,
+            itemId: input.itemId,
+            expectedRevision: input.expectedRevision,
+            ...(input.title === undefined ? {} : { title: input.title }),
+            ...(input.config === undefined ? {} : { config: input.config }),
+          },
+          ctx.actor,
+        ),
+      ),
+    ),
+    delete: t.procedure
+      .input(deleteBoardItemSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.boards.deleteItem(input, ctx.actor))),
+  }),
+});
+export const widgetRouter = t.router({
+  catalog: t.procedure.query(({ ctx }) => ctx.boards.catalog()),
 });
 export const appsRouter = t.router({
   canManage: t.procedure.query(({ ctx }) =>
@@ -112,7 +151,11 @@ export const appsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.apps.test(input.id, ctx.actor))),
 });
-export const dashboardRouter = t.router({ board: boardRouter, app: appsRouter });
+export const dashboardRouter = t.router({
+  board: boardRouter,
+  app: appsRouter,
+  widget: widgetRouter,
+});
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;
 export const createCaller = (context: ApiContext) => dashboardRouter.createCaller(context);

@@ -148,3 +148,13 @@ Hors V1.
 Ne pas exécuter de code plugin non fiable dans le process principal sans modèle de sandbox clair.
 
 Commencer par des widgets compilés dans le monorepo.
+
+# État Phase 6
+
+Le package `@dashboard/widgets` expose un `WidgetRegistry` immuable après initialisation, un contrat `WidgetContract` (sans React) et une policy injectable. Les IDs built-in persistants sont `clock`, `bookmarks` et `app-tile`, tous en version 1.
+
+Le flux de config est : parse JSON → lookup → migrations in-memory → Zod → rendu. Une lecture ne mute pas la DB. Une version future produit `incompatible-version`. Un type inconnu n'est jamais `publicSafe`.
+
+Clock est `publicSafe` et se met à jour localement via `Intl.DateTimeFormat`. Bookmarks et App Tile ne le sont pas. Bookmarks refuse `javascript:`, `data:`, `file:`, `blob:`, `ftp:` et les URLs avec credentials. App Tile lit le catalogue Apps Phase 5 via `app.read` et n'appelle jamais `app.test`.
+
+Le runtime standardise les états `ready`, `loading`, `empty`, `error`, `stale`, `disconnected`, `permission-denied` et `configuration-missing`. Une exception React est isolée par widget. `widget.data` générique n'existe pas.

@@ -189,3 +189,11 @@ générique, login, admin, logout et route protégée. Les autres packages méti
 Les packages Apps et Monitoring ont de vrais tests. Ils couvrent validation, RBAC, politique IP,
 DNS pinning, statuses HTTP, redirects et timeout. Les repositories couvrent transactions, tags,
 reset de health et rejet d'un résultat stale ; l'upgrade Phase 4→5 conserve une App existante.
+
+## 13. Couverture Phase 6
+
+`@dashboard/widgets` n'utilise plus `--passWithNoTests`. Les tests couvrent registry, duplicate id,
+config/version/migrations, publicSafe, schémas Clock/Bookmarks/App Tile et l'isolation d'erreur
+React. Boards/API/DB couvrent first-fit, CRUD item, CAS de révision, projection publique et
+concurrence PostgreSQL. L'E2E étend le parcours admin avec ajout/config/reload des trois widgets,
+publicSafe et le coordinateur autosave/item.

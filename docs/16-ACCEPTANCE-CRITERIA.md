@@ -128,3 +128,7 @@ Le produit fonctionne derrière un reverse proxy HTTPS avec WebSocket/realtime s
 Une App validée persiste avec ses tags et son target. Un lecteur ne peut ni muter ni tester. Le test
 manuel ne suit pas les redirects, bloque loopback/metadata, autorise le LAN et ne remplace jamais
 l'état d'une configuration plus récente.
+
+## AC-027 Widget Engine
+
+Le registry built-in contient exactement `clock`, `bookmarks` et `app-tile`. Une config invalide est rejetée côté serveur. Clock, Bookmarks et App Tile persistent après reload sans donnée inventée. Les mutations d'item incrémentent `board.revision`. Une exception d'un widget n'arrête pas les autres. Clock-only peut être public ; Bookmarks/App Tile/inconnu bloquent la publication et ne fuient pas en lecture anonyme.

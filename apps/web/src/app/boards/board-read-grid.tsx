@@ -1,12 +1,17 @@
+import type { AppTileView } from "@dashboard/widgets";
 import type { ItemRecord, LayoutRecord, PlacementRecord } from "@dashboard/boards";
+import { WidgetRenderer } from "@dashboard/widgets/runtime";
+
 export function BoardReadGrid({
   layout,
   items,
   placements,
+  appViews,
 }: {
   layout: LayoutRecord;
   items: ItemRecord[];
   placements: PlacementRecord[];
+  appViews: Record<string, AppTileView>;
 }) {
   return (
     <section
@@ -15,19 +20,26 @@ export function BoardReadGrid({
       style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))` }}
       aria-label={`${layout.name} layout`}
     >
-      {placements.map((p) => {
-        const entry = items.find((i) => i.id === p.itemId);
+      {placements.map((placement) => {
+        const entry = items.find((item) => item.id === placement.itemId);
         return (
-          <article
-            key={p.id}
-            data-item-id={p.itemId}
-            data-x={p.x}
-            data-y={p.y}
-            style={{ gridColumn: `${p.x + 1} / span ${p.w}`, gridRow: `${p.y + 1} / span ${p.h}` }}
+          <div
+            key={placement.id}
+            data-item-id={placement.itemId}
+            data-x={placement.x}
+            data-y={placement.y}
+            style={{
+              gridColumn: `${placement.x + 1} / span ${placement.w}`,
+              gridRow: `${placement.y + 1} / span ${placement.h}`,
+            }}
           >
-            <h2>{entry?.title ?? entry?.widgetType ?? "Item"}</h2>
-            {entry && <p>{entry.widgetType}</p>}
-          </article>
+            {entry ? (
+              <WidgetRenderer
+                item={entry}
+                {...(appViews[entry.id] ? { appView: appViews[entry.id] } : {})}
+              />
+            ) : null}
+          </div>
         );
       })}
     </section>

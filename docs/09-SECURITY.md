@@ -190,3 +190,7 @@ Minimum :
 - XSS Markdown ;
 - unauthorized Docker action ;
 - backup unauthorized.
+
+La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="noopener noreferrer"`
+pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board
+vérifiée serveur), et isolation d'erreur par widget sans stack client.

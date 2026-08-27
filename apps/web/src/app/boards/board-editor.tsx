@@ -1,49 +1,89 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
 import { BOARD_AUTOSAVE_DEBOUNCE_MS } from "@dashboard/boards";
+import type { AppTileView, WidgetCatalogEntry } from "@dashboard/widgets";
+import {
+  appTileDefaultConfig,
+  bookmarksDefaultConfig,
+  clockDefaultConfig,
+} from "@dashboard/widgets";
+import { WidgetConfigForm, WidgetRenderer } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
-import { saveLayoutAction } from "./actions";
+import { useRouter } from "next/navigation";
+import {
+  createBoardItemAction,
+  deleteBoardItemAction,
+  listAppsForWidgetAction,
+  saveLayoutAction,
+  updateBoardItemAction,
+} from "./actions";
+import { createBoardMutationCoordinator } from "./mutation-coordinator";
 
-export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
+function defaultConfig(widgetType: string): unknown {
+  switch (widgetType) {
+    case "clock":
+      return clockDefaultConfig;
+    case "bookmarks":
+      return bookmarksDefaultConfig;
+    case "app-tile":
+      return appTileDefaultConfig;
+    default:
+      return {};
+  }
+}
+
+export function BoardEditor({
+  snapshot,
+  catalog,
+  appViews,
+  canReadApps,
+}: {
+  snapshot: BoardSnapshot;
+  catalog: readonly WidgetCatalogEntry[];
+  appViews: Record<string, AppTileView>;
+  canReadApps: boolean;
+}) {
   const root = useRef<HTMLDivElement>(null);
-  const revision = useRef(snapshot.board.revision);
-  const queue = useRef(Promise.resolve());
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pending = useRef<{
-    layoutId: string;
-    items: { itemId: string; x: number; y: number; w: number; h: number }[];
-  } | null>(null);
-  const conflictRef = useRef(false);
+  const [current, setCurrent] = useState(snapshot);
   const [breakpoint, setBreakpoint] = useState("desktop");
   const [status, setStatus] = useState("Sauvegardé");
   const [conflict, setConflict] = useState(false);
-  const active = snapshot.layouts.find((l) => l.breakpoint === breakpoint)!;
-  const flushPending = () => {
-    if (!pending.current || conflictRef.current) return;
-    const save = pending.current;
-    pending.current = null;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    setStatus("Sauvegarde…");
-    queue.current = queue.current.then(async () => {
-      if (conflictRef.current) return;
-      try {
-        revision.current = await saveLayoutAction({
-          boardId: snapshot.board.id,
-          layoutId: save.layoutId,
-          expectedRevision: revision.current,
-          items: save.items,
-        });
-        setStatus("Sauvegardé");
-      } catch {
-        conflictRef.current = true;
-        pending.current = null;
-        setConflict(true);
-        setStatus("Le board a été modifié ailleurs.");
-      }
-    });
-  };
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftConfig, setDraftConfig] = useState<unknown>(null);
+  const [pendingAppTile, setPendingAppTile] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [gridEpoch, setGridEpoch] = useState(0);
+  const router = useRouter();
+  const conflictRef = useRef(false);
+  const coordinator = useMemo(
+    () =>
+      createBoardMutationCoordinator({
+        initialRevision: snapshot.board.revision,
+        debounceMs: BOARD_AUTOSAVE_DEBOUNCE_MS,
+        saveLayout: async (input) => {
+          setStatus("Sauvegarde…");
+          const revision = await saveLayoutAction({
+            boardId: snapshot.board.id,
+            ...input,
+          });
+          setStatus("Sauvegardé");
+          return revision;
+        },
+        onConflict: () => {
+          conflictRef.current = true;
+          setConflict(true);
+          setStatus("Le board a été modifié ailleurs.");
+        },
+      }),
+    [snapshot.board.id],
+  );
+  const active = current.layouts.find((layout) => layout.breakpoint === breakpoint)!;
+  useEffect(() => {
+    setCurrent(snapshot);
+  }, [snapshot]);
   useEffect(() => {
     if (!root.current) return;
     const grid = GridStack.init(
@@ -58,28 +98,98 @@ export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
     const persist = (_event: Event, nodes: GridStackNode[]) => {
       if (conflictRef.current) return;
       setStatus("Modifications en attente");
-      if (timer.current) clearTimeout(timer.current);
-      pending.current = {
+      coordinator.scheduleLayout({
         layoutId: active.id,
         items: nodes
-          .filter((n) => n.el?.dataset.itemId)
-          .map((n) => ({
-            itemId: n.el!.dataset.itemId!,
-            x: n.x ?? 0,
-            y: n.y ?? 0,
-            w: n.w ?? 1,
-            h: n.h ?? 1,
+          .filter((node) => node.el?.dataset.itemId)
+          .map((node) => ({
+            itemId: node.el!.dataset.itemId!,
+            x: node.x ?? 0,
+            y: node.y ?? 0,
+            w: node.w ?? 1,
+            h: node.h ?? 1,
           })),
-      };
-      timer.current = setTimeout(flushPending, BOARD_AUTOSAVE_DEBOUNCE_MS);
+      });
     };
     grid.on("change", persist);
     return () => {
-      flushPending();
+      void coordinator.flushLayout();
       grid.destroy(false);
     };
-  }, [active, snapshot.board.id]);
-  const placements = snapshot.placements.filter((p) => p.layoutId === active.id);
+  }, [active, coordinator, gridEpoch, snapshot.board.id]);
+
+  const addWidget = async (widgetType: string, config: unknown) => {
+    setStatus("Sauvegarde…");
+    await coordinator.runItemMutation(async (expectedRevision) => {
+      const result = await createBoardItemAction({
+        boardId: snapshot.board.id,
+        expectedRevision,
+        widgetType,
+        config,
+      });
+      setCurrent(result.snapshot);
+      setGridEpoch((value) => value + 1);
+      setStatus("Sauvegardé");
+      router.refresh();
+      return result.revision;
+    });
+    setCatalogOpen(false);
+    setPendingAppTile(false);
+  };
+
+  const saveItem = async () => {
+    if (!editingId) return;
+    setStatus("Sauvegarde…");
+    await coordinator.runItemMutation(async (expectedRevision) => {
+      const revision = await updateBoardItemAction({
+        boardId: snapshot.board.id,
+        itemId: editingId,
+        expectedRevision,
+        title: draftTitle,
+        config: draftConfig,
+      });
+      setCurrent((value) => ({
+        ...value,
+        board: { ...value.board, revision },
+        items: value.items.map((item) =>
+          item.id === editingId
+            ? { ...item, title: draftTitle || null, config: draftConfig }
+            : item,
+        ),
+      }));
+      setStatus("Sauvegardé");
+      router.refresh();
+      return revision;
+    });
+    setEditingId(null);
+  };
+
+  const removeItem = async (itemId: string) => {
+    setStatus("Sauvegarde…");
+    await coordinator.runItemMutation(async (expectedRevision) => {
+      const revision = await deleteBoardItemAction({
+        boardId: snapshot.board.id,
+        itemId,
+        expectedRevision,
+      });
+      setCurrent((value) => ({
+        ...value,
+        board: { ...value.board, revision },
+        items: value.items.filter((item) => item.id !== itemId),
+        placements: value.placements.filter((placement) => placement.itemId !== itemId),
+      }));
+      setGridEpoch((value) => value + 1);
+      setStatus("Sauvegardé");
+      router.refresh();
+      return revision;
+    });
+    setDeleteId(null);
+  };
+
+  const placements = current.placements.filter((placement) => placement.layoutId === active.id);
+  const editing = current.items.find((item) => item.id === editingId);
+  const isPublic = current.board.visibility === "public";
+
   return (
     <section>
       <nav aria-label="Layouts">
@@ -104,31 +214,174 @@ export function BoardEditor({ snapshot }: { snapshot: BoardSnapshot }) {
           Recharger le board
         </button>
       )}
-      <div className="grid-stack" ref={root}>
-        {placements.map((p) => {
-          const entry = snapshot.items.find((i) => i.id === p.itemId);
+      <button type="button" onClick={() => setCatalogOpen((value) => !value)}>
+        Ajouter un widget
+      </button>
+      {catalogOpen && (
+        <section aria-label="Catalogue de widgets">
+          {pendingAppTile ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void addWidget("app-tile", draftConfig ?? appTileDefaultConfig);
+              }}
+            >
+              <WidgetConfigForm
+                widgetType="app-tile"
+                config={draftConfig ?? appTileDefaultConfig}
+                onChange={setDraftConfig}
+                permissionDenied={!canReadApps}
+                loadApps={listAppsForWidgetAction}
+              />
+              <button
+                type="submit"
+                disabled={
+                  !canReadApps ||
+                  typeof (draftConfig as { appId?: string } | null)?.appId !== "string" ||
+                  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                    (draftConfig as { appId: string }).appId,
+                  ) ||
+                  (draftConfig as { appId: string }).appId === appTileDefaultConfig.appId
+                }
+              >
+                Ajouter la tuile
+              </button>
+              <button type="button" onClick={() => setPendingAppTile(false)}>
+                Annuler
+              </button>
+            </form>
+          ) : (
+            <ul>
+              {catalog.map((entry) => {
+                const blocked = isPublic && !entry.publicSafe;
+                return (
+                  <li key={entry.id}>
+                    <p>
+                      <strong>{entry.name}</strong> — {entry.description}
+                    </p>
+                    <p>
+                      {entry.category} · {entry.defaultSize.w}×{entry.defaultSize.h}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={blocked || conflict}
+                      {...(blocked
+                        ? {
+                            title:
+                              "Ce widget n'est pas public-safe et ne peut pas être ajouté à un board public",
+                          }
+                        : {})}
+                      onClick={() => {
+                        if (entry.id === "app-tile") {
+                          setDraftConfig(appTileDefaultConfig);
+                          setPendingAppTile(true);
+                          return;
+                        }
+                        void addWidget(entry.id, defaultConfig(entry.id));
+                      }}
+                    >
+                      Ajouter {entry.name}
+                    </button>
+                    {blocked ? (
+                      <p>Refusé sur un board public : ce widget n'est pas public-safe.</p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+      <div className="grid-stack" ref={root} key={`${active.id}-${gridEpoch}`}>
+        {placements.map((placement) => {
+          const entry = current.items.find((item) => item.id === placement.itemId);
           return (
             <div
               className="grid-stack-item"
-              key={p.id}
-              data-item-id={p.itemId}
-              gs-x={p.x}
-              gs-y={p.y}
-              gs-w={p.w}
-              gs-h={p.h}
+              key={placement.id}
+              data-item-id={placement.itemId}
+              gs-x={placement.x}
+              gs-y={placement.y}
+              gs-w={placement.w}
+              gs-h={placement.h}
+              {...(placement.minW != null ? { "gs-min-w": placement.minW } : {})}
+              {...(placement.minH != null ? { "gs-min-h": placement.minH } : {})}
+              {...(placement.maxW != null ? { "gs-max-w": placement.maxW } : {})}
+              {...(placement.maxH != null ? { "gs-max-h": placement.maxH } : {})}
             >
-              <article
+              <div
                 className="grid-stack-item-content"
                 tabIndex={0}
                 aria-label={`Déplacer ou redimensionner ${entry?.title ?? entry?.widgetType ?? "item"}`}
               >
-                <h2>{entry?.title ?? entry?.widgetType}</h2>
-                <p>{entry?.widgetType}</p>
-              </article>
+                {entry ? (
+                  <WidgetRenderer
+                    item={entry}
+                    {...(appViews[entry.id] ? { appView: appViews[entry.id] } : {})}
+                  />
+                ) : null}
+                <div className="widget-edit-controls">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!entry) return;
+                      setEditingId(entry.id);
+                      setDraftTitle(entry.title ?? "");
+                      setDraftConfig(entry.config ?? defaultConfig(entry.widgetType));
+                    }}
+                  >
+                    Configurer
+                  </button>
+                  <button type="button" onClick={() => setDeleteId(entry?.id ?? null)}>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}
       </div>
+      {editing && (
+        <form
+          aria-label="Configuration du widget"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveItem();
+          }}
+        >
+          <h2>Configurer le widget</h2>
+          <label>
+            Titre du widget
+            <input
+              value={draftTitle}
+              maxLength={120}
+              onChange={(event) => setDraftTitle(event.target.value)}
+            />
+          </label>
+          <WidgetConfigForm
+            widgetType={editing.widgetType}
+            config={draftConfig}
+            onChange={setDraftConfig}
+            permissionDenied={!canReadApps}
+            loadApps={listAppsForWidgetAction}
+          />
+          <button type="submit">Enregistrer la configuration</button>
+          <button type="button" onClick={() => setEditingId(null)}>
+            Annuler
+          </button>
+        </form>
+      )}
+      {deleteId && (
+        <section role="alertdialog" aria-labelledby="delete-widget-title" aria-modal="true">
+          <h2 id="delete-widget-title">Supprimer ce widget ?</h2>
+          <button type="button" onClick={() => setDeleteId(null)}>
+            Annuler
+          </button>
+          <button type="button" onClick={() => void removeItem(deleteId)}>
+            Supprimer définitivement
+          </button>
+        </section>
+      )}
     </section>
   );
 }
