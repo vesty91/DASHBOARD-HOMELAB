@@ -160,6 +160,9 @@ Liste de liens personnalisés.
 
 Horloge/date avec timezone.
 
+Phase 6 implémente Clock, Bookmarks et App Tile via le registry. App Tile consomme le catalogue Apps
+existant. Service Status et les widgets d'intégration restent hors scope.
+
 ### Service Status
 
 État d'un endpoint HTTP.

@@ -1,7 +1,10 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import {
   BoardError,
+  createBoardItemSchema,
   createBoardSchema,
+  deleteBoardItemSchema,
+  updateBoardItemSchema,
   updateBoardSchema,
   updateLayoutBatchSchema,
   type BoardActor,
@@ -16,6 +19,7 @@ import {
   type AppActor,
   type AppService,
 } from "@dashboard/apps";
+import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 
 export interface ApiContext {
   actor: BoardActor & AppActor;
@@ -41,6 +45,25 @@ const mapError = (error: unknown): never => {
   throw error;
 };
 const procedure = <T>(operation: () => Promise<T>) => operation().catch(mapError);
+
+async function ensureAppTileTarget(
+  ctx: ApiContext,
+  widgetType: string | undefined,
+  config: unknown,
+) {
+  const parsed = appTileConfigSchema.safeParse(config);
+  const isAppTile = widgetType === "app-tile" || (widgetType === undefined && parsed.success);
+  if (!isAppTile || !parsed.success) return;
+  if (parsed.data.appId === APP_TILE_UNSET_APP_ID)
+    throw new BoardError("VALIDATION_ERROR", "Application introuvable ou inaccessible");
+  try {
+    await ctx.apps.get(parsed.data.appId, ctx.actor);
+  } catch (error) {
+    if (error instanceof AppError && (error.code === "NOT_FOUND" || error.code === "FORBIDDEN"))
+      throw new BoardError("VALIDATION_ERROR", "Application introuvable ou inaccessible");
+    mapError(error);
+  }
+}
 
 export const boardRouter = t.router({
   canCreate: t.procedure.query(({ ctx }) =>
@@ -81,6 +104,44 @@ export const boardRouter = t.router({
         procedure(() => ctx.boards.updateLayoutBatch(input, ctx.actor)),
       ),
   }),
+  item: t.router({
+    create: t.procedure.input(createBoardItemSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        await ensureAppTileTarget(ctx, input.widgetType, input.config);
+        return ctx.boards.createItem(
+          {
+            boardId: input.boardId,
+            expectedRevision: input.expectedRevision,
+            widgetType: input.widgetType,
+            config: input.config,
+            ...(input.title === undefined ? {} : { title: input.title }),
+          },
+          ctx.actor,
+        );
+      }),
+    ),
+    update: t.procedure.input(updateBoardItemSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        if (input.config !== undefined) await ensureAppTileTarget(ctx, undefined, input.config);
+        return ctx.boards.updateItem(
+          {
+            boardId: input.boardId,
+            itemId: input.itemId,
+            expectedRevision: input.expectedRevision,
+            ...(input.title === undefined ? {} : { title: input.title }),
+            ...(input.config === undefined ? {} : { config: input.config }),
+          },
+          ctx.actor,
+        );
+      }),
+    ),
+    delete: t.procedure
+      .input(deleteBoardItemSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.boards.deleteItem(input, ctx.actor))),
+  }),
+});
+export const widgetRouter = t.router({
+  catalog: t.procedure.query(({ ctx }) => ctx.boards.catalog()),
 });
 export const appsRouter = t.router({
   canManage: t.procedure.query(({ ctx }) =>
@@ -112,7 +173,11 @@ export const appsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.apps.test(input.id, ctx.actor))),
 });
-export const dashboardRouter = t.router({ board: boardRouter, app: appsRouter });
+export const dashboardRouter = t.router({
+  board: boardRouter,
+  app: appsRouter,
+  widget: widgetRouter,
+});
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;
 export const createCaller = (context: ApiContext) => dashboardRouter.createCaller(context);

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createPostgresqlClient } from "./client/postgresql";
@@ -214,6 +215,110 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect((await client.pool.query("select count(*)::int count from app_tags")).rows[0]).toEqual(
         { count: 0 },
       );
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("creates, updates and deletes board items with PostgreSQL revision CAS", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await migratePostgresql(client.pool);
+      const auth = createPostgresqlAuthStore(client.pool);
+      const admin = await auth.createFirstAdmin({
+        username: "WidgetAdmin",
+        usernameCanonical: "widgetadmin",
+        passwordHash: "hash",
+      });
+      const boardStore = createPostgresqlBoardStore(client.pool);
+      const board = await boardStore.createBoardWithLayouts({
+        slug: "pg-widgets",
+        name: "PG Widgets",
+        description: null,
+        visibility: "private",
+        ownerUserId: admin.id,
+        layouts: [
+          { name: "Desktop", breakpoint: "desktop", columns: 12, rowHeight: 72, sortOrder: 0 },
+          { name: "Mobile", breakpoint: "mobile", columns: 4, rowHeight: 72, sortOrder: 1 },
+        ],
+      });
+      const desktop = board.layouts[0]!;
+      const mobile = board.layouts[1]!;
+      const itemA = randomUUID();
+      const placementFor = (layoutId: string) => ({
+        layoutId,
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 2,
+        minW: 2,
+        minH: 1,
+        maxW: 8,
+        maxH: 4,
+      });
+      const createBody = (id: string) => ({
+        boardId: board.board.id,
+        expectedRevision: 1,
+        item: {
+          id,
+          widgetType: "clock",
+          widgetVersion: 1,
+          title: null,
+          configJson: { timezone: "UTC", showDate: true, showSeconds: false, hour12: false },
+          integrationId: null,
+        },
+        placements: [placementFor(desktop.id), placementFor(mobile.id)],
+      });
+      const itemB = randomUUID();
+      const concurrent = await Promise.allSettled([
+        boardStore.createItem(createBody(itemA)),
+        boardStore.createItem(createBody(itemB)),
+      ]);
+      expect(concurrent.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(concurrent.filter((result) => result.status === "rejected")).toHaveLength(1);
+      const rejected = concurrent.find(
+        (result) => result.status === "rejected",
+      ) as PromiseRejectedResult;
+      expect(rejected.reason).toMatchObject({ code: "BOARD_REVISION_CONFLICT" });
+      const afterCreate = await boardStore.findSnapshotById(board.board.id);
+      expect(afterCreate?.items).toHaveLength(1);
+      expect(afterCreate?.placements).toHaveLength(2);
+      expect(afterCreate?.board.revision).toBe(2);
+      const surviving = afterCreate!.items[0]!;
+      const updates = await Promise.allSettled([
+        boardStore.updateItem({
+          boardId: board.board.id,
+          itemId: surviving.id,
+          expectedRevision: 2,
+          title: "One",
+          configJson: {
+            timezone: "Europe/Paris",
+            showDate: false,
+            showSeconds: true,
+            hour12: false,
+          },
+          widgetVersion: 1,
+        }),
+        boardStore.updateItem({
+          boardId: board.board.id,
+          itemId: surviving.id,
+          expectedRevision: 2,
+          title: "Two",
+          configJson: { timezone: "UTC", showDate: true, showSeconds: false, hour12: false },
+          widgetVersion: 1,
+        }),
+      ]);
+      expect(updates.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(updates.filter((result) => result.status === "rejected")).toHaveLength(1);
+      await expect(
+        boardStore.deleteItem({
+          boardId: board.board.id,
+          itemId: surviving.id,
+          expectedRevision: 3,
+        }),
+      ).resolves.toBe(4);
+      expect((await boardStore.findSnapshotById(board.board.id))?.items).toEqual([]);
     } finally {
       await client.close();
     }

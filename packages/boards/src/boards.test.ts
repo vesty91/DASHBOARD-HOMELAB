@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { BoardError } from "./errors";
-import { DEFAULT_BOARD_LAYOUTS, validateLayoutPlacements } from "./layout";
 import { canAccessBoard } from "./policy";
 import { createBoardService } from "./service";
+import {
+  clampWidgetSize,
+  DEFAULT_BOARD_LAYOUTS,
+  findFirstFitPlacement,
+  validateLayoutPlacements,
+} from "./layout";
 import type {
   BoardAccessContext,
   BoardRecord,
   BoardRepository,
+  BoardWidgetPolicy,
   LayoutPlacementInput,
 } from "./types";
 const board: BoardRecord = {
@@ -34,6 +40,31 @@ const p = (itemId: string, x: number, y: number, w = 2, h = 2): LayoutPlacementI
   w,
   h,
 });
+const policy: BoardWidgetPolicy = {
+  has: (type) => type === "clock" || type === "bookmarks",
+  getSizing: (type) =>
+    type === "clock"
+      ? {
+          defaultSize: { w: 4, h: 2 },
+          minSize: { w: 2, h: 1 },
+          maxSize: { w: 8, h: 4 },
+        }
+      : type === "bookmarks"
+        ? {
+            defaultSize: { w: 4, h: 4 },
+            minSize: { w: 2, h: 2 },
+            maxSize: { w: 12, h: 12 },
+          }
+        : undefined,
+  currentVersion: (type) => (type === "clock" || type === "bookmarks" ? 1 : undefined),
+  resolve: (type, _version, config) => {
+    if (type === "clock") return { status: "ready", config, version: 1, publicSafe: true };
+    if (type === "bookmarks") return { status: "ready", config, version: 1, publicSafe: false };
+    return { status: "unknown" };
+  },
+  catalog: () => [],
+};
+const owner = { userId: "owner", subject: active };
 describe("board domain", () => {
   it("defines independent defaults", () =>
     expect(DEFAULT_BOARD_LAYOUTS).toMatchObject([
@@ -88,7 +119,7 @@ describe("board domain", () => {
       },
     } as unknown as BoardRepository;
     await expect(
-      createBoardService(repository).update(
+      createBoardService(repository, policy).update(
         { boardId: "b", expectedRevision: 1, name: "Home", description: null },
         { userId: "owner", subject: active },
       ),
@@ -122,7 +153,7 @@ describe("board domain", () => {
       },
     } as unknown as BoardRepository;
     await expect(
-      createBoardService(repository).update(
+      createBoardService(repository, policy).update(
         { boardId: "b", expectedRevision: 1, ...changes },
         { userId: "editor", subject: active },
       ),
@@ -137,7 +168,7 @@ describe("board domain", () => {
       updateBoard: async () => 2,
     } as unknown as BoardRepository;
     await expect(
-      createBoardService(repository).update(
+      createBoardService(repository, policy).update(
         {
           boardId: "b",
           expectedRevision: 1,
@@ -160,8 +191,182 @@ describe("board domain", () => {
       },
     } as unknown as BoardRepository;
     await expect(
-      createBoardService(repository).delete("b", { userId: "editor", subject: active }),
+      createBoardService(repository, policy).delete("b", { userId: "editor", subject: active }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(deleted).toBe(false);
+  });
+  it("places sequential widgets without overlap and clamps to layout columns", () => {
+    expect(clampWidgetSize(policy.getSizing("clock")!, 4)).toMatchObject({ w: 4, h: 2 });
+    const first = findFirstFitPlacement({
+      columns: 12,
+      size: { w: 4, h: 2 },
+      existing: [],
+      itemId: "one",
+    });
+    const second = findFirstFitPlacement({
+      columns: 12,
+      size: { w: 4, h: 2 },
+      existing: [{ itemId: "one", ...first }],
+      itemId: "two",
+    });
+    expect(first).toEqual({ x: 0, y: 0, w: 4, h: 2 });
+    expect(second).toEqual({ x: 4, y: 0, w: 4, h: 2 });
+  });
+  it("rejects publishing a board that contains unsafe or unknown widgets", async () => {
+    const snapshot = {
+      board,
+      layouts: [],
+      items: [
+        {
+          id: "i1",
+          boardId: "b",
+          widgetType: "bookmarks",
+          widgetVersion: 1,
+          title: null,
+          configJson: { links: [] },
+          configParseFailed: false,
+          integrationId: null,
+        },
+      ],
+      placements: [],
+    };
+    const repository = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => [],
+      updateBoard: async () => 2,
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(repository, policy).update(
+        {
+          boardId: "b",
+          expectedRevision: 1,
+          name: "Home",
+          description: null,
+          visibility: "public",
+        },
+        owner,
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+  it("allows publishing a clock-only board and filters unsafe items on public read", async () => {
+    const snapshot = {
+      board: { ...board, visibility: "public" as const },
+      layouts: [
+        {
+          id: "ld",
+          boardId: "b",
+          name: "Desktop",
+          breakpoint: "desktop",
+          columns: 12,
+          rowHeight: 72,
+          sortOrder: 0,
+        },
+      ],
+      items: [
+        {
+          id: "clock-1",
+          boardId: "b",
+          widgetType: "clock",
+          widgetVersion: 1,
+          title: null,
+          configJson: { timezone: "UTC" },
+          configParseFailed: false,
+          integrationId: null,
+        },
+        {
+          id: "bm-1",
+          boardId: "b",
+          widgetType: "bookmarks",
+          widgetVersion: 1,
+          title: null,
+          configJson: { links: [{ url: "http://192.168.1.5" }] },
+          configParseFailed: false,
+          integrationId: null,
+        },
+      ],
+      placements: [
+        {
+          id: "p1",
+          itemId: "clock-1",
+          layoutId: "ld",
+          x: 0,
+          y: 0,
+          w: 4,
+          h: 2,
+          minW: 2,
+          minH: 1,
+          maxW: 8,
+          maxH: 4,
+        },
+        {
+          id: "p2",
+          itemId: "bm-1",
+          layoutId: "ld",
+          x: 4,
+          y: 0,
+          w: 4,
+          h: 4,
+          minW: 2,
+          minH: 2,
+          maxW: 12,
+          maxH: 12,
+        },
+      ],
+    };
+    const repository = {
+      findSnapshotBySlug: async () => snapshot,
+      resolveResourcePermissions: async () => [],
+    } as unknown as BoardRepository;
+    const result = await createBoardService(repository, policy).getBySlug("home", {
+      userId: null,
+      subject: null,
+    });
+    expect(result.items.map((item) => item.id)).toEqual(["clock-1"]);
+    expect(result.items[0]?.config).toEqual({ timezone: "UTC" });
+    expect(result.placements.map((placement) => placement.itemId)).toEqual(["clock-1"]);
+  });
+  it("rejects item mutations without board.edit and cross-board item ids", async () => {
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    const repository = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => ["board.view"],
+      createItem: async () => 2,
+      deleteItem: async () => 2,
+    } as unknown as BoardRepository;
+    const service = createBoardService(repository, policy);
+    await expect(
+      service.createItem(
+        { boardId: "b", expectedRevision: 1, widgetType: "clock", config: { timezone: "UTC" } },
+        { userId: "viewer", subject: active },
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const owned = {
+      board,
+      layouts: [],
+      items: [
+        {
+          id: "other",
+          boardId: "other-board",
+          widgetType: "clock",
+          widgetVersion: 1,
+          title: null,
+          configJson: {},
+          configParseFailed: false,
+          integrationId: null,
+        },
+      ],
+      placements: [],
+    };
+    const idor = {
+      findSnapshotById: async () => owned,
+      resolveResourcePermissions: async () => [],
+      deleteItem: async () => 2,
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(idor, policy).deleteItem(
+        { boardId: "b", itemId: "missing-on-this-board", expectedRevision: 1 },
+        owner,
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

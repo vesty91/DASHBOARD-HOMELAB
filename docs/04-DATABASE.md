@@ -173,6 +173,10 @@ updatedAt
 ```
 
 La Phase 5 ajoute `target`, le dernier état health persistant, `healthConfigRevision` et `app_tags`.
+
+La Phase 6 n'ajoute aucune migration. `items.config_json`, `items.widget_version`, `items.title` et
+les bornes `item_layouts.min_w/min_h/max_w/max_h` suffisent. Une config widget est du JSON validé
+par le registry, jamais un fallback inventé.
 Les tags sont uniques par `(appId, canonicalValue)` et supprimés en cascade. Les migrations `0003`
 SQLite/PostgreSQL conservent les Apps Phase 4 et initialisent leur état à `unknown`.
 

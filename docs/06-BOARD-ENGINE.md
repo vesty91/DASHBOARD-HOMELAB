@@ -181,8 +181,12 @@ Objectifs :
 
 La création d'un board persiste atomiquement les layouts `desktop` (12 colonnes) et `mobile` (4 colonnes). Les positions sont exclusivement stockées dans `item_layouts`. Toute mutation batch réserve atomiquement `board.revision`, valide l'état final projeté, puis persiste ou rollback intégralement.
 
-La policy resource-level applique la hiérarchie `board.manage > board.edit > board.view`. Le propriétaire et `board.manage.all` gèrent ; `board.read.all` lit ; les ACL directes et de groupe sont résolues séparément. `authenticated` permet seulement la lecture aux comptes actifs et `public` seulement la lecture anonyme. Jusqu'au registre Widget Phase 6, un board contenant des items ne peut pas devenir public.
+La policy resource-level applique la hiérarchie `board.manage > board.edit > board.view`. Le propriétaire et `board.manage.all` gèrent ; `board.read.all` lit ; les ACL directes et de groupe sont résolues séparément. `authenticated` permet seulement la lecture aux comptes actifs et `public` seulement la lecture anonyme.
 
-L'éditeur utilise GridStack derrière un adaptateur local, avec autosave coalescé à 400 ms. Un conflit retourne `BOARD_REVISION_CONFLICT` et impose un rechargement ; aucun écrasement ou merge implicite n'est effectué.
+Un board devient public seulement si tous ses items sont d'un type connu, d'une version supportée, d'une config Zod valide et `publicSafe`. Clock est publiable. Bookmarks et App Tile bloquent la publication. En lecture anonyme d'un board public, les items unsafe, inconnus ou invalides sont omis avec leurs placements (ADR 0006).
 
-La duplication et l'export sont reportés : la duplication sûre des configurations dépend des contrats Widget Phase 6, et l'import/backup appartient à la Phase 14.
+`board.item.create`, `board.item.update`, `board.item.delete` et `board.update` (métadonnées) exigent les permissions board correspondantes, consomment `expectedRevision` et incrémentent `board.revision` une seule fois dans une transaction. Un placement first-fit déterministe est créé pour chaque layout existant.
+
+L'éditeur possède un seul propriétaire de `board.revision` : `BoardEditWorkspace` séquence layout autosave, métadonnées, `item.create`, `item.update` et `item.delete` sur la même file. Un `CONFLICT` de révision gèle le coordinateur et exige un reload. Une `VALIDATION_ERROR`, `FORBIDDEN` ou erreur métier ordinaire n'est pas un conflit : le formulaire reste utilisable et la révision n'est pas incrémentée.
+
+La duplication et l'export restent reportés : l'import/backup appartient à la Phase 14.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 export const boardSlugSchema = z
   .string()
   .trim()
@@ -20,6 +21,13 @@ export const placementSchema = z.object({
   w: z.number().int().min(1).max(64),
   h: z.number().int().min(1).max(1000),
 });
+export const itemTitleSchema = z
+  .string()
+  .trim()
+  .max(120)
+  .refine((value) => !/[<>]/.test(value), "Title must not contain HTML")
+  .transform((value) => value || null)
+  .nullable();
 export const createBoardSchema = z.object({
   name: boardNameSchema,
   slug: boardSlugSchema,
@@ -38,4 +46,28 @@ export const updateLayoutBatchSchema = z.object({
   layoutId: z.uuid(),
   expectedRevision: revisionSchema,
   items: z.array(placementSchema).min(1).max(200),
+});
+export const createBoardItemSchema = z.object({
+  boardId: z.uuid(),
+  expectedRevision: revisionSchema,
+  widgetType: z.string().trim().min(1).max(80),
+  title: itemTitleSchema.optional(),
+  config: z.unknown(),
+});
+export const updateBoardItemSchema = z
+  .object({
+    boardId: z.uuid(),
+    itemId: z.uuid(),
+    expectedRevision: revisionSchema,
+    title: itemTitleSchema.optional(),
+    config: z.unknown().optional(),
+  })
+  .refine(
+    (value) => value.title !== undefined || value.config !== undefined,
+    "Item update requires title or config",
+  );
+export const deleteBoardItemSchema = z.object({
+  boardId: z.uuid(),
+  itemId: z.uuid(),
+  expectedRevision: revisionSchema,
 });

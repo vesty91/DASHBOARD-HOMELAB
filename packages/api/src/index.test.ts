@@ -7,6 +7,7 @@ import {
 } from "@dashboard/boards";
 import { createCaller } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
+import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
   subject: { status: "active" as const, isSystemAdmin: false },
@@ -21,6 +22,10 @@ const service = (overrides: Partial<BoardService> = {}): BoardService =>
     update: vi.fn(),
     updateLayoutBatch: vi.fn(),
     delete: vi.fn(),
+    createItem: vi.fn(),
+    updateItem: vi.fn(),
+    deleteItem: vi.fn(),
+    catalog: vi.fn(() => []),
     ...overrides,
   }) as BoardService;
 const apps = {} as AppService;
@@ -73,7 +78,11 @@ describe("board tRPC router", () => {
       updateBoard: vi.fn(async () => 2),
     } as unknown as BoardRepository;
     await expect(
-      createCaller({ actor, boards: createBoardService(repository), apps }).board.update({
+      createCaller({
+        actor,
+        boards: createBoardService(repository, createBuiltInWidgetPolicy()),
+        apps,
+      }).board.update({
         boardId: board.id,
         expectedRevision: 1,
         name: board.name,
@@ -82,6 +91,191 @@ describe("board tRPC router", () => {
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(repository.updateBoard).not.toHaveBeenCalled();
+  });
+});
+
+describe("widget tRPC router", () => {
+  it("returns a stable catalog from the board service", async () => {
+    const catalog = [
+      {
+        id: "clock",
+        version: 1,
+        name: "Horloge",
+        description: "Clock",
+        category: "information",
+        defaultSize: { w: 4, h: 2 },
+        minSize: { w: 2, h: 1 },
+        maxSize: { w: 8, h: 4 },
+        publicSafe: true,
+      },
+      {
+        id: "bookmarks",
+        version: 1,
+        name: "Signets",
+        description: "Links",
+        category: "navigation",
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 2, h: 2 },
+        maxSize: { w: 12, h: 12 },
+        publicSafe: false,
+      },
+    ];
+    const result = await createCaller({
+      actor,
+      boards: service({ catalog: () => catalog }),
+      apps,
+    }).widget.catalog();
+    expect(result.map((entry) => entry.id)).toEqual(["clock", "bookmarks"]);
+    expect(result[0]?.publicSafe).toBe(true);
+    expect(result[1]?.publicSafe).toBe(false);
+  });
+  it("creates a clock item and rejects anonymous mutations", async () => {
+    const boards = service({
+      createItem: vi.fn(async () => ({ revision: 2, snapshot: {} as never })),
+    });
+    await expect(
+      createCaller({ actor, boards, apps }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "clock",
+        config: { timezone: "UTC", showDate: true, showSeconds: false, hour12: false },
+      }),
+    ).resolves.toMatchObject({ revision: 2 });
+    await expect(
+      createCaller({
+        actor: { userId: null, subject: null },
+        boards: service({
+          createItem: vi.fn(async () => {
+            throw new BoardError("UNAUTHORIZED", "Login required");
+          }),
+        }),
+        apps,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "clock",
+        config: { timezone: "UTC" },
+      }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+  it("maps viewer forbidden and stale item updates", async () => {
+    await expect(
+      createCaller({
+        actor,
+        boards: service({
+          createItem: vi.fn(async () => {
+            throw new BoardError("FORBIDDEN", "Board access denied");
+          }),
+        }),
+        apps,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "clock",
+        config: {},
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      createCaller({
+        actor,
+        boards: service({
+          updateItem: vi.fn(async () => {
+            throw new BoardError("BOARD_REVISION_CONFLICT", "Board revision conflict");
+          }),
+        }),
+        apps,
+      }).board.item.update({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        itemId: "00000000-0000-4000-8000-000000000005",
+        expectedRevision: 1,
+        title: "Renamed",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  it("rejects unsafe bookmark URLs through the real widget policy", async () => {
+    const repository = {
+      findSnapshotById: async () => ({
+        board: {
+          id: "00000000-0000-4000-8000-000000000002",
+          slug: "home",
+          name: "Home",
+          description: null,
+          visibility: "private",
+          ownerUserId: actor.userId,
+          revision: 1,
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+        layouts: [],
+        items: [],
+        placements: [],
+      }),
+      resolveResourcePermissions: async () => [],
+      createItem: vi.fn(),
+    } as unknown as BoardRepository;
+    await expect(
+      createCaller({
+        actor,
+        boards: createBoardService(repository, createBuiltInWidgetPolicy()),
+        apps,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "bookmarks",
+        config: {
+          links: [
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              title: "xss",
+              url: "javascript:alert(1)",
+              target: "new-tab",
+            },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(repository.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects App Tile persistence when the App does not exist", async () => {
+    const createItem = vi.fn();
+    const get = vi.fn(async () => {
+      throw new AppError("NOT_FOUND", "App not found");
+    });
+    await expect(
+      createCaller({
+        actor,
+        boards: service({ createItem }),
+        apps: { get } as unknown as AppService,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "app-tile",
+        config: {
+          appId: "00000000-0000-4000-8000-000000000000",
+          showStatus: true,
+          showLatency: false,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(createItem).not.toHaveBeenCalled();
+    await expect(
+      createCaller({
+        actor,
+        boards: service({ createItem }),
+        apps: { get } as unknown as AppService,
+      }).board.item.create({
+        boardId: "00000000-0000-4000-8000-000000000002",
+        expectedRevision: 1,
+        widgetType: "app-tile",
+        config: {
+          appId: "22222222-2222-4222-8222-222222222222",
+          showStatus: true,
+          showLatency: false,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(createItem).not.toHaveBeenCalled();
   });
 });
 

@@ -43,7 +43,19 @@ body {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 3px solid Highlight;
   outline-offset: 2px;
+}
+
+.widget-edit-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.widget-frame time {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
 }

@@ -2,6 +2,8 @@
 
 ## Phase 0 — Documentation
 
+Statut : COMPLETE.
+
 Livrables :
 
 - docs validées ;
@@ -13,6 +15,8 @@ Livrables :
 Gate : aucune implémentation métier avant validation.
 
 ## Phase 1 — Skeleton
+
+Statut : COMPLETE.
 
 Livrables :
 
@@ -84,7 +88,7 @@ Milestone : premier board réellement utilisable.
 
 ## Phase 5 — Apps
 
-Statut : implémentée sur la branche `phase-5-apps`, en attente de review.
+Statut : COMPLETE.
 
 Livrables :
 
@@ -95,7 +99,7 @@ Livrables :
 
 ## Phase 6 — Widget Engine
 
-Statut : non commencée.
+Statut : implémentée sur la branche `phase-6-widget-engine`, en review.
 
 Livrables :
 
@@ -107,6 +111,8 @@ Livrables :
 - error/loading states.
 
 ## Phase 7 — Integration Framework
+
+Statut : non commencée.
 
 Livrables :
 
