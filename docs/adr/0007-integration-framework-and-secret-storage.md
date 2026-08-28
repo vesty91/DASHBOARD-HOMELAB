@@ -40,24 +40,31 @@ La Phase 7 n'expose qu'une clé version 1 ; la rotation complète est différée
 
 ### 4. `config_revision` et résultats stale
 
-La migration `0004` ajoute `config_revision INTEGER NOT NULL DEFAULT 1` avec contrainte `> 0`.
+La migration `0004` ajoute `config_revision INTEGER NOT NULL DEFAULT 1` avec contrainte `> 0` (CHECK SQLite et PostgreSQL).
 Toute mutation de `baseUrl`, config, `enabled` ou secret incrémente la révision et remet le status à
-`unknown`. Le test snapshot la révision N, fait le réseau hors transaction, puis
+`unknown`. Un `UPDATE` ne touche que les colonnes présentes dans l'input (pas de read-modify-write
+complet). Le test snapshot la révision N, fait le réseau hors transaction, puis
 `UPDATE ... WHERE config_revision = N`. 0 ligne : `STALE_RESULT`, l'état N+1 est conservé.
 
 ### 5. SSRF, DNS pinning, TLS
 
 Le client HTTP réutilise `isAllowedHealthAddress` et le resolver de `@dashboard/monitoring` (ADR 0005).
-Schémas `http:`/`https:` sans credentials. Loopback, link-local et metadata sont bloqués. LAN privé,
-CGNAT et ULA restent autorisés. Résolution unique, connexion à l'IP validée, SNI du hostname original.
-Redirects : 0 par défaut. `verifyTls` est vrai par défaut ; `false` est local à l'agent HTTPS de cette
-intégration, jamais via `NODE_TLS_REJECT_UNAUTHORIZED`.
+Schémas `http:`/`https:` sans credentials. Loopback, link-local, multicast et metadata sont bloqués,
+y compris `100.100.100.200` et `fd00:ec2::254`. LAN privé, CGNAT hors ces endpoints, et ULA restent
+autorisés. Résolution unique, connexion à l'IP validée, SNI du hostname original.
+Redirects : 0 par défaut. Timeout : deadline absolue en plus du timeout d'inactivité. `verifyTls` est
+vrai par défaut ; `false` est local à l'agent HTTPS de cette intégration, jamais via
+`NODE_TLS_REJECT_UNAUTHORIZED`.
+
+Les metadata et messages de test sont redacted par **valeur** des secrets déchiffrés, pas seulement
+par nom de clé.
 
 ### 6. Cache et rate limiter mémoire
 
 `MemoryIntegrationCache` : TTL, max 500 entrées, LRU, invalidation par `integrationId`. Le test de
-connexion bypasse le cache. `MemoryTestRateLimiter` : 5 tests / minute / acteur+intégration. La limite
-multi-instance est une dette Phase 13 (Redis).
+connexion bypasse le cache. `MemoryTestRateLimiter` : 5 tests / minute / acteur+intégration, avec un
+plafond strict de clés trackées (éviction FIFO après cleanup). La limite multi-instance est une dette
+Phase 13 (Redis).
 
 ### 7. Phase 8 différée
 

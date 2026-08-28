@@ -7,6 +7,7 @@ import {
   type SecretKeyring,
 } from "@dashboard/secrets";
 import { hasPermission } from "@dashboard/permissions";
+import { assertConfigExcludesSecretKeys } from "./definition";
 import { IntegrationError, type IntegrationErrorCode } from "./errors";
 import { DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, MIN_TIMEOUT_MS, secureRequest } from "./http-client";
 import type { IntegrationRegistry } from "./registry";
@@ -54,6 +55,37 @@ function timeoutFromConfig(config: JsonObject): number {
 
 function verifyTlsFromConfig(config: JsonObject): boolean {
   return config.verifyTls !== false;
+}
+
+export function collectSecretStringValues(secrets: unknown): string[] {
+  const values: string[] = [];
+  const visit = (value: unknown): void => {
+    if (typeof value === "string" && value.length > 0) values.push(value);
+    else if (Array.isArray(value)) for (const entry of value) visit(entry);
+    else if (value && typeof value === "object")
+      for (const entry of Object.values(value as JsonObject)) visit(entry);
+  };
+  visit(secrets);
+  return [...new Set(values)].sort((left, right) => right.length - left.length);
+}
+
+export function redactKnownSecretValues(value: unknown, secretValues: readonly string[]): unknown {
+  if (secretValues.length === 0) return value;
+  if (typeof value === "string") {
+    let output = value;
+    for (const secret of secretValues)
+      if (output.includes(secret)) output = output.split(secret).join("[REDACTED]");
+    return output;
+  }
+  if (Array.isArray(value))
+    return value.map((entry) => redactKnownSecretValues(entry, secretValues));
+  if (value && typeof value === "object") {
+    const output: JsonObject = {};
+    for (const [key, entry] of Object.entries(value as JsonObject))
+      output[key] = redactKnownSecretValues(entry, secretValues);
+    return output;
+  }
+  return value;
 }
 
 function sanitizeMetadata(value: unknown, depth = 0): unknown {
@@ -141,6 +173,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       const definition = registry.get(parsed.type);
       if (!definition) throw new IntegrationError("MISCONFIGURED", "Unknown integration type");
       const config = definition.configSchema.parse(parsed.config) as JsonObject;
+      assertConfigExcludesSecretKeys(definition, config);
       const created = await store.create({
         type: parsed.type,
         name: parsed.name,
@@ -163,6 +196,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       if (parsed.config !== undefined) {
         if (!definition) throw new IntegrationError("MISCONFIGURED", "Unknown integration type");
         nextConfig = definition.configSchema.parse(parsed.config) as JsonObject;
+        assertConfigExcludesSecretKeys(definition, nextConfig);
       }
       const bumpRevision =
         (parsed.baseUrl !== undefined && parsed.baseUrl !== current.baseUrl) ||
@@ -248,6 +282,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       if (!rateLimiter.tryConsume(actor.userId ?? "anonymous", current.id))
         return { ok: false as const, code: "RATE_LIMITED" as const, message: "Too many tests" };
       const revision = current.configRevision;
+      const secretValues = collectSecretStringValues(secrets);
       const started = performance.now();
       let result;
       try {
@@ -284,13 +319,21 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
             ok: true as const,
             latencyMs,
             ...(result.metadata
-              ? { metadata: redact(sanitizeMetadata(result.metadata)) as JsonObject }
+              ? {
+                  metadata: redact(
+                    sanitizeMetadata(redactKnownSecretValues(result.metadata, secretValues)),
+                  ) as JsonObject,
+                }
               : {}),
           }
         : {
             ok: false as const,
             code: result.code,
-            ...(result.message ? { message: result.message } : {}),
+            ...(result.message
+              ? {
+                  message: String(redactKnownSecretValues(result.message, secretValues)),
+                }
+              : {}),
           };
       if (normalized.ok || shouldPersistFailure(normalized.code)) {
         const persisted = await store.persistConnectionResult(

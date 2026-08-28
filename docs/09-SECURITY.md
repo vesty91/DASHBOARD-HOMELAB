@@ -99,9 +99,13 @@ Ajouter tests contre :
 
 Attention : le LAN est une cible légitime du produit. La politique doit distinguer admin autorisé et source externe non fiable.
 
+Les metadata et messages de `integration.test` sont filtrés contre les valeurs de secrets déchiffrées **avant** truncation. Une réponse qui reflète un secret dans un champ anodin (`version`, etc.) est redacted.
+
 La Phase 5 applique la politique détaillée par l'ADR 0005 : résolution complète, validation de toutes
 les adresses, normalisation des IPv4 mappées en IPv6, DNS pinning, résolution bornée par le timeout,
-redirects manuels, TLS normal et blocage loopback/link-local/metadata.
+redirects manuels, TLS normal et blocage loopback/link-local/metadata. Les endpoints metadata non
+link-local `100.100.100.200` et `fd00:ec2::254` sont aussi refusés. Le client d'intégration Phase 7
+applique la même policy centralisée et un deadline timer absolu (pas seulement l'inactivité socket).
 
 ## 8. Uploads
 

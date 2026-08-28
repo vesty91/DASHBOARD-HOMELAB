@@ -12,4 +12,12 @@ describe("MemoryTestRateLimiter", () => {
     now += 60_001;
     expect(limiter.tryConsume("actor", "integration")).toBe(true);
   });
+
+  it("never grows beyond maxTrackedKeys while entries are still active", () => {
+    const limiter = new MemoryTestRateLimiter(5, 60_000, () => 1_000, 10);
+    for (let index = 0; index < 15; index += 1)
+      expect(limiter.tryConsume(`actor-${index}`, "integration")).toBe(true);
+    expect(limiter.trackedKeyCount).toBeLessThanOrEqual(10);
+    expect(limiter.trackedKeyCount).toBe(10);
+  });
 });

@@ -21,6 +21,9 @@ export function assertIntegrationDefinition(definition: IntegrationDefinition): 
   const configKeys = new Set(definition.configFields.map((field) => field.key));
   if (configKeys.size !== definition.configFields.length)
     throw new IntegrationError("MISCONFIGURED", "Config field keys must be unique");
+  for (const key of secretKeys)
+    if (configKeys.has(key))
+      throw new IntegrationError("MISCONFIGURED", "Config and secret field keys must not overlap");
   const schemes = definition.allowedSchemes.length ? definition.allowedSchemes : DEFAULT_SCHEMES;
   for (const scheme of schemes)
     if (!scheme.endsWith(":"))
@@ -59,6 +62,16 @@ export function sealIntegrationDefinition<TConfig, TSecrets>(
     testConnection: definition.testConnection,
   };
   return Object.freeze(sealed);
+}
+
+export function assertConfigExcludesSecretKeys(
+  definition: IntegrationDefinition,
+  config: Record<string, unknown>,
+): void {
+  const secretKeys = new Set(definition.secretFields.map((field) => field.key));
+  for (const key of Object.keys(config))
+    if (secretKeys.has(key))
+      throw new IntegrationError("VALIDATION_ERROR", "Secret fields cannot be stored in config");
 }
 
 export function catalogEntryFromDefinition(definition: IntegrationDefinition) {

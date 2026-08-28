@@ -413,7 +413,20 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
           resetStatus: true,
         }),
       ]);
-      expect((await store.findById(created.id))?.configRevision).toBe(4);
+      expect(await store.findById(created.id)).toMatchObject({
+        enabled: false,
+        baseUrl: "http://10.0.0.11:3000",
+        configRevision: 4,
+      });
+      await expect(
+        client.pool.query("update integrations set config_revision=0 where id=$1", [created.id]),
+      ).rejects.toThrow();
+      await expect(
+        client.pool.query(
+          "insert into integrations(id,type,name,base_url,enabled,config_json,status,config_revision,created_at,updated_at) values($1,'test-http','Zero','http://10.0.0.9:3000',true,'{}'::jsonb,'unknown',0,now(),now())",
+          ["00000000-0000-4000-8000-000000000079"],
+        ),
+      ).rejects.toThrow();
       expect(await store.delete(created.id)).toBe(true);
       expect(
         (

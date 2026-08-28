@@ -15,7 +15,8 @@ export const MIN_TIMEOUT_MS = 500;
 export const MAX_TIMEOUT_MS = 30_000;
 export const DEFAULT_MAX_BODY_BYTES = 1_048_576;
 export const INTEGRATION_USER_AGENT = "Dashboard-Integrations/1";
-const MAX_RETRY_DELAY_MS = 2_000;
+export const MAX_RETRY_DELAY_MS = 2_000;
+const FALLBACK_RETRY_AFTER_MS = 100;
 
 export type { AddressResolver };
 
@@ -35,7 +36,7 @@ export interface SecureHttpRequest {
 }
 
 export type SecureHttpResult =
-  | { ok: true; status: number; body: Buffer; latencyMs: number }
+  | { ok: true; status: number; body: Buffer; latencyMs: number; retryAfterMs?: number }
   | { ok: false; code: IntegrationErrorCode; latencyMs: number };
 
 function remainingMs(deadline: number): number {
@@ -44,16 +45,22 @@ function remainingMs(deadline: number): number {
 
 function clampTimeout(timeoutMs: number | undefined): number {
   const value = timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, value));
+  return Math.min(MAX_TIMEOUT_MS, Math.max(1, value));
 }
 
-function parseRetryAfterMs(value: string | undefined): number {
-  if (!value) return 100;
-  const seconds = Number(value);
+function headerLine(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+export function parseRetryAfterMs(value: string | string[] | undefined): number {
+  const raw = headerLine(value);
+  if (!raw) return FALLBACK_RETRY_AFTER_MS;
+  const seconds = Number(raw);
   if (Number.isFinite(seconds) && seconds >= 0) return Math.min(MAX_RETRY_DELAY_MS, seconds * 1000);
-  const date = Date.parse(value);
+  const date = Date.parse(raw);
   if (Number.isFinite(date)) return Math.min(MAX_RETRY_DELAY_MS, Math.max(0, date - Date.now()));
-  return 100;
+  return FALLBACK_RETRY_AFTER_MS;
 }
 
 function sleep(ms: number, deadline: number): Promise<void> {
@@ -144,11 +151,20 @@ function onceRequest(
       accept: "application/json, */*;q=0.8",
       ...options.headers,
     };
+    if (performance.now() >= deadline) return fail("TIMEOUT");
     return await new Promise<SecureHttpResult>((resolve) => {
-      let settled = false;
+      const session: {
+        settled: boolean;
+        response?: http.IncomingMessage;
+        request?: http.ClientRequest;
+        timer?: ReturnType<typeof setTimeout>;
+      } = { settled: false };
       const finish = (result: SecureHttpResult) => {
-        if (settled) return;
-        settled = true;
+        if (session.settled) return;
+        session.settled = true;
+        if (session.timer !== undefined) clearTimeout(session.timer);
+        session.response?.destroy();
+        session.request?.destroy();
         insecureAgent?.destroy();
         resolve(result);
       };
@@ -166,12 +182,16 @@ function onceRequest(
       if (parsed.protocol === "https:" && !net.isIP(hostname)) requestOptions.servername = hostname;
       if (insecureAgent) requestOptions.agent = insecureAgent;
       const request = client.request(parsed, requestOptions, (response) => {
+        session.response = response;
         const chunks: Buffer[] = [];
         let size = 0;
+        const retryAfterMs =
+          response.statusCode === 429
+            ? parseRetryAfterMs(response.headers["retry-after"])
+            : undefined;
         response.on("data", (chunk: Buffer) => {
           size += chunk.length;
           if (size > maxBodyBytes) {
-            response.destroy();
             finish(fail("INVALID_RESPONSE"));
             return;
           }
@@ -183,10 +203,17 @@ function onceRequest(
             status: response.statusCode ?? 0,
             body: Buffer.concat(chunks),
             latencyMs: latency(),
+            ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
           });
         });
         response.on("error", () => finish(fail("UNREACHABLE")));
       });
+      session.request = request;
+      session.timer = setTimeout(() => {
+        request.destroy(Object.assign(new Error("timeout"), { code: "ETIMEDOUT" }));
+        session.response?.destroy();
+        finish(fail("TIMEOUT"));
+      }, remainingMs(deadline));
       request.on("timeout", () =>
         request.destroy(Object.assign(new Error("timeout"), { code: "ETIMEDOUT" })),
       );
@@ -223,7 +250,9 @@ export async function secureRequest(options: SecureHttpRequest): Promise<SecureH
       (last.ok && [429, 502, 503, 504].includes(last.status));
     if (!retryable || attempt === maxRetries || performance.now() >= deadline) return last;
     const retryAfter =
-      last.ok && last.status === 429 ? parseRetryAfterMs(undefined) : 50 * (attempt + 1);
+      last.ok && last.status === 429
+        ? Math.min(last.retryAfterMs ?? FALLBACK_RETRY_AFTER_MS, remainingMs(deadline))
+        : 50 * (attempt + 1);
     attempt += 1;
     await sleep(retryAfter, deadline);
   }

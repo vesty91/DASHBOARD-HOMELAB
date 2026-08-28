@@ -1,12 +1,18 @@
 import http from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { createEnvKeyring } from "@dashboard/secrets";
 import { MemoryIntegrationCache } from "./cache";
 import { createIntegrationRegistry } from "./registry";
 import { MemoryTestRateLimiter } from "./rate-limiter";
 import { createIntegrationService } from "./service";
 import { createTestHttpIntegrationDefinition } from "./test-support";
-import type { EncryptedSecretRow, IntegrationRecord, IntegrationStore } from "./types";
+import type {
+  EncryptedSecretRow,
+  IntegrationDefinition,
+  IntegrationRecord,
+  IntegrationStore,
+} from "./types";
 
 const SENTINEL = "SUPER_SECRET_VALUE_123";
 const keyring = createEnvKeyring(Buffer.alloc(32, 11).toString("base64"))!;
@@ -131,10 +137,14 @@ async function listen(handler: http.RequestListener) {
   return `http://127.0.0.1:${address.port}`;
 }
 
-function serviceFor(store: IntegrationStore, limiter = new MemoryTestRateLimiter()) {
-  const registry = createIntegrationRegistry()
-    .register(createTestHttpIntegrationDefinition())
-    .freeze();
+function serviceFor(
+  store: IntegrationStore,
+  limiter = new MemoryTestRateLimiter(),
+  extraDefinitions: IntegrationDefinition[] = [],
+) {
+  const registry = createIntegrationRegistry().register(createTestHttpIntegrationDefinition());
+  for (const definition of extraDefinitions) registry.register(definition);
+  registry.freeze();
   return createIntegrationService({
     store,
     registry,
@@ -273,5 +283,112 @@ describe("integration service", () => {
     expect(service.catalog(admin)).toEqual([
       expect.objectContaining({ id: "test-http", displayName: "Test HTTP" }),
     ]);
+  });
+
+  it("redacts reflected secret values in metadata and messages", async () => {
+    const store = createMemoryStore();
+    const base = createTestHttpIntegrationDefinition();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...base,
+        id: "test-leaky",
+        displayName: "Test leaky",
+        testConnection: async () => ({
+          ok: true,
+          latencyMs: 4,
+          metadata: {
+            version: SENTINEL,
+            nested: { info: SENTINEL },
+            wrapped: `prefix-${SENTINEL}-suffix`,
+          },
+        }),
+      },
+      {
+        ...base,
+        id: "test-leaky-fail",
+        displayName: "Test leaky fail",
+        testConnection: async () => ({
+          ok: false,
+          code: "INVALID_RESPONSE",
+          message: `failed:${SENTINEL}`,
+        }),
+      },
+    ]);
+    const created = await service.create(
+      {
+        type: "test-leaky",
+        name: "Leaky",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000 },
+      },
+      admin,
+    );
+    await service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, admin);
+    const ok = await service.test(created.id, admin);
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.metadata).toEqual({
+        version: "[REDACTED]",
+        nested: { info: "[REDACTED]" },
+        wrapped: "prefix-[REDACTED]-suffix",
+      });
+    }
+    expect(JSON.stringify(ok)).not.toContain(SENTINEL);
+    const failing = await service.create(
+      {
+        type: "test-leaky-fail",
+        name: "Leaky fail",
+        baseUrl: "http://10.0.0.11:3000",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000 },
+      },
+      admin,
+    );
+    await service.setSecret({ integrationId: failing.id, key: "apiKey", value: SENTINEL }, admin);
+    const failed = await service.test(failing.id, admin);
+    expect(failed).toMatchObject({ ok: false, code: "INVALID_RESPONSE" });
+    expect(JSON.stringify(failed)).not.toContain(SENTINEL);
+    if (!failed.ok) expect(failed.message).toBe("failed:[REDACTED]");
+  });
+
+  it("rejects declared secret keys in configJson even with a permissive schema", async () => {
+    const store = createMemoryStore();
+    const base = createTestHttpIntegrationDefinition();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...base,
+        id: "test-open-config",
+        displayName: "Test open config",
+        configSchema: z.object({}).passthrough(),
+      },
+    ]);
+    await expect(
+      service.create(
+        {
+          type: "test-open-config",
+          name: "Open",
+          baseUrl: "http://10.0.0.10:3000",
+          enabled: true,
+          config: { apiKey: "SECRET", path: "/health" },
+        },
+        admin,
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(await store.list(10)).toEqual([]);
+    const created = await service.create(
+      {
+        type: "test-open-config",
+        name: "Open",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: { path: "/health" },
+      },
+      admin,
+    );
+    await expect(
+      service.update({ id: created.id, config: { apiKey: "SECRET" } }, admin),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect((await service.get(created.id, admin)).config).toEqual({ path: "/health" });
   });
 });

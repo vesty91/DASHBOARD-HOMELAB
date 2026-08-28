@@ -24,4 +24,17 @@ describe("IntegrationRegistry", () => {
     expect(production.catalog()).toEqual([]);
     expect(() => production.register(createTestHttpIntegrationDefinition())).toThrow(/frozen/);
   });
+
+  it("rejects overlapping config and secret field keys", () => {
+    const definition = createTestHttpIntegrationDefinition();
+    expect(() =>
+      createIntegrationRegistry().register({
+        ...definition,
+        configFields: [
+          { key: "apiKey", label: "API key", required: false },
+          ...definition.configFields,
+        ],
+      }),
+    ).toThrow(/must not overlap/);
+  });
 });

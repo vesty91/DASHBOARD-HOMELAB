@@ -33,6 +33,8 @@ Secrets :
 - username/password si nécessaire ;
 - clientSecret.
 
+Les secrets d'une définition ne peuvent pas figurer dans `configFields` ni être persistés dans `configJson`.
+
 Ne jamais mélanger les deux en DB.
 
 ## 3. Test de connexion
@@ -67,12 +69,12 @@ UNKNOWN
 Fonctions communes :
 
 - URL normalization ;
-- timeout via AbortController ;
+- timeout global avec deadline absolue (DNS, connect, TLS, headers, body) ;
 - headers ;
 - user-agent ;
 - max body ;
 - JSON parsing ;
-- redaction ;
+- redaction par nom de clé et par valeur de secret connue ;
 - TLS policy ;
 - retries limités.
 
@@ -100,8 +102,11 @@ Mais bloquer systématiquement :
 
 - `file://` ;
 - protocoles non HTTP(S), sauf adapter spécialisé ;
-- metadata cloud connues ;
+- loopback, link-local, multicast ;
+- metadata cloud connues, y compris `169.254.169.254`, `100.100.100.200` (Alibaba) et `fd00:ec2::254` (AWS IMDS IPv6), ainsi que leurs formes IPv4-mapped ;
 - redirections vers protocoles interdits.
+
+Le CGNAT `100.64/10` et l'ULA IPv6 restent autorisés, sauf ces endpoints metadata explicitement interdits.
 
 Documenter le risque d'un utilisateur ayant `integration.manage`.
 

@@ -103,6 +103,49 @@ describe("SQLite integration store", () => {
         resetStatus: true,
       });
       expect(reset).toMatchObject({ status: "unknown", configRevision: 3, lastCheckedAt: null });
+      const initial = await store.findById(created.id);
+      await Promise.all([
+        store.update({
+          id: created.id,
+          enabled: false,
+          bumpRevision: true,
+          resetStatus: true,
+        }),
+        store.update({
+          id: created.id,
+          baseUrl: "http://10.0.0.55:3000",
+          bumpRevision: true,
+          resetStatus: true,
+        }),
+      ]);
+      expect(await store.findById(created.id)).toMatchObject({
+        enabled: false,
+        baseUrl: "http://10.0.0.55:3000",
+        configRevision: (initial?.configRevision ?? 0) + 2,
+      });
+      expect(() =>
+        client.sqlite
+          .prepare("UPDATE integrations SET config_revision=0 WHERE id=?")
+          .run(created.id),
+      ).toThrow();
+      expect(() =>
+        client.sqlite
+          .prepare(
+            "INSERT INTO integrations(id,type,name,base_url,enabled,config_json,status,config_revision,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+          )
+          .run(
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "test-http",
+            "Zero",
+            "http://10.0.0.9:3000",
+            1,
+            "{}",
+            "unknown",
+            0,
+            Date.now(),
+            Date.now(),
+          ),
+      ).toThrow();
       expect(await store.delete(created.id)).toBe(true);
       expect(
         client.sqlite

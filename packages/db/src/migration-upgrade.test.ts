@@ -227,6 +227,13 @@ describe("Phase 6 to Phase 7 migration", () => {
         auth_tag: "dGFn",
         key_version: 1,
       });
+      expect(() =>
+        database
+          .prepare(
+            "UPDATE integrations SET config_revision=0 WHERE id='11111111-1111-4111-8111-111111111111'",
+          )
+          .run(),
+      ).toThrow();
     } finally {
       database.close();
     }

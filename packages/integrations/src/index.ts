@@ -5,7 +5,11 @@ export {
   CAPABILITY_PATTERN,
 } from "./capabilities";
 export { MemoryIntegrationCache, DEFAULT_CACHE_MAX_ENTRIES, DEFAULT_CACHE_TTL_MS } from "./cache";
-export { assertIntegrationDefinition, catalogEntryFromDefinition } from "./definition";
+export {
+  assertIntegrationDefinition,
+  assertConfigExcludesSecretKeys,
+  catalogEntryFromDefinition,
+} from "./definition";
 export {
   IntegrationError,
   INTEGRATION_ERROR_CODES,
@@ -16,11 +20,13 @@ export {
   DEFAULT_MAX_BODY_BYTES,
   DEFAULT_TIMEOUT_MS,
   INTEGRATION_USER_AGENT,
+  MAX_RETRY_DELAY_MS,
   MAX_TIMEOUT_MS,
   MIN_TIMEOUT_MS,
   isAllowedIntegrationAddress,
   mapHttpResult,
   parseJsonBody,
+  parseRetryAfterMs,
   secureRequest,
   type AddressResolver,
   type SecureHttpRequest,
@@ -30,6 +36,7 @@ export {
   MemoryTestRateLimiter,
   DEFAULT_TEST_RATE_LIMIT,
   DEFAULT_TEST_RATE_WINDOW_MS,
+  DEFAULT_MAX_TRACKED_KEYS,
 } from "./rate-limiter";
 export {
   IntegrationRegistry,

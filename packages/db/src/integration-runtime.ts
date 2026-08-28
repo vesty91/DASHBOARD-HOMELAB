@@ -143,28 +143,40 @@ export function createSqliteIntegrationStore(db: DatabaseSync): IntegrationStore
       return find(id)!;
     },
     async update(input) {
-      const current = find(input.id);
-      if (!current) return undefined;
-      const next = {
-        name: input.name ?? current.name,
-        baseUrl: input.baseUrl ?? current.baseUrl,
-        enabled: input.enabled ?? current.enabled,
-        config: input.config ?? current.config,
-      };
-      db.prepare(
-        `UPDATE integrations SET name=?,base_url=?,enabled=?,config_json=?,status=?,last_checked_at=?,config_revision=config_revision+?,updated_at=? WHERE id=?`,
-      ).run(
-        next.name,
-        next.baseUrl,
-        next.enabled ? 1 : 0,
-        JSON.stringify(next.config),
-        input.resetStatus ? "unknown" : current.status,
-        input.resetStatus ? null : (current.lastCheckedAt?.getTime() ?? null),
-        input.bumpRevision ? 1 : 0,
-        Date.now(),
-        input.id,
-      );
-      return find(input.id)!;
+      const sets: string[] = [];
+      const values: Array<string | number | null> = [];
+      if (input.name !== undefined) {
+        sets.push("name=?");
+        values.push(input.name);
+      }
+      if (input.baseUrl !== undefined) {
+        sets.push("base_url=?");
+        values.push(input.baseUrl);
+      }
+      if (input.enabled !== undefined) {
+        sets.push("enabled=?");
+        values.push(input.enabled ? 1 : 0);
+      }
+      if (input.config !== undefined) {
+        sets.push("config_json=?");
+        values.push(JSON.stringify(input.config));
+      }
+      if (input.resetStatus) {
+        sets.push("status=?");
+        values.push("unknown");
+        sets.push("last_checked_at=?");
+        values.push(null);
+      }
+      sets.push("config_revision=config_revision+?");
+      values.push(input.bumpRevision ? 1 : 0);
+      sets.push("updated_at=?");
+      values.push(Date.now());
+      values.push(input.id);
+      const result = db
+        .prepare(`UPDATE integrations SET ${sets.join(",")} WHERE id=?`)
+        .run(...values);
+      if (result.changes !== 1) return undefined;
+      return find(input.id);
     },
     async delete(id) {
       return db.prepare("DELETE FROM integrations WHERE id=?").run(id).changes === 1;
@@ -250,28 +262,30 @@ export function createPostgresqlIntegrationStore(pool: Pool): IntegrationStore {
       return (await find(pool, id))!;
     },
     async update(input) {
-      const current = await find(pool, input.id);
-      if (!current) return undefined;
-      const next = {
-        name: input.name ?? current.name,
-        baseUrl: input.baseUrl ?? current.baseUrl,
-        enabled: input.enabled ?? current.enabled,
-        config: input.config ?? current.config,
+      const sets: string[] = [];
+      const values: unknown[] = [];
+      const param = (value: unknown) => {
+        values.push(value);
+        return `$${values.length}`;
       };
-      await pool.query(
-        "UPDATE integrations SET name=$1,base_url=$2,enabled=$3,config_json=$4,status=$5,last_checked_at=$6,config_revision=config_revision+CASE WHEN $7::boolean THEN 1 ELSE 0 END,updated_at=now() WHERE id=$8",
-        [
-          next.name,
-          next.baseUrl,
-          next.enabled,
-          next.config,
-          input.resetStatus ? "unknown" : current.status,
-          input.resetStatus ? null : current.lastCheckedAt,
-          input.bumpRevision,
-          input.id,
-        ],
+      if (input.name !== undefined) sets.push(`name=${param(input.name)}`);
+      if (input.baseUrl !== undefined) sets.push(`base_url=${param(input.baseUrl)}`);
+      if (input.enabled !== undefined) sets.push(`enabled=${param(input.enabled)}`);
+      if (input.config !== undefined) sets.push(`config_json=${param(input.config)}`);
+      if (input.resetStatus) {
+        sets.push(`status=${param("unknown")}`);
+        sets.push("last_checked_at=NULL");
+      }
+      sets.push(
+        `config_revision=config_revision+CASE WHEN ${param(input.bumpRevision)}::boolean THEN 1 ELSE 0 END`,
       );
-      return (await find(pool, input.id))!;
+      sets.push("updated_at=now()");
+      const result = await pool.query(
+        `UPDATE integrations SET ${sets.join(",")} WHERE id=${param(input.id)}`,
+        values,
+      );
+      if (result.rowCount !== 1) return undefined;
+      return find(pool, input.id);
     },
     async delete(id) {
       return (await pool.query("DELETE FROM integrations WHERE id=$1", [id])).rowCount === 1;
