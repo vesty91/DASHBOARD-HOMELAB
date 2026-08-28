@@ -16,6 +16,12 @@ export interface BoardRecord {
   createdAt: Date;
   updatedAt: Date;
 }
+export interface BoardListAccess {
+  canEdit: boolean;
+}
+export type BoardListItem = BoardRecord & {
+  access: BoardListAccess;
+};
 export interface LayoutRecord {
   id: string;
   boardId: string;

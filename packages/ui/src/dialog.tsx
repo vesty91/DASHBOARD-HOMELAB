@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Button } from "./button";
 import { cn } from "./cn";
+import { attachModalFocusTrap } from "./focus-trap";
 
 export function Dialog({
   open,
@@ -22,25 +23,22 @@ export function Dialog({
 
   useEffect(() => {
     if (!open) return;
-    const previous = document.activeElement;
-    panelRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("ui-scroll-lock");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("ui-scroll-lock");
-      if (previous instanceof HTMLElement) previous.focus();
-    };
+    const panel = panelRef.current;
+    if (!panel) return;
+    return attachModalFocusTrap(panel, onClose);
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
     <div className="ui-overlay">
-      <button type="button" className="ui-overlay-backdrop" aria-label="Fermer" onClick={onClose} />
+      <button
+        type="button"
+        className="ui-overlay-backdrop"
+        aria-label="Fermer"
+        tabIndex={-1}
+        onClick={onClose}
+      />
       <div
         ref={panelRef}
         role="dialog"
@@ -79,19 +77,12 @@ export function ConfirmDialog({
   confirmLabel?: string;
 }) {
   const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    panelRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("ui-scroll-lock");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("ui-scroll-lock");
-    };
+    const panel = panelRef.current;
+    if (!panel) return;
+    return attachModalFocusTrap(panel, onCancel);
   }, [onCancel]);
 
   return (
@@ -100,6 +91,7 @@ export function ConfirmDialog({
         type="button"
         className="ui-overlay-backdrop"
         aria-label="Fermer"
+        tabIndex={-1}
         onClick={onCancel}
       />
       <section

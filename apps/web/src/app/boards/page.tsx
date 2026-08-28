@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
-import { canAccessBoard } from "@dashboard/boards";
 import {
   Badge,
   Card,
@@ -10,7 +9,7 @@ import {
   PageContainer,
   PageHeader,
 } from "@dashboard/ui";
-import { createBoardApiContext, getBoardCaller } from "../../lib/server/board-api";
+import { getBoardCaller } from "../../lib/server/board-api";
 import { CreateBoardDialog } from "./create-board-dialog";
 
 const visibilityLabel = {
@@ -27,7 +26,6 @@ const visibilityTone = {
 
 export default async function BoardsPage() {
   const caller = await getBoardCaller();
-  const context = await createBoardApiContext();
   const [boards, canCreate] = await Promise.all([caller.board.list(), caller.board.canCreate()]);
   return (
     <PageContainer>
@@ -48,10 +46,7 @@ export default async function BoardsPage() {
             Boards accessibles
           </h2>
           {boards.map((board) => {
-            const canEdit = canAccessBoard(
-              { board, actor: context.actor, resourcePermissions: [] },
-              "board.edit",
-            );
+            const canEdit = board.access.canEdit;
             return (
               <Card key={board.id} className="entity-card">
                 <CardBody>

@@ -2,11 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { Badge, PageContainer, PageHeader } from "@dashboard/ui";
-import { canAccessBoard } from "@dashboard/boards";
-import { authOptions } from "../../../lib/server/auth";
-import { createBoardApiContext, getBoardCaller } from "../../../lib/server/board-api";
+import { getBoardCaller } from "../../../lib/server/board-api";
 import { resolveAppTileViews } from "../resolve-app-tiles";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
@@ -29,13 +26,10 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     if (error instanceof TRPCError && error.code === "FORBIDDEN") redirect("/forbidden");
     throw error;
   }
-  const session = await getServerSession(authOptions);
-  const context = await createBoardApiContext();
-  const canEdit = canAccessBoard(
-    { board: snapshot.board, actor: context.actor, resourcePermissions: [] },
-    "board.edit",
-  );
-  const appViews = await resolveAppTileViews(snapshot, caller);
+  const [canEdit, appViews] = await Promise.all([
+    caller.board.canAccess({ slug, permission: "board.edit" }),
+    resolveAppTileViews(snapshot, caller),
+  ]);
   return (
     <PageContainer wide>
       <PageHeader
@@ -44,7 +38,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         actions={
           <>
             <Badge>{visibilityLabel[snapshot.board.visibility]}</Badge>
-            {session?.user?.id && canEdit ? (
+            {canEdit ? (
               <Link className="ui-btn ui-btn-primary" href={`/boards/${slug}/edit`}>
                 Modifier
               </Link>

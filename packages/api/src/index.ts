@@ -85,6 +85,16 @@ export const boardRouter = t.router({
     ctx.actor.subject ? hasPermission(ctx.actor.subject, "board.create") : false,
   ),
   list: t.procedure.query(({ ctx }) => procedure(() => ctx.boards.list(ctx.actor))),
+  canAccess: t.procedure
+    .input(
+      z.object({
+        slug: z.string().min(1),
+        permission: z.enum(["board.view", "board.edit", "board.manage"]),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      procedure(() => ctx.boards.canAccess({ slug: input.slug }, ctx.actor, input.permission)),
+    ),
   get: t.procedure
     .input(z.object({ slug: z.string() }))
     .query(({ ctx, input }) => procedure(() => ctx.boards.getBySlug(input.slug, ctx.actor))),
