@@ -3,10 +3,18 @@ import { notFound } from "next/navigation";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
+import { Badge, PageContainer, PageHeader } from "@dashboard/ui";
+import { canAccessBoard } from "@dashboard/boards";
 import { authOptions } from "../../../lib/server/auth";
-import { getBoardCaller } from "../../../lib/server/board-api";
+import { createBoardApiContext, getBoardCaller } from "../../../lib/server/board-api";
 import { resolveAppTileViews } from "../resolve-app-tiles";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
+
+const visibilityLabel = {
+  private: "Privé",
+  authenticated: "Authentifié",
+  public: "Public",
+} as const;
 
 export default async function BoardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -22,13 +30,29 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     throw error;
   }
   const session = await getServerSession(authOptions);
+  const context = await createBoardApiContext();
+  const canEdit = canAccessBoard(
+    { board: snapshot.board, actor: context.actor, resourcePermissions: [] },
+    "board.edit",
+  );
   const appViews = await resolveAppTileViews(snapshot, caller);
   return (
-    <main>
-      <h1>{snapshot.board.name}</h1>
-      {snapshot.board.description && <p>{snapshot.board.description}</p>}
-      {session?.user?.id ? <Link href={`/boards/${slug}/edit`}>Modifier</Link> : null}
+    <PageContainer wide>
+      <PageHeader
+        title={snapshot.board.name}
+        {...(snapshot.board.description ? { description: snapshot.board.description } : {})}
+        actions={
+          <>
+            <Badge>{visibilityLabel[snapshot.board.visibility]}</Badge>
+            {session?.user?.id && canEdit ? (
+              <Link className="ui-btn ui-btn-primary" href={`/boards/${slug}/edit`}>
+                Modifier
+              </Link>
+            ) : null}
+          </>
+        }
+      />
       <ResponsiveBoardReadGrid snapshot={snapshot} appViews={appViews} />
-    </main>
+    </PageContainer>
   );
 }

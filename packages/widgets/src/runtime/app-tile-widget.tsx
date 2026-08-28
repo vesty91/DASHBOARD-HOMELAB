@@ -41,20 +41,24 @@ export function AppTileWidget({
       <a href={app.url}>{app.name}</a>
     );
   return (
-    <div className="widget-app-tile" style={app.color ? { borderColor: app.color } : undefined}>
+    <div className="widget-app-tile" {...(app.color ? { style: { borderColor: app.color } } : {})}>
       {app.iconRef ? <img src={app.iconRef} alt="" width={32} height={32} /> : null}
-      <p>{link}</p>
-      {config.showStatus ? <p>{healthLabel(app)}</p> : null}
-      {config.showLatency && app.lastLatencyMs != null ? <p>{app.lastLatencyMs} ms</p> : null}
-      {app.lastCheckedAt ? (
-        <p>
-          Vérifié le{" "}
-          {new Intl.DateTimeFormat("fr-FR", {
-            dateStyle: "short",
-            timeStyle: "short",
-          }).format(new Date(app.lastCheckedAt))}
-        </p>
-      ) : null}
+      <div>
+        <p>{link}</p>
+        {config.showStatus ? <p className="widget-state">{healthLabel(app)}</p> : null}
+        {config.showLatency && app.lastLatencyMs != null ? (
+          <p className="widget-state">{app.lastLatencyMs} ms</p>
+        ) : null}
+        {app.lastCheckedAt ? (
+          <p className="widget-state">
+            Vérifié le{" "}
+            {new Intl.DateTimeFormat("fr-FR", {
+              dateStyle: "short",
+              timeStyle: "short",
+            }).format(new Date(app.lastCheckedAt))}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

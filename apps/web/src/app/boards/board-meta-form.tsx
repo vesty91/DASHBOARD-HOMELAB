@@ -1,5 +1,6 @@
 "use client";
 import type { BoardMutationResult } from "./mutation-result";
+import { Button, Field, Input, Select } from "@dashboard/ui";
 
 export function BoardMetaForm({
   name,
@@ -20,6 +21,7 @@ export function BoardMetaForm({
 }) {
   return (
     <form
+      className="board-meta-form"
       onSubmit={(event) => {
         event.preventDefault();
         if (conflict) return;
@@ -33,23 +35,22 @@ export function BoardMetaForm({
         });
       }}
     >
-      <label>
-        Nom <input name="name" defaultValue={name} required maxLength={120} />
-      </label>
-      <label>
-        Description <textarea name="description" defaultValue={description} maxLength={1000} />
-      </label>
-      <label>
-        Visibilité{" "}
-        <select name="visibility" defaultValue={visibility}>
+      <Field label="Nom">
+        <Input name="name" defaultValue={name} required maxLength={120} />
+      </Field>
+      <Field label="Description">
+        <Input name="description" defaultValue={description} maxLength={1000} />
+      </Field>
+      <Field label="Visibilité">
+        <Select name="visibility" defaultValue={visibility}>
           <option value="private">Privé</option>
           <option value="authenticated">Authentifié</option>
           <option value="public">Public</option>
-        </select>
-      </label>
-      <button type="submit" disabled={conflict}>
+        </Select>
+      </Field>
+      <Button variant="secondary" type="submit" disabled={conflict}>
         Enregistrer les métadonnées
-      </button>
+      </Button>
     </form>
   );
 }

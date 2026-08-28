@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageContainer } from "@dashboard/ui";
 import { getBoardCaller } from "../../../../lib/server/board-api";
 import { BoardEditWorkspace } from "../../board-edit-workspace";
 import { deleteBoardAction } from "../../actions";
@@ -31,16 +32,22 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     else throw error;
   }
   return (
-    <main>
-      <h1>Modifier {snapshot.board.name}</h1>
-      <Link href={`/boards/${slug}`}>Quitter le mode édition</Link>
+    <PageContainer wide>
+      <header className="board-edit-chrome">
+        <Link className="ui-btn ui-btn-ghost" href={`/boards/${slug}`}>
+          Retour
+        </Link>
+        <h1 className="ui-page-title" style={{ fontSize: "1.35rem", margin: 0 }}>
+          Modifier {snapshot.board.name}
+        </h1>
+        <DeleteBoardControl action={deleteBoardAction.bind(null, snapshot.board.id)} />
+      </header>
       <BoardEditWorkspace
         snapshot={snapshot}
         catalog={catalog}
         appViews={appViews}
         canReadApps={canReadApps}
       />
-      <DeleteBoardControl action={deleteBoardAction.bind(null, snapshot.board.id)} />
-    </main>
+    </PageContainer>
   );
 }

@@ -1,4 +1,6 @@
 import type { AppDto } from "@dashboard/apps";
+import { Button, Field, Input, Select, Textarea } from "@dashboard/ui";
+
 export function AppForm({
   action,
   app,
@@ -8,85 +10,85 @@ export function AppForm({
 }) {
   const health = app?.healthcheckConfig;
   return (
-    <form action={action}>
-      <label>
-        Nom <input name="name" required maxLength={120} defaultValue={app?.name} />
-      </label>
-      <label>
-        Description{" "}
-        <textarea name="description" maxLength={1000} defaultValue={app?.description ?? ""} />
-      </label>
-      <label>
-        URL <input name="url" type="url" required maxLength={2048} defaultValue={app?.url} />
-      </label>
-      <label>
-        Icône (URL HTTP/HTTPS){" "}
-        <input name="iconRef" type="url" maxLength={2048} defaultValue={app?.iconRef ?? ""} />
-      </label>
-      <label>
-        Couleur{" "}
-        <input
+    <form action={action} className="ui-form ui-form-wide ui-form-grid">
+      <Field label="Nom">
+        <Input name="name" required maxLength={120} defaultValue={app?.name ?? ""} />
+      </Field>
+      <Field label="Description">
+        <Textarea name="description" maxLength={1000} defaultValue={app?.description ?? ""} />
+      </Field>
+      <Field label="URL">
+        <Input name="url" type="url" required maxLength={2048} defaultValue={app?.url ?? ""} />
+      </Field>
+      <Field label="Icône (URL HTTP/HTTPS)">
+        <Input name="iconRef" type="url" maxLength={2048} defaultValue={app?.iconRef ?? ""} />
+      </Field>
+      <Field label="Couleur">
+        <Input
           name="color"
           pattern="#[0-9A-Fa-f]{6}"
           placeholder="#336699"
           defaultValue={app?.color ?? ""}
         />
-      </label>
-      <label>
-        Tags séparés par des virgules <input name="tags" defaultValue={app?.tags.join(", ")} />
-      </label>
-      <label>
-        Ouvrir dans{" "}
-        <select name="target" defaultValue={app?.target ?? "new-tab"}>
+      </Field>
+      <Field label="Tags séparés par des virgules">
+        <Input name="tags" defaultValue={app?.tags?.join(", ") ?? ""} />
+      </Field>
+      <Field label="Ouvrir dans">
+        <Select name="target" defaultValue={app?.target ?? "new-tab"}>
           <option value="new-tab">Nouvel onglet</option>
           <option value="same-tab">Même onglet</option>
-        </select>
+        </Select>
+      </Field>
+      <label className="ui-field">
+        <span className="ui-label">
+          <input
+            name="healthcheckEnabled"
+            type="checkbox"
+            defaultChecked={Boolean(app?.healthcheckEnabled)}
+          />{" "}
+          Healthcheck activé
+        </span>
       </label>
-      <label>
-        <input name="healthcheckEnabled" type="checkbox" defaultChecked={app?.healthcheckEnabled} />{" "}
-        Healthcheck activé
-      </label>
-      <label>
-        Health path <input name="healthPath" defaultValue={health?.path ?? "/"} />
-      </label>
-      <label>
-        Méthode{" "}
-        <select name="healthMethod" defaultValue={health?.method ?? "GET"}>
+      <Field label="Health path">
+        <Input name="healthPath" defaultValue={health?.path ?? "/"} />
+      </Field>
+      <Field label="Méthode">
+        <Select name="healthMethod" defaultValue={health?.method ?? "GET"}>
           <option>GET</option>
           <option>HEAD</option>
-        </select>
-      </label>
-      <label>
-        Timeout ms{" "}
-        <input
+        </Select>
+      </Field>
+      <Field label="Timeout ms">
+        <Input
           name="timeoutMs"
           type="number"
           min={500}
           max={10000}
           defaultValue={health?.timeoutMs ?? 5000}
         />
-      </label>
-      <label>
-        Status minimum{" "}
-        <input
+      </Field>
+      <Field label="Status minimum">
+        <Input
           name="expectedStatusMin"
           type="number"
           min={100}
           max={599}
           defaultValue={health?.expectedStatusMin ?? 200}
         />
-      </label>
-      <label>
-        Status maximum{" "}
-        <input
+      </Field>
+      <Field label="Status maximum">
+        <Input
           name="expectedStatusMax"
           type="number"
           min={100}
           max={599}
           defaultValue={health?.expectedStatusMax ?? 399}
         />
-      </label>
-      <button type="submit">Enregistrer</button>
+      </Field>
+      <Button variant="primary" type="submit">
+        Enregistrer
+      </Button>
     </form>
   );
 }

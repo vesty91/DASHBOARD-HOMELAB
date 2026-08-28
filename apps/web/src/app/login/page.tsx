@@ -1,9 +1,10 @@
+import { PublicAuthLayout } from "@/components/public-auth-layout";
 import { LoginForm } from "./login-form";
+
 export default function LoginPage() {
   return (
-    <main className="mx-auto max-w-md p-8">
-      <h1 className="text-3xl font-semibold">Connexion</h1>
+    <PublicAuthLayout title="Connexion" description="Accédez à votre tableau de bord homelab.">
       <LoginForm />
-    </main>
+    </PublicAuthLayout>
   );
 }

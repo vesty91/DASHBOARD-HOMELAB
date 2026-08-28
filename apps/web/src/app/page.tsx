@@ -1,39 +1,132 @@
-const foundations = [
-  "Boards",
-  "Widgets",
-  "Integrations",
-  "RBAC",
-  "Monitoring",
-  "Docker / NAS",
-] as const;
+import { getServerSession } from "next-auth";
+import Link from "next/link";
+import { AppWindow, LayoutGrid, Plug } from "lucide-react";
+import { PageContainer } from "@dashboard/ui";
+import { PublicAuthLayout } from "@/components/public-auth-layout";
+import { AppShellServer } from "@/components/shell/app-shell-server";
+import { getShellContext } from "@/components/shell/get-shell-context";
+import { authOptions } from "@/lib/server/auth";
+import { getBoardCaller } from "@/lib/server/board-api";
+import { getDatabase } from "@/lib/server/database";
 
-export default function HomePage() {
+function isDenied(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error.code === "UNAUTHORIZED" || error.code === "FORBIDDEN"),
+  );
+}
+
+async function countOrNull(load: () => Promise<number | null>): Promise<number | null> {
+  try {
+    return await load();
+  } catch (error) {
+    if (isDenied(error)) return null;
+    throw error;
+  }
+}
+
+export default async function HomePage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    const { authStore } = await getDatabase();
+    const onboarded = await authStore.isOnboardingCompleted();
+    return (
+      <PublicAuthLayout
+        title="Homelab Dashboard"
+        description="Tableau de bord self-hosted pour votre homelab."
+      >
+        {onboarded ? (
+          <Link className="ui-btn ui-btn-primary" href="/login">
+            Connexion
+          </Link>
+        ) : (
+          <Link className="ui-btn ui-btn-primary" href="/setup">
+            Initialiser
+          </Link>
+        )}
+      </PublicAuthLayout>
+    );
+  }
+
+  const { nav } = await getShellContext();
+  const caller = await getBoardCaller();
+  const [boardCount, appCount, integrationCount] = await Promise.all([
+    nav.boards
+      ? countOrNull(async () => (await caller.board.list()).length)
+      : Promise.resolve(null),
+    nav.apps
+      ? countOrNull(async () => {
+          const page = await caller.app.list({ limit: 50 });
+          return page.nextCursor ? null : page.items.length;
+        })
+      : Promise.resolve(null),
+    nav.integrations
+      ? countOrNull(async () => {
+          const page = await caller.integration.list({ limit: 50 });
+          return page.nextCursor ? null : page.items.length;
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const shortcuts = [
+    nav.boards
+      ? {
+          href: "/boards",
+          title: "Boards",
+          description: "Gérer vos dashboards",
+          icon: <LayoutGrid />,
+          count: boardCount,
+        }
+      : null,
+    nav.apps
+      ? {
+          href: "/apps",
+          title: "Applications",
+          description: "Gérer les services et raccourcis",
+          icon: <AppWindow />,
+          count: appCount,
+        }
+      : null,
+    nav.integrations
+      ? {
+          href: "/integrations",
+          title: "Intégrations",
+          description: "Configurer les connexions externes",
+          icon: <Plug />,
+          count: integrationCount,
+        }
+      : null,
+  ].filter((item) => item !== null);
+
   return (
-    <main className="min-h-screen px-6 py-10 sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-10">
-          <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-zinc-400">
-            Phase 1 bootstrap
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Homelab Dashboard</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-400">
-            Le squelette est prêt. Codex doit maintenant auditer la documentation, valider la stack
-            et terminer les fondations avant toute fonctionnalité métier.
-          </p>
-        </div>
-
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {foundations.map((foundation) => (
-            <article
-              key={foundation}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5"
+    <AppShellServer>
+      <PageContainer>
+        <h1 className="sr-only">Accueil</h1>
+        <p className="home-lead">Vue d&apos;ensemble de votre homelab.</p>
+        <section className="home-grid" aria-label="Raccourcis">
+          {shortcuts.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="shortcut-card"
+              {...(item.count != null ? { "aria-label": `${item.title}, ${item.count}` } : {})}
             >
-              <div className="text-sm text-zinc-500">Module prévu</div>
-              <div className="mt-2 text-lg font-medium">{foundation}</div>
-            </article>
+              <span className="shortcut-card-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="shortcut-card-copy">
+                <span className="ui-card-title">{item.title}</span>
+                <span className="ui-muted">{item.description}</span>
+              </span>
+              {item.count != null ? (
+                <span className="shortcut-card-count">{item.count}</span>
+              ) : null}
+            </Link>
           ))}
         </section>
-      </div>
-    </main>
+      </PageContainer>
+    </AppShellServer>
   );
 }
