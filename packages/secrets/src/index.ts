@@ -1,10 +1,4 @@
-/**
- * Encryption, decryption and redaction primitives.
- *
- * Phase 1 intentionally exposes only a typed bootstrap marker.
- * Codex must implement this package according to docs/ and AGENTS.md.
- */
-export const SecretsPackage = {
-  name: "@dashboard/secrets",
-  phase: "bootstrap",
-} as const;
+export { decryptSecret, encryptSecret, buildSecretAad, type EncryptedSecret } from "./crypto";
+export { SecretError } from "./errors";
+export { createEnvKeyring, parseSecretEncryptionKey, type SecretKeyring } from "./keyring";
+export { isSensitiveKey, redact } from "./redaction";

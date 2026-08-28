@@ -10,6 +10,7 @@ try {
     "0001_sharp_doomsday.sql",
     "0002_wooden_callisto.sql",
     "0003_loud_titanium_man.sql",
+    "0004_green_tenebrous.sql",
   ])
     database.exec(
       await readFile(

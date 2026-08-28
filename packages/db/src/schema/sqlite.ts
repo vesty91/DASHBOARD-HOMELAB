@@ -56,6 +56,7 @@ export const integrations = sqliteTable(
       .notNull()
       .default("unknown"),
     lastCheckedAt: integer("last_checked_at", { mode: "timestamp_ms" }),
+    configRevision: integer("config_revision").notNull().default(1),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -64,6 +65,7 @@ export const integrations = sqliteTable(
     index("integrations_type_idx").on(t.type),
     index("integrations_status_idx").on(t.status),
     check("integrations_status_valid", sql`${t.status} IN ('unknown', 'available', 'unavailable')`),
+    check("integrations_config_revision_positive", sql`${t.configRevision} > 0`),
   ],
 );
 export const boards = sqliteTable(

@@ -1,0 +1,2 @@
+ALTER TABLE "integrations" ADD COLUMN "config_revision" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "integrations" ADD CONSTRAINT "integrations_config_revision_positive" CHECK ("integrations"."config_revision" > 0);

@@ -7,6 +7,10 @@ import {
 } from "@dashboard/db/auth-runtime";
 import { createPostgresqlBoardStore, createSqliteBoardStore } from "@dashboard/db/board-runtime";
 import { createPostgresqlAppStore, createSqliteAppStore } from "@dashboard/db/app-runtime";
+import {
+  createPostgresqlIntegrationStore,
+  createSqliteIntegrationStore,
+} from "@dashboard/db/integration-runtime";
 
 const globalDatabase = globalThis as typeof globalThis & {
   dashboardDatabase?: ReturnType<typeof createDatabase>;
@@ -21,6 +25,7 @@ async function createDatabase() {
       authStore: createPostgresqlAuthStore(client.pool),
       boardStore: createPostgresqlBoardStore(client.pool),
       appStore: createPostgresqlAppStore(client.pool),
+      integrationStore: createPostgresqlIntegrationStore(client.pool),
     };
   }
   const client = createSqliteClient(process.env.DATABASE_URL ?? "./appdata/dashboard.sqlite");
@@ -30,6 +35,7 @@ async function createDatabase() {
     authStore: createSqliteAuthStore(client.sqlite),
     boardStore: createSqliteBoardStore(client.sqlite),
     appStore: createSqliteAppStore(client.sqlite),
+    integrationStore: createSqliteIntegrationStore(client.sqlite),
   };
 }
 export function getDatabase() {

@@ -203,3 +203,13 @@ Le routeur tRPC interne expose `board.list`, `board.get`, `board.create`, `board
 `board.item.create`, `board.item.update` et `board.item.delete` exigent `board.edit` et `expectedRevision`. Le client ne peut pas changer `widgetType`, `widgetVersion`, `boardId` ni `integrationId` via update. La config est validée par le registry. Un item d'un autre board est rejeté.
 
 `widget.data` générique n'est pas implémenté. Clock et Bookmarks n'ont aucune query réseau. App Tile réutilise `app.get` / `app.list`.
+
+# Integration API — Phase 7
+
+Le routeur expose `integration.list`, `integration.get`, `integration.catalog`, `integration.create`,
+`integration.update`, `integration.setSecret`, `integration.test` et `integration.delete`.
+`integration.catalog` retourne les metadata safe du registry (id, displayName, version, description,
+capabilities, config/secret field labels). Aucun schéma Zod interne ni secret n'est exposé.
+
+`integration.test` exige `integration.manage` et retourne un `ConnectionResult` sans secret. Un
+catalogue de production vide est valide. `integration.call` / `integration.invoke` n'existent pas.

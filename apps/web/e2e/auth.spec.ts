@@ -174,6 +174,11 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByLabel("URL", { exact: true }).fill("http://192.168.1.10/");
   await page.getByRole("button", { name: "Enregistrer" }).click();
 
+  await page.goto("/integrations");
+  await expect(page.getByRole("heading", { name: "Intégrations" })).toBeVisible();
+  await expect(page.getByText("Aucun type d'intégration disponible.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ajouter une intégration" })).not.toBeVisible();
+
   await page.goto("/admin/users");
   await page.getByPlaceholder("Identifiant").fill("viewer");
   await page.getByPlaceholder("Mot de passe initial").fill("viewer password is secure");
@@ -198,6 +203,11 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await expect(page.getByRole("heading", { name: "Viewer Visible App" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ajouter une App" })).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Tester maintenant" })).not.toBeVisible();
+
+  await page.goto("/integrations");
+  await expect(page.getByRole("heading", { name: "Intégrations" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ajouter une intégration" })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Tester la connexion" })).not.toBeVisible();
 
   await context.clearCookies();
   await page.goto("/admin/users");

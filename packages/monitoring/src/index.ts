@@ -34,6 +34,36 @@ const ipv4In = (address: string, base: string, bits: number) => {
   const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
   return (ipv4Number(address) & mask) === (ipv4Number(base) & mask);
 };
+
+const BLOCKED_CLOUD_METADATA_V4 = new Set(["100.100.100.200"]);
+
+function expandIPv6(address: string): string | undefined {
+  const ip = address.toLowerCase().split("%")[0] ?? "";
+  if (ip.includes(".")) return undefined;
+  const sides = ip.split("::");
+  if (sides.length > 2) return undefined;
+  const head = sides[0] ? sides[0].split(":").filter(Boolean) : [];
+  const tail = sides[1] ? sides[1].split(":").filter(Boolean) : [];
+  const missing = 8 - head.length - tail.length;
+  if (missing < 0 || (sides.length === 1 && missing !== 0) || (sides.length === 2 && missing === 0))
+    return undefined;
+  const parts = sides.length === 1 ? head : [...head, ...Array(missing).fill("0"), ...tail];
+  if (parts.length !== 8 || parts.some((part) => !/^[0-9a-f]{1,4}$/u.test(part))) return undefined;
+  return parts.map((part) => part.padStart(4, "0")).join(":");
+}
+
+const BLOCKED_CLOUD_METADATA_V6 = new Set(
+  ["fd00:ec2::254"]
+    .map((address) => expandIPv6(address))
+    .filter((address) => address !== undefined),
+);
+
+function isBlockedCloudMetadata(address: string, family: 4 | 6): boolean {
+  if (family === 4) return BLOCKED_CLOUD_METADATA_V4.has(address);
+  const expanded = expandIPv6(address);
+  return expanded !== undefined && BLOCKED_CLOUD_METADATA_V6.has(expanded);
+}
+
 export function isAllowedHealthAddress(address: string): boolean {
   const family = net.isIP(address);
   if (family === 4)
@@ -42,7 +72,8 @@ export function isAllowedHealthAddress(address: string): boolean {
       ipv4In(address, "127.0.0.0", 8) ||
       ipv4In(address, "169.254.0.0", 16) ||
       ipv4In(address, "224.0.0.0", 4) ||
-      ipv4In(address, "240.0.0.0", 4)
+      ipv4In(address, "240.0.0.0", 4) ||
+      isBlockedCloudMetadata(address, 4)
     );
   if (family === 6) {
     const ip = address.toLowerCase().split("%")[0] ?? "";
@@ -54,7 +85,12 @@ export function isAllowedHealthAddress(address: string): boolean {
       const low = Number.parseInt(hexadecimalMapped[2], 16);
       return isAllowedHealthAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
     }
-    return !(ip === "::" || ip === "::1" || /^(fe[89ab]|ff)/.test(ip));
+    return !(
+      ip === "::" ||
+      ip === "::1" ||
+      /^(fe[89ab]|ff)/.test(ip) ||
+      isBlockedCloudMetadata(ip, 6)
+    );
   }
   return false;
 }

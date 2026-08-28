@@ -33,11 +33,22 @@ describe("health target policy", () => {
     "::ffff:127.0.0.1",
     "::ffff:169.254.169.254",
     "::ffff:7f00:1",
+    "100.100.100.200",
+    "::ffff:100.100.100.200",
+    "fd00:ec2::254",
+    "FD00:EC2::254",
+    "fd00:ec2:0:0:0:0:0:254",
+    "fd00:0ec2:0000:0000:0000:0000:0000:0254",
   ])("blocks %s", (address) => expect(isAllowedHealthAddress(address)).toBe(false));
-  it.each(["192.168.1.5", "10.0.0.5", "172.16.0.1", "100.64.0.1", "fc00::1", "fd12::1"])(
-    "allows %s",
-    (address) => expect(isAllowedHealthAddress(address)).toBe(true),
-  );
+  it.each([
+    "192.168.1.5",
+    "10.0.0.5",
+    "172.16.0.1",
+    "100.64.0.1",
+    "100.64.12.34",
+    "fc00::1",
+    "fd12::1",
+  ])("allows %s", (address) => expect(isAllowedHealthAddress(address)).toBe(true));
   it("blocks localhost and metadata resolved through DNS", async () => {
     const common = {
       method: "GET" as const,
@@ -54,6 +65,24 @@ describe("health target policy", () => {
           ...common,
           url: new URL("http://safe.example"),
           resolver: async () => [{ address: "169.254.169.254", family: 4 }],
+        })
+      ).errorCode,
+    ).toBe("TARGET_BLOCKED");
+    expect(
+      (
+        await probeHttp({
+          ...common,
+          url: new URL("http://alibaba-metadata.example"),
+          resolver: async () => [{ address: "100.100.100.200", family: 4 }],
+        })
+      ).errorCode,
+    ).toBe("TARGET_BLOCKED");
+    expect(
+      (
+        await probeHttp({
+          ...common,
+          url: new URL("http://aws-imds.example"),
+          resolver: async () => [{ address: "fd00:ec2::254", family: 6 }],
         })
       ).errorCode,
     ).toBe("TARGET_BLOCKED");

@@ -17,7 +17,7 @@ describe("server environment", () => {
         APP_URL: "https://dashboard.example.test",
         AUTH_SECRET: "a".repeat(32),
         AUTH_SESSION_MAX_AGE_SECONDS: "3600",
-        SECRET_ENCRYPTION_KEY: "a".repeat(64),
+        SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
         DB_DRIVER: "sqlite",
         DATABASE_URL: "./appdata/dashboard.sqlite",
         REDIS_URL: "redis://localhost:6379",

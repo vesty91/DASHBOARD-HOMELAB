@@ -37,7 +37,17 @@ Clé racine :
 SECRET_ENCRYPTION_KEY=
 ```
 
-Ne pas stocker cette clé dans la DB.
+Format Phase 7 : base64 décodant exactement 32 octets.
+
+Génération documentaire (ne pas committer le résultat) :
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Si la variable est absente, l'application démarre mais `integration.setSecret` et les tests
+nécessitant des secrets échouent avec `SECRETS_NOT_CONFIGURED`. Aucune clé éphémère n'est générée.
+Ne pas stocker cette clé dans la DB. Ne pas réutiliser `AUTH_SECRET`.
 
 ## 3. Rotation
 
@@ -89,9 +99,13 @@ Ajouter tests contre :
 
 Attention : le LAN est une cible légitime du produit. La politique doit distinguer admin autorisé et source externe non fiable.
 
+Les metadata et messages de `integration.test` sont filtrés contre les valeurs de secrets déchiffrées **avant** truncation. Une réponse qui reflète un secret dans un champ anodin (`version`, etc.) est redacted.
+
 La Phase 5 applique la politique détaillée par l'ADR 0005 : résolution complète, validation de toutes
 les adresses, normalisation des IPv4 mappées en IPv6, DNS pinning, résolution bornée par le timeout,
-redirects manuels, TLS normal et blocage loopback/link-local/metadata.
+redirects manuels, TLS normal et blocage loopback/link-local/metadata. Les endpoints metadata non
+link-local `100.100.100.200` et `fd00:ec2::254` sont aussi refusés. Le client d'intégration Phase 7
+applique la même policy centralisée et un deadline timer absolu (pas seulement l'inactivité socket).
 
 ## 8. Uploads
 
@@ -195,3 +209,8 @@ La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="n
 pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board
 vérifiée serveur), isolation d'erreur par widget sans stack client, distinction CONFLICT vs
 erreur de validation dans le coordinateur d'éditeur, et immutabilité réelle des metadata du registry.
+
+La Phase 7 ajoute : AES-256-GCM avec AAD `integrationId`+`key`+`keyVersion`, redaction centralisée,
+`integration.test` réservé à `integration.manage`, SSRF/DNS pinning du client d'intégration,
+`verifyTls=false` strictement local, cache mémoire borné, et tests de non-fuite du sentinel
+`SUPER_SECRET_VALUE_123`.

@@ -180,6 +180,9 @@ par le registry, jamais un fallback inventé.
 Les tags sont uniques par `(appId, canonicalValue)` et supprimés en cascade. Les migrations `0003`
 SQLite/PostgreSQL conservent les Apps Phase 4 et initialisent leur état à `unknown`.
 
+La Phase 7 ajoute `config_revision` via les migrations `0004` SQLite/PostgreSQL. Les intégrations
+existantes conservent config, status et secrets chiffrés. La révision initiale vaut 1.
+
 ## integrations
 
 ```text
@@ -191,10 +194,17 @@ enabled
 configJson
 status
 lastCheckedAt
+configRevision
 createdBy
 createdAt
 updatedAt
 ```
+
+`configRevision` (Phase 7) est un entier `> 0` incrémenté lorsque `baseUrl`, `configJson`, `enabled`
+ou un secret change. Le test de connexion persiste le status seulement si la révision snapshotée
+correspond encore.
+
+## integration_secrets
 
 ## integration_secrets
 

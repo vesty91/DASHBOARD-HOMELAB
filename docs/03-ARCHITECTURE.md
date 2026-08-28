@@ -172,8 +172,10 @@ shared -> next
 ```
 
 La Phase 1 vérifie ces quatre interdictions dans les manifests avec
-`scripts/check-architecture-boundaries.mjs`. Le contrôle est intégré à `pnpm lint`. Cette approche
-légère et ses limites sont documentées dans
+`scripts/check-architecture-boundaries.mjs`. Le contrôle est intégré à `pnpm lint`. La Phase 7 étend
+le script : `integrations` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm` ni `db` ;
+`secrets` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm`, `db` ni `integrations`.
+Cette approche légère et ses limites sont documentées dans
 `docs/adr/0001-lightweight-package-boundary-check.md`.
 
 ## 4. API
@@ -282,3 +284,10 @@ Exemples :
 `packages/widgets` est le Widget Engine. Le domaine (registry, schémas, policy) est séparé du runtime
 React. `packages/boards` reçoit une `BoardWidgetPolicy` injectée ; aucun cycle `boards <-> widgets`.
 `apps/web` compose la policy built-in. Voir ADR 0006.
+
+# État Phase 7
+
+`@dashboard/secrets` chiffre AES-256-GCM avec AAD et keyVersion. `@dashboard/integrations` fournit
+registry, client HTTP SSRF, cache mémoire borné, rate limiter et `IntegrationService`.
+`packages/db` implémente `integration-runtime` sans connaître le plaintext. Le registry de production
+est vide. Voir ADR 0007.
