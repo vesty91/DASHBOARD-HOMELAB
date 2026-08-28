@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Button, Field, Input } from "@dashboard/ui";
 
 export function SecretFieldControl({
   action,
@@ -17,11 +18,10 @@ export function SecretFieldControl({
     setValue("");
   }, [configured]);
   return (
-    <form action={action}>
+    <form action={action} className="ui-form" style={{ marginTop: "1rem" }}>
       <input type="hidden" name="key" value={fieldKey} />
-      <label>
-        {label}{" "}
-        <input
+      <Field label={label}>
+        <Input
           name="value"
           type="password"
           autoComplete="new-password"
@@ -29,9 +29,11 @@ export function SecretFieldControl({
           value={value}
           onChange={(event) => setValue(event.target.value)}
         />
-      </label>
-      <p>{configured ? "Configuré" : "Non configuré"}</p>
-      <button type="submit">Enregistrer le secret</button>
+      </Field>
+      <p className="ui-muted">{configured ? "Configuré" : "Non configuré"}</p>
+      <Button variant="secondary" type="submit">
+        Enregistrer le secret
+      </Button>
     </form>
   );
 }

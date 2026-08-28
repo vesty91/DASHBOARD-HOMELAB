@@ -1,45 +1,80 @@
 import Link from "next/link";
+import { LayoutGrid } from "lucide-react";
+import {
+  Badge,
+  Card,
+  CardBody,
+  CardFooter,
+  EmptyState,
+  PageContainer,
+  PageHeader,
+} from "@dashboard/ui";
 import { getBoardCaller } from "../../lib/server/board-api";
-import { createBoardAction } from "./actions";
+import { CreateBoardDialog } from "./create-board-dialog";
+
+const visibilityLabel = {
+  private: "Privé",
+  authenticated: "Authentifié",
+  public: "Public",
+} as const;
+
+const visibilityTone = {
+  private: "neutral",
+  authenticated: "accent",
+  public: "success",
+} as const;
 
 export default async function BoardsPage() {
   const caller = await getBoardCaller();
   const [boards, canCreate] = await Promise.all([caller.board.list(), caller.board.canCreate()]);
   return (
-    <main>
-      <h1>Boards</h1>
-      <section aria-labelledby="accessible-boards">
-        <h2 id="accessible-boards">Boards accessibles</h2>
-        {boards.length === 0 ? (
-          <p>Aucun board accessible.</p>
-        ) : (
-          <ul>
-            {boards.map((board) => (
-              <li key={board.id}>
-                <Link href={`/boards/${board.slug}`}>{board.name}</Link>{" "}
-                <Link href={`/boards/${board.slug}/edit`}>Modifier</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      {canCreate && (
-        <section aria-labelledby="create-board">
-          <h2 id="create-board">Créer un board</h2>
-          <form action={createBoardAction}>
-            <label>
-              Nom <input name="name" required maxLength={120} />
-            </label>
-            <label>
-              Slug <input name="slug" required maxLength={80} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
-            </label>
-            <label>
-              Description <textarea name="description" maxLength={1000} />
-            </label>
-            <button type="submit">Créer</button>
-          </form>
+    <PageContainer>
+      <PageHeader
+        title="Boards"
+        description="Vos espaces et tableaux de bord."
+        {...(canCreate ? { actions: <CreateBoardDialog /> } : {})}
+      />
+      {boards.length === 0 ? (
+        <EmptyState
+          icon={<LayoutGrid />}
+          title="Aucun board"
+          description="Aucun board accessible."
+        />
+      ) : (
+        <section className="card-grid" aria-labelledby="accessible-boards">
+          <h2 id="accessible-boards" className="sr-only">
+            Boards accessibles
+          </h2>
+          {boards.map((board) => {
+            const canEdit = board.access.canEdit;
+            return (
+              <Card key={board.id} className="entity-card">
+                <CardBody>
+                  <div className="ui-card-header" style={{ padding: 0 }}>
+                    <h2 className="ui-card-title">{board.name}</h2>
+                    <Badge tone={visibilityTone[board.visibility]}>
+                      {visibilityLabel[board.visibility]}
+                    </Badge>
+                  </div>
+                  {board.description ? (
+                    <p className="ui-muted line-clamp-2">{board.description}</p>
+                  ) : null}
+                </CardBody>
+                <CardFooter>
+                  <Link className="ui-btn" href={`/boards/${board.slug}`}>
+                    Ouvrir
+                  </Link>
+                  {canEdit ? (
+                    <Link className="ui-btn ui-btn-ghost" href={`/boards/${board.slug}/edit`}>
+                      Modifier
+                    </Link>
+                  ) : null}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </section>
       )}
-    </main>
+    </PageContainer>
   );
 }

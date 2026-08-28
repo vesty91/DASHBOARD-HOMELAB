@@ -8,9 +8,18 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "19.2.8"
   },
   "devDependencies": {
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "jsdom": "26.1.0",
+    "react-dom": "19.2.8",
     "vitest": "4.1.11"
   }
 }

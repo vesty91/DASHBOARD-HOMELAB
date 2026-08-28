@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 
 const databasePath = resolve(process.cwd(), ".e2e-auth.sqlite");
-test.setTimeout(180_000);
+test.setTimeout(240_000);
 
 async function loginAdmin(page: Page) {
   await page.goto("/setup");
@@ -19,6 +19,7 @@ async function loginAdmin(page: Page) {
   await page.getByLabel("Mot de passe").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Connexion" }).click();
   await expect(page).toHaveURL(/\/(admin|boards)/);
+  await expect(page.getByRole("button", { name: "Administrator" })).toBeVisible();
 }
 
 async function releaseGridDrag(page: Page) {
@@ -26,8 +27,14 @@ async function releaseGridDrag(page: Page) {
   await expect(page.locator(".grid-stack-placeholder")).toHaveCount(0);
 }
 
-function boardRevision(slug: string) {
+function openE2eDatabase() {
   const database = new DatabaseSync(databasePath);
+  database.exec("PRAGMA busy_timeout = 5000;");
+  return database;
+}
+
+function boardRevision(slug: string) {
+  const database = openE2eDatabase();
   try {
     return Number(database.prepare("SELECT revision FROM boards WHERE slug=?").get(slug)?.revision);
   } finally {
@@ -41,9 +48,10 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
 }) => {
   await loginAdmin(page);
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Phase 6 Widgets");
-  await page.getByLabel("Slug").fill("phase-6-widgets");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Phase 6 Widgets");
+  await page.getByRole("dialog").getByLabel("Slug").fill("phase-6-widgets");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await expect(page).toHaveURL(/\/boards\/phase-6-widgets\/edit/);
 
   await page.getByRole("button", { name: "Ajouter un widget" }).click();
@@ -122,18 +130,19 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.reload();
   await expect(page.locator("[data-clock-timezone='UTC']")).toBeVisible();
 
-  await page.getByRole("button", { name: "Supprimer" }).first().click();
+  await page.getByRole("button", { name: "Supprimer", exact: true }).first().click();
   await expect(page.getByRole("alertdialog")).toBeVisible();
   await page.getByRole("button", { name: "Annuler" }).click();
-  await page.getByRole("button", { name: "Supprimer" }).first().click();
+  await page.getByRole("button", { name: "Supprimer", exact: true }).first().click();
   await page.getByRole("button", { name: "Supprimer définitivement" }).click();
   await expect(page.getByText("Sauvegardé")).toBeVisible();
   await page.reload();
 
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Public Clock");
-  await page.getByLabel("Slug").fill("public-clock");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Public Clock");
+  await page.getByRole("dialog").getByLabel("Slug").fill("public-clock");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await page.getByRole("button", { name: "Ajouter un widget" }).click();
   await page.getByRole("button", { name: "Ajouter Horloge" }).click();
   await expect(page.getByText("Sauvegardé")).toBeVisible();
@@ -158,6 +167,16 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
+  await page.goto("/boards/phase-6-widgets/edit");
+  await expect(page.getByRole("heading", { name: "Modifier Phase 6 Widgets" })).toBeVisible();
+  await page.getByLabel("Visibilité").selectOption("public");
+  await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "Public boards may only contain known public-safe widgets with valid configuration",
+    }),
+  ).toBeVisible();
+
   await context.clearCookies();
   await page.goto("/boards/public-clock");
   await expect(page.locator("[data-clock-timezone]")).toBeVisible();
@@ -169,24 +188,16 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByRole("button", { name: "Ajouter un widget" }).click();
   await expect(page.getByRole("button", { name: "Ajouter Signets" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Ajouter Tuile d'application" })).toBeDisabled();
-
-  await page.goto("/boards/phase-6-widgets/edit");
-  await page.getByLabel("Visibilité").selectOption("public");
-  await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
-  await expect(
-    page.getByRole("alert").filter({
-      hasText: "Public boards may only contain known public-safe widgets with valid configuration",
-    }),
-  ).toBeVisible();
   expect(desktopX).toBeGreaterThanOrEqual(0);
 });
 
 test("shared revision coordinates layout, metadata and widget config", async ({ page }) => {
   await loginAdmin(page);
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Phase 6 Coordination");
-  await page.getByLabel("Slug").fill("phase-6-coordination");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Phase 6 Coordination");
+  await page.getByRole("dialog").getByLabel("Slug").fill("phase-6-coordination");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await expect(page).toHaveURL(/\/boards\/phase-6-coordination\/edit/);
 
   await page.getByRole("button", { name: "Ajouter un widget" }).click();
@@ -229,9 +240,10 @@ test("shared revision coordinates layout, metadata and widget config", async ({ 
 test("bookmark validation does not freeze the editor", async ({ page }) => {
   await loginAdmin(page);
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Phase 6 Bookmarks Validation");
-  await page.getByLabel("Slug").fill("phase-6-bookmark-validation");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Phase 6 Bookmarks Validation");
+  await page.getByRole("dialog").getByLabel("Slug").fill("phase-6-bookmark-validation");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await expect(page).toHaveURL(/\/boards\/phase-6-bookmark-validation\/edit/);
 
   await page.getByRole("button", { name: "Ajouter un widget" }).click();

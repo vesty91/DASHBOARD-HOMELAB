@@ -16,12 +16,16 @@ export function WidgetFrame({
 }) {
   return (
     <article className="widget-frame" data-widget-state={state}>
-      <h2>{title}</h2>
-      {state === "ready" ? (
-        children
-      ) : (
-        <WidgetStateView state={state} {...(message ? { message } : {})} />
-      )}
+      <header className="widget-frame-header">
+        <h2>{title}</h2>
+      </header>
+      <div className="widget-frame-body">
+        {state === "ready" ? (
+          children
+        ) : (
+          <WidgetStateView state={state} {...(message ? { message } : {})} />
+        )}
+      </div>
     </article>
   );
 }

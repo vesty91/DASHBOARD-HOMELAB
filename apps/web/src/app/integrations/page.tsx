@@ -1,5 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Plug } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Card,
+  CardBody,
+  CardFooter,
+  EmptyState,
+  PageContainer,
+  PageHeader,
+} from "@dashboard/ui";
 import { getBoardCaller } from "../../lib/server/board-api";
 import { deleteIntegrationAction, testIntegrationAction } from "./actions";
 import { DeleteIntegrationControl } from "./delete-integration-control";
@@ -8,6 +19,12 @@ const labels = {
   unknown: "Non vérifié",
   available: "Disponible",
   unavailable: "Indisponible",
+} as const;
+
+const tones = {
+  unknown: "neutral",
+  available: "success",
+  unavailable: "danger",
 } as const;
 
 export default async function IntegrationsPage({
@@ -26,44 +43,61 @@ export default async function IntegrationsPage({
     ]);
     const canAdd = canCreate && catalog.length > 0;
     return (
-      <main>
-        <h1>Intégrations</h1>
-        {canAdd ? (
-          <Link href="/integrations/new">Ajouter une intégration</Link>
-        ) : canCreate ? (
-          <p>Aucun type d&apos;intégration disponible.</p>
-        ) : null}
-        {catalog.length === 0 && (
-          <p>
-            Les adapters d&apos;intégration arriveront à la Phase 8. Aucun type n&apos;est
-            enregistré.
-          </p>
-        )}
+      <PageContainer>
+        <PageHeader
+          title="Intégrations"
+          description="Connexions vers les services externes."
+          {...(canAdd
+            ? {
+                actions: (
+                  <Link className="ui-btn ui-btn-primary" href="/integrations/new">
+                    Ajouter une intégration
+                  </Link>
+                ),
+              }
+            : {})}
+        />
         {page.items.length === 0 ? (
-          <p>Aucune intégration.</p>
+          <EmptyState
+            icon={<Plug />}
+            title="Aucune intégration disponible"
+            description="Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
+          />
         ) : (
-          <ul>
+          <section className="card-grid">
             {page.items.map((integration) => (
-              <li key={integration.id}>
-                <article>
-                  <h2>{integration.name}</h2>
-                  <p>
-                    {integration.type} — {integration.enabled ? "activée" : "désactivée"} —{" "}
-                    {labels[integration.status]}
-                    {integration.lastCheckedAt &&
-                      ` — dernier test ${integration.lastCheckedAt.toLocaleString("fr-FR")}`}
+              <Card key={integration.id}>
+                <CardBody>
+                  <div className="ui-card-header" style={{ padding: 0 }}>
+                    <h2 className="ui-card-title">{integration.name}</h2>
+                    <Badge tone={tones[integration.status]}>{labels[integration.status]}</Badge>
+                  </div>
+                  <p className="ui-muted">
+                    {integration.type} — {integration.enabled ? "activée" : "désactivée"}
+                    {integration.lastCheckedAt
+                      ? ` — dernier test ${integration.lastCheckedAt.toLocaleString("fr-FR")}`
+                      : ""}
                   </p>
-                  <p>
+                  <p className="ui-muted">
                     {integration.definitionAvailable
                       ? "Définition disponible"
                       : "Définition indisponible"}
                   </p>
-                  {integration.config.verifyTls === false && (
-                    <p role="alert">Vérification TLS désactivée pour cette intégration.</p>
-                  )}
-                  {canManage && integration.definitionAvailable && (
+                  {integration.config.verifyTls === false ? (
+                    <Alert tone="warning">
+                      Vérification TLS désactivée pour cette intégration.
+                    </Alert>
+                  ) : null}
+                </CardBody>
+                <CardFooter>
+                  {canManage && integration.definitionAvailable ? (
                     <>
-                      <Link href={`/integrations/${integration.id}/edit`}>Modifier</Link>
+                      <Link
+                        className="ui-btn ui-btn-ghost"
+                        href={`/integrations/${integration.id}/edit`}
+                      >
+                        Modifier
+                      </Link>
                       <form action={testIntegrationAction.bind(null, integration.id)}>
                         <button type="submit">Tester la connexion</button>
                       </form>
@@ -71,21 +105,23 @@ export default async function IntegrationsPage({
                         action={deleteIntegrationAction.bind(null, integration.id)}
                       />
                     </>
-                  )}
-                  {canManage && !integration.definitionAvailable && (
+                  ) : null}
+                  {canManage && !integration.definitionAvailable ? (
                     <DeleteIntegrationControl
                       action={deleteIntegrationAction.bind(null, integration.id)}
                     />
-                  )}
-                </article>
-              </li>
+                  ) : null}
+                </CardFooter>
+              </Card>
             ))}
-          </ul>
+          </section>
         )}
-        {page.nextCursor && (
-          <Link href={`/integrations?cursor=${page.nextCursor}`}>Page suivante</Link>
-        )}
-      </main>
+        {page.nextCursor ? (
+          <p style={{ marginTop: "1rem" }}>
+            <Link href={`/integrations?cursor=${page.nextCursor}`}>Page suivante</Link>
+          </p>
+        ) : null}
+      </PageContainer>
     );
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "UNAUTHORIZED")

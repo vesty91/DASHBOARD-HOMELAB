@@ -9,6 +9,7 @@ import {
 import { canAccessBoard } from "./policy";
 import type {
   BoardActor,
+  BoardListItem,
   BoardRepository,
   BoardResourcePermission,
   BoardSnapshot,
@@ -135,23 +136,35 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
   }
 
   return {
-    async list(actor: BoardActor) {
-      const result = [];
-      for (const board of await repository.listBoards())
-        if (
-          canAccessBoard(
-            {
-              board,
-              actor,
-              resourcePermissions: actor.userId
-                ? await repository.resolveResourcePermissions(board.id, actor.userId)
-                : [],
-            },
-            "board.view",
-          )
-        )
-          result.push(board);
+    async list(actor: BoardActor): Promise<BoardListItem[]> {
+      const result: BoardListItem[] = [];
+      for (const board of await repository.listBoards()) {
+        const resourcePermissions = actor.userId
+          ? await repository.resolveResourcePermissions(board.id, actor.userId)
+          : [];
+        const context = { board, actor, resourcePermissions };
+        if (!canAccessBoard(context, "board.view")) continue;
+        result.push({
+          ...board,
+          access: { canEdit: canAccessBoard(context, "board.edit") },
+        });
+      }
       return result;
+    },
+    async canAccess(
+      input: { slug: string } | { boardId: string },
+      actor: BoardActor,
+      permission: BoardResourcePermission,
+    ): Promise<boolean> {
+      const snapshot =
+        "slug" in input
+          ? await repository.findSnapshotBySlug(input.slug)
+          : await repository.findSnapshotById(input.boardId);
+      if (!snapshot) throw new BoardError("NOT_FOUND", "Board not found");
+      return canAccessBoard(
+        { board: snapshot.board, actor, resourcePermissions: await grants(snapshot, actor) },
+        permission,
+      );
     },
     async getBySlug(slug: string, actor: BoardActor) {
       return presented(

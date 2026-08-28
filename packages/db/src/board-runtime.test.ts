@@ -323,6 +323,24 @@ describe("SQLite board repository", () => {
       expect(await store.resolveResourcePermissions(result.board.id, viewer)).toEqual([
         "board.view",
       ]);
+      const editor = randomUUID();
+      client.sqlite
+        .prepare(
+          "INSERT INTO users(id,username,username_canonical,created_at,updated_at) VALUES(?,?,?,?,?)",
+        )
+        .run(editor, "editor", "editor", Date.now(), Date.now());
+      client.sqlite
+        .prepare("INSERT INTO board_user_permissions(board_id,user_id,permission) VALUES(?,?,?)")
+        .run(result.board.id, editor, "board.edit");
+      expect(await store.resolveResourcePermissions(result.board.id, editor)).toEqual([
+        "board.edit",
+      ]);
+      client.sqlite
+        .prepare("INSERT INTO board_group_permissions(board_id,group_id,permission) VALUES(?,?,?)")
+        .run(result.board.id, group, "board.edit");
+      expect(await store.resolveResourcePermissions(result.board.id, viewer)).toEqual(
+        expect.arrayContaining(["board.view", "board.edit"]),
+      );
       await store.deleteBoard(result.board.id);
       expect(
         client.sqlite.prepare("SELECT count(*) count FROM board_group_permissions").get()?.count,

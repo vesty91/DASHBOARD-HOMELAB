@@ -201,25 +201,27 @@ export function BoardEditor({
 
   return (
     <section>
-      <nav aria-label="Layouts">
-        <button
-          type="button"
-          onClick={() => setBreakpoint("desktop")}
-          aria-pressed={breakpoint === "desktop"}
-        >
-          Desktop
+      <div className="board-edit-toolbar">
+        <nav aria-label="Layouts">
+          <button
+            type="button"
+            onClick={() => setBreakpoint("desktop")}
+            aria-pressed={breakpoint === "desktop"}
+          >
+            Desktop
+          </button>
+          <button
+            type="button"
+            onClick={() => setBreakpoint("mobile")}
+            aria-pressed={breakpoint === "mobile"}
+          >
+            Mobile
+          </button>
+        </nav>
+        <button type="button" onClick={() => setCatalogOpen((value) => !value)}>
+          Ajouter un widget
         </button>
-        <button
-          type="button"
-          onClick={() => setBreakpoint("mobile")}
-          aria-pressed={breakpoint === "mobile"}
-        >
-          Mobile
-        </button>
-      </nav>
-      <button type="button" onClick={() => setCatalogOpen((value) => !value)}>
-        Ajouter un widget
-      </button>
+      </div>
       {catalogOpen && (
         <section aria-label="Catalogue de widgets">
           {pendingAppTile ? (
@@ -294,7 +296,7 @@ export function BoardEditor({
           )}
         </section>
       )}
-      <div className="grid-stack" ref={root} key={`${active.id}-${gridEpoch}`}>
+      <div className="grid-stack board-editing" ref={root} key={`${active.id}-${gridEpoch}`}>
         {placements.map((placement) => {
           const entry = current.items.find((item) => item.id === placement.itemId);
           return (

@@ -109,6 +109,44 @@ describe("board domain", () => {
       ),
     ).toBe(true);
   });
+  it("lists canEdit from resolved direct ACL instead of empty resource grants", async () => {
+    const editor = { userId: "editor", subject: active };
+    const viewer = { userId: "viewer", subject: active };
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    const grants: Record<string, readonly ("board.view" | "board.edit")[]> = {
+      editor: ["board.edit"],
+      viewer: ["board.view"],
+    };
+    const repository = {
+      listBoards: async () => [board],
+      findSnapshotBySlug: async () => snapshot,
+      resolveResourcePermissions: async (_boardId: string, userId: string) => grants[userId] ?? [],
+    } as unknown as BoardRepository;
+    const service = createBoardService(repository, policy);
+    const listed = await service.list(editor);
+    expect(listed).toEqual([
+      expect.objectContaining({ id: "b", slug: "home", access: { canEdit: true } }),
+    ]);
+    expect((await service.list(viewer))[0]?.access.canEdit).toBe(false);
+    expect(await service.canAccess({ slug: "home" }, editor, "board.edit")).toBe(true);
+    expect(await service.canAccess({ slug: "home" }, viewer, "board.edit")).toBe(false);
+    expect(await service.getForEdit("home", editor)).toMatchObject({ board: { slug: "home" } });
+    await expect(service.getForEdit("home", viewer)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("lists canEdit when board.edit is inherited from a group grant", async () => {
+    const member = { userId: "member", subject: active };
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    const repository = {
+      listBoards: async () => [board],
+      findSnapshotBySlug: async () => snapshot,
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => ["board.edit"] as const,
+    } as unknown as BoardRepository;
+    const service = createBoardService(repository, policy);
+    expect((await service.list(member))[0]?.access.canEdit).toBe(true);
+    expect(await service.canAccess({ boardId: "b" }, member, "board.edit")).toBe(true);
+    expect(await service.getForEdit("home", member)).toMatchObject({ board: { id: "b" } });
+  });
   it("maps repository revision conflicts to the stable domain error", async () => {
     const snapshot = { board, layouts: [], items: [], placements: [] };
     const repository = {

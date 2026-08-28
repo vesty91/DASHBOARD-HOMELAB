@@ -1,14 +1,19 @@
 "use client";
+
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { Alert, Button, Field, Input } from "@dashboard/ui";
+
 export function LoginForm() {
   const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
   return (
     <form
-      className="mt-8 grid gap-4"
+      className="ui-form"
       onSubmit={async (event) => {
         event.preventDefault();
         setError(false);
+        setPending(true);
         const data = new FormData(event.currentTarget);
         const result = await signIn("credentials", {
           username: String(data.get("username")),
@@ -16,25 +21,21 @@ export function LoginForm() {
           redirect: false,
           callbackUrl: "/admin",
         });
+        setPending(false);
         if (result?.ok) location.assign(result.url ?? "/admin");
         else setError(true);
       }}
     >
-      <label>
-        Identifiant
-        <input name="username" required className="block w-full rounded border p-2 text-black" />
-      </label>
-      <label>
-        Mot de passe
-        <input
-          name="password"
-          type="password"
-          required
-          className="block w-full rounded border p-2 text-black"
-        />
-      </label>
-      {error && <p role="alert">Identifiant ou mot de passe invalide.</p>}
-      <button className="rounded bg-white p-2 text-black">Connexion</button>
+      <Field label="Identifiant">
+        <Input name="username" required autoComplete="username" />
+      </Field>
+      <Field label="Mot de passe">
+        <Input name="password" type="password" required autoComplete="current-password" />
+      </Field>
+      {error ? <Alert tone="danger">Identifiant ou mot de passe invalide.</Alert> : null}
+      <Button variant="primary" type="submit" disabled={pending}>
+        Connexion
+      </Button>
     </form>
   );
 }

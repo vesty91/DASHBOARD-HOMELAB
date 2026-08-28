@@ -3,6 +3,13 @@ import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 const databasePath = resolve(process.cwd(), ".e2e-auth.sqlite");
+
+function openE2eDatabase() {
+  const database = new DatabaseSync(databasePath);
+  database.exec("PRAGMA busy_timeout = 5000;");
+  return database;
+}
+
 test.setTimeout(120_000);
 test("onboarding, login, protected admin and logout", async ({ page, context }) => {
   await page.goto("/admin");
@@ -25,13 +32,14 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
 
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Phase 4 Board");
-  await page.getByLabel("Slug").fill("phase-4-board");
-  await page.getByLabel("Description").fill("Persistent board engine");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Phase 4 Board");
+  await page.getByRole("dialog").getByLabel("Slug").fill("phase-4-board");
+  await page.getByRole("dialog").getByLabel("Description").fill("Persistent board engine");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await expect(page).toHaveURL(/\/boards\/phase-4-board\/edit/);
   await expect(page.getByRole("button", { name: "Desktop" })).toBeVisible();
-  const fixtureDatabase = new DatabaseSync(databasePath);
+  const fixtureDatabase = openE2eDatabase();
   const board = fixtureDatabase.prepare("SELECT id FROM boards WHERE slug=?").get("phase-4-board");
   const layouts = fixtureDatabase
     .prepare("SELECT id,breakpoint FROM layouts WHERE board_id=?")
@@ -64,10 +72,9 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 8 });
   await page.mouse.up();
-  await page.getByRole("button", { name: "Mobile" }).click();
   await expect
     .poll(() => {
-      const database = new DatabaseSync(databasePath);
+      const database = openE2eDatabase();
       try {
         return Number(
           database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
@@ -80,13 +87,19 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
     .toBeGreaterThan(1);
   await expect(page.getByText("Sauvegardé")).toBeVisible();
   await expect(page.getByText("Fixture item")).toBeVisible();
+  await page.getByRole("button", { name: "Mobile" }).click();
+  await expect(page.getByRole("button", { name: "Mobile" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.locator(".grid-stack").scrollIntoViewIfNeeded();
   const mobileBox = await item.boundingBox();
   if (!mobileBox) throw new Error("Mobile grid fixture was not rendered");
   await page.mouse.move(mobileBox.x + mobileBox.width / 2, mobileBox.y + mobileBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(
     mobileBox.x + mobileBox.width / 2,
-    mobileBox.y + mobileBox.height / 2 + 100,
+    mobileBox.y + mobileBox.height / 2 + 160,
     {
       steps: 8,
     },
@@ -95,7 +108,7 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByRole("button", { name: "Desktop" }).click();
   await expect
     .poll(() => {
-      const database = new DatabaseSync(databasePath);
+      const database = openE2eDatabase();
       try {
         return Number(
           database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
@@ -122,15 +135,16 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/boards");
-  await page.getByLabel("Nom").fill("Delete Me");
-  await page.getByLabel("Slug").fill("delete-me");
-  await page.getByRole("button", { name: "Créer" }).click();
+  await page.getByRole("button", { name: "Nouveau board" }).click();
+  await page.getByRole("dialog").getByLabel("Nom").fill("Delete Me");
+  await page.getByRole("dialog").getByLabel("Slug").fill("delete-me");
+  await page.getByRole("dialog").getByRole("button", { name: "Créer" }).click();
   await page.getByRole("button", { name: "Supprimer le board" }).click();
   await expect(page.getByRole("alertdialog")).toBeVisible();
   await page.getByRole("button", { name: "Annuler" }).click();
   await expect(page.getByRole("alertdialog")).not.toBeVisible();
   const deleteCount = () => {
-    const database = new DatabaseSync(databasePath);
+    const database = openE2eDatabase();
     try {
       return Number(
         database.prepare("SELECT count(*) count FROM boards WHERE slug='delete-me'").get()?.count,
@@ -183,10 +197,11 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByPlaceholder("Identifiant").fill("viewer");
   await page.getByPlaceholder("Mot de passe initial").fill("viewer password is secure");
   await page.getByRole("button", { name: "Créer" }).click();
-  await expect(page.getByText("viewer — active")).toBeVisible();
+  await expect(page.getByRole("row", { name: /viewer/ })).toContainText("Actif");
 
   await page.goto("/admin");
-  await page.getByRole("button", { name: "Déconnexion" }).click();
+  await page.getByRole("button", { name: "Administrator" }).click();
+  await page.getByRole("menuitem", { name: "Déconnexion" }).click();
   await expect(page).toHaveURL(/\/login/);
 
   await page.getByLabel("Identifiant").fill("viewer");

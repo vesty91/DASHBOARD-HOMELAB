@@ -13,11 +13,15 @@ export function ClockWidget({ config }: { config: ClockConfig }) {
     return () => window.clearInterval(id);
   }, [config.showSeconds]);
   if (!now) {
-    return <p data-clock-timezone={config.timezone}>{config.timezone}</p>;
+    return (
+      <p className="widget-clock" data-clock-timezone={config.timezone}>
+        {config.timezone}
+      </p>
+    );
   }
   const formatted = formatClock(now, config);
   return (
-    <div data-clock-timezone={config.timezone}>
+    <div className="widget-clock" data-clock-timezone={config.timezone}>
       <time dateTime={formatted.iso}>{formatted.time}</time>
       {formatted.dateLabel ? <p>{formatted.dateLabel}</p> : null}
     </div>

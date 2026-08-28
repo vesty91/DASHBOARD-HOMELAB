@@ -1,22 +1,23 @@
 "use client";
 import { useState } from "react";
+import { Button, ConfirmDialog } from "@dashboard/ui";
+
 export function DeleteAppControl({ action }: { action: () => Promise<void> }) {
   const [confirming, setConfirming] = useState(false);
   if (!confirming)
     return (
-      <button type="button" onClick={() => setConfirming(true)}>
+      <Button variant="danger" onClick={() => setConfirming(true)}>
         Supprimer
-      </button>
+      </Button>
     );
   return (
-    <section role="alertdialog" aria-modal="true" aria-label="Confirmer la suppression">
+    <ConfirmDialog
+      title="Confirmer la suppression"
+      onCancel={() => setConfirming(false)}
+      onConfirm={() => void action()}
+      confirmLabel="Supprimer définitivement"
+    >
       <p>Supprimer définitivement cette App ?</p>
-      <button type="button" onClick={() => setConfirming(false)}>
-        Annuler
-      </button>
-      <button type="button" onClick={() => void action()}>
-        Supprimer définitivement
-      </button>
-    </section>
+    </ConfirmDialog>
   );
 }

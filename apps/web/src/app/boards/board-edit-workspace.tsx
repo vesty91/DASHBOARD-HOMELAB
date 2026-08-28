@@ -63,12 +63,16 @@ export function BoardEditWorkspace({
 
   return (
     <section>
-      <p role="status">{status}</p>
-      {conflict ? (
-        <button type="button" onClick={() => location.reload()}>
-          Recharger le board
-        </button>
-      ) : null}
+      <div className="board-edit-toolbar">
+        <p className="board-edit-status" role="status">
+          {status}
+        </p>
+        {conflict ? (
+          <button type="button" onClick={() => location.reload()}>
+            Recharger le board
+          </button>
+        ) : null}
+      </div>
       {mutationError && !conflict ? <p role="alert">{mutationError}</p> : null}
       <BoardMetaForm
         key={`${current.board.name}:${current.board.visibility}:${current.board.revision}`}

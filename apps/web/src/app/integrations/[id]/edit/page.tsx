@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Alert, PageContainer, PageHeader } from "@dashboard/ui";
 import { getBoardCaller } from "../../../../lib/server/board-api";
 import { setIntegrationSecretAction, updateIntegrationAction } from "../../actions";
 import { IntegrationForm } from "../../integration-form";
@@ -14,11 +15,11 @@ export default async function EditIntegrationPage({ params }: { params: Promise<
   ]);
   const definition = catalog.find((entry) => entry.id === integration.type);
   return (
-    <main>
-      <h1>Modifier {integration.name}</h1>
-      {integration.config.verifyTls === false && (
-        <p role="alert">Vérification TLS désactivée pour cette intégration.</p>
-      )}
+    <PageContainer>
+      <PageHeader title={`Modifier ${integration.name}`} />
+      {integration.config.verifyTls === false ? (
+        <Alert tone="warning">Vérification TLS désactivée pour cette intégration.</Alert>
+      ) : null}
       {definition ? (
         <>
           <IntegrationForm
@@ -41,6 +42,6 @@ export default async function EditIntegrationPage({ params }: { params: Promise<
           Définition indisponible. La configuration dépendante du type ne peut pas être modifiée.
         </p>
       )}
-    </main>
+    </PageContainer>
   );
 }

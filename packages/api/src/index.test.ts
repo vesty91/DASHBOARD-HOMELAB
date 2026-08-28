@@ -16,6 +16,7 @@ const actor = {
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({
     list: vi.fn(async () => []),
+    canAccess: vi.fn(),
     getBySlug: vi.fn(),
     getById: vi.fn(),
     getForEdit: vi.fn(),
@@ -46,6 +47,17 @@ describe("board tRPC router", () => {
         description: "",
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("exposes board.canAccess from the service", async () => {
+    const boards = service({
+      canAccess: vi.fn(async () => true),
+    });
+    await expect(
+      createCaller({ actor, boards, apps, integrations }).board.canAccess({
+        slug: "home",
+        permission: "board.edit",
+      }),
+    ).resolves.toBe(true);
   });
   it("maps revision conflicts to tRPC conflict", async () => {
     const boards = service({

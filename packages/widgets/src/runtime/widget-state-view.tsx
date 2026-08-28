@@ -24,5 +24,9 @@ export function WidgetStateView({
   state: WidgetRuntimeState;
   message?: string;
 }) {
-  return <p role="status">{widgetStateLabel(state, message)}</p>;
+  return (
+    <p className="widget-state" role="status">
+      {widgetStateLabel(state, message)}
+    </p>
+  );
 }
