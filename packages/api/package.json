@@ -17,6 +17,7 @@
   "dependencies": {
     "@dashboard/apps": "workspace:*",
     "@dashboard/boards": "workspace:*",
+    "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/widgets": "workspace:*",
     "@trpc/server": "11.18.0",

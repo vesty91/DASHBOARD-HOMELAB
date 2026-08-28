@@ -147,6 +147,11 @@ La matrice finale est configurable via permissions explicites.
 En Phase 5, `app.read` autorise uniquement liste/lecture et `app.manage` autorise CRUD et test manuel.
 `app.test` reste interdit au lecteur afin de ne pas transformer le serveur en scanner réseau.
 
+En Phase 7, `integration.read` autorise list/get/catalog. `integration.create` autorise la création.
+`integration.manage` autorise update, delete, `setSecret` et `integration.test`. `integration.use` et
+`integration.interact` restent réservés aux consommateurs serveur Phase 8+. `integration.test` n'est
+jamais accordé à un simple lecteur.
+
 ## 10. Audit
 
 Actions à journaliser :

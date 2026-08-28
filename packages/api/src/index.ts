@@ -19,17 +19,30 @@ import {
   type AppActor,
   type AppService,
 } from "@dashboard/apps";
+import {
+  IntegrationError,
+  integrationCreateSchema,
+  integrationSetSecretSchema,
+  integrationUpdateSchema,
+  type IntegrationActor,
+  type IntegrationService,
+} from "@dashboard/integrations";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 
 export interface ApiContext {
-  actor: BoardActor & AppActor;
+  actor: BoardActor & AppActor & IntegrationActor;
   boards: BoardService;
   apps: AppService;
+  integrations: IntegrationService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
 const mapError = (error: unknown): never => {
-  if (error instanceof BoardError || error instanceof AppError) {
+  if (
+    error instanceof BoardError ||
+    error instanceof AppError ||
+    error instanceof IntegrationError
+  ) {
     const code =
       error.code === "UNAUTHORIZED"
         ? "UNAUTHORIZED"
@@ -39,7 +52,9 @@ const mapError = (error: unknown): never => {
             ? "NOT_FOUND"
             : error.code === "BOARD_REVISION_CONFLICT" || error.code === "CONFLICT"
               ? "CONFLICT"
-              : "BAD_REQUEST";
+              : error.code === "SECRETS_NOT_CONFIGURED"
+                ? "PRECONDITION_FAILED"
+                : "BAD_REQUEST";
     throw new TRPCError({ code, message: error.message, cause: error });
   }
   throw error;
@@ -140,9 +155,6 @@ export const boardRouter = t.router({
       .mutation(({ ctx, input }) => procedure(() => ctx.boards.deleteItem(input, ctx.actor))),
   }),
 });
-export const widgetRouter = t.router({
-  catalog: t.procedure.query(({ ctx }) => ctx.boards.catalog()),
-});
 export const appsRouter = t.router({
   canManage: t.procedure.query(({ ctx }) =>
     ctx.actor.subject ? hasPermission(ctx.actor.subject, "app.manage") : false,
@@ -173,10 +185,53 @@ export const appsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.apps.test(input.id, ctx.actor))),
 });
+export const widgetRouter = t.router({
+  catalog: t.procedure.query(({ ctx }) => ctx.boards.catalog()),
+});
+export const integrationsRouter = t.router({
+  canManage: t.procedure.query(({ ctx }) =>
+    ctx.actor.subject ? hasPermission(ctx.actor.subject, "integration.manage") : false,
+  ),
+  canCreate: t.procedure.query(({ ctx }) =>
+    ctx.actor.subject ? hasPermission(ctx.actor.subject, "integration.create") : false,
+  ),
+  catalog: t.procedure.query(({ ctx }) =>
+    procedure(async () => ctx.integrations.catalog(ctx.actor)),
+  ),
+  list: t.procedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(50),
+          cursor: z.uuid().optional(),
+        })
+        .default({ limit: 50 }),
+    )
+    .query(({ ctx, input }) => procedure(() => ctx.integrations.list(ctx.actor, input))),
+  get: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .query(({ ctx, input }) => procedure(() => ctx.integrations.get(input.id, ctx.actor))),
+  create: t.procedure
+    .input(integrationCreateSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.create(input, ctx.actor))),
+  update: t.procedure
+    .input(integrationUpdateSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.update(input, ctx.actor))),
+  setSecret: t.procedure
+    .input(integrationSetSecretSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.setSecret(input, ctx.actor))),
+  test: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.test(input.id, ctx.actor))),
+  delete: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.delete(input.id, ctx.actor))),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
   widget: widgetRouter,
+  integration: integrationsRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

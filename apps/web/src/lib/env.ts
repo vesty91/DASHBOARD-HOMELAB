@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseSecretEncryptionKey } from "@dashboard/secrets";
 
 const redisUrlSchema = z.url().refine((value) => {
   const protocol = new URL(value).protocol;
@@ -11,8 +12,18 @@ export const serverEnvSchema = z.object({
   AUTH_SESSION_MAX_AGE_SECONDS: z.coerce.number().int().min(300).max(2_592_000).default(86_400),
   SECRET_ENCRYPTION_KEY: z
     .string()
-    .regex(/^[0-9a-fA-F]{64}$/)
-    .optional(),
+    .optional()
+    .superRefine((value, context) => {
+      if (value === undefined || value.trim() === "") return;
+      try {
+        parseSecretEncryptionKey(value);
+      } catch {
+        context.addIssue({
+          code: "custom",
+          message: "SECRET_ENCRYPTION_KEY must be base64 decoding to exactly 32 bytes",
+        });
+      }
+    }),
   DB_DRIVER: z.enum(["sqlite", "postgres"]).optional(),
   DATABASE_URL: z.string().trim().min(1).optional(),
   REDIS_URL: redisUrlSchema.optional(),

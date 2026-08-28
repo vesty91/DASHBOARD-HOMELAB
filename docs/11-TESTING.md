@@ -200,3 +200,10 @@ concurrence PostgreSQL. L'éditeur web teste le coordinateur : CONFLICT vs VALID
 mutation valide après erreur ordinaire, et séquence layout/métadonnées/item sur une seule
 révision. L'E2E étend le parcours admin avec ajout/config/reload des trois widgets, publicSafe,
 coordinateur autosave/item/métadonnées, et validation Bookmarks sans faux conflit.
+
+## 14. Couverture Phase 7
+
+`@dashboard/secrets` et `@dashboard/integrations` n'utilisent plus `--passWithNoTests`. Les tests
+couvrent AES-256-GCM, IV unique, auth tag, AAD, keyVersion, redaction, registry, cache borné,
+SSRF, DNS pinning, retries/timeout/body, RBAC, sentinel secret, stale `config_revision`, et
+upgrade Phase 6→7 SQLite/PostgreSQL. L'E2E vérifie l'empty state du catalogue de production.

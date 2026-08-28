@@ -7,6 +7,7 @@ import {
 } from "@dashboard/boards";
 import { createCaller } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
+import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -29,6 +30,7 @@ const service = (overrides: Partial<BoardService> = {}): BoardService =>
     ...overrides,
   }) as BoardService;
 const apps = {} as AppService;
+const integrations = {} as IntegrationService;
 describe("board tRPC router", () => {
   it("does not expose business error details and maps forbidden", async () => {
     const boards = service({
@@ -37,7 +39,7 @@ describe("board tRPC router", () => {
       }),
     });
     await expect(
-      createCaller({ actor, boards, apps }).board.update({
+      createCaller({ actor, boards, apps, integrations }).board.update({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
         name: "Home",
@@ -52,7 +54,7 @@ describe("board tRPC router", () => {
       }),
     });
     await expect(
-      createCaller({ actor, boards, apps }).board.layout.updateBatch({
+      createCaller({ actor, boards, apps, integrations }).board.layout.updateBatch({
         boardId: "00000000-0000-4000-8000-000000000002",
         layoutId: "00000000-0000-4000-8000-000000000003",
         expectedRevision: 1,
@@ -82,6 +84,7 @@ describe("board tRPC router", () => {
         actor,
         boards: createBoardService(repository, createBuiltInWidgetPolicy()),
         apps,
+        integrations,
       }).board.update({
         boardId: board.id,
         expectedRevision: 1,
@@ -124,8 +127,9 @@ describe("widget tRPC router", () => {
       actor,
       boards: service({ catalog: () => catalog }),
       apps,
+      integrations,
     }).widget.catalog();
-    expect(result.map((entry) => entry.id)).toEqual(["clock", "bookmarks"]);
+    expect(result.map((entry: { id: string }) => entry.id)).toEqual(["clock", "bookmarks"]);
     expect(result[0]?.publicSafe).toBe(true);
     expect(result[1]?.publicSafe).toBe(false);
   });
@@ -134,7 +138,7 @@ describe("widget tRPC router", () => {
       createItem: vi.fn(async () => ({ revision: 2, snapshot: {} as never })),
     });
     await expect(
-      createCaller({ actor, boards, apps }).board.item.create({
+      createCaller({ actor, boards, apps, integrations }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
         widgetType: "clock",
@@ -150,6 +154,7 @@ describe("widget tRPC router", () => {
           }),
         }),
         apps,
+        integrations,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -168,6 +173,7 @@ describe("widget tRPC router", () => {
           }),
         }),
         apps,
+        integrations,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -184,6 +190,7 @@ describe("widget tRPC router", () => {
           }),
         }),
         apps,
+        integrations,
       }).board.item.update({
         boardId: "00000000-0000-4000-8000-000000000002",
         itemId: "00000000-0000-4000-8000-000000000005",
@@ -218,6 +225,7 @@ describe("widget tRPC router", () => {
         actor,
         boards: createBoardService(repository, createBuiltInWidgetPolicy()),
         apps,
+        integrations,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -247,6 +255,7 @@ describe("widget tRPC router", () => {
         actor,
         boards: service({ createItem }),
         apps: { get } as unknown as AppService,
+        integrations,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -264,6 +273,7 @@ describe("widget tRPC router", () => {
         actor,
         boards: service({ createItem }),
         apps: { get } as unknown as AppService,
+        integrations,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -316,10 +326,16 @@ describe("app tRPC router", () => {
         actor: { userId: null, subject: null },
         boards: service(),
         apps: appService,
+        integrations,
       }).app.list(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(
-      createCaller({ actor: readableActor, boards: service(), apps: appService }).app.create({
+      createCaller({
+        actor: readableActor,
+        boards: service(),
+        apps: appService,
+        integrations,
+      }).app.create({
         name: "App",
         url: "https://example.com",
       }),
@@ -328,11 +344,131 @@ describe("app tRPC router", () => {
   it("validates unsafe URLs before calling the service", async () => {
     const appService = appServices();
     await expect(
-      createCaller({ actor: managedActor, boards: service(), apps: appService }).app.create({
+      createCaller({
+        actor: managedActor,
+        boards: service(),
+        apps: appService,
+        integrations,
+      }).app.create({
         name: "App",
         url: "javascript:alert(1)",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(appService.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("integration tRPC router", () => {
+  const SENTINEL = "SUPER_SECRET_VALUE_123";
+  const managedActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.manage", "integration.read", "integration.create"],
+    },
+  };
+  const readableActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.read"],
+    },
+  };
+  const integrationServices = (overrides: Partial<IntegrationService> = {}) =>
+    ({
+      catalog: vi.fn(() => []),
+      list: vi.fn(async () => ({ items: [], nextCursor: null })),
+      get: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      setSecret: vi.fn(),
+      test: vi.fn(),
+      delete: vi.fn(),
+      ...overrides,
+    }) as IntegrationService;
+  it("rejects anonymous access and read-only mutations", async () => {
+    const integrationService = integrationServices({
+      list: vi.fn(async () => {
+        throw new IntegrationError("UNAUTHORIZED", "Authentication required");
+      }),
+      create: vi.fn(async () => {
+        throw new IntegrationError("FORBIDDEN", "Permission denied");
+      }),
+      test: vi.fn(async () => {
+        throw new IntegrationError("FORBIDDEN", "Permission denied");
+      }),
+    });
+    await expect(
+      createCaller({
+        actor: { userId: null, subject: null },
+        boards: service(),
+        apps,
+        integrations: integrationService,
+      }).integration.list(),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      createCaller({
+        actor: readableActor,
+        boards: service(),
+        apps,
+        integrations: integrationService,
+      }).integration.create({
+        type: "test-http",
+        name: "Nope",
+        baseUrl: "http://10.0.0.10:3000",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      createCaller({
+        actor: readableActor,
+        boards: service(),
+        apps,
+        integrations: integrationService,
+      }).integration.test({ id: "00000000-0000-4000-8000-000000000009" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+  it("never serializes the sentinel secret in tRPC outputs", async () => {
+    const dto = {
+      id: "00000000-0000-4000-8000-000000000009",
+      type: "test-http",
+      name: "Probe",
+      baseUrl: "http://10.0.0.10:3000",
+      enabled: true,
+      config: { path: "/health" },
+      status: "unknown" as const,
+      lastCheckedAt: null,
+      configRevision: 2,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+      definitionAvailable: true,
+      capabilities: ["test.ping"],
+      secrets: { apiKey: { configured: true } },
+    };
+    const integrationService = integrationServices({
+      get: vi.fn(async () => dto),
+      list: vi.fn(async () => ({ items: [dto], nextCursor: null })),
+      setSecret: vi.fn(async () => ({ configured: true as const })),
+      test: vi.fn(async () => ({ ok: true as const, latencyMs: 12, metadata: { version: "1" } })),
+    });
+    const caller = createCaller({
+      actor: managedActor,
+      boards: service(),
+      apps,
+      integrations: integrationService,
+    });
+    const outputs = [
+      await caller.integration.list(),
+      await caller.integration.get({ id: dto.id }),
+      await caller.integration.setSecret({
+        integrationId: dto.id,
+        key: "apiKey",
+        value: SENTINEL,
+      }),
+      await caller.integration.test({ id: dto.id }),
+    ];
+    expect(JSON.stringify(outputs)).not.toContain(SENTINEL);
+    expect(JSON.stringify(outputs)).not.toMatch(/ciphertext|authTag|"iv"/i);
   });
 });

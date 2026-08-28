@@ -166,11 +166,19 @@ Chaque adapter doit tolérer :
 
 Réponses externes toujours validées/normalisées.
 
+# État Phase 7
+
+Le package `@dashboard/integrations` implémente `IntegrationDefinition`, `IntegrationRegistry`,
+capabilities, client HTTP sécurisé, cache mémoire, rate limiter de test et `IntegrationService`.
+Le registry de production est vide et gelé. Les secrets sont chiffrés par `@dashboard/secrets`.
+Le test de connexion bypasse le cache, snapshot `configRevision`, et ignore un résultat stale.
+Voir ADR 0007.
+
 ## 12. Intégration Docker
 
-Priorité 1.
+Priorité 1, **Phase 8**. Le framework Phase 7 n'enregistre aucun adapter Docker.
 
-Transport :
+Transport prévu :
 
 - socket proxy ;
 - socket unix explicite ;

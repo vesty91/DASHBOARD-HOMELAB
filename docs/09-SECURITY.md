@@ -37,7 +37,17 @@ Clé racine :
 SECRET_ENCRYPTION_KEY=
 ```
 
-Ne pas stocker cette clé dans la DB.
+Format Phase 7 : base64 décodant exactement 32 octets.
+
+Génération documentaire (ne pas committer le résultat) :
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Si la variable est absente, l'application démarre mais `integration.setSecret` et les tests
+nécessitant des secrets échouent avec `SECRETS_NOT_CONFIGURED`. Aucune clé éphémère n'est générée.
+Ne pas stocker cette clé dans la DB. Ne pas réutiliser `AUTH_SECRET`.
 
 ## 3. Rotation
 
@@ -195,3 +205,8 @@ La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="n
 pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board
 vérifiée serveur), isolation d'erreur par widget sans stack client, distinction CONFLICT vs
 erreur de validation dans le coordinateur d'éditeur, et immutabilité réelle des metadata du registry.
+
+La Phase 7 ajoute : AES-256-GCM avec AAD `integrationId`+`key`+`keyVersion`, redaction centralisée,
+`integration.test` réservé à `integration.manage`, SSRF/DNS pinning du client d'intégration,
+`verifyTls=false` strictement local, cache mémoire borné, et tests de non-fuite du sentinel
+`SUPER_SECRET_VALUE_123`.

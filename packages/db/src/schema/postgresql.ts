@@ -65,6 +65,7 @@ export const integrations = pgTable(
     configJson: jsonb("config_json").notNull().default({}),
     status: text("status").notNull().default("unknown"),
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    configRevision: integer("config_revision").notNull().default(1),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },
@@ -72,6 +73,7 @@ export const integrations = pgTable(
     index("integrations_type_idx").on(t.type),
     index("integrations_status_idx").on(t.status),
     check("integrations_status_valid", sql`${t.status} IN ('unknown', 'available', 'unavailable')`),
+    check("integrations_config_revision_positive", sql`${t.configRevision} > 0`),
   ],
 );
 export const boards = pgTable(

@@ -99,7 +99,7 @@ Livrables :
 
 ## Phase 6 — Widget Engine
 
-Statut : implémentée sur la branche `phase-6-widget-engine`, en review.
+Statut : COMPLETE.
 
 Livrables :
 
@@ -112,7 +112,7 @@ Livrables :
 
 ## Phase 7 — Integration Framework
 
-Statut : non commencée.
+Statut : implémentée sur la branche `phase-7-integration-framework`, en review.
 
 Livrables :
 
@@ -123,6 +123,8 @@ Livrables :
 - capabilities ;
 - error types ;
 - cache.
+
+Aucun adapter de production n'est enregistré. Docker, Synology et les autres intégrations restent Phase 8+.
 
 ## Phase 8 — Docker
 

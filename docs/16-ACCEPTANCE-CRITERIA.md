@@ -132,3 +132,11 @@ l'état d'une configuration plus récente.
 ## AC-027 Widget Engine
 
 Le registry built-in contient exactement `clock`, `bookmarks` et `app-tile`. Une config invalide est rejetée côté serveur. Clock, Bookmarks et App Tile persistent après reload sans donnée inventée. Les mutations d'item incrémentent `board.revision`. Une exception d'un widget n'arrête pas les autres. Clock-only peut être public ; Bookmarks/App Tile/inconnu bloquent la publication et ne fuient pas en lecture anonyme.
+
+## AC-028 Integration Framework
+
+Le registry de production Phase 7 ne contient aucun adapter. Les secrets sont chiffrés AES-256-GCM au
+repos et jamais renvoyés en clair, ni en ciphertext. `integration.test` exige `integration.manage`.
+Le client HTTP bloque loopback/metadata, autorise le LAN, pin le DNS et ne suit pas les redirects.
+Un résultat de test stale n'écrase pas une révision plus récente. SQLite et PostgreSQL restent à
+parité, y compris `config_revision`.

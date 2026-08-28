@@ -1,0 +1,57 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getBoardCaller } from "../../lib/server/board-api";
+
+function configFromForm(formData: FormData) {
+  const timeoutRaw = Number(formData.get("timeoutMs") ?? 8000);
+  return {
+    verifyTls: formData.get("verifyTls") === "on",
+    timeoutMs: Number.isFinite(timeoutRaw) ? timeoutRaw : 8000,
+  };
+}
+
+export async function createIntegrationAction(formData: FormData) {
+  await (
+    await getBoardCaller()
+  ).integration.create({
+    type: String(formData.get("type") ?? ""),
+    name: String(formData.get("name") ?? ""),
+    baseUrl: String(formData.get("baseUrl") ?? ""),
+    enabled: formData.get("enabled") === "on",
+    config: configFromForm(formData),
+  });
+  redirect("/integrations");
+}
+
+export async function updateIntegrationAction(id: string, formData: FormData) {
+  await (
+    await getBoardCaller()
+  ).integration.update({
+    id,
+    name: String(formData.get("name") ?? ""),
+    baseUrl: String(formData.get("baseUrl") ?? ""),
+    enabled: formData.get("enabled") === "on",
+    config: configFromForm(formData),
+  });
+  revalidatePath("/integrations");
+  redirect("/integrations");
+}
+
+export async function setIntegrationSecretAction(integrationId: string, formData: FormData) {
+  const key = String(formData.get("key") ?? "");
+  const value = String(formData.get("value") ?? "");
+  await (await getBoardCaller()).integration.setSecret({ integrationId, key, value });
+  revalidatePath(`/integrations/${integrationId}/edit`);
+  revalidatePath("/integrations");
+}
+
+export async function deleteIntegrationAction(id: string) {
+  await (await getBoardCaller()).integration.delete({ id });
+  revalidatePath("/integrations");
+}
+
+export async function testIntegrationAction(id: string) {
+  await (await getBoardCaller()).integration.test({ id });
+  revalidatePath("/integrations");
+}

@@ -163,6 +163,9 @@ Horloge/date avec timezone.
 Phase 6 implémente Clock, Bookmarks et App Tile via le registry. App Tile consomme le catalogue Apps
 existant. Service Status et les widgets d'intégration restent hors scope.
 
+La Phase 7 livre uniquement le framework d'intégrations (registry vide en production, secrets
+chiffrés, test de connexion, SSRF). Les adapters Docker/NAS/médias commencent à la Phase 8.
+
 ### Service Status
 
 État d'un endpoint HTTP.

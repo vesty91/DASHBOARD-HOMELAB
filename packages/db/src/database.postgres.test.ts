@@ -7,6 +7,7 @@ import { createPostgresqlRepositories } from "./repositories/postgresql";
 import { createPostgresqlAuthStore } from "./repositories/auth";
 import { createPostgresqlBoardStore } from "./board-runtime";
 import { createPostgresqlAppStore } from "./app-runtime";
+import { createPostgresqlIntegrationStore } from "./integration-runtime";
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
@@ -319,6 +320,109 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         }),
       ).resolves.toBe(4);
       expect((await boardStore.findSnapshotById(board.board.id))?.items).toEqual([]);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("migrates integration config_revision and enforces encrypted secret CAS", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await client.pool.query(
+        await readFile(
+          new URL("../drizzle/postgresql/0000_kind_pride.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      await client.pool.query(
+        await readFile(
+          new URL("../drizzle/postgresql/0001_slim_kabuki.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      await client.pool.query(
+        await readFile(
+          new URL("../drizzle/postgresql/0002_brief_captain_america.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      await client.pool.query(
+        await readFile(
+          new URL("../drizzle/postgresql/0003_known_doctor_spectrum.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      const integrationId = "00000000-0000-4000-8000-000000000077";
+      await client.pool.query(
+        "insert into integrations(id,type,name,base_url,enabled,config_json,status,created_at,updated_at) values($1,'legacy','NAS','https://192.168.1.5:5001',true,'{\"verifyTls\":true}'::jsonb,'available',now(),now())",
+        [integrationId],
+      );
+      await client.pool.query(
+        "insert into integration_secrets(id,integration_id,key,ciphertext,iv,auth_tag,key_version,created_at,updated_at) values($1,$2,'apiKey','Y2lwaGVy','aXY=','dGFn',1,now(),now())",
+        ["00000000-0000-4000-8000-000000000078", integrationId],
+      );
+      await executePostgresqlMigration(
+        client.pool,
+        await readFile(
+          new URL("../drizzle/postgresql/0004_classy_rocket_raccoon.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(
+        await client.pool.query(
+          "select name,status,config_revision,config_json from integrations where id=$1",
+          [integrationId],
+        ),
+      ).toMatchObject({
+        rows: [
+          {
+            name: "NAS",
+            status: "available",
+            config_revision: 1,
+            config_json: { verifyTls: true },
+          },
+        ],
+      });
+      const store = createPostgresqlIntegrationStore(client.pool);
+      const created = await store.create({
+        type: "test-http",
+        name: "Probe",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: { verifyTls: true },
+        createdBy: null,
+      });
+      await store.upsertSecret(created.id, {
+        key: "apiKey",
+        ciphertext: "Y2lwaGVy",
+        iv: "aXY=",
+        authTag: "dGFn",
+        keyVersion: 1,
+      });
+      expect((await store.findById(created.id))?.configRevision).toBe(2);
+      expect(await store.persistConnectionResult(created.id, 2, "available")).toBe(true);
+      expect(await store.persistConnectionResult(created.id, 1, "unavailable")).toBe(false);
+      expect((await store.findById(created.id))?.status).toBe("available");
+      await Promise.all([
+        store.update({ id: created.id, enabled: false, bumpRevision: true, resetStatus: true }),
+        store.update({
+          id: created.id,
+          baseUrl: "http://10.0.0.11:3000",
+          bumpRevision: true,
+          resetStatus: true,
+        }),
+      ]);
+      expect((await store.findById(created.id))?.configRevision).toBe(4);
+      expect(await store.delete(created.id)).toBe(true);
+      expect(
+        (
+          await client.pool.query(
+            "select count(*)::int count from integration_secrets where integration_id=$1",
+            [created.id],
+          )
+        ).rows[0],
+      ).toEqual({ count: 0 });
     } finally {
       await client.close();
     }

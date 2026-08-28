@@ -23,6 +23,7 @@ export default async function AdminPage() {
       <nav className="my-8 flex gap-4">
         <Link href="/admin/users">Utilisateurs</Link>
         <Link href="/admin/groups">Groupes</Link>
+        <Link href="/integrations">Intégrations</Link>
         <Link href="/account/security">Sécurité</Link>
       </nav>
       <LogoutButton />

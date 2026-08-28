@@ -7,6 +7,7 @@ const phase2Migration = new URL("../drizzle/sqlite/0000_last_spyke.sql", import.
 const phase3Migration = new URL("../drizzle/sqlite/0001_sharp_doomsday.sql", import.meta.url);
 const phase4Migration = new URL("../drizzle/sqlite/0002_wooden_callisto.sql", import.meta.url);
 const phase5Migration = new URL("../drizzle/sqlite/0003_loud_titanium_man.sql", import.meta.url);
+const phase6Migration = new URL("../drizzle/sqlite/0004_green_tenebrous.sql", import.meta.url);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -173,6 +174,59 @@ describe("Phase 3 to Phase 4 migration", () => {
       expect(
         database.prepare("PRAGMA table_info(board_user_permissions)").all().length,
       ).toBeGreaterThan(0);
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 6 to Phase 7 migration", () => {
+  it("preserves integrations and encrypted secrets while adding config_revision", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      database
+        .prepare(
+          "INSERT INTO integrations(id,type,name,base_url,enabled,config_json,status,created_at,updated_at) VALUES('11111111-1111-4111-8111-111111111111','legacy','NAS','https://192.168.1.5:5001',1,'{\"verifyTls\":true}','available',1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO integration_secrets(id,integration_id,key,ciphertext,iv,auth_tag,key_version,created_at,updated_at) VALUES('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111','apiKey','Y2lwaGVy','aXY=','dGFn',1,1,1)",
+        )
+        .run();
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      expect(
+        database
+          .prepare(
+            "SELECT type,name,base_url,config_json,status,config_revision FROM integrations WHERE id='11111111-1111-4111-8111-111111111111'",
+          )
+          .get(),
+      ).toMatchObject({
+        type: "legacy",
+        name: "NAS",
+        base_url: "https://192.168.1.5:5001",
+        config_json: '{"verifyTls":true}',
+        status: "available",
+        config_revision: 1,
+      });
+      expect(
+        database
+          .prepare(
+            "SELECT key,ciphertext,iv,auth_tag,key_version FROM integration_secrets WHERE integration_id='11111111-1111-4111-8111-111111111111'",
+          )
+          .get(),
+      ).toMatchObject({
+        key: "apiKey",
+        ciphertext: "Y2lwaGVy",
+        iv: "aXY=",
+        auth_tag: "dGFn",
+        key_version: 1,
+      });
     } finally {
       database.close();
     }

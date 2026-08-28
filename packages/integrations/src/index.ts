@@ -1,10 +1,71 @@
-/**
- * Integration registry, adapters and clients.
- *
- * Phase 1 intentionally exposes only a typed bootstrap marker.
- * Codex must implement this package according to docs/ and AGENTS.md.
- */
-export const IntegrationsPackage = {
-  name: "@dashboard/integrations",
-  phase: "bootstrap",
-} as const;
+export {
+  normalizeCapabilities,
+  hasCapability,
+  requireCapability,
+  CAPABILITY_PATTERN,
+} from "./capabilities";
+export { MemoryIntegrationCache, DEFAULT_CACHE_MAX_ENTRIES, DEFAULT_CACHE_TTL_MS } from "./cache";
+export { assertIntegrationDefinition, catalogEntryFromDefinition } from "./definition";
+export {
+  IntegrationError,
+  INTEGRATION_ERROR_CODES,
+  classifyHttpStatus,
+  type IntegrationErrorCode,
+} from "./errors";
+export {
+  DEFAULT_MAX_BODY_BYTES,
+  DEFAULT_TIMEOUT_MS,
+  INTEGRATION_USER_AGENT,
+  MAX_TIMEOUT_MS,
+  MIN_TIMEOUT_MS,
+  isAllowedIntegrationAddress,
+  mapHttpResult,
+  parseJsonBody,
+  secureRequest,
+  type AddressResolver,
+  type SecureHttpRequest,
+  type SecureHttpResult,
+} from "./http-client";
+export {
+  MemoryTestRateLimiter,
+  DEFAULT_TEST_RATE_LIMIT,
+  DEFAULT_TEST_RATE_WINDOW_MS,
+} from "./rate-limiter";
+export {
+  IntegrationRegistry,
+  createIntegrationRegistry,
+  createProductionIntegrationRegistry,
+} from "./registry";
+export {
+  integrationCreateSchema,
+  integrationSetSecretSchema,
+  integrationUpdateSchema,
+  integrationUrlSchema,
+} from "./schemas";
+export {
+  createIntegrationService,
+  type IntegrationService,
+  type IntegrationServiceDeps,
+} from "./service";
+export type {
+  ConfigFieldMeta,
+  ConnectionResult,
+  EncryptedSecretRow,
+  IntegrationActor,
+  IntegrationCache,
+  IntegrationCatalogEntry,
+  IntegrationClient,
+  IntegrationClientContext,
+  IntegrationCreateInput,
+  IntegrationDefinition,
+  IntegrationDto,
+  IntegrationRateLimiter,
+  IntegrationRecord,
+  IntegrationSecretState,
+  IntegrationStatus,
+  IntegrationStore,
+  IntegrationUpdateInput,
+  JsonObject,
+  SecretFieldMeta,
+} from "./types";
+export { parseIntegrationUrl } from "./urls";
