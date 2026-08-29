@@ -534,5 +534,8 @@ describe("app library tRPC router", () => {
     await expect(caller.app.library.get({ id: "does-not-exist" })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+    await expect(caller.app.library.get({ id: "jellyseerr" })).resolves.toMatchObject({
+      lifecycle: { status: "legacy", replacedBy: "seerr", replacedByName: "Seerr" },
+    });
   });
 });

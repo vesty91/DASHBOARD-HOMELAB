@@ -1,8 +1,15 @@
 import { createAppLibraryRegistry } from "./registry";
-import type { AppDefinition, AppLibraryCategory } from "./types";
+import type { AppDefinition, AppLibraryCategory, AppLifecycle } from "./types";
 
-function icon(id: string): AppDefinition["icon"] {
-  return { path: `/app-icons/${id}.svg`, source: "dashboard-icons" };
+function icon(
+  id: string,
+  source: AppDefinition["icon"]["source"] = "dashboard-icons",
+): AppDefinition["icon"] {
+  return { path: `/app-icons/${id}.svg`, source };
+}
+
+function genericIcon(): AppDefinition["icon"] {
+  return { path: "/app-icons/generic-app.svg", source: "internal" };
 }
 
 function def(input: {
@@ -20,13 +27,15 @@ function def(input: {
   healthPath?: string;
   dockerImages?: readonly string[];
   futureIntegrationType?: string;
+  lifecycle?: AppLifecycle;
+  iconFallback?: boolean;
 }): AppDefinition {
   return {
     id: input.id,
     name: input.name,
     description: input.description,
     category: input.category,
-    icon: icon(input.id),
+    icon: input.iconFallback ? genericIcon() : icon(input.id),
     tags: input.tags,
     ...(input.website ? { website: input.website } : {}),
     ...(input.documentation ? { documentation: input.documentation } : {}),
@@ -45,6 +54,7 @@ function def(input: {
       : {}),
     ...(input.dockerImages ? { discovery: { dockerImages: input.dockerImages } } : {}),
     ...(input.futureIntegrationType ? { futureIntegrationType: input.futureIntegrationType } : {}),
+    ...(input.lifecycle ? { lifecycle: input.lifecycle } : {}),
   };
 }
 
@@ -148,7 +158,12 @@ export function createBuiltInAppLibrary() {
         tags: ["requests", "jellyfin", "arr"],
         website: "https://docs.jellyseerr.dev",
         port: 5055,
-        dockerImages: ["fallenbagel/jellyseerr"],
+        dockerImages: ["fallenbagel/jellyseerr", "ghcr.io/fallenbagel/jellyseerr"],
+        lifecycle: {
+          status: "legacy",
+          replacedBy: "seerr",
+          note: "Jellyseerr et Overseerr sont unifiés dans Seerr.",
+        },
       }),
     )
     .register(
@@ -161,6 +176,26 @@ export function createBuiltInAppLibrary() {
         website: "https://overseerr.dev",
         port: 5055,
         dockerImages: ["sctx/overseerr"],
+        lifecycle: {
+          status: "legacy",
+          replacedBy: "seerr",
+          note: "Jellyseerr et Overseerr sont unifiés dans Seerr.",
+        },
+      }),
+    )
+    .register(
+      def({
+        id: "seerr",
+        name: "Seerr",
+        description:
+          "Demandes de médias pour Jellyfin, Plex et Emby, successeur d'Overseerr et Jellyseerr.",
+        category: "media",
+        tags: ["requests", "media", "jellyfin", "plex", "arr"],
+        website: "https://seerr.dev",
+        documentation: "https://docs.seerr.dev",
+        port: 5055,
+        healthPath: "/api/v1/settings/public",
+        dockerImages: ["ghcr.io/seerr-team/seerr", "seerr/seerr"],
       }),
     )
     .register(
@@ -209,6 +244,10 @@ export function createBuiltInAppLibrary() {
         website: "https://wiki.servarr.com/readarr",
         port: 8787,
         dockerImages: ["linuxserver/readarr"],
+        lifecycle: {
+          status: "retired",
+          note: "Le projet Readarr est officiellement retiré par l'équipe Servarr.",
+        },
       }),
     )
     .register(
@@ -303,7 +342,9 @@ export function createBuiltInAppLibrary() {
         category: "infrastructure",
         tags: ["docker", "containers", "admin"],
         website: "https://www.portainer.io",
-        port: 9000,
+        documentation: "https://docs.portainer.io",
+        protocol: "https",
+        port: 9443,
         dockerImages: ["portainer/portainer-ce"],
       }),
     )
@@ -502,14 +543,18 @@ export function createBuiltInAppLibrary() {
     .register(
       def({
         id: "unifi",
-        name: "UniFi",
-        description: "Contrôleur de réseau UniFi.",
+        name: "UniFi Network Application",
+        description: "Application de gestion du réseau UniFi.",
         category: "network",
         tags: ["wifi", "network", "controller"],
         website: "https://www.ui.com",
         protocol: "https",
         port: 8443,
-        dockerImages: ["linuxserver/unifi-controller"],
+        dockerImages: ["linuxserver/unifi-network-application", "linuxserver/unifi-controller"],
+        lifecycle: {
+          status: "active",
+          note: "linuxserver/unifi-controller is retained only as a historical Docker discovery alias.",
+        },
       }),
     )
     .register(
@@ -777,6 +822,311 @@ export function createBuiltInAppLibrary() {
         website: "https://ntfy.sh",
         documentation: "https://docs.ntfy.sh",
         dockerImages: ["binwiederhier/ntfy"],
+      }),
+    )
+    .register(
+      def({
+        id: "homepage",
+        name: "Homepage",
+        description: "Tableau de bord homelab configurable.",
+        category: "infrastructure",
+        tags: ["dashboard", "homelab", "status"],
+        website: "https://gethomepage.dev",
+        documentation: "https://gethomepage.dev/installation/docker",
+        port: 3000,
+        dockerImages: ["ghcr.io/gethomepage/homepage"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "homarr",
+        name: "Homarr",
+        description: "Tableau de bord homelab tiers pour organiser des services.",
+        category: "infrastructure",
+        tags: ["dashboard", "homelab", "widgets"],
+        website: "https://homarr.dev",
+        documentation: "https://homarr.dev/docs/getting-started/installation/docker",
+        port: 7575,
+        dockerImages: ["ghcr.io/homarr-labs/homarr"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "dockge",
+        name: "Dockge",
+        description: "Gestionnaire de stacks Docker Compose avec interface web.",
+        category: "infrastructure",
+        tags: ["docker", "compose", "stacks"],
+        website: "https://github.com/louislam/dockge",
+        port: 5001,
+        dockerImages: ["louislam/dockge"],
+      }),
+    )
+    .register(
+      def({
+        id: "komodo",
+        name: "Komodo",
+        description: "Plateforme de déploiement et de gestion de serveurs et de stacks.",
+        category: "infrastructure",
+        tags: ["docker", "deploy", "servers"],
+        website: "https://komo.do",
+        documentation: "https://komo.do/docs/setup",
+        port: 9120,
+        dockerImages: ["ghcr.io/moghtech/komodo-core"],
+      }),
+    )
+    .register(
+      def({
+        id: "n8n",
+        name: "n8n",
+        description: "Automatisation de workflows self-hosted.",
+        category: "automation",
+        tags: ["workflows", "automation", "integrations"],
+        website: "https://n8n.io",
+        documentation: "https://docs.n8n.io",
+        port: 5678,
+        dockerImages: ["n8nio/n8n", "docker.n8n.io/n8nio/n8n"],
+      }),
+    )
+    .register(
+      def({
+        id: "activepieces",
+        name: "Activepieces",
+        description: "Automatisation de flux no-code et low-code self-hosted.",
+        category: "automation",
+        tags: ["workflows", "automation", "no-code"],
+        website: "https://www.activepieces.com",
+        documentation: "https://www.activepieces.com/docs",
+        dockerImages: ["activepieces/activepieces", "ghcr.io/activepieces/activepieces"],
+      }),
+    )
+    .register(
+      def({
+        id: "syncthing",
+        name: "Syncthing",
+        description: "Synchronisation de fichiers continue et décentralisée.",
+        category: "storage",
+        tags: ["sync", "files", "p2p"],
+        website: "https://syncthing.net",
+        documentation: "https://docs.syncthing.net",
+        port: 8384,
+        healthPath: "/rest/noauth/health",
+        dockerImages: ["syncthing/syncthing"],
+      }),
+    )
+    .register(
+      def({
+        id: "file-browser",
+        name: "File Browser",
+        description: "Explorateur de fichiers web pour un répertoire du serveur.",
+        category: "storage",
+        tags: ["files", "browser", "storage"],
+        website: "https://filebrowser.org",
+        dockerImages: ["filebrowser/filebrowser"],
+      }),
+    )
+    .register(
+      def({
+        id: "scrutiny",
+        name: "Scrutiny",
+        description: "Surveillance S.M.A.R.T. des disques avec historique.",
+        category: "monitoring",
+        tags: ["smart", "disks", "storage"],
+        website: "https://github.com/AnalogJ/scrutiny",
+        port: 8080,
+        dockerImages: ["ghcr.io/analogj/scrutiny", "linuxserver/scrutiny"],
+      }),
+    )
+    .register(
+      def({
+        id: "proxmox-backup-server",
+        name: "Proxmox Backup Server",
+        description: "Sauvegarde dédupliquée pour machines virtuelles et hôtes.",
+        category: "storage",
+        tags: ["backup", "proxmox", "storage"],
+        website: "https://www.proxmox.com",
+        documentation: "https://pbs.proxmox.com/docs",
+        protocol: "https",
+        port: 8007,
+      }),
+    )
+    .register(
+      def({
+        id: "tautulli",
+        name: "Tautulli",
+        description: "Statistiques et historique de lecture pour Plex.",
+        category: "media",
+        tags: ["plex", "stats", "media"],
+        website: "https://tautulli.com",
+        documentation: "https://docs.tautulli.com",
+        port: 8181,
+        dockerImages: ["tautulli/tautulli", "ghcr.io/tautulli/tautulli"],
+      }),
+    )
+    .register(
+      def({
+        id: "kavita",
+        name: "Kavita",
+        description: "Serveur de lecture pour livres, comics et manga.",
+        category: "media",
+        tags: ["books", "comics", "manga"],
+        website: "https://www.kavitareader.com",
+        documentation: "https://wiki.kavitareader.com",
+        port: 5000,
+        dockerImages: ["jvmilazz0/kavita"],
+      }),
+    )
+    .register(
+      def({
+        id: "calibre-web",
+        name: "Calibre-Web",
+        description: "Interface web pour une bibliothèque Calibre.",
+        category: "media",
+        tags: ["books", "ebooks", "calibre"],
+        website: "https://github.com/janeczku/calibre-web",
+        port: 8083,
+        dockerImages: ["linuxserver/calibre-web"],
+      }),
+    )
+    .register(
+      def({
+        id: "tdarr",
+        name: "Tdarr",
+        description: "Transcodage distribué de bibliothèques audio et vidéo.",
+        category: "media",
+        tags: ["transcode", "media", "ffmpeg"],
+        website: "https://tdarr.io",
+        documentation: "https://docs.tdarr.io",
+        port: 8265,
+        dockerImages: ["ghcr.io/haveagitgat/tdarr", "haveagitgat/tdarr"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "tube-archivist",
+        name: "Tube Archivist",
+        description: "Archive YouTube self-hosted avec indexation.",
+        category: "media",
+        tags: ["youtube", "archive", "media"],
+        website: "https://www.tubearchivist.com",
+        documentation: "https://docs.tubearchivist.com",
+        port: 8000,
+        dockerImages: ["bbilly1/tubearchivist"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "speedtest-tracker",
+        name: "Speedtest Tracker",
+        description: "Suivi périodique des performances de la connexion Internet.",
+        category: "monitoring",
+        tags: ["speedtest", "network", "monitoring"],
+        website: "https://docs.speedtest-tracker.dev",
+        dockerImages: ["linuxserver/speedtest-tracker"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "gatus",
+        name: "Gatus",
+        description: "Page de statut et contrôles de santé automatisés.",
+        category: "monitoring",
+        tags: ["status", "health", "monitoring"],
+        website: "https://github.com/TwiN/gatus",
+        port: 8080,
+        dockerImages: ["twinproduction/gatus", "ghcr.io/twin/gatus"],
+      }),
+    )
+    .register(
+      def({
+        id: "wg-easy",
+        name: "wg-easy",
+        description: "Interface web pour gérer un serveur WireGuard.",
+        category: "network",
+        tags: ["vpn", "wireguard", "network"],
+        website: "https://github.com/wg-easy/wg-easy",
+        port: 51821,
+        dockerImages: ["ghcr.io/wg-easy/wg-easy"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "technitium-dns",
+        name: "Technitium DNS",
+        description: "Serveur DNS autoritaire et récursif avec console web.",
+        category: "network",
+        tags: ["dns", "resolver", "network"],
+        website: "https://technitium.com/dns",
+        port: 5380,
+        dockerImages: ["technitium/dns-server"],
+      }),
+    )
+    .register(
+      def({
+        id: "homebox",
+        name: "Homebox",
+        description: "Inventaire domestique pour objets, garanties et emplacements.",
+        category: "productivity",
+        tags: ["inventory", "home", "assets"],
+        website: "https://homebox.software",
+        port: 7745,
+        dockerImages: ["ghcr.io/sysadminsmedia/homebox"],
+      }),
+    )
+    .register(
+      def({
+        id: "freshrss",
+        name: "FreshRSS",
+        description: "Agrégateur RSS self-hosted.",
+        category: "productivity",
+        tags: ["rss", "news", "reader"],
+        website: "https://freshrss.org",
+        dockerImages: ["freshrss/freshrss"],
+      }),
+    )
+    .register(
+      def({
+        id: "linkwarden",
+        name: "Linkwarden",
+        description: "Gestionnaire de favoris collaboratif avec archivage.",
+        category: "productivity",
+        tags: ["bookmarks", "archive", "links"],
+        website: "https://linkwarden.app",
+        documentation: "https://docs.linkwarden.app",
+        port: 3000,
+        dockerImages: ["ghcr.io/linkwarden/linkwarden"],
+        iconFallback: true,
+      }),
+    )
+    .register(
+      def({
+        id: "triliumnext",
+        name: "TriliumNext",
+        description: "Base de connaissances personnelle hiérarchique.",
+        category: "productivity",
+        tags: ["notes", "knowledge", "wiki"],
+        website: "https://docs.triliumnotes.org",
+        documentation: "https://docs.triliumnotes.org/user-guide/setup/server/installation/docker",
+        port: 8080,
+        dockerImages: ["triliumnext/trilium"],
+      }),
+    )
+    .register(
+      def({
+        id: "netbox",
+        name: "NetBox",
+        description: "Source of truth pour l'infrastructure réseau.",
+        category: "infrastructure",
+        tags: ["dcim", "ipam", "network"],
+        website: "https://netboxlabs.com/oss/netbox",
+        documentation: "https://netboxlabs.com/docs/netbox",
+        dockerImages: ["netboxcommunity/netbox"],
       }),
     )
     .freeze();

@@ -143,7 +143,15 @@ parité, y compris `config_revision`.
 
 ## AC-029 Application Library
 
-Le catalogue built-in contient au moins 50 définitions statiques, sans App fictive ni URL
+Le catalogue built-in contient au moins 85 définitions statiques, sans App fictive ni URL
 utilisateur inventée. Les icônes sont locales (`/app-icons/...`) et ne dépendent d'aucun CDN au
 runtime. La création depuis un template produit une App normale indépendante ; l'App personnalisée
 reste possible. Aucun client Docker n'est appelé. Aucune migration DB n'est ajoutée.
+
+## AC-030 Application Library lifecycle
+
+Seerr est `active`. Jellyseerr et Overseerr sont `legacy` avec `replacedBy: seerr`. Readarr est
+`retired` et n'apparaît pas dans la liste active par défaut, mais reste trouvable. Portainer
+utilise HTTPS 9443. UniFi Network Application utilise `linuxserver/unifi-network-application`
+comme image primaire. Les apps legacy restent créables. Le matcher Docker reste une comparaison
+de strings, sans accès Docker runtime.

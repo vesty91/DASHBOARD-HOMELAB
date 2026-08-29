@@ -1,3 +1,4 @@
+import { compareAppDefinitions, validateReplacementGraph } from "./lifecycle";
 import { appDefinitionSchema } from "./schema";
 import type { AppDefinition, AppLibraryCategory } from "./types";
 
@@ -35,6 +36,7 @@ export class AppLibraryRegistry {
   }
 
   freeze(): this {
+    validateReplacementGraph(this.#definitions);
     this.#frozen = true;
     return this;
   }
@@ -48,9 +50,7 @@ export class AppLibraryRegistry {
   }
 
   list(): readonly AppDefinition[] {
-    return Object.freeze(
-      [...this.#definitions.values()].sort((left, right) => left.id.localeCompare(right.id, "und")),
-    );
+    return Object.freeze([...this.#definitions.values()].sort(compareAppDefinitions));
   }
 
   search(query: string): readonly AppDefinition[] {
@@ -58,9 +58,16 @@ export class AppLibraryRegistry {
     if (!needle) return this.list();
     return Object.freeze(
       this.list().filter((definition) => {
+        if (normalizeQuery(definition.id).includes(needle)) return true;
         if (normalizeQuery(definition.name).includes(needle)) return true;
         if (normalizeQuery(definition.description).includes(needle)) return true;
-        return definition.tags.some((tag) => tag.includes(needle) || needle.includes(tag));
+        if (definition.tags.some((tag) => tag.includes(needle) || needle.includes(tag)))
+          return true;
+        const replacedBy = definition.lifecycle?.replacedBy;
+        if (!replacedBy) return false;
+        if (normalizeQuery(replacedBy).includes(needle)) return true;
+        const target = this.#definitions.get(replacedBy);
+        return Boolean(target && normalizeQuery(target.name).includes(needle));
       }),
     );
   }

@@ -59,6 +59,30 @@ test("library template creates a normal app without inventing a URL", async ({ p
   expect(external).toEqual([]);
 });
 
+test("legacy apps stay hidden until searched or toggled", async ({ page }) => {
+  await loginAdmin(page);
+  await page.goto("/apps/library");
+  await expect(page.getByRole("heading", { name: "Seerr", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Readarr", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Jellyseerr", exact: true })).toHaveCount(0);
+  await page.getByLabel("Afficher les applications anciennes").check();
+  await expect(page.getByRole("heading", { name: "Readarr", exact: true })).toBeVisible();
+  await expect(page.getByText("Retiré", { exact: true }).first()).toBeVisible();
+  await page.getByLabel("Afficher les applications anciennes").uncheck();
+  await page.getByLabel("Rechercher").fill("overseerr");
+  const overseerrCard = page.locator(".entity-card", {
+    has: page.getByRole("heading", { name: "Overseerr", exact: true }),
+  });
+  await expect(overseerrCard.getByText("Legacy", { exact: true })).toBeVisible();
+  await overseerrCard.getByRole("button", { name: "Remplacé par Seerr" }).click();
+  await expect(page.getByRole("heading", { name: "Seerr", exact: true })).toBeVisible();
+  await page.getByLabel("Rechercher").fill("overseerr");
+  await overseerrCard.getByRole("link", { name: "Ajouter" }).click();
+  await expect(page).toHaveURL(/template=overseerr/);
+  await expect(page.getByText("Cette application est ancienne.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Seerr" })).toBeVisible();
+});
+
 test("custom app creation remains available", async ({ page }) => {
   await loginAdmin(page);
   await page.goto("/apps/library");

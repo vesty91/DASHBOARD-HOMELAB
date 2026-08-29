@@ -17,6 +17,16 @@ export type AppLibraryCategory = (typeof APP_LIBRARY_CATEGORIES)[number];
 
 export const LOCAL_APP_ICON_PATH = /^\/app-icons\/[a-z0-9]+(?:-[a-z0-9]+)*\.(svg|png|webp)$/;
 
+export const APP_LIFECYCLE_STATUSES = ["active", "legacy", "retired"] as const;
+
+export type AppLifecycleStatus = (typeof APP_LIFECYCLE_STATUSES)[number];
+
+export interface AppLifecycle {
+  readonly status: AppLifecycleStatus;
+  readonly replacedBy?: string;
+  readonly note?: string;
+}
+
 export interface AppDefinition {
   readonly id: string;
   readonly name: string;
@@ -44,6 +54,7 @@ export interface AppDefinition {
     readonly containerNames?: readonly string[];
   };
   readonly futureIntegrationType?: string;
+  readonly lifecycle?: AppLifecycle;
 }
 
 export interface AppLibraryView {
@@ -74,4 +85,10 @@ export interface AppLibraryView {
     readonly containerNames?: readonly string[];
   };
   readonly futureIntegrationType?: string;
+  readonly lifecycle: {
+    readonly status: AppLifecycleStatus;
+    readonly replacedBy?: string;
+    readonly replacedByName?: string;
+    readonly note?: string;
+  };
 }

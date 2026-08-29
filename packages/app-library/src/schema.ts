@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { APP_LIBRARY_CATEGORIES, LOCAL_APP_ICON_PATH } from "./types";
+import { APP_LIBRARY_CATEGORIES, APP_LIFECYCLE_STATUSES, LOCAL_APP_ICON_PATH } from "./types";
 
 const slugId = z
   .string()
@@ -82,11 +82,38 @@ export const appDefinitionSchema = z
       .optional(),
     discovery: z
       .object({
-        dockerImages: z.array(z.string().trim().min(1).max(256)).max(12).optional(),
+        dockerImages: z
+          .array(
+            z
+              .string()
+              .trim()
+              .min(1)
+              .max(256)
+              .refine(
+                (value) =>
+                  value.includes("/") &&
+                  !value.includes(":") &&
+                  !value.includes("@") &&
+                  !value.includes("*") &&
+                  !value.includes("..") &&
+                  !value.includes(" ") &&
+                  !value.includes("\\"),
+                "Docker image patterns must be canonical names without tags, digests or wildcards",
+              ),
+          )
+          .max(12)
+          .optional(),
         containerNames: z.array(z.string().trim().min(1).max(128)).max(12).optional(),
       })
       .optional(),
     futureIntegrationType: slugId.optional(),
+    lifecycle: z
+      .object({
+        status: z.enum(APP_LIFECYCLE_STATUSES),
+        replacedBy: slugId.optional(),
+        note: z.string().trim().min(1).max(280).optional(),
+      })
+      .optional(),
   })
   .superRefine((value, context) => {
     const seen = new Set<string>();
@@ -96,5 +123,20 @@ export const appDefinitionSchema = z
         return;
       }
       seen.add(item);
+    }
+    const replacedBy = value.lifecycle?.replacedBy;
+    if (value.lifecycle?.status === "active" && replacedBy) {
+      context.addIssue({
+        code: "custom",
+        path: ["lifecycle", "replacedBy"],
+        message: "Active definitions must not declare replacedBy",
+      });
+    }
+    if (replacedBy && replacedBy === value.id) {
+      context.addIssue({
+        code: "custom",
+        path: ["lifecycle", "replacedBy"],
+        message: "replacedBy cannot reference the same definition",
+      });
     }
   });

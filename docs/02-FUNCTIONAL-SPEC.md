@@ -143,15 +143,18 @@ Actions :
 
 ### Bibliothèque d'applications
 
-Le catalogue Phase 7.5 est un ensemble de templates statiques :
+Le catalogue Phase 7.5 / 7.6 est un ensemble de templates statiques :
 
 - parcourir, rechercher et filtrer des définitions connues ;
 - préremplir nom, description, tags, icône locale et target ;
 - laisser l'utilisateur saisir l'URL réelle ;
-- créer ensuite une App normale via `AppService.create`.
+- créer ensuite une App normale via `AppService.create` ;
+- exposer un cycle de vie `active` / `legacy` / `retired` et un `replacedBy` optionnel ;
+- conserver les hints Docker des définitions anciennes pour une future autodétection.
 
-Une définition n'est pas une instance : pas de statut, pas de latence, pas d'URL inventée.
-La création manuelle (« Application personnalisée ») reste disponible. Aucune migration DB.
+Une définition n'est pas une instance : pas de statut runtime, pas de latence, pas d'URL inventée.
+Les apps legacy restent créables. La création manuelle (« Application personnalisée ») reste disponible.
+Aucune migration DB. Aucun client Docker.
 
 ## 9. Widgets MVP
 

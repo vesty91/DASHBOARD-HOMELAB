@@ -204,12 +204,15 @@ Le routeur tRPC interne expose `board.list`, `board.get`, `board.create`, `board
 
 `widget.data` générique n'est pas implémenté. Clock et Bookmarks n'ont aucune query réseau. App Tile réutilise `app.get` / `app.list`.
 
-# App Library API — Phase 7.5
+# App Library API — Phase 7.5 / 7.6
 
 `app.library.list` et `app.library.get` exigent `app.read`. Ils retournent des metadata sérialisables
 (`id`, `name`, `description`, `category`, `icon.path`, `tags`, `website`, `documentation`, defaults
-sûrs). Aucune fonction matcher, aucun objet interne du registry et aucune URL utilisateur inventée
+sûrs, `lifecycle`). `lifecycle.status` est toujours présent côté vue (`active` par défaut).
+`replacedBy` et `replacedByName` sont exposés lorsqu'une succession officielle existe.
+Aucune fonction matcher, aucun objet interne du registry et aucune URL utilisateur inventée
 ne sont exposés. La création d'App continue d'exiger `app.manage` via `app.create`.
+Le lifecycle n'est pas une colonne DB.
 
 # Integration API — Phase 7
 
