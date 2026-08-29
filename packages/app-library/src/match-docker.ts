@@ -14,7 +14,8 @@ export function normalizeDockerImageRef(imageRef: string): string | null {
   if (!trimmed || trimmed.includes("..") || trimmed.includes("\\") || trimmed.includes(" "))
     return null;
   const name = stripTag(stripDigest(trimmed));
-  return name || null;
+  if (!name) return null;
+  return name.includes("/") ? name : `library/${name}`;
 }
 
 export function matchDockerImage(

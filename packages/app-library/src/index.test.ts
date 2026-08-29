@@ -10,6 +10,7 @@ import {
   findDefinitionsForDockerImage,
   listAppLibrary,
   matchDockerImage,
+  normalizeDockerImageRef,
 } from "./index";
 import type { AppDefinition } from "./types";
 
@@ -93,6 +94,23 @@ describe("docker image matcher", () => {
   const jellyfin = builtInAppLibrary.get("jellyfin");
   const immich = builtInAppLibrary.get("immich");
 
+  it("canonicalizes official Docker Hub image refs", () => {
+    expect(normalizeDockerImageRef("traefik:latest")).toBe("library/traefik");
+    expect(normalizeDockerImageRef("nextcloud")).toBe("library/nextcloud");
+    expect(normalizeDockerImageRef("postgres:18")).toBe("library/postgres");
+    expect(
+      normalizeDockerImageRef(
+        "nextcloud@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      ),
+    ).toBe("library/nextcloud");
+    expect(normalizeDockerImageRef("linuxserver/jellyfin:latest")).toBe("linuxserver/jellyfin");
+    expect(normalizeDockerImageRef("ghcr.io/immich-app/immich-server:v1")).toBe(
+      "ghcr.io/immich-app/immich-server",
+    );
+    expect(matchDockerImage("traefik:latest", ["library/traefik"])).toBe(true);
+    expect(matchDockerImage("nextcloud:latest", ["library/nextcloud"])).toBe(true);
+  });
+
   it("matches tagged and digested official images", () => {
     expect(matchDockerImage("jellyfin/jellyfin:10.10.0", jellyfin?.discovery?.dockerImages)).toBe(
       true,
@@ -121,5 +139,7 @@ describe("docker image matcher", () => {
     ).toBe(false);
     expect(matchDockerImage("evil/not-jellyfin", jellyfin?.discovery?.dockerImages)).toBe(false);
     expect(matchDockerImage("../secret", ["jellyfin/jellyfin"])).toBe(false);
+    expect(matchDockerImage("my-traefik-malware", ["library/traefik"])).toBe(false);
+    expect(matchDockerImage("evil/nextcloud", ["library/nextcloud"])).toBe(false);
   });
 });

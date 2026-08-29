@@ -512,4 +512,27 @@ describe("app library tRPC router", () => {
       }).app.library.list(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
+
+  it("returns a known definition and maps unknown ids to NOT_FOUND", async () => {
+    const caller = createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000009",
+        subject: {
+          status: "active" as const,
+          isSystemAdmin: false,
+          directPermissions: ["app.read"],
+        },
+      },
+      boards: service(),
+      apps,
+      integrations,
+    });
+    await expect(caller.app.library.get({ id: "jellyfin" })).resolves.toMatchObject({
+      id: "jellyfin",
+      name: "Jellyfin",
+    });
+    await expect(caller.app.library.get({ id: "does-not-exist" })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
 });
