@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { AppDto } from "@dashboard/apps";
 import type { AppLibraryView } from "@dashboard/app-library";
 import { Button, Field, Input, Select, Textarea } from "@dashboard/ui";
@@ -22,8 +23,27 @@ export function AppForm({
   const [customIcon, setCustomIcon] = useState(!initialLocalIcon);
   const health = app?.healthcheckConfig;
   const suggestedHealth = template?.health?.suggestedPath ?? health?.path ?? "/";
+  const templateStatus = template?.lifecycle.status;
+  const replacementName = template?.lifecycle.replacedByName;
+  const replacementId = template?.lifecycle.replacedBy;
   return (
     <form action={action} className="ui-form ui-form-wide ui-form-grid">
+      {template && templateStatus && templateStatus !== "active" ? (
+        <div className="library-legacy-warning" role="status">
+          <p>
+            {templateStatus === "retired"
+              ? "Cette application est retirée."
+              : "Cette application est ancienne."}
+          </p>
+          {replacementId && replacementName ? (
+            <p>
+              Une alternative maintenue existe :{" "}
+              <Link href={`/apps/new?template=${replacementId}`}>{replacementName}</Link>.
+            </p>
+          ) : null}
+          <p>Vous pouvez continuer avec {template.name} si vous en avez réellement besoin.</p>
+        </div>
+      ) : null}
       <Field label="Nom">
         <Input
           name="name"

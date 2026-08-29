@@ -135,8 +135,9 @@ reference/
 ### packages/app-library
 
 - registre pur de définitions d'applications ;
-- catalogue statique, recherche et catégories ;
-- hints Docker sous forme de strings uniquement ;
+- catalogue statique, recherche, catégories et cycle de vie ;
+- relations `replacedBy` validées au freeze du registry ;
+- hints Docker sous forme de strings uniquement, y compris pour les apps legacy ;
 - aucune dépendance DB, React, Next.js, API, intégrations ou Docker.
 
 ### packages/apps

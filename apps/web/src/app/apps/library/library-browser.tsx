@@ -25,6 +25,40 @@ function normalize(value: string): string {
   return value.trim().normalize("NFKC").toLocaleLowerCase("und");
 }
 
+function lifecycleLabel(status: AppLibraryView["lifecycle"]["status"]): string | undefined {
+  switch (status) {
+    case "active":
+      return undefined;
+    case "legacy":
+      return "Legacy";
+    case "retired":
+      return "Retiré";
+    default: {
+      const exhaustive: never = status;
+      return exhaustive;
+    }
+  }
+}
+
+function matchesQuery(item: AppLibraryView, needle: string): boolean {
+  if (!needle) return true;
+  if (normalize(item.id).includes(needle)) return true;
+  if (normalize(item.name).includes(needle)) return true;
+  if (normalize(item.description).includes(needle)) return true;
+  if (
+    item.tags.some((tag) => {
+      const normalizedTag = normalize(tag);
+      return normalizedTag.includes(needle) || needle.includes(normalizedTag);
+    })
+  )
+    return true;
+  if (item.lifecycle.replacedBy && normalize(item.lifecycle.replacedBy).includes(needle))
+    return true;
+  return Boolean(
+    item.lifecycle.replacedByName && normalize(item.lifecycle.replacedByName).includes(needle),
+  );
+}
+
 export function LibraryBrowser({
   items,
   categories,
@@ -36,21 +70,16 @@ export function LibraryBrowser({
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<AppLibraryCategory | "all">("all");
+  const [showLegacy, setShowLegacy] = useState(false);
   const visible = useMemo(() => {
     const needle = normalize(query);
     return items.filter((item) => {
       if (category !== "all" && item.category !== category) return false;
-      if (!needle) return true;
-      return (
-        normalize(item.name).includes(needle) ||
-        normalize(item.description).includes(needle) ||
-        item.tags.some((tag) => {
-          const normalizedTag = normalize(tag);
-          return normalizedTag.includes(needle) || needle.includes(normalizedTag);
-        })
-      );
+      if (!matchesQuery(item, needle)) return false;
+      if (!needle && !showLegacy && item.lifecycle.status !== "active") return false;
+      return true;
     });
-  }, [category, items, query]);
+  }, [category, items, query, showLegacy]);
 
   return (
     <div className="library-browser">
@@ -62,6 +91,14 @@ export function LibraryBrowser({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Jellyfin, monitoring, photos…"
           />
+        </label>
+        <label className="library-legacy-toggle">
+          <input
+            type="checkbox"
+            checked={showLegacy}
+            onChange={(event) => setShowLegacy(event.target.checked)}
+          />
+          <span>Afficher les applications anciennes</span>
         </label>
         <div className="library-filters" role="tablist" aria-label="Catégories">
           <button
@@ -113,32 +150,52 @@ export function LibraryBrowser({
             )}
           </CardFooter>
         </Card>
-        {visible.map((item) => (
-          <Card key={item.id} className="entity-card">
-            <CardBody>
-              <div className="ui-card-header" style={{ padding: 0 }}>
-                <span className="app-card-identity">
-                  <span className="app-card-icon">
-                    <AppIcon src={item.icon.path} name={item.name} />
+        {visible.map((item) => {
+          const statusLabel = lifecycleLabel(item.lifecycle.status);
+          return (
+            <Card key={item.id} className="entity-card" id={`library-${item.id}`}>
+              <CardBody>
+                <div className="ui-card-header" style={{ padding: 0 }}>
+                  <span className="app-card-identity">
+                    <span className="app-card-icon">
+                      <AppIcon src={item.icon.path} name={item.name} />
+                    </span>
+                    <h2 className="ui-card-title">{item.name}</h2>
                   </span>
-                  <h2 className="ui-card-title">{item.name}</h2>
-                </span>
-                <Badge>{CATEGORY_LABELS[item.category]}</Badge>
-              </div>
-              <p className="ui-muted line-clamp-2">{item.description}</p>
-              <p className="ui-muted">{item.tags.slice(0, 4).join(" · ")}</p>
-            </CardBody>
-            <CardFooter>
-              {canManage ? (
-                <Link className="ui-btn ui-btn-primary" href={`/apps/new?template=${item.id}`}>
-                  Ajouter
-                </Link>
-              ) : (
-                <span className="ui-muted">Lecture seule</span>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
+                  <span className="library-card-badges">
+                    <Badge>{CATEGORY_LABELS[item.category]}</Badge>
+                    {statusLabel ? (
+                      <Badge tone={item.lifecycle.status === "retired" ? "danger" : "warning"}>
+                        {statusLabel}
+                      </Badge>
+                    ) : null}
+                  </span>
+                </div>
+                <p className="ui-muted line-clamp-2">{item.description}</p>
+                <p className="ui-muted">{item.tags.slice(0, 4).join(" · ")}</p>
+                {item.lifecycle.replacedBy && item.lifecycle.replacedByName ? (
+                  <p>
+                    <Link
+                      className="library-replacement-link"
+                      href={`#library-${item.lifecycle.replacedBy}`}
+                    >
+                      Remplacé par {item.lifecycle.replacedByName}
+                    </Link>
+                  </p>
+                ) : null}
+              </CardBody>
+              <CardFooter>
+                {canManage ? (
+                  <Link className="ui-btn ui-btn-primary" href={`/apps/new?template=${item.id}`}>
+                    Ajouter
+                  </Link>
+                ) : (
+                  <span className="ui-muted">Lecture seule</span>
+                )}
+              </CardFooter>
+            </Card>
+          );
+        })}
       </section>
       {visible.length === 0 ? (
         <EmptyState title="Aucun résultat" description="Essayez un autre nom, tag ou catégorie." />

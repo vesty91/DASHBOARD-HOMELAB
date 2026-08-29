@@ -113,13 +113,16 @@ Si un user n'a pas permission de configurer :
 
 ## 12. Icônes
 
-Le catalogue Phase 7.5 affiche des icônes locales vendored (`/app-icons/<slug>.svg`) via `<img>`.
+Le catalogue Phase 7.5 / 7.6 affiche des icônes locales vendored (`/app-icons/<slug>.svg`) via `<img>`.
 Les URL HTTP(S) existantes restent valides. Un fallback générique remplace une image cassée.
 Aucun SVG n'est injecté en HTML.
 
 `/apps` liste les Apps créées. `/apps/library` parcourt le catalogue : recherche, filtres
-catégories, cards clavier, CTA « Application personnalisée ». Aucun badge online/status sur une
-définition.
+catégories, cards clavier, CTA « Application personnalisée ». Les définitions `active` sont
+affichées par défaut. Un toggle « Afficher les applications anciennes » et la recherche
+rendent les apps `legacy` / `retired` trouvables, avec badges texte « Legacy » / « Retiré »
+et un lien « Remplacé par … » accessible au clavier. Un avertissement non bloquant apparaît
+si l'utilisateur choisit un template ancien. Aucun badge online/status sur une définition.
 
 ## 13. Search/Spotlight
 

@@ -1171,6 +1171,41 @@ a.ui-btn-ghost:hover {
   max-width: 28rem;
 }
 
+.library-legacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.library-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.library-replacement-link,
+.library-legacy-warning a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.library-replacement-link:focus-visible,
+.library-legacy-warning a:focus-visible {
+  outline: 2px solid var(--ring, var(--accent));
+  outline-offset: 2px;
+}
+
+.library-legacy-warning {
+  grid-column: 1 / -1;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--warning, #c9a227) 12%, transparent);
+}
+
 .library-filters {
   display: flex;
   flex-wrap: wrap;

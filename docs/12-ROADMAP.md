@@ -139,7 +139,7 @@ Livrables :
 
 ## Phase 7.5 — Application Library
 
-Statut sur la branche `phase-7-5-app-library` : implemented / review.
+Statut : COMPLETE / merged (PR #8).
 
 Livrables :
 
@@ -150,9 +150,25 @@ Livrables :
 - custom app fallback ;
 - Docker discovery metadata only.
 
-Aucune connexion Docker. Aucune migration DB. Phase 8 Docker : NON COMMENCEE.
+Aucune connexion Docker. Aucune migration DB.
+
+## Phase 7.6 — App Library Hardening & Expansion
+
+Statut sur la branche `phase-7-6-app-library-expansion` : IMPLEMENTED / REVIEW.
+
+Livrables :
+
+- cycle de vie `active` / `legacy` / `retired` ;
+- relations `replacedBy` validées ;
+- expansion curatée du catalogue ;
+- metadata Docker discovery conservées pour les apps legacy ;
+- icônes locales uniquement.
+
+Aucune connexion Docker. Aucune migration DB. Phase 8 Docker : NOT STARTED.
 
 ## Phase 8 — Docker
+
+Statut : NOT STARTED.
 
 Livrables :
 
