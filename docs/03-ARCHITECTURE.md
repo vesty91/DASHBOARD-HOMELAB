@@ -19,6 +19,7 @@ packages/
   permissions/
   secrets/
   monitoring/
+  app-library/
   apps/
   ui/
   shared/
@@ -130,6 +131,13 @@ reference/
 - status ;
 - history ;
 - metrics internes.
+
+### packages/app-library
+
+- registre pur de définitions d'applications ;
+- catalogue statique, recherche et catégories ;
+- hints Docker sous forme de strings uniquement ;
+- aucune dépendance DB, React, Next.js, API, intégrations ou Docker.
 
 ### packages/apps
 

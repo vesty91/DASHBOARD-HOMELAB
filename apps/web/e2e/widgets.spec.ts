@@ -107,7 +107,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await expect(docs).toHaveAttribute("rel", "noopener noreferrer");
 
   await page.goto("/apps");
-  await page.getByRole("link", { name: "Ajouter une App" }).click();
+  await page.getByRole("link", { name: "Application personnalisée" }).click();
   await page.getByLabel("Nom").fill("Widget App");
   await page.getByLabel("URL", { exact: true }).fill("http://192.168.1.20/");
   await page.getByRole("button", { name: "Enregistrer" }).click();

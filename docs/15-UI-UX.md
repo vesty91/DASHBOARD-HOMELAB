@@ -113,11 +113,13 @@ Si un user n'a pas permission de configurer :
 
 ## 12. Icônes
 
-Prévoir :
+Le catalogue Phase 7.5 affiche des icônes locales vendored (`/app-icons/<slug>.svg`) via `<img>`.
+Les URL HTTP(S) existantes restent valides. Un fallback générique remplace une image cassée.
+Aucun SVG n'est injecté en HTML.
 
-- catalogue d'icônes open source ;
-- upload custom ;
-- URL icon avec proxy sécurisé si nécessaire.
+`/apps` liste les Apps créées. `/apps/library` parcourt le catalogue : recherche, filtres
+catégories, cards clavier, CTA « Application personnalisée ». Aucun badge online/status sur une
+définition.
 
 ## 13. Search/Spotlight
 

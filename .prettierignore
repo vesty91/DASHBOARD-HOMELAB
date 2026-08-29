@@ -5,3 +5,5 @@ coverage
 playwright-report
 reference/homarr
 pnpm-lock.yaml
+licenses
+apps/web/public/app-icons

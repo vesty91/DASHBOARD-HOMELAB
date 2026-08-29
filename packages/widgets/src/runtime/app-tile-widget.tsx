@@ -42,7 +42,17 @@ export function AppTileWidget({
     );
   return (
     <div className="widget-app-tile" {...(app.color ? { style: { borderColor: app.color } } : {})}>
-      {app.iconRef ? <img src={app.iconRef} alt="" width={32} height={32} /> : null}
+      {app.iconRef ? (
+        <img
+          src={app.iconRef}
+          alt=""
+          width={32}
+          height={32}
+          onError={(event) => {
+            event.currentTarget.src = "/app-icons/generic-app.svg";
+          }}
+        />
+      ) : null}
       <div>
         <p>{link}</p>
         {config.showStatus ? <p className="widget-state">{healthLabel(app)}</p> : null}

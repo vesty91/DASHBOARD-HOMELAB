@@ -160,7 +160,7 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   expect(deleteCount()).toBe(0);
 
   await page.goto("/apps");
-  await page.getByRole("link", { name: "Ajouter une App" }).click();
+  await page.getByRole("link", { name: "Application personnalisée" }).click();
   await page.getByLabel("Nom").fill("NAS Portal");
   await page.getByLabel("Description").fill("Persistent service catalog");
   await page.getByLabel("URL", { exact: true }).fill("http://192.168.1.5:5000/");
@@ -183,7 +183,7 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByRole("button", { name: "Supprimer" }).click();
   await page.getByRole("button", { name: "Supprimer définitivement" }).click();
   await expect(page.getByRole("heading", { name: "NAS Portal Updated" })).not.toBeVisible();
-  await page.getByRole("link", { name: "Ajouter une App" }).click();
+  await page.getByRole("link", { name: "Application personnalisée" }).click();
   await page.getByLabel("Nom").fill("Viewer Visible App");
   await page.getByLabel("URL", { exact: true }).fill("http://192.168.1.10/");
   await page.getByRole("button", { name: "Enregistrer" }).click();
@@ -216,7 +216,8 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await expect(page).toHaveURL(/\/forbidden/);
   await page.goto("/apps");
   await expect(page.getByRole("heading", { name: "Viewer Visible App" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ajouter une App" })).not.toBeVisible();
+  await expect(page.getByRole("link", { name: "Ajouter une application" })).not.toBeVisible();
+  await expect(page.getByRole("link", { name: "Application personnalisée" })).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Tester maintenant" })).not.toBeVisible();
 
   await page.goto("/integrations");

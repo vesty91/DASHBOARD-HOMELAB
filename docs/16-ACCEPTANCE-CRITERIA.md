@@ -140,3 +140,10 @@ repos et jamais renvoyés en clair, ni en ciphertext. `integration.test` exige `
 Le client HTTP bloque loopback/metadata, autorise le LAN, pin le DNS et ne suit pas les redirects.
 Un résultat de test stale n'écrase pas une révision plus récente. SQLite et PostgreSQL restent à
 parité, y compris `config_revision`.
+
+## AC-029 Application Library
+
+Le catalogue built-in contient au moins 50 définitions statiques, sans App fictive ni URL
+utilisateur inventée. Les icônes sont locales (`/app-icons/...`) et ne dépendent d'aucun CDN au
+runtime. La création depuis un template produit une App normale indépendante ; l'App personnalisée
+reste possible. Aucun client Docker n'est appelé. Aucune migration DB n'est ajoutée.

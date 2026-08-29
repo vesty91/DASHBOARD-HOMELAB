@@ -19,6 +19,74 @@ describe("app validation", () => {
       appCreateSchema.parse({ name: "App", url: "https://example.com", color }),
     ).toThrow(),
   );
+  it("accepts HTTP(S) and local library icon refs", () => {
+    expect(
+      appCreateSchema.parse({
+        name: "App",
+        url: "https://example.com",
+        iconRef: "https://example.org/icon.png",
+      }).iconRef,
+    ).toBe("https://example.org/icon.png");
+    expect(
+      appCreateSchema.parse({
+        name: "App",
+        url: "https://example.com",
+        iconRef: "http://example.org/icon.svg",
+      }).iconRef,
+    ).toBe("http://example.org/icon.svg");
+    expect(
+      appCreateSchema.parse({
+        name: "App",
+        url: "https://example.com",
+        iconRef: "/app-icons/jellyfin.svg",
+      }).iconRef,
+    ).toBe("/app-icons/jellyfin.svg");
+    expect(
+      appCreateSchema.parse({
+        name: "App",
+        url: "https://example.com",
+        iconRef: "/app-icons/immich.webp",
+      }).iconRef,
+    ).toBe("/app-icons/immich.webp");
+  });
+  it("creates from library defaults only after the user supplies a URL", () => {
+    expect(() =>
+      appCreateSchema.parse({
+        name: "Jellyfin",
+        description: "Serveur média libre.",
+        iconRef: "/app-icons/jellyfin.svg",
+        tags: ["media", "streaming"],
+      }),
+    ).toThrow();
+    expect(
+      appCreateSchema.parse({
+        name: "Jellyfin",
+        description: "Serveur média libre.",
+        url: "http://192.168.50.20:8096",
+        iconRef: "/app-icons/jellyfin.svg",
+        tags: ["media", "streaming"],
+      }),
+    ).toMatchObject({
+      name: "Jellyfin",
+      url: "http://192.168.50.20:8096/",
+      iconRef: "/app-icons/jellyfin.svg",
+      healthcheckEnabled: false,
+    });
+  });
+  it.each([
+    "javascript:alert(1)",
+    "data:image/svg+xml;base64,aaaa",
+    "file:///etc/passwd",
+    "../secret",
+    "/app-icons/../../secret",
+    "/fake/jellyfin.svg",
+    "/app-icons/test.svg?evil=1",
+    "https://user:pass@example.org/icon.png",
+  ])("rejects unsafe iconRef %s", (iconRef) =>
+    expect(() =>
+      appCreateSchema.parse({ name: "App", url: "https://example.com", iconRef }),
+    ).toThrow(),
+  );
 });
 describe("app RBAC", () => {
   const store = {

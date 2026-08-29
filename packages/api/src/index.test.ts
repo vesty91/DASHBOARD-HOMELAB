@@ -484,3 +484,55 @@ describe("integration tRPC router", () => {
     expect(JSON.stringify(outputs)).not.toMatch(/ciphertext|authTag|"iv"/i);
   });
 });
+
+describe("app library tRPC router", () => {
+  it("lists catalog metadata to app.read and forbids anonymous access", async () => {
+    const reader = {
+      userId: "00000000-0000-4000-8000-000000000009",
+      subject: { status: "active" as const, isSystemAdmin: false, directPermissions: ["app.read"] },
+    };
+    const listed = await createCaller({
+      actor: reader,
+      boards: service(),
+      apps,
+      integrations,
+    }).app.library.list();
+    expect(listed.length).toBeGreaterThanOrEqual(50);
+    expect(listed.find((item) => item.id === "jellyfin")).toMatchObject({
+      name: "Jellyfin",
+      icon: { path: "/app-icons/jellyfin.svg" },
+    });
+    expect(listed.find((item) => item.id === "jellyfin")?.defaults).not.toHaveProperty("url");
+    await expect(
+      createCaller({
+        actor: { userId: null, subject: null },
+        boards: service(),
+        apps,
+        integrations,
+      }).app.library.list(),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("returns a known definition and maps unknown ids to NOT_FOUND", async () => {
+    const caller = createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000009",
+        subject: {
+          status: "active" as const,
+          isSystemAdmin: false,
+          directPermissions: ["app.read"],
+        },
+      },
+      boards: service(),
+      apps,
+      integrations,
+    });
+    await expect(caller.app.library.get({ id: "jellyfin" })).resolves.toMatchObject({
+      id: "jellyfin",
+      name: "Jellyfin",
+    });
+    await expect(caller.app.library.get({ id: "does-not-exist" })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+});

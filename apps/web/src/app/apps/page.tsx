@@ -52,9 +52,14 @@ export default async function AppsPage({
           {...(canManage
             ? {
                 actions: (
-                  <Link className="ui-btn ui-btn-primary" href="/apps/new">
-                    Ajouter une App
-                  </Link>
+                  <>
+                    <Link className="ui-btn ui-btn-primary" href="/apps/library">
+                      Ajouter une application
+                    </Link>
+                    <Link className="ui-btn" href="/apps/new">
+                      Application personnalisée
+                    </Link>
+                  </>
                 ),
               }
             : {})}
@@ -64,6 +69,18 @@ export default async function AppsPage({
             icon={<AppWindow />}
             title="Aucune application"
             description="Aucun service n'est encore enregistré."
+            action={
+              canManage ? (
+                <div className="empty-actions">
+                  <Link className="ui-btn ui-btn-primary" href="/apps/library">
+                    Parcourir la bibliothèque
+                  </Link>
+                  <Link className="ui-btn" href="/apps/new">
+                    Ajouter manuellement
+                  </Link>
+                </div>
+              ) : undefined
+            }
           />
         ) : (
           <section className="card-grid">
