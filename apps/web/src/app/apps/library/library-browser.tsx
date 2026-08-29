@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AppLibraryCategory, AppLibraryView } from "@dashboard/app-library";
 import { Badge, Card, CardBody, CardFooter, EmptyState, Input } from "@dashboard/ui";
@@ -71,6 +71,7 @@ export function LibraryBrowser({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<AppLibraryCategory | "all">("all");
   const [showLegacy, setShowLegacy] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const visible = useMemo(() => {
     const needle = normalize(query);
     return items.filter((item) => {
@@ -80,6 +81,16 @@ export function LibraryBrowser({
       return true;
     });
   }, [category, items, query, showLegacy]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const node = document.getElementById(`library-${highlightId}`);
+    if (!node) return;
+    node.scrollIntoView({ block: "nearest" });
+    const focusable = node.querySelector<HTMLElement>("h2, a, button");
+    focusable?.focus();
+    setHighlightId(null);
+  }, [highlightId, visible]);
 
   return (
     <div className="library-browser">
@@ -160,7 +171,9 @@ export function LibraryBrowser({
                     <span className="app-card-icon">
                       <AppIcon src={item.icon.path} name={item.name} />
                     </span>
-                    <h2 className="ui-card-title">{item.name}</h2>
+                    <h2 className="ui-card-title" tabIndex={-1}>
+                      {item.name}
+                    </h2>
                   </span>
                   <span className="library-card-badges">
                     <Badge>{CATEGORY_LABELS[item.category]}</Badge>
@@ -175,12 +188,17 @@ export function LibraryBrowser({
                 <p className="ui-muted">{item.tags.slice(0, 4).join(" · ")}</p>
                 {item.lifecycle.replacedBy && item.lifecycle.replacedByName ? (
                   <p>
-                    <Link
+                    <button
+                      type="button"
                       className="library-replacement-link"
-                      href={`#library-${item.lifecycle.replacedBy}`}
+                      onClick={() => {
+                        setCategory("all");
+                        setQuery(item.lifecycle.replacedByName ?? "");
+                        setHighlightId(item.lifecycle.replacedBy ?? null);
+                      }}
                     >
                       Remplacé par {item.lifecycle.replacedByName}
-                    </Link>
+                    </button>
                   </p>
                 ) : null}
               </CardBody>

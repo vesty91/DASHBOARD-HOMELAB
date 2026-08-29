@@ -74,7 +74,9 @@ test("legacy apps stay hidden until searched or toggled", async ({ page }) => {
     has: page.getByRole("heading", { name: "Overseerr", exact: true }),
   });
   await expect(overseerrCard.getByText("Legacy", { exact: true })).toBeVisible();
-  await expect(overseerrCard.getByRole("link", { name: "Remplacé par Seerr" })).toBeVisible();
+  await overseerrCard.getByRole("button", { name: "Remplacé par Seerr" }).click();
+  await expect(page.getByRole("heading", { name: "Seerr", exact: true })).toBeVisible();
+  await page.getByLabel("Rechercher").fill("overseerr");
   await overseerrCard.getByRole("link", { name: "Ajouter" }).click();
   await expect(page).toHaveURL(/template=overseerr/);
   await expect(page.getByText("Cette application est ancienne.")).toBeVisible();

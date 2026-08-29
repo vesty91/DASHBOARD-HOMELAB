@@ -849,6 +849,7 @@ export function createBuiltInAppLibrary() {
         documentation: "https://homarr.dev/docs/getting-started/installation/docker",
         port: 7575,
         dockerImages: ["ghcr.io/homarr-labs/homarr"],
+        iconFallback: true,
       }),
     )
     .register(

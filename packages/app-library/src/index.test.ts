@@ -133,6 +133,7 @@ describe("built-in app library", () => {
     expect(views.find((item) => item.id === "jellyseerr")?.lifecycle.replacedByName).toBe("Seerr");
     for (const id of [
       "homepage",
+      "homarr",
       "tdarr",
       "tube-archivist",
       "speedtest-tracker",
