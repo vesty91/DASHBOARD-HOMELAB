@@ -141,6 +141,18 @@ Actions :
 - statut ;
 - association à une intégration.
 
+### Bibliothèque d'applications
+
+Le catalogue Phase 7.5 est un ensemble de templates statiques :
+
+- parcourir, rechercher et filtrer des définitions connues ;
+- préremplir nom, description, tags, icône locale et target ;
+- laisser l'utilisateur saisir l'URL réelle ;
+- créer ensuite une App normale via `AppService.create`.
+
+Une définition n'est pas une instance : pas de statut, pas de latence, pas d'URL inventée.
+La création manuelle (« Application personnalisée ») reste disponible. Aucune migration DB.
+
 ## 9. Widgets MVP
 
 ### App Tile

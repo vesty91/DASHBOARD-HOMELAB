@@ -99,6 +99,7 @@ packages/
   permissions/
   secrets/
   monitoring/
+  app-library/
   ui/
   shared/
 ```

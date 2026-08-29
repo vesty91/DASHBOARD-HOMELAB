@@ -33,19 +33,24 @@ const nullableText = (max: number) =>
     .max(max)
     .transform((value) => value || null)
     .nullable();
+export const LOCAL_APP_ICON_REF = /^\/app-icons\/[a-z0-9]+(?:-[a-z0-9]+)*\.(svg|png|webp)$/;
 const iconRef = z
   .string()
   .trim()
   .max(2048)
   .transform((value, context) => {
     if (!value) return null;
+    if (LOCAL_APP_ICON_REF.test(value)) return value;
     try {
       const url = new URL(value);
       if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
         throw new Error();
       return url.toString();
     } catch {
-      context.addIssue({ code: "custom", message: "Icon must be an HTTP(S) URL" });
+      context.addIssue({
+        code: "custom",
+        message: "Icon must be an HTTP(S) URL or a local /app-icons/<slug>.(svg|png|webp) path",
+      });
       return z.NEVER;
     }
   })

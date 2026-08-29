@@ -11,6 +11,7 @@ import {
   type BoardService,
 } from "@dashboard/boards";
 import { z } from "zod";
+import { getAppLibraryEntry, listAppLibrary } from "@dashboard/app-library";
 import { hasPermission } from "@dashboard/permissions";
 import {
   AppError,
@@ -165,10 +166,29 @@ export const boardRouter = t.router({
       .mutation(({ ctx, input }) => procedure(() => ctx.boards.deleteItem(input, ctx.actor))),
   }),
 });
+function requireAppRead(ctx: ApiContext) {
+  if (!ctx.actor.userId || !ctx.actor.subject || ctx.actor.subject.status !== "active")
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
+  if (!hasPermission(ctx.actor.subject, "app.read"))
+    throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });
+}
+
 export const appsRouter = t.router({
   canManage: t.procedure.query(({ ctx }) =>
     ctx.actor.subject ? hasPermission(ctx.actor.subject, "app.manage") : false,
   ),
+  library: t.router({
+    list: t.procedure.query(({ ctx }) => {
+      requireAppRead(ctx);
+      return listAppLibrary();
+    }),
+    get: t.procedure.input(z.object({ id: z.string().min(1).max(64) })).query(({ ctx, input }) => {
+      requireAppRead(ctx);
+      const entry = getAppLibraryEntry(input.id);
+      if (!entry) throw new TRPCError({ code: "NOT_FOUND", message: "App definition not found" });
+      return entry;
+    }),
+  }),
   list: t.procedure
     .input(
       z

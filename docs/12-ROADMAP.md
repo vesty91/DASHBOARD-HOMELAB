@@ -112,7 +112,7 @@ Livrables :
 
 ## Phase 7 — Integration Framework
 
-Statut : implémentée sur la branche `phase-7-integration-framework`, en review.
+Statut : COMPLETE.
 
 Livrables :
 
@@ -125,6 +125,32 @@ Livrables :
 - cache.
 
 Aucun adapter de production n'est enregistré. Docker, Synology et les autres intégrations restent Phase 8+.
+
+## UI redesign
+
+Statut : COMPLETE / merged (PR #7).
+
+Livrables :
+
+- AppShell ;
+- design system ;
+- pages Boards / Apps / Integrations / Admin ;
+- focus trap et ACL edit actions.
+
+## Phase 7.5 — Application Library
+
+Statut sur la branche `phase-7-5-app-library` : implemented / review.
+
+Livrables :
+
+- AppDefinition registry ;
+- curated app catalog ;
+- local icons ;
+- search/categories ;
+- custom app fallback ;
+- Docker discovery metadata only.
+
+Aucune connexion Docker. Aucune migration DB. Phase 8 Docker : NON COMMENCEE.
 
 ## Phase 8 — Docker
 

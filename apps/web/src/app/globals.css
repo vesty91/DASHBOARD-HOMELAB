@@ -1154,7 +1154,44 @@ a.ui-btn-ghost:hover {
 .app-card-icon img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+.library-browser {
+  display: grid;
+  gap: 1rem;
+}
+
+.library-toolbar {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.library-search {
+  max-width: 28rem;
+}
+
+.library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.library-grid {
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.app-icon-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
 }
 
 .board-meta-form {
@@ -1474,11 +1511,19 @@ button[aria-pressed="true"] {
   .ui-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  }
 }
 
 @media (min-width: 1100px) {
   .home-grid,
   .card-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   }
 }
