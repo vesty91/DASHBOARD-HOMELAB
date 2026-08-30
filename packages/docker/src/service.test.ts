@@ -251,6 +251,25 @@ describe("DockerService", () => {
     ).resolves.toMatchObject({ text: "kept\n", truncated: true });
   });
 
+  it("rejects non-object Docker stats payloads", async () => {
+    await expect(
+      serviceFor(async (options) => {
+        const href = String(options.url);
+        if (href.endsWith("/version")) return jsonResult(versionPayload());
+        if (href.includes("/stats")) return jsonResult("not-an-object");
+        throw new Error(href);
+      }).getContainerStats({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    await expect(
+      serviceFor(async (options) => {
+        const href = String(options.url);
+        if (href.endsWith("/version")) return jsonResult(versionPayload());
+        if (href.includes("/stats")) return jsonResult([]);
+        throw new Error(href);
+      }).getContainerStats({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
   it("posts start/stop/restart exactly once and invalidates cache", async () => {
     const methods: string[] = [];
     const cache = new MemoryIntegrationCache();

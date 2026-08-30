@@ -39,7 +39,7 @@ import {
   shortContainerId,
 } from "./dto";
 import { recognizeDockerImage } from "./recognition";
-import { dockerInspectSchema, dockerContainerListSchema } from "./schemas";
+import { dockerContainerListSchema, dockerInspectSchema, dockerStatsSchema } from "./schemas";
 import { mapContainerStats } from "./stats";
 import type {
   DockerActionResult,
@@ -294,7 +294,10 @@ export function createDockerService(deps: DockerServiceDeps) {
         versionedPath(version.negotiatedApiVersion, `/containers/${input.containerId}/stats`),
         search,
       );
-      const stats = mapContainerStats(result.body);
+      const parsed = dockerStatsSchema.safeParse(result.body);
+      if (!parsed.success)
+        throw new IntegrationError("INVALID_RESPONSE", "Docker stats payload is invalid");
+      const stats = mapContainerStats(parsed.data);
       deps.cache.set(loaded.recordId, operation, stats, CONTAINER_CACHE_TTL_MS);
       return stats;
     },

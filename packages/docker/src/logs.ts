@@ -57,6 +57,7 @@ export function decodeDockerLogs(
     const start = offset + 8;
     const end = start + size;
     if (end > limited.length) {
+      chunks.push(sanitizeDockerLogText(decodeUtf8(limited.subarray(start))));
       truncated = true;
       break;
     }

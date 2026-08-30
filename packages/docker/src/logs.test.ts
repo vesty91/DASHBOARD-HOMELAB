@@ -33,8 +33,21 @@ describe("Docker logs decoder", () => {
     header[0] = 1;
     header.writeUInt32BE(20, 4);
     const partial = Buffer.concat([header, Buffer.from("nope")]);
-    expect(decodeDockerLogs(partial, false).truncated).toBe(true);
+    const decodedPartial = decodeDockerLogs(partial, false);
+    expect(decodedPartial.truncated).toBe(true);
+    expect(decodedPartial.text).toBe("nope");
     const oversized = Buffer.alloc(DOCKER_LOGS_MAX_BYTES + 8, 65);
     expect(decodeDockerLogs(oversized, true).truncated).toBe(true);
+  });
+
+  it("keeps the bounded payload of a truncated multiplexed frame", () => {
+    const payload = Buffer.alloc(DOCKER_LOGS_MAX_BYTES, 65);
+    const header = Buffer.alloc(8);
+    header[0] = 1;
+    header.writeUInt32BE(payload.length, 4);
+    const decoded = decodeDockerLogs(Buffer.concat([header, payload]), false);
+    expect(decoded.truncated).toBe(true);
+    expect(decoded.text.length).toBe(DOCKER_LOGS_MAX_BYTES - 8);
+    expect(decoded.text).toMatch(/^A+$/u);
   });
 });
