@@ -75,4 +75,10 @@ export type {
   JsonObject,
   SecretFieldMeta,
 } from "./types";
+export {
+  MAX_TRUSTED_CA_BYTES,
+  MAX_TRUSTED_CA_CERTS,
+  normalizeOptionalTrustedCaPem,
+  normalizeTrustedCaPem,
+} from "./trusted-ca";
 export { parseIntegrationUrl } from "./urls";

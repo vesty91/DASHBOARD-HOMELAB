@@ -124,7 +124,47 @@ rendent les apps `legacy` / `retired` trouvables, avec badges texte « Legacy »
 et un lien « Remplacé par … » accessible au clavier. Un avertissement non bloquant apparaît
 si l'utilisateur choisit un template ancien. Aucun badge online/status sur une définition.
 
-## 13. Search/Spotlight
+## 13. Docker Phase 8
+
+`/integrations` : carte nom/type/status/enabled. Bouton **Ouvrir** si `docker.read` (ou manage).
+Modifier / Tester / Supprimer restent sur les permissions génériques.
+
+Création/édition Docker : aide « Utilisez l'URL HTTP(S) interne de votre Docker Socket Proxy. »
+Placeholder `http://socket-proxy:2375` sans `defaultValue`. Avertissement : accès daemon
+hautement privilégié, proxy restreint, ne pas publier le port.
+
+Création/édition Docker : champ optionnel « CA de confiance (PEM) », désactivé si
+« Vérifier TLS » est décoché. Aide : coller uniquement le certificat CA public.
+
+`/integrations/[id]` Docker s'ouvre pour un lecteur délégué (`integration.use` + `docker.read`)
+via `docker.integration.get` : le titre est le nom réel, sans `integration.read` ni config.
+
+`/integrations/[id]` (type `docker`) : header nom + sous-titre Docker ; version Engine et API
+négociée réelles ; compteurs calculés depuis `listContainers` (total, running, exited,
+restarting, paused). Liste desktop en table dense, mobile en cards : icône reconnue, nom,
+image, state, status borné, ports sûrs, badge legacy/retired, lien Voir.
+
+`/integrations/[id]/containers/[containerId]` : name, image, state, health, uptime,
+restartCount, stats one-shot. Pas d'Env/Mounts/labels/command. Métrique `null` →
+« Indisponible », jamais « 0 % » pour une valeur inconnue.
+
+Logs : non chargés par défaut. Si `canLogs`, bouton **Charger les logs** (tail borné, pas de
+follow/WebSocket/polling). Texte monospace escaped. Avertissement : les logs peuvent contenir
+des informations sensibles.
+
+Actions selon permissions serveur : Stop/Restart si running, Start si `created`/`exited`.
+Confirmation obligatoire pour stop et restart (composant partagé). Start sans confirmation
+obligatoire. Un échec start/stop/restart (proxy down, 403, rate limit) s'affiche dans une
+alerte isolée des contrôles, sans error boundary Next.js.
+
+Docker down : alerte isolée (DNS, timeout, TLS, forbidden, unavailable). Ne casse pas
+`/integrations`, le dashboard ni Next.js. 403 proxy logs :
+« L'accès aux logs n'est pas autorisé par le socket proxy. »
+
+App reconnue : lien « Ajouter aux applications » vers `/apps/new?template=<id>` sans URL
+préremplie, uniquement si `app.manage`.
+
+## 14. Search/Spotlight
 
 Phase 1.5 :
 

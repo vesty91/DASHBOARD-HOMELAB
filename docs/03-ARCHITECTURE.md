@@ -108,10 +108,24 @@ reference/
 
 ### packages/docker
 
-- client Docker ;
-- proxy policy ;
-- DTO ;
-- actions.
+Responsable :
+
+- client Docker Engine HTTP(S) via `secureRequest` ;
+- négociation de version API ;
+- policy d'endpoints exacte ;
+- DTO sûrs (jamais Env/Labels/Mounts/Command/HostConfig) ;
+- logs bornés et sanitizés ;
+- actions start/stop/restart ;
+- `DockerService` sur `IntegrationStore` / `IntegrationRegistry` / `IntegrationCache`.
+
+Ne dépend pas de `@dashboard/web`, Next, React, Drizzle ni `@dashboard/db`.
+`packages/integrations` ne dépend pas de Docker.
+
+### Composition des adapters
+
+Les adapters de production sont composés dans `apps/web`
+(`createApplicationIntegrationRegistry`), pas dans le package générique.
+`createProductionIntegrationRegistry()` reste vide pour les invariants Phase 7.
 
 ### packages/permissions
 
@@ -182,8 +196,10 @@ shared -> next
 
 La Phase 1 vérifie ces quatre interdictions dans les manifests avec
 `scripts/check-architecture-boundaries.mjs`. Le contrôle est intégré à `pnpm lint`. La Phase 7 étend
-le script : `integrations` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm` ni `db` ;
-`secrets` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm`, `db` ni `integrations`.
+le script : `integrations` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm`, `db` ni
+`@dashboard/docker` ; `secrets` n'a pas le droit de dépendre de `web`, `next`, `drizzle-orm`, `db`
+ni `integrations` ; `docker` n'a pas le droit de dépendre de `web`, `next`, `react`, `drizzle-orm`
+ni `db`.
 Cette approche légère et ses limites sont documentées dans
 `docs/adr/0001-lightweight-package-boundary-check.md`.
 

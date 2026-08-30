@@ -149,8 +149,16 @@ En Phase 5, `app.read` autorise uniquement liste/lecture et `app.manage` autoris
 
 En Phase 7, `integration.read` autorise list/get/catalog. `integration.create` autorise la création.
 `integration.manage` autorise update, delete, `setSecret` et `integration.test`. `integration.use` et
-`integration.interact` restent réservés aux consommateurs serveur Phase 8+. `integration.test` n'est
+`integration.interact` sont consommés par Docker Phase 8. `integration.test` n'est
 jamais accordé à un simple lecteur.
+
+Phase 8 n'ajoute aucune permission. Lecture Docker exige
+(`integration.use` ou `integration.manage`) **et** (`docker.read` ou `docker.manage`).
+Cette conjonction suffit pour `docker.integration.get` et `/integrations/[id]` Docker :
+`integration.read` n'est pas requis et n'est pas accordé implicitement.
+Logs / start / stop / restart suivent la même conjonction avec `docker.logs|start|stop|restart`.
+Le rôle `ADMIN` par défaut **n'obtient pas** `docker.*`. Seul `SYSTEM_ADMIN` les reçoit toutes ;
+la délégation passe par groupes/permissions existants.
 
 ## 10. Audit
 

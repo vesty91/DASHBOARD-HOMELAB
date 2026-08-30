@@ -115,8 +115,14 @@ Documenter le risque d'un utilisateur ayant `integration.manage`.
 Options :
 
 - verify système par défaut ;
-- certificat custom de confiance ;
+- certificat custom de confiance (`trustedCaPem`, certificat CA public uniquement) ;
 - mode insecure uniquement si explicitement activé par admin avec warning.
+
+Un certificat CA public n'est pas traité comme un secret. Les clés privées ne sont jamais
+acceptées. `trustedCaPem` est stocké dans `integrations.configJson`, pas dans
+`integration_secrets`. La validation de chaîne, d'expiration et de hostname reste active.
+`trustedCaPem` est incompatible avec `verifyTls=false`. Le trust custom est local à la
+requête : jamais `NODE_TLS_REJECT_UNAUTHORIZED`, jamais `https.globalAgent`.
 
 Ne jamais désactiver TLS globalement.
 
@@ -175,19 +181,44 @@ Réponses externes toujours validées/normalisées.
 
 Le package `@dashboard/integrations` implémente `IntegrationDefinition`, `IntegrationRegistry`,
 capabilities, client HTTP sécurisé, cache mémoire, rate limiter de test et `IntegrationService`.
-Le registry de production est vide et gelé. Les secrets sont chiffrés par `@dashboard/secrets`.
-Le test de connexion bypasse le cache, snapshot `configRevision`, et ignore un résultat stale.
-Voir ADR 0007.
+Le registry générique `createProductionIntegrationRegistry()` reste vide et gelé. Les secrets sont
+chiffrés par `@dashboard/secrets`. Le test de connexion bypasse le cache, snapshot `configRevision`,
+et ignore un résultat stale. Voir ADR 0007.
 
 ## 12. Intégration Docker
 
-Priorité 1, **Phase 8**. Le framework Phase 7 n'enregistre aucun adapter Docker.
+Statut sur la branche `phase-8-docker` : IMPLEMENTED / REVIEW.
 
-Transport prévu :
+Premier adapter de production. Composé dans `apps/web` (`createApplicationIntegrationRegistry`),
+jamais importé par `@dashboard/integrations`. Voir ADR 0008.
 
-- socket proxy ;
-- socket unix explicite ;
-- TCP/TLS futur.
+Transport Phase 8 :
+
+- HTTP(S) vers un Docker Socket Proxy restreint.
+
+Différé :
+
+- Unix socket direct ;
+- Docker TCP/TLS client-cert ;
+- Docker SSH.
+
+Capabilities implémentées :
+
+```text
+containers.read
+containers.stats
+containers.logs
+containers.start
+containers.stop
+containers.restart
+```
+
+`docker.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Docker
+(`integration.use|manage` + `docker.read|manage`). `integration.read` n'est pas requis pour
+ouvrir `/integrations/[id]` d'une intégration Docker. La projection n'inclut pas `baseUrl`,
+`config`, `trustedCaPem`, secrets ni `configRevision`.
+
+Pas d'inventaire `GET /images/json`. Pas de generic invoke. Pas de widget Docker dans cette phase.
 
 ## 13. Synology
 

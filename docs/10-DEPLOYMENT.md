@@ -134,13 +134,64 @@ Ne pas coder de chemin Synology en dur dans le produit.
 
 ## 10. Docker socket proxy
 
-Exemple conceptuel :
+Architecture Phase 8 :
 
 ```text
-web/worker -> socket-proxy -> /var/run/docker.sock
+apps/web  --HTTP(S)-->  socket-proxy  --ro-->  /var/run/docker.sock
 ```
 
-N'exposer que les endpoints requis.
+Le service web ne monte jamais le socket. Le proxy reste sur le réseau Docker interne.
+Aucun `ports:` vers l'hôte (ne pas publier 2375). `docker.sock` est monté read-only
+**uniquement dans le proxy**.
+
+Un proxy HTTPS signé par une CA privée homelab utilise `verifyTls=true` et le champ
+`trustedCaPem` (certificat CA public uniquement). Ne pas désactiver la vérification TLS
+et ne jamais coller une clé privée. Le dashboard conserve la validation hostname.
+
+`CONTAINERS=1` + `POST=0` ne suffit pas. Un proxy durci doit contrôler les sous-routes GET
+sensibles. LinuxServer socket-proxy a ajouté le 18 août 2026 :
+`ALLOW_ARCHIVE`, `ALLOW_CHANGES`, `ALLOW_EXPORT`, `ALLOW_LOGS`, `ALLOW_TOP`.
+Sans ces contrôles (ou équivalent), archive/export/top/logs/changes peuvent rester ouverts.
+CVE-2026-78122 documente cette classe de faille.
+
+Ne pas utiliser `:latest` en production. Pin une version ou un digest vérifié. Tant que le
+pin n'est pas établi dans ce dépôt, l'exemple utilise `<PINNED_VERIFIED_VERSION>`.
+
+Exemple conceptuel (pas un compose de production copié-collé) :
+
+```yaml
+services:
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:<PINNED_VERIFIED_VERSION>
+    environment:
+      CONTAINERS: "1"
+      POST: "0"
+      ALLOW_ARCHIVE: "0"
+      ALLOW_CHANGES: "0"
+      ALLOW_EXPORT: "0"
+      ALLOW_TOP: "0"
+      ALLOW_LOGS: "0"
+      ALLOW_START: "1"
+      ALLOW_STOP: "1"
+      ALLOW_RESTARTS: "1"
+      EXEC: "0"
+      IMAGES: "0"
+      INFO: "0"
+      NETWORKS: "0"
+      VOLUMES: "0"
+      BUILD: "0"
+    read_only: true
+    tmpfs:
+      - /run
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # aucun ports: vers l'hôte
+```
+
+`ALLOW_RESTARTS` peut aussi ouvrir `kill` côté proxy. Le dashboard n'appelle jamais `kill` :
+son allowlist reste autoritaire. Activer `ALLOW_LOGS` seulement si l'opérateur veut les logs
+Docker. URL saisie par l'utilisateur, placeholder documentaire uniquement :
+`http://socket-proxy:2375`.
 
 ## 11. Resource limits
 

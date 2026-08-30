@@ -2,14 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getBoardCaller } from "../../lib/server/board-api";
-
-function configFromForm(formData: FormData) {
-  const timeoutRaw = Number(formData.get("timeoutMs") ?? 8000);
-  return {
-    verifyTls: formData.get("verifyTls") === "on",
-    timeoutMs: Number.isFinite(timeoutRaw) ? timeoutRaw : 8000,
-  };
-}
+import { configFromForm } from "./integration-form-config";
 
 export async function createIntegrationAction(formData: FormData) {
   await (

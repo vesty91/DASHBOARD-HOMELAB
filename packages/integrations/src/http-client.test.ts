@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import { performance } from "node:perf_hooks";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -8,9 +9,17 @@ import {
   secureRequest,
   type AddressResolver,
 } from "./http-client";
+import {
+  TEST_OTHER_CA_PEM,
+  TEST_PROXY_CERT_PEM,
+  TEST_PROXY_KEY_PEM,
+  TEST_TRUSTED_CA_PEM,
+  TEST_WRONG_HOST_CERT_PEM,
+  TEST_WRONG_HOST_KEY_PEM,
+} from "./test-tls-fixtures";
 import { parseIntegrationUrl } from "./urls";
 
-const servers: http.Server[] = [];
+const servers: Array<http.Server | https.Server> = [];
 afterEach(async () =>
   Promise.all(
     servers
@@ -154,6 +163,16 @@ describe("secure HTTP client", () => {
         allowAddress: allowLocal,
       }),
     ).toMatchObject({ code: "INVALID_RESPONSE" });
+    const truncated = await secureRequest({
+      url: huge.url,
+      timeoutMs: 1000,
+      maxBodyBytes: 1024,
+      onBodyLimit: "truncate",
+      resolver: localResolver,
+      allowAddress: allowLocal,
+    });
+    expect(truncated).toMatchObject({ ok: true, truncated: true });
+    if (truncated.ok) expect(truncated.body.length).toBe(1024);
   });
 
   it("does not set NODE_TLS_REJECT_UNAUTHORIZED when TLS verification is disabled", async () => {
@@ -165,7 +184,89 @@ describe("secure HTTP client", () => {
     });
     expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBe(before);
   });
+});
 
+describe("trusted CA HTTPS", () => {
+  async function makeHttpsServer(cert: string, key: string) {
+    const instance = https.createServer({ cert, key }, (_request, response) => {
+      response.writeHead(200, { "content-type": "text/plain" });
+      response.end("OK");
+    });
+    servers.push(instance);
+    await new Promise<void>((resolve) => instance.listen(0, "127.0.0.1", resolve));
+    const address = instance.address();
+    if (!address || typeof address === "string") throw new Error("Test TLS server unavailable");
+    return new URL(`https://docker-proxy.test:${address.port}/_ping`);
+  }
+
+  it("requires the matching private CA and keeps hostname checks", async () => {
+    const url = await makeHttpsServer(TEST_PROXY_CERT_PEM, TEST_PROXY_KEY_PEM);
+    const before = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    const withoutCa = await secureRequest({
+      url,
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+    });
+    expect(withoutCa).toMatchObject({ ok: false, code: "TLS_ERROR" });
+    const withCa = await secureRequest({
+      url,
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+      trustedCaPem: TEST_TRUSTED_CA_PEM,
+    });
+    expect(withCa).toMatchObject({ ok: true, status: 200 });
+    const wrongCa = await secureRequest({
+      url,
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+      trustedCaPem: TEST_OTHER_CA_PEM,
+    });
+    expect(wrongCa).toMatchObject({ ok: false, code: "TLS_ERROR" });
+    expect(
+      await secureRequest({
+        url,
+        timeoutMs: 1000,
+        resolver: localResolver,
+        allowAddress: allowLocal,
+        trustedCaPem: "-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----",
+      }),
+    ).toMatchObject({ ok: false, code: "MISCONFIGURED" });
+    expect(
+      await secureRequest({
+        url,
+        timeoutMs: 1000,
+        resolver: localResolver,
+        allowAddress: allowLocal,
+        verifyTls: false,
+        trustedCaPem: TEST_TRUSTED_CA_PEM,
+      }),
+    ).toMatchObject({ ok: false, code: "MISCONFIGURED" });
+    const insecure = await secureRequest({
+      url,
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+      verifyTls: false,
+    });
+    expect(insecure).toMatchObject({ ok: true, status: 200 });
+    expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBe(before);
+    const wrongHostUrl = await makeHttpsServer(TEST_WRONG_HOST_CERT_PEM, TEST_WRONG_HOST_KEY_PEM);
+    expect(
+      await secureRequest({
+        url: wrongHostUrl,
+        timeoutMs: 1000,
+        resolver: localResolver,
+        allowAddress: allowLocal,
+        trustedCaPem: TEST_TRUSTED_CA_PEM,
+      }),
+    ).toMatchObject({ ok: false, code: "TLS_ERROR" });
+  });
+});
+
+describe("secure HTTP retry and streaming", () => {
   it("enforces an absolute deadline while the server streams forever", async () => {
     const { url } = await makeServer((_request, response) => {
       response.writeHead(200, { "content-type": "application/json" });

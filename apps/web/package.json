@@ -18,6 +18,7 @@
     "@dashboard/auth": "workspace:*",
     "@dashboard/boards": "workspace:*",
     "@dashboard/db": "workspace:*",
+    "@dashboard/docker": "workspace:*",
     "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/secrets": "workspace:*",

@@ -18,6 +18,7 @@
     "@dashboard/app-library": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/boards": "workspace:*",
+    "@dashboard/docker": "workspace:*",
     "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/widgets": "workspace:*",

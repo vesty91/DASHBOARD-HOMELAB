@@ -8,6 +8,7 @@ import {
 import { createCaller } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
+import type { DockerService } from "@dashboard/docker";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -32,6 +33,7 @@ const service = (overrides: Partial<BoardService> = {}): BoardService =>
   }) as BoardService;
 const apps = {} as AppService;
 const integrations = {} as IntegrationService;
+const docker = {} as DockerService;
 describe("board tRPC router", () => {
   it("does not expose business error details and maps forbidden", async () => {
     const boards = service({
@@ -40,7 +42,7 @@ describe("board tRPC router", () => {
       }),
     });
     await expect(
-      createCaller({ actor, boards, apps, integrations }).board.update({
+      createCaller({ actor, boards, apps, integrations, docker }).board.update({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
         name: "Home",
@@ -53,7 +55,7 @@ describe("board tRPC router", () => {
       canAccess: vi.fn(async () => true),
     });
     await expect(
-      createCaller({ actor, boards, apps, integrations }).board.canAccess({
+      createCaller({ actor, boards, apps, integrations, docker }).board.canAccess({
         slug: "home",
         permission: "board.edit",
       }),
@@ -66,7 +68,7 @@ describe("board tRPC router", () => {
       }),
     });
     await expect(
-      createCaller({ actor, boards, apps, integrations }).board.layout.updateBatch({
+      createCaller({ actor, boards, apps, integrations, docker }).board.layout.updateBatch({
         boardId: "00000000-0000-4000-8000-000000000002",
         layoutId: "00000000-0000-4000-8000-000000000003",
         expectedRevision: 1,
@@ -97,6 +99,7 @@ describe("board tRPC router", () => {
         boards: createBoardService(repository, createBuiltInWidgetPolicy()),
         apps,
         integrations,
+        docker,
       }).board.update({
         boardId: board.id,
         expectedRevision: 1,
@@ -140,6 +143,7 @@ describe("widget tRPC router", () => {
       boards: service({ catalog: () => catalog }),
       apps,
       integrations,
+      docker,
     }).widget.catalog();
     expect(result.map((entry: { id: string }) => entry.id)).toEqual(["clock", "bookmarks"]);
     expect(result[0]?.publicSafe).toBe(true);
@@ -150,7 +154,7 @@ describe("widget tRPC router", () => {
       createItem: vi.fn(async () => ({ revision: 2, snapshot: {} as never })),
     });
     await expect(
-      createCaller({ actor, boards, apps, integrations }).board.item.create({
+      createCaller({ actor, boards, apps, integrations, docker }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
         widgetType: "clock",
@@ -167,6 +171,7 @@ describe("widget tRPC router", () => {
         }),
         apps,
         integrations,
+        docker,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -186,6 +191,7 @@ describe("widget tRPC router", () => {
         }),
         apps,
         integrations,
+        docker,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -203,6 +209,7 @@ describe("widget tRPC router", () => {
         }),
         apps,
         integrations,
+        docker,
       }).board.item.update({
         boardId: "00000000-0000-4000-8000-000000000002",
         itemId: "00000000-0000-4000-8000-000000000005",
@@ -238,6 +245,7 @@ describe("widget tRPC router", () => {
         boards: createBoardService(repository, createBuiltInWidgetPolicy()),
         apps,
         integrations,
+        docker,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -268,6 +276,7 @@ describe("widget tRPC router", () => {
         boards: service({ createItem }),
         apps: { get } as unknown as AppService,
         integrations,
+        docker,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -286,6 +295,7 @@ describe("widget tRPC router", () => {
         boards: service({ createItem }),
         apps: { get } as unknown as AppService,
         integrations,
+        docker,
       }).board.item.create({
         boardId: "00000000-0000-4000-8000-000000000002",
         expectedRevision: 1,
@@ -339,6 +349,7 @@ describe("app tRPC router", () => {
         boards: service(),
         apps: appService,
         integrations,
+        docker,
       }).app.list(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(
@@ -347,6 +358,7 @@ describe("app tRPC router", () => {
         boards: service(),
         apps: appService,
         integrations,
+        docker,
       }).app.create({
         name: "App",
         url: "https://example.com",
@@ -361,6 +373,7 @@ describe("app tRPC router", () => {
         boards: service(),
         apps: appService,
         integrations,
+        docker,
       }).app.create({
         name: "App",
         url: "javascript:alert(1)",
@@ -418,6 +431,7 @@ describe("integration tRPC router", () => {
         boards: service(),
         apps,
         integrations: integrationService,
+        docker,
       }).integration.list(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(
@@ -426,6 +440,7 @@ describe("integration tRPC router", () => {
         boards: service(),
         apps,
         integrations: integrationService,
+        docker,
       }).integration.create({
         type: "test-http",
         name: "Nope",
@@ -438,6 +453,7 @@ describe("integration tRPC router", () => {
         boards: service(),
         apps,
         integrations: integrationService,
+        docker,
       }).integration.test({ id: "00000000-0000-4000-8000-000000000009" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
@@ -469,6 +485,7 @@ describe("integration tRPC router", () => {
       boards: service(),
       apps,
       integrations: integrationService,
+      docker,
     });
     const outputs = [
       await caller.integration.list(),
@@ -496,6 +513,7 @@ describe("app library tRPC router", () => {
       boards: service(),
       apps,
       integrations,
+      docker,
     }).app.library.list();
     expect(listed.length).toBeGreaterThanOrEqual(50);
     expect(listed.find((item) => item.id === "jellyfin")).toMatchObject({
@@ -509,6 +527,7 @@ describe("app library tRPC router", () => {
         boards: service(),
         apps,
         integrations,
+        docker,
       }).app.library.list(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
@@ -526,6 +545,7 @@ describe("app library tRPC router", () => {
       boards: service(),
       apps,
       integrations,
+      docker,
     });
     await expect(caller.app.library.get({ id: "jellyfin" })).resolves.toMatchObject({
       id: "jellyfin",
@@ -537,5 +557,217 @@ describe("app library tRPC router", () => {
     await expect(caller.app.library.get({ id: "jellyseerr" })).resolves.toMatchObject({
       lifecycle: { status: "legacy", replacedBy: "seerr", replacedByName: "Seerr" },
     });
+  });
+});
+
+describe("docker tRPC router", () => {
+  const ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const integrationId = "00000000-0000-4000-8000-000000000009";
+  const dockerActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "docker.read"],
+    },
+  };
+  const dockerServices = (overrides: Partial<DockerService> = {}) =>
+    ({
+      permissions: vi.fn(() => ({
+        canRead: true,
+        canLogs: false,
+        canStart: false,
+        canStop: false,
+        canRestart: false,
+        canManage: false,
+      })),
+      getIntegrationMetadata: vi.fn(),
+      getSystem: vi.fn(),
+      listContainers: vi.fn(async () => []),
+      getContainer: vi.fn(),
+      getContainerStats: vi.fn(),
+      getContainerLogs: vi.fn(),
+      startContainer: vi.fn(),
+      stopContainer: vi.fn(),
+      restartContainer: vi.fn(),
+      ...overrides,
+    }) as DockerService;
+
+  it("returns safe Docker metadata for a delegated reader without config", async () => {
+    const dockerService = dockerServices({
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Proxy maison",
+        enabled: true,
+      })),
+    });
+    const result = await createCaller({
+      actor: dockerActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker: dockerService,
+    }).docker.integration.get({ integrationId });
+    expect(result).toEqual({
+      id: integrationId,
+      name: "Proxy maison",
+      enabled: true,
+    });
+    expect(result).not.toHaveProperty("baseUrl");
+    expect(result).not.toHaveProperty("config");
+    expect(result).not.toHaveProperty("trustedCaPem");
+    expect(result).not.toHaveProperty("secrets");
+    expect(result).not.toHaveProperty("configRevision");
+    expect(dockerService.getIntegrationMetadata).toHaveBeenCalledWith(integrationId, dockerActor);
+  });
+
+  it("rejects invalid container ids before calling Docker", async () => {
+    const dockerService = dockerServices();
+    await expect(
+      createCaller({
+        actor: dockerActor,
+        boards: service(),
+        apps,
+        integrations,
+        docker: dockerService,
+      }).docker.containers.get({ integrationId, containerId: "short-id" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(dockerService.getContainer).not.toHaveBeenCalled();
+    await expect(
+      createCaller({
+        actor: dockerActor,
+        boards: service(),
+        apps,
+        integrations,
+        docker: dockerService,
+      }).docker.containers.logs({
+        integrationId,
+        containerId: ID.toUpperCase(),
+        tail: 999,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(dockerService.getContainerLogs).not.toHaveBeenCalled();
+  });
+
+  it("exposes permissions and maps restart forbidden", async () => {
+    const dockerService = dockerServices({
+      restartContainer: vi.fn(async () => {
+        throw new IntegrationError("FORBIDDEN", "Permission denied");
+      }),
+    });
+    const caller = createCaller({
+      actor: dockerActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker: dockerService,
+    });
+    await expect(caller.docker.permissions()).resolves.toMatchObject({
+      canRead: true,
+      canRestart: false,
+    });
+    await expect(caller.docker.containers.list({ integrationId })).resolves.toEqual([]);
+    await expect(
+      caller.docker.containers.restart({ integrationId, containerId: ID }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  it("exposes the remaining Docker procedures with Zod inputs", async () => {
+    const dockerService = dockerServices({
+      getSystem: vi.fn(async () => ({
+        engineVersion: "27.0.0",
+        serverApiVersion: "1.55",
+        serverMinApiVersion: "1.40",
+        negotiatedApiVersion: "1.55",
+        os: "linux",
+        arch: "amd64",
+      })),
+      getContainer: vi.fn(async () => ({
+        id: ID,
+        shortId: ID.slice(0, 12),
+        name: "jellyfin",
+        image: "jellyfin/jellyfin",
+        state: "running" as const,
+        health: "none" as const,
+        startedAt: null,
+        finishedAt: null,
+        restartCount: 0,
+        uptimeSeconds: null,
+        ports: [],
+        recognizedApp: null,
+      })),
+      getContainerStats: vi.fn(async () => ({
+        cpuPercent: null,
+        memoryUsageBytes: null,
+        memoryLimitBytes: null,
+        memoryPercent: null,
+        networkRxBytes: null,
+        networkTxBytes: null,
+        blockReadBytes: null,
+        blockWriteBytes: null,
+      })),
+      getContainerLogs: vi.fn(async () => ({
+        text: "ok",
+        tail: 200,
+        truncated: false,
+        tty: false,
+      })),
+      startContainer: vi.fn(async () => ({ changed: true })),
+      stopContainer: vi.fn(async () => ({ changed: false })),
+    });
+    const caller = createCaller({
+      actor: dockerActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker: dockerService,
+    });
+    await expect(caller.docker.system.get({ integrationId })).resolves.toMatchObject({
+      negotiatedApiVersion: "1.55",
+    });
+    await expect(
+      caller.docker.containers.get({ integrationId, containerId: ID }),
+    ).resolves.toMatchObject({
+      id: ID,
+    });
+    await expect(
+      caller.docker.containers.stats({ integrationId, containerId: ID }),
+    ).resolves.toMatchObject({
+      cpuPercent: null,
+    });
+    await expect(
+      caller.docker.containers.logs({ integrationId, containerId: ID, tail: 200 }),
+    ).resolves.toMatchObject({
+      tail: 200,
+    });
+    await expect(
+      caller.docker.containers.start({ integrationId, containerId: ID }),
+    ).resolves.toEqual({
+      changed: true,
+    });
+    await expect(
+      caller.docker.containers.stop({ integrationId, containerId: ID, timeoutSeconds: 10 }),
+    ).resolves.toEqual({ changed: false });
+    expect(dockerService.getSystem).toHaveBeenCalledTimes(1);
+    expect(dockerService.getContainerLogs).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps Docker logs forbidden from the service", async () => {
+    const dockerService = dockerServices({
+      getContainerLogs: vi.fn(async () => {
+        throw new IntegrationError("FORBIDDEN", "Permission denied");
+      }),
+    });
+    await expect(
+      createCaller({
+        actor: dockerActor,
+        boards: service(),
+        apps,
+        integrations,
+        docker: dockerService,
+      }).docker.containers.logs({ integrationId, containerId: ID }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

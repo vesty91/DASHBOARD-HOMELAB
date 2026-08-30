@@ -56,6 +56,9 @@ importers:
       '@dashboard/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@dashboard/docker':
+        specifier: workspace:*
+        version: link:../../packages/docker
       '@dashboard/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -138,6 +141,9 @@ importers:
       '@dashboard/boards':
         specifier: workspace:*
         version: link:../boards
+      '@dashboard/docker':
+        specifier: workspace:*
+        version: link:../docker
       '@dashboard/integrations':
         specifier: workspace:*
         version: link:../integrations
@@ -245,7 +251,23 @@ importers:
         version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   packages/docker:
+    dependencies:
+      '@dashboard/app-library':
+        specifier: workspace:*
+        version: link:../app-library
+      '@dashboard/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))

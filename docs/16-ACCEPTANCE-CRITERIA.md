@@ -155,3 +155,20 @@ Seerr est `active`. Jellyseerr et Overseerr sont `legacy` avec `replacedBy: seer
 utilise HTTPS 9443. UniFi Network Application utilise `linuxserver/unifi-network-application`
 comme image primaire. Les apps legacy restent créables. Le matcher Docker reste une comparaison
 de strings, sans accès Docker runtime.
+
+## AC-031 Docker Integration
+
+Docker est le premier adapter de production, composé dans `apps/web`, pas dans le registry
+générique Phase 7. Le transport est HTTP(S) vers un Docker Socket Proxy restreint. Un
+utilisateur autorisé (`integration.use|manage` et `docker.read|manage`) peut lister et
+inspecter les conteneurs, et ouvrir `/integrations/[id]` via `docker.integration.get`
+sans `integration.read`. Un proxy HTTPS à CA privée fonctionne avec `verifyTls=true` et
+`trustedCaPem` (certificat CA public, jamais une clé privée) ; hostname et chaîne restent
+validés. Un utilisateur sans `docker.restart` reçoit `FORBIDDEN` sur
+restart, y compris en appel API manuel (AC-011 reste vrai). L'allowlist d'endpoints est
+exacte ; aucun generic invoke ni path/method arbitrary. Les IDs exposés à l'API sont 64 hex
+lowercase. Les DTO excluent Env, Labels, Mounts, Command et HostConfig. Les logs sont bornés,
+chargés uniquement sur demande, et exigent `docker.logs`. Les actions se limitent à
+start/stop/restart ; kill/exec/remove sont absents. Le web ne monte pas `docker.sock`.
+La reconnaissance réutilise App Library et n'invente aucune URL d'application. Aucune
+migration DB. Aucune fake data de production. Pas de widget Docker dans cette phase.
