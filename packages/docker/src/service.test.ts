@@ -221,7 +221,9 @@ describe("DockerService", () => {
     expect(JSON.stringify(detail)).not.toContain("SECRET");
     const cachedInspect = cache.get(INTEGRATION_ID, `docker.containers.inspect:${ID}`);
     expect(cachedInspect).toMatchObject({ tty: false, detail: { id: ID } });
-    expect(JSON.stringify(cachedInspect)).not.toMatch(/Env|Labels|Mounts|HostConfig|PASSWORD|SECRET/);
+    expect(JSON.stringify(cachedInspect)).not.toMatch(
+      /Env|Labels|Mounts|HostConfig|PASSWORD|SECRET/,
+    );
     const stats = await docker.getContainerStats(
       { integrationId: INTEGRATION_ID, containerId: ID },
       systemAdmin,
