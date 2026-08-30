@@ -149,15 +149,27 @@ Sur :
 
 ## 12. Docker
 
-Un accès au socket Docker est équivalent à un pouvoir très élevé.
+Un accès au daemon Docker est équivalent à un pouvoir très élevé.
 
-Recommandation :
+Hardening Phase 8 :
 
-- socket proxy ;
-- API read-only par défaut ;
-- actions séparées ;
-- audit log ;
-- aucun terminal arbitrary exec en V1.
+- le web ne monte jamais `/var/run/docker.sock` ;
+- transport HTTP(S) vers un socket proxy interne uniquement ;
+- allowlist exacte d'endpoints côté Dashboard (defense in depth) ;
+- refus explicite de `/archive`, `/export`, `/top`, `/changes`, `/exec`, `/attach`, `/kill` ;
+- `CONTAINERS=1` + `POST=0` n'est pas suffisant : exiger des contrôles granulaires
+  (`ALLOW_ARCHIVE`, `ALLOW_CHANGES`, `ALLOW_EXPORT`, `ALLOW_LOGS`, `ALLOW_TOP` ou équivalent,
+  hardening LinuxServer publié le 18 août 2026) ;
+- logs sensibles : permission `docker.logs`, jamais auto-chargés, jamais journalisés, 512 KiB max ;
+- start/stop/restart seulement ; aucun kill/exec/remove ;
+- permissions d'action séparées ; le rôle `ADMIN` par défaut n'obtient pas `docker.*` ;
+- rate limit actions 10 / minute / acteur+intégration ;
+- POST Docker : `maxRetries = 0`, `maxRedirects = 0` ;
+- IDs conteneur = 64 hex lowercase ; aucun path/method arbitrary ;
+- SSRF inchangé (LAN OK, loopback/link-local/metadata bloqués) ;
+- audit persistant des actions Docker différé (aucune table Phase 8).
+
+Voir ADR 0008.
 
 ## 13. Logs
 

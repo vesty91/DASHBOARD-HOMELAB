@@ -81,3 +81,16 @@ Utiliser les scripts :
 Ils créent `reference/homarr` comme source documentaire locale.
 
 La référence doit rester en lecture seule du point de vue du développement du produit.
+
+## Docker (Phase 8)
+
+L'intégration Docker se connecte à un **Docker Socket Proxy** HTTP(S) interne, jamais au
+socket Unix du daemon depuis l'application web. Exemple de placeholder uniquement :
+
+```text
+http://socket-proxy:2375
+```
+
+Ne pas publier le port du proxy sur l'hôte. Ne pas utiliser une adresse LAN personnelle
+comme configuration du dépôt. Voir `docs/adr/0008-docker-transport-and-endpoint-policy.md`
+et `docs/10-DEPLOYMENT.md`.

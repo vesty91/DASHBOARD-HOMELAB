@@ -178,8 +178,9 @@ Horloge/date avec timezone.
 Phase 6 implémente Clock, Bookmarks et App Tile via le registry. App Tile consomme le catalogue Apps
 existant. Service Status et les widgets d'intégration restent hors scope.
 
-La Phase 7 livre uniquement le framework d'intégrations (registry vide en production, secrets
-chiffrés, test de connexion, SSRF). Les adapters Docker/NAS/médias commencent à la Phase 8.
+La Phase 7 livre uniquement le framework d'intégrations (registry générique vide en production, secrets
+chiffrés, test de connexion, SSRF). La Phase 8 enregistre Docker dans la composition application
+(`apps/web`), pas dans `createProductionIntegrationRegistry()`. Synology et les médias restent Phase 9+.
 
 ### Service Status
 
@@ -229,19 +230,30 @@ requête PromQL contrôlée et rendu simple.
 
 ### Docker
 
+Phase 8 (IMPLEMENTED / REVIEW sur `phase-8-docker`) : intégration réelle via Docker Socket Proxy
+HTTP(S). Le dashboard web ne monte jamais `/var/run/docker.sock`.
+
 Lecture :
 
-- containers ;
-- images ;
-- health ;
-- stats ;
-- uptime.
+- liste de conteneurs (`all=true`, limite 1–200, défaut 100) ;
+- inspect sûr (état, health structuré, uptime si running + `StartedAt` valide, restartCount, ports) ;
+- health `healthy | unhealthy | starting | none | unknown` sans invention ;
+- stats one-shot (`stream=false`) : CPU, mémoire working-set, réseau, block IO ;
+- logs bornés sur demande explicite (tail 1–500, défaut 200, 512 KiB max, pas de follow).
+
+Le champ `Image` du conteneur suffit à reconnaître une app via App Library.
+L'inventaire complet `GET /images/json` n'est **pas** activé en Phase 8.
 
 Actions :
 
 - start ;
-- stop ;
-- restart.
+- stop (`t` 0–30 s, défaut 10) ;
+- restart (`t` 0–30 s).
+
+Interdit : kill, exec, attach, remove, create, archive, export, top, changes.
+
+La création d'une App depuis un conteneur reconnu ouvre `/apps/new?template=<id>`
+sans préremplir d'URL (pas d'IP/port Docker inventés).
 
 ### Synology DSM
 

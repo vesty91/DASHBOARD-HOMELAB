@@ -28,6 +28,13 @@ import {
   type IntegrationActor,
   type IntegrationService,
 } from "@dashboard/integrations";
+import {
+  dockerActionInputSchema,
+  dockerContainerInputSchema,
+  dockerListInputSchema,
+  dockerLogsInputSchema,
+  type DockerService,
+} from "@dashboard/docker";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 
 export interface ApiContext {
@@ -35,6 +42,7 @@ export interface ApiContext {
   boards: BoardService;
   apps: AppService;
   integrations: IntegrationService;
+  docker: DockerService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -55,7 +63,11 @@ const mapError = (error: unknown): never => {
               ? "CONFLICT"
               : error.code === "SECRETS_NOT_CONFIGURED"
                 ? "PRECONDITION_FAILED"
-                : "BAD_REQUEST";
+                : error.code === "RATE_LIMITED"
+                  ? "TOO_MANY_REQUESTS"
+                  : error.code === "TIMEOUT"
+                    ? "TIMEOUT"
+                    : "BAD_REQUEST";
     throw new TRPCError({ code, message: error.message, cause: error });
   }
   throw error;
@@ -257,11 +269,45 @@ export const integrationsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.integrations.delete(input.id, ctx.actor))),
 });
+export const dockerRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.docker.permissions(ctx.actor)),
+  system: t.router({
+    get: t.procedure
+      .input(z.object({ integrationId: z.uuid() }))
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.docker.getSystem(input.integrationId, ctx.actor)),
+      ),
+  }),
+  containers: t.router({
+    list: t.procedure
+      .input(dockerListInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.docker.listContainers(input, ctx.actor))),
+    get: t.procedure
+      .input(dockerContainerInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.docker.getContainer(input, ctx.actor))),
+    stats: t.procedure
+      .input(dockerContainerInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.docker.getContainerStats(input, ctx.actor))),
+    logs: t.procedure
+      .input(dockerLogsInputSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.docker.getContainerLogs(input, ctx.actor))),
+    start: t.procedure
+      .input(dockerContainerInputSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.docker.startContainer(input, ctx.actor))),
+    stop: t.procedure
+      .input(dockerActionInputSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.docker.stopContainer(input, ctx.actor))),
+    restart: t.procedure
+      .input(dockerActionInputSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.docker.restartContainer(input, ctx.actor))),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
   widget: widgetRouter,
   integration: integrationsRouter,
+  docker: dockerRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

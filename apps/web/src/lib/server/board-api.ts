@@ -2,31 +2,35 @@ import "server-only";
 import { createBoardService } from "@dashboard/boards";
 import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
+import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
   createIntegrationService,
-  createProductionIntegrationRegistry,
   MemoryIntegrationCache,
   MemoryTestRateLimiter,
+  secureRequest,
 } from "@dashboard/integrations";
 import { createEnvKeyring } from "@dashboard/secrets";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { getDatabase } from "./database";
+import { createApplicationIntegrationRegistry } from "./integration-registry";
 
 const globalRuntime = globalThis as typeof globalThis & {
   dashboardIntegrationRuntime?: {
-    registry: ReturnType<typeof createProductionIntegrationRegistry>;
+    registry: ReturnType<typeof createApplicationIntegrationRegistry>;
     cache: MemoryIntegrationCache;
     rateLimiter: MemoryTestRateLimiter;
+    dockerActionRateLimiter: MemoryDockerActionRateLimiter;
   };
 };
 
 function integrationRuntime() {
   return (globalRuntime.dashboardIntegrationRuntime ??= {
-    registry: createProductionIntegrationRegistry(),
+    registry: createApplicationIntegrationRegistry(),
     cache: new MemoryIntegrationCache(),
     rateLimiter: new MemoryTestRateLimiter(),
+    dockerActionRateLimiter: new MemoryDockerActionRateLimiter(),
   });
 }
 
@@ -49,6 +53,13 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       cache: runtime.cache,
       rateLimiter: runtime.rateLimiter,
       ...(keyring ? { keyring } : {}),
+    }),
+    docker: createDockerService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      actionRateLimiter: runtime.dockerActionRateLimiter,
+      request: secureRequest,
     }),
   };
 }

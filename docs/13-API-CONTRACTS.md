@@ -28,6 +28,16 @@ integration.setSecret
 integration.test
 integration.delete
 
+docker.permissions
+docker.system.get
+docker.containers.list
+docker.containers.get
+docker.containers.stats
+docker.containers.logs
+docker.containers.start
+docker.containers.stop
+docker.containers.restart
+
 widget.catalog
 widget.data
 
@@ -222,4 +232,39 @@ Le routeur expose `integration.list`, `integration.get`, `integration.catalog`, 
 capabilities, config/secret field labels). Aucun schéma Zod interne ni secret n'est exposé.
 
 `integration.test` exige `integration.manage` et retourne un `ConnectionResult` sans secret. Un
-catalogue de production vide est valide. `integration.call` / `integration.invoke` n'existent pas.
+catalogue générique vide reste valide. La composition application Phase 8 enregistre Docker.
+`integration.call` / `integration.invoke` / `docker.request` n'existent pas.
+
+# Docker API — Phase 8
+
+Routeur tRPC `docker` (aucun generic invoke, aucun `method`/`path` client).
+
+Inputs communs : `integrationId` UUID ; `containerId` exactement 64 hex lowercase.
+`limit` 1–200 (défaut 100). `tail` 1–500 (défaut 200). `sinceSeconds` 0–86400.
+`timeoutSeconds` 0–30 (défaut 10).
+
+| Route                       | Permission                              | Capability           | Notes                                                                                            |
+| --------------------------- | --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
+| `docker.permissions`        | auth active                             | —                    | Helper UI only : `canRead`, `canLogs`, `canStart`, `canStop`, `canRestart`, `canManage`          |
+| `docker.system.get`         | use/manage + docker.read/manage         | `containers.read`    | `engineVersion`, `serverApiVersion`, `serverMinApiVersion`, `negotiatedApiVersion` ; pas `/info` |
+| `docker.containers.list`    | idem                                    | `containers.read`    | DTO summary sûr                                                                                  |
+| `docker.containers.get`     | idem                                    | `containers.read`    | DTO inspect sûr                                                                                  |
+| `docker.containers.stats`   | idem                                    | `containers.stats`   | one-shot, cache ~2 s                                                                             |
+| `docker.containers.logs`    | use/manage + docker.logs/manage         | `containers.logs`    | mutation explicite, jamais cachée, 512 KiB                                                       |
+| `docker.containers.start`   | interact/manage + docker.start/manage   | `containers.start`   | POST, 0 retry                                                                                    |
+| `docker.containers.stop`    | interact/manage + docker.stop/manage    | `containers.stop`    | confirmation UI                                                                                  |
+| `docker.containers.restart` | interact/manage + docker.restart/manage | `containers.restart` | AC-011 : FORBIDDEN sans `docker.restart`                                                         |
+
+DTO list/detail : `id`, `shortId`, `names`/`name`, `image`, `state`, `statusText`/`health`,
+`ports` bornés, `recognizedApp` (`id`, `name`, `iconPath`, `lifecycleStatus`, `replacedBy`,
+`replacedByName`). Detail ajoute `startedAt`, `finishedAt`, `restartCount`, `uptimeSeconds`.
+
+Jamais exposés : `Env`, `Labels`, `Command`, `Args`, `Mounts`, `HostConfig`, NetworkSettings brut,
+GraphDriver, secrets.
+
+Stats : `cpuPercent`, `memoryUsageBytes`, `memoryLimitBytes`, `memoryPercent`, `networkRxBytes`,
+`networkTxBytes`, `blockReadBytes`, `blockWriteBytes` — `null` si inconnu, jamais `0` pour « inconnu ».
+
+Erreurs : `UNAUTHORIZED`, `FORBIDDEN` (RBAC ou 403 proxy), `NOT_FOUND`, `CONFLICT` (409),
+`TOO_MANY_REQUESTS`, `TIMEOUT`, `BAD_REQUEST` (validation / DNS / TLS / réponse invalide).
+ID invalide : `BAD_REQUEST` sans requête Docker.

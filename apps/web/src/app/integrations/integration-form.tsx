@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { IntegrationCatalogEntry, IntegrationDto } from "@dashboard/integrations";
 import { Alert, Button, Field, Input, Select } from "@dashboard/ui";
 
@@ -10,6 +13,8 @@ export function IntegrationForm({
   catalog: readonly IntegrationCatalogEntry[];
   integration?: IntegrationDto;
 }) {
+  const [selectedType, setSelectedType] = useState(integration?.type ?? catalog[0]?.id ?? "");
+  const showDockerHelp = selectedType === "docker";
   const verifyTls = integration?.config.verifyTls !== false;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
@@ -21,6 +26,7 @@ export function IntegrationForm({
           required
           defaultValue={integration?.type ?? catalog[0]?.id ?? ""}
           disabled={Boolean(integration)}
+          onChange={(event) => setSelectedType(event.target.value)}
         >
           {catalog.map((entry) => (
             <option key={entry.id} value={entry.id}>
@@ -39,8 +45,18 @@ export function IntegrationForm({
           required
           maxLength={2048}
           defaultValue={integration?.baseUrl ?? ""}
+          placeholder={showDockerHelp ? "http://socket-proxy:2375" : undefined}
         />
       </Field>
+      {showDockerHelp ? (
+        <>
+          <Alert>Utilisez l&apos;URL HTTP(S) interne de votre Docker Socket Proxy.</Alert>
+          <Alert tone="warning">
+            L&apos;accès au daemon Docker est hautement privilégié. Utilisez un socket proxy
+            restreint et ne publiez pas son port.
+          </Alert>
+        </>
+      ) : null}
       <label className="ui-field">
         <span className="ui-label">
           <input name="enabled" type="checkbox" defaultChecked={integration?.enabled ?? true} />{" "}

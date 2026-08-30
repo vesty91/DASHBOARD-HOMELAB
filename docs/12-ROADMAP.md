@@ -154,7 +154,7 @@ Aucune connexion Docker. Aucune migration DB.
 
 ## Phase 7.6 — App Library Hardening & Expansion
 
-Statut sur la branche `phase-7-6-app-library-expansion` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE / merged (PR #9), tag `phase-7-6-complete`.
 
 Livrables :
 
@@ -164,21 +164,25 @@ Livrables :
 - metadata Docker discovery conservées pour les apps legacy ;
 - icônes locales uniquement.
 
-Aucune connexion Docker. Aucune migration DB. Phase 8 Docker : NOT STARTED.
+Aucune connexion Docker. Aucune migration DB.
 
 ## Phase 8 — Docker
 
-Statut : NOT STARTED.
+Statut sur la branche `phase-8-docker` : IMPLEMENTED / REVIEW.
 
 Livrables :
 
-- containers ;
-- status ;
-- health ;
-- stats ;
-- logs bornés ;
-- start/stop/restart ;
-- socket proxy docs.
+- premier adapter de production `docker` via socket proxy HTTP(S) ;
+- négociation API Engine `1.40`–`1.55` ;
+- list / inspect / health / stats one-shot / logs bornés ;
+- start / stop / restart permissionnés ;
+- allowlist exacte d'endpoints ;
+- reconnaissance via App Library ;
+- pages `/integrations/[id]` et `/integrations/[id]/containers/[containerId]`.
+
+Hors scope : widgets Docker, realtime, inventaire `/images/json`, socket Unix direct, Phase 9.
+
+Ne pas écrire COMPLETE avant merge/post-merge.
 
 ## Phase 9 — Synology
 
