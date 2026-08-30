@@ -100,6 +100,8 @@ export const dockerInspectSchema = z
 
 export const dockerStatsSchema = z
   .object({
+    id: z.string().optional(),
+    Id: z.string().optional(),
     cpu_stats: z.object({}).passthrough().optional(),
     precpu_stats: z.object({}).passthrough().optional(),
     memory_stats: z.object({}).passthrough().optional(),

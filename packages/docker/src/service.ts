@@ -57,6 +57,21 @@ const LIST_OPERATION = "docker.containers.list";
 const INSPECT_PREFIX = "docker.containers.inspect:";
 const STATS_PREFIX = "docker.containers.stats:";
 
+interface CachedDockerInspect {
+  readonly detail: DockerContainerDetail;
+  readonly tty: boolean;
+}
+
+function dockerPayloadContainerId(value: {
+  id?: string | undefined;
+  Id?: string | undefined;
+}): string | null {
+  const raw = value.id ?? value.Id;
+  if (typeof raw !== "string") return null;
+  const id = raw.trim().toLocaleLowerCase("und");
+  return /^[a-f0-9]{64}$/u.test(id) ? id : null;
+}
+
 export interface DockerServiceDeps {
   store: IntegrationStore;
   registry: IntegrationRegistry;
@@ -200,21 +215,31 @@ export function createDockerService(deps: DockerServiceDeps) {
     };
   }
 
-  async function inspectRaw(
+  async function inspectCached(
     ctx: DockerClientContext,
     integrationId: string,
     containerId: string,
     version: string,
-  ) {
+  ): Promise<CachedDockerInspect> {
     const operation = `${INSPECT_PREFIX}${containerId}`;
-    const cached = cachedValue<unknown>(deps.cache, integrationId, operation);
-    if (cached !== undefined) return cached;
+    const cached = cachedValue<CachedDockerInspect>(deps.cache, integrationId, operation);
+    if (cached) return cached;
     const result = await dockerGetJson(
       ctx,
       versionedPath(version, `/containers/${containerId}/json`),
     );
-    deps.cache.set(integrationId, operation, result.body, CONTAINER_CACHE_TTL_MS);
-    return result.body;
+    const detail = mapDetail(result.body);
+    if (detail.id !== containerId)
+      throw new IntegrationError(
+        "INVALID_RESPONSE",
+        "Docker inspect returned a different container id",
+      );
+    const sanitized: CachedDockerInspect = Object.freeze({
+      detail: Object.freeze(detail),
+      tty: inspectTty(result.body),
+    });
+    deps.cache.set(integrationId, operation, sanitized, CONTAINER_CACHE_TTL_MS);
+    return sanitized;
   }
 
   async function consumeAction(actor: DockerActor, integrationId: string): Promise<void> {
@@ -269,19 +294,14 @@ export function createDockerService(deps: DockerServiceDeps) {
       assertDockerContainerId(input.containerId);
       const loaded = await loadDocker(input.integrationId, "containers.read");
       const version = await negotiatedVersion(loaded.ctx, loaded.recordId);
-      const raw = await inspectRaw(
-        loaded.ctx,
-        loaded.recordId,
-        input.containerId,
-        version.negotiatedApiVersion,
-      );
-      const detail = mapDetail(raw);
-      if (detail.id !== input.containerId)
-        throw new IntegrationError(
-          "INVALID_RESPONSE",
-          "Docker inspect returned a different container id",
-        );
-      return detail;
+      return (
+        await inspectCached(
+          loaded.ctx,
+          loaded.recordId,
+          input.containerId,
+          version.negotiatedApiVersion,
+        )
+      ).detail;
     },
     async getContainerStats(
       input: { integrationId: string; containerId: string },
@@ -303,6 +323,11 @@ export function createDockerService(deps: DockerServiceDeps) {
       const parsed = dockerStatsSchema.safeParse(result.body);
       if (!parsed.success)
         throw new IntegrationError("INVALID_RESPONSE", "Docker stats payload is invalid");
+      if (dockerPayloadContainerId(parsed.data) !== input.containerId)
+        throw new IntegrationError(
+          "INVALID_RESPONSE",
+          "Docker stats returned a different container id",
+        );
       const stats = mapContainerStats(parsed.data);
       deps.cache.set(loaded.recordId, operation, stats, CONTAINER_CACHE_TTL_MS);
       return stats;
@@ -320,7 +345,7 @@ export function createDockerService(deps: DockerServiceDeps) {
       assertDockerContainerId(input.containerId);
       const loaded = await loadDocker(input.integrationId, "containers.logs");
       const version = await negotiatedVersion(loaded.ctx, loaded.recordId);
-      const inspect = await inspectRaw(
+      const inspect = await inspectCached(
         loaded.ctx,
         loaded.recordId,
         input.containerId,
@@ -341,7 +366,7 @@ export function createDockerService(deps: DockerServiceDeps) {
         loaded.ctx,
         versionedPath(version.negotiatedApiVersion, `/containers/${input.containerId}/logs`),
         search,
-        inspectTty(inspect),
+        inspect.tty,
       );
     },
     async startContainer(

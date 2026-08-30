@@ -197,6 +197,7 @@ describe("DockerService", () => {
       if (href.endsWith("/json")) return jsonResult(inspectPayload());
       if (href.includes("/stats"))
         return jsonResult({
+          id: ID,
           cpu_stats: {
             cpu_usage: { total_usage: 200, percpu_usage: [1] },
             system_cpu_usage: 400,
@@ -218,6 +219,9 @@ describe("DockerService", () => {
     expect(detail.health).toBe("healthy");
     expect(detail.uptimeSeconds).toBeGreaterThan(0);
     expect(JSON.stringify(detail)).not.toContain("SECRET");
+    const cachedInspect = cache.get(INTEGRATION_ID, `docker.containers.inspect:${ID}`);
+    expect(cachedInspect).toMatchObject({ tty: false, detail: { id: ID } });
+    expect(JSON.stringify(cachedInspect)).not.toMatch(/Env|Labels|Mounts|HostConfig|PASSWORD|SECRET/);
     const stats = await docker.getContainerStats(
       { integrationId: INTEGRATION_ID, containerId: ID },
       systemAdmin,
@@ -261,6 +265,26 @@ describe("DockerService", () => {
     });
     await expect(
       docker.getContainer({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
+  it("rejects stats payloads whose container id differs from the request", async () => {
+    const other = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    await expect(
+      serviceFor(async (options) => {
+        const href = String(options.url);
+        if (href.endsWith("/version")) return jsonResult(versionPayload());
+        if (href.includes("/stats")) return jsonResult({ id: other });
+        throw new Error(href);
+      }).getContainerStats({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    await expect(
+      serviceFor(async (options) => {
+        const href = String(options.url);
+        if (href.endsWith("/version")) return jsonResult(versionPayload());
+        if (href.includes("/stats")) return jsonResult({});
+        throw new Error(href);
+      }).getContainerStats({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
@@ -375,7 +399,7 @@ describe("DockerService", () => {
       const href = String(options.url);
       if (href.endsWith("/version")) return jsonResult(versionPayload());
       if (href.includes("/containers/json")) return jsonResult([containerSummary()]);
-      if (href.includes("/stats")) return jsonResult({});
+      if (href.includes("/stats")) return jsonResult({ id: ID });
       if (href.endsWith("/json")) return jsonResult(inspectPayload());
       if (href.includes("/logs") || href.includes("/restart"))
         throw new Error("should not be called");
