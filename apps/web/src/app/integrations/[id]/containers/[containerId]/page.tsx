@@ -27,7 +27,10 @@ export default async function DockerContainerPage({
   if (!/^[a-f0-9]{64}$/u.test(containerId)) redirect(`/integrations/${id}`);
   try {
     const caller = await getBoardCaller();
-    const permissions = await caller.docker.permissions();
+    const [permissions, canManageApps] = await Promise.all([
+      caller.docker.permissions(),
+      caller.app.canManage(),
+    ]);
     if (!permissions.canRead) redirect("/forbidden");
     let error: string | null = null;
     let statsError: string | null = null;
@@ -83,7 +86,7 @@ export default async function DockerContainerPage({
                       : ""}
                   </p>
                 ) : null}
-                {detail.recognizedApp ? (
+                {detail.recognizedApp && canManageApps ? (
                   <Link className="ui-btn" href={`/apps/new?template=${detail.recognizedApp.id}`}>
                     Ajouter aux applications
                   </Link>

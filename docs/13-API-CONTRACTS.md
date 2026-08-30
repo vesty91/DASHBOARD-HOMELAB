@@ -249,7 +249,7 @@ Inputs communs : `integrationId` UUID ; `containerId` exactement 64 hex lowercas
 | `docker.permissions`        | auth active                             | —                    | Helper UI only : `canRead`, `canLogs`, `canStart`, `canStop`, `canRestart`, `canManage`          |
 | `docker.integration.get`    | use/manage + docker.read/manage         | —                    | `{ id, name, enabled }` uniquement ; pas de réseau Docker ; pas de `config`/`trustedCaPem`       |
 | `docker.system.get`         | use/manage + docker.read/manage         | `containers.read`    | `engineVersion`, `serverApiVersion`, `serverMinApiVersion`, `negotiatedApiVersion` ; pas `/info` |
-| `docker.containers.list`    | idem                                    | `containers.read`    | DTO summary sûr                                                                                  |
+| `docker.containers.list`    | idem                                    | `containers.read`    | DTO summary sûr ; plafond transport liste 2 MiB (inspect/stats restent 256 KiB)                  |
 | `docker.containers.get`     | idem                                    | `containers.read`    | DTO inspect sûr                                                                                  |
 | `docker.containers.stats`   | idem                                    | `containers.stats`   | one-shot, cache ~2 s                                                                             |
 | `docker.containers.logs`    | use/manage + docker.logs/manage         | `containers.logs`    | mutation explicite, jamais cachée, 512 KiB                                                       |

@@ -22,6 +22,7 @@ import type {
 } from "./types";
 
 export const DOCKER_JSON_MAX_BYTES = 256 * 1024;
+export const DOCKER_LIST_MAX_BYTES = 2 * 1024 * 1024;
 export const DOCKER_BOOTSTRAP_MAX_BYTES = 16 * 1024;
 export const VERSION_CACHE_TTL_MS = 45_000;
 export const CONTAINER_CACHE_TTL_MS = 2_000;
@@ -132,10 +133,11 @@ export async function dockerGetJson(
   ctx: DockerClientContext,
   pathname: string,
   search?: URLSearchParams,
+  maxBodyBytes = DOCKER_JSON_MAX_BYTES,
 ): Promise<{ status: number; body: unknown; latencyMs: number }> {
   const result = await dockerFetch(ctx, "GET", pathname, {
     ...(search ? { search } : {}),
-    maxBodyBytes: DOCKER_JSON_MAX_BYTES,
+    maxBodyBytes,
   });
   if (result.status !== 200) failHttp(result, "Docker JSON request failed");
   try {

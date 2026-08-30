@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { getBoardCaller } from "../../lib/server/board-api";
-import { dockerActionFailure, type DockerActionOutcome } from "./docker-action-result";
+import {
+  dockerActionFailure,
+  type DockerActionOutcome,
+  type DockerLogsOutcome,
+} from "./docker-action-result";
 
 function revalidateContainer(integrationId: string, containerId: string) {
   revalidatePath(`/integrations/${integrationId}`);
@@ -48,6 +52,21 @@ export async function restartDockerContainerAction(
   }
 }
 
-export async function loadDockerLogsAction(integrationId: string, containerId: string, tail = 200) {
-  return (await getBoardCaller()).docker.containers.logs({ integrationId, containerId, tail });
+export async function loadDockerLogsAction(
+  integrationId: string,
+  containerId: string,
+  tail = 200,
+): Promise<DockerLogsOutcome> {
+  try {
+    const result = await (
+      await getBoardCaller()
+    ).docker.containers.logs({
+      integrationId,
+      containerId,
+      tail,
+    });
+    return { ok: true, ...result };
+  } catch (error) {
+    return dockerActionFailure(error);
+  }
 }

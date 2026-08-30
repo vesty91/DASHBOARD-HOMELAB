@@ -162,7 +162,7 @@ Docker down : alerte isolée (DNS, timeout, TLS, forbidden, unavailable). Ne cas
 « L'accès aux logs n'est pas autorisé par le socket proxy. »
 
 App reconnue : lien « Ajouter aux applications » vers `/apps/new?template=<id>` sans URL
-préremplie.
+préremplie, uniquement si `app.manage`.
 
 ## 14. Search/Spotlight
 

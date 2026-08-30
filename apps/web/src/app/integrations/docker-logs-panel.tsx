@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Alert, Button } from "@dashboard/ui";
 import { loadDockerLogsAction } from "./docker-actions";
-import { dockerUserError } from "./docker-error";
 
 export function DockerLogsPanel({
   integrationId,
@@ -23,11 +22,13 @@ export function DockerLogsPanel({
     setError(null);
     try {
       const result = await loadDockerLogsAction(integrationId, containerId, 200);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
       setText(result.text);
       setTail(result.tail);
       setTruncated(result.truncated);
-    } catch (caught) {
-      setError(dockerUserError(caught));
     } finally {
       setPending(false);
     }

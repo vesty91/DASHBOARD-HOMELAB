@@ -9,6 +9,7 @@ import {
   type SecureHttpResult,
 } from "@dashboard/integrations";
 import { TEST_TRUSTED_CA_PEM } from "@dashboard/integrations/test-tls-fixtures";
+import { DOCKER_BOOTSTRAP_MAX_BYTES, DOCKER_LIST_MAX_BYTES } from "./client";
 import { dockerIntegrationDefinition } from "./definition";
 import { MemoryDockerActionRateLimiter } from "./rate-limiter";
 import { createDockerService } from "./service";
@@ -174,8 +175,14 @@ describe("DockerService", () => {
       const href = String(options.url);
       calls.push(`${options.method ?? "GET"} ${new URL(href).pathname}${new URL(href).search}`);
       expect(options.maxRetries).toBe(0);
-      if (href.endsWith("/version")) return jsonResult(versionPayload());
-      if (href.includes("/containers/json")) return jsonResult([containerSummary()]);
+      if (href.endsWith("/version")) {
+        expect(options.maxBodyBytes).toBe(DOCKER_BOOTSTRAP_MAX_BYTES);
+        return jsonResult(versionPayload());
+      }
+      if (href.includes("/containers/json")) {
+        expect(options.maxBodyBytes).toBe(DOCKER_LIST_MAX_BYTES);
+        return jsonResult([containerSummary()]);
+      }
       throw new Error(href);
     });
     const listed = await docker.listContainers({ integrationId: INTEGRATION_ID }, systemAdmin);

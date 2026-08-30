@@ -16,6 +16,7 @@ import { assertDockerAccess, dockerPermissionsView } from "./access";
 import { assertDockerContainerId } from "./policy";
 import {
   CONTAINER_CACHE_TTL_MS,
+  DOCKER_LIST_MAX_BYTES,
   dockerGetJson,
   dockerGetLogs,
   dockerPostAction,
@@ -300,6 +301,7 @@ export function createDockerService(deps: DockerServiceDeps) {
         loaded.ctx,
         versionedPath(version.negotiatedApiVersion, "/containers/json"),
         search,
+        DOCKER_LIST_MAX_BYTES,
       );
       const parsed = dockerContainerListSchema.safeParse(result.body);
       if (!parsed.success)

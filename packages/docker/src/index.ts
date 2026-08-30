@@ -12,6 +12,7 @@ export {
   CONTAINER_CACHE_TTL_MS,
   DOCKER_BOOTSTRAP_MAX_BYTES,
   DOCKER_JSON_MAX_BYTES,
+  DOCKER_LIST_MAX_BYTES,
   VERSION_CACHE_TTL_MS,
   dockerContextFromIntegration,
   dockerGetJson,
