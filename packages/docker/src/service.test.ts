@@ -205,6 +205,7 @@ describe("DockerService", () => {
           precpu_stats: { cpu_usage: { total_usage: 100 }, system_cpu_usage: 200 },
         });
       if (href.includes("/logs")) {
+        expect(options.onBodyLimit).toBe("truncate");
         logCalls += 1;
         return textResult("line\n");
       }
@@ -231,6 +232,23 @@ describe("DockerService", () => {
       systemAdmin,
     );
     expect(logCalls).toBe(2);
+    const truncated = serviceFor(async (options) => {
+      const href = String(options.url);
+      if (href.endsWith("/version")) return jsonResult(versionPayload());
+      if (href.endsWith("/json")) return jsonResult(inspectPayload());
+      if (href.includes("/logs"))
+        return {
+          ok: true,
+          status: 200,
+          body: Buffer.from("kept\n"),
+          latencyMs: 1,
+          truncated: true,
+        };
+      throw new Error(href);
+    });
+    await expect(
+      truncated.getContainerLogs({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).resolves.toMatchObject({ text: "kept\n", truncated: true });
   });
 
   it("posts start/stop/restart exactly once and invalidates cache", async () => {

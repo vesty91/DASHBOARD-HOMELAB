@@ -56,7 +56,7 @@ async function dockerFetch(
   ctx: DockerClientContext,
   method: DockerHttpMethod,
   pathname: string,
-  options: { search?: URLSearchParams; maxBodyBytes: number },
+  options: { search?: URLSearchParams; maxBodyBytes: number; onBodyLimit?: "truncate" },
 ): Promise<Extract<SecureHttpResult, { ok: true }>> {
   const url = buildUrl(ctx.baseUrl, pathname, options.search);
   assertDockerEndpointAllowed(method, url);
@@ -69,6 +69,7 @@ async function dockerFetch(
     maxRetries: 0,
     maxRedirects: 0,
     maxBodyBytes: options.maxBodyBytes,
+    ...(options.onBodyLimit === undefined ? {} : { onBodyLimit: options.onBodyLimit }),
   });
   if (!result.ok) throw new IntegrationError(result.code, "Docker request failed");
   return result;
@@ -139,6 +140,7 @@ export async function dockerGetLogs(
   const result = await dockerFetch(ctx, "GET", pathname, {
     search,
     maxBodyBytes: DOCKER_LOGS_MAX_BYTES,
+    onBodyLimit: "truncate",
   });
   if (result.status === 403)
     throw new IntegrationError(
@@ -151,7 +153,7 @@ export async function dockerGetLogs(
   return {
     text: decoded.text,
     tail: Number.isInteger(tail) ? tail : 200,
-    truncated: decoded.truncated,
+    truncated: decoded.truncated || result.truncated === true,
     tty: decoded.tty,
   };
 }

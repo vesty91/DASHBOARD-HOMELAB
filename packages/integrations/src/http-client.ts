@@ -27,6 +27,7 @@ export interface SecureHttpRequest {
   body?: string;
   timeoutMs?: number;
   maxBodyBytes?: number;
+  onBodyLimit?: "reject" | "truncate";
   verifyTls?: boolean;
   allowedSchemes?: readonly string[];
   maxRedirects?: number;
@@ -36,7 +37,14 @@ export interface SecureHttpRequest {
 }
 
 export type SecureHttpResult =
-  | { ok: true; status: number; body: Buffer; latencyMs: number; retryAfterMs?: number }
+  | {
+      ok: true;
+      status: number;
+      body: Buffer;
+      latencyMs: number;
+      retryAfterMs?: number;
+      truncated?: boolean;
+    }
   | { ok: false; code: IntegrationErrorCode; latencyMs: number };
 
 function remainingMs(deadline: number): number {
@@ -190,11 +198,26 @@ function onceRequest(
             ? parseRetryAfterMs(response.headers["retry-after"])
             : undefined;
         response.on("data", (chunk: Buffer) => {
-          size += chunk.length;
-          if (size > maxBodyBytes) {
+          if (session.settled) return;
+          const next = size + chunk.length;
+          if (next > maxBodyBytes) {
+            if (options.onBodyLimit === "truncate") {
+              const keep = maxBodyBytes - size;
+              if (keep > 0) chunks.push(chunk.subarray(0, keep));
+              finish({
+                ok: true,
+                status: response.statusCode ?? 0,
+                body: Buffer.concat(chunks),
+                latencyMs: latency(),
+                truncated: true,
+                ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+              });
+              return;
+            }
             finish(fail("INVALID_RESPONSE"));
             return;
           }
+          size = next;
           chunks.push(chunk);
         });
         response.on("end", () => {

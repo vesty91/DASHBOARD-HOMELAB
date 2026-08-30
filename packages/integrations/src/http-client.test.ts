@@ -154,6 +154,16 @@ describe("secure HTTP client", () => {
         allowAddress: allowLocal,
       }),
     ).toMatchObject({ code: "INVALID_RESPONSE" });
+    const truncated = await secureRequest({
+      url: huge.url,
+      timeoutMs: 1000,
+      maxBodyBytes: 1024,
+      onBodyLimit: "truncate",
+      resolver: localResolver,
+      allowAddress: allowLocal,
+    });
+    expect(truncated).toMatchObject({ ok: true, truncated: true });
+    if (truncated.ok) expect(truncated.body.length).toBe(1024);
   });
 
   it("does not set NODE_TLS_REJECT_UNAUTHORIZED when TLS verification is disabled", async () => {
