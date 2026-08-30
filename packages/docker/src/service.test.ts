@@ -190,6 +190,21 @@ describe("DockerService", () => {
     expect(calls.some((call) => call.includes("/v1.55/containers/json"))).toBe(true);
   });
 
+  it("rejects a container list that contains an invalid entry instead of dropping it", async () => {
+    const cache = new MemoryIntegrationCache();
+    const docker = serviceFor(async (options) => {
+      const href = String(options.url);
+      if (href.endsWith("/version")) return jsonResult(versionPayload());
+      if (href.includes("/containers/json"))
+        return jsonResult([containerSummary(), { ...containerSummary(), Id: "short-id" }]);
+      throw new Error(href);
+    }, cache);
+    await expect(
+      docker.listContainers({ integrationId: INTEGRATION_ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    expect(cache.get(INTEGRATION_ID, "docker.containers.list:100")).toBeUndefined();
+  });
+
   it("inspects, stats, and logs without caching logs", async () => {
     let logCalls = 0;
     const cache = new MemoryIntegrationCache();

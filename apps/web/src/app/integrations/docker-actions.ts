@@ -2,23 +2,50 @@
 
 import { revalidatePath } from "next/cache";
 import { getBoardCaller } from "../../lib/server/board-api";
+import { dockerActionFailure, type DockerActionOutcome } from "./docker-action-result";
 
-export async function startDockerContainerAction(integrationId: string, containerId: string) {
-  await (await getBoardCaller()).docker.containers.start({ integrationId, containerId });
+function revalidateContainer(integrationId: string, containerId: string) {
   revalidatePath(`/integrations/${integrationId}`);
   revalidatePath(`/integrations/${integrationId}/containers/${containerId}`);
 }
 
-export async function stopDockerContainerAction(integrationId: string, containerId: string) {
-  await (await getBoardCaller()).docker.containers.stop({ integrationId, containerId });
-  revalidatePath(`/integrations/${integrationId}`);
-  revalidatePath(`/integrations/${integrationId}/containers/${containerId}`);
+export async function startDockerContainerAction(
+  integrationId: string,
+  containerId: string,
+): Promise<DockerActionOutcome> {
+  try {
+    await (await getBoardCaller()).docker.containers.start({ integrationId, containerId });
+    revalidateContainer(integrationId, containerId);
+    return { ok: true };
+  } catch (error) {
+    return dockerActionFailure(error);
+  }
 }
 
-export async function restartDockerContainerAction(integrationId: string, containerId: string) {
-  await (await getBoardCaller()).docker.containers.restart({ integrationId, containerId });
-  revalidatePath(`/integrations/${integrationId}`);
-  revalidatePath(`/integrations/${integrationId}/containers/${containerId}`);
+export async function stopDockerContainerAction(
+  integrationId: string,
+  containerId: string,
+): Promise<DockerActionOutcome> {
+  try {
+    await (await getBoardCaller()).docker.containers.stop({ integrationId, containerId });
+    revalidateContainer(integrationId, containerId);
+    return { ok: true };
+  } catch (error) {
+    return dockerActionFailure(error);
+  }
+}
+
+export async function restartDockerContainerAction(
+  integrationId: string,
+  containerId: string,
+): Promise<DockerActionOutcome> {
+  try {
+    await (await getBoardCaller()).docker.containers.restart({ integrationId, containerId });
+    revalidateContainer(integrationId, containerId);
+    return { ok: true };
+  } catch (error) {
+    return dockerActionFailure(error);
+  }
 }
 
 export async function loadDockerLogsAction(integrationId: string, containerId: string, tail = 200) {

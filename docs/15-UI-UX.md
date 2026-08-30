@@ -152,9 +152,10 @@ Logs : non chargés par défaut. Si `canLogs`, bouton **Charger les logs** (tail
 follow/WebSocket/polling). Texte monospace escaped. Avertissement : les logs peuvent contenir
 des informations sensibles.
 
-Actions selon permissions serveur : Stop/Restart si running, Start si stopped/exited.
+Actions selon permissions serveur : Stop/Restart si running, Start si `created`/`exited`.
 Confirmation obligatoire pour stop et restart (composant partagé). Start sans confirmation
-obligatoire.
+obligatoire. Un échec start/stop/restart (proxy down, 403, rate limit) s'affiche dans une
+alerte isolée des contrôles, sans error boundary Next.js.
 
 Docker down : alerte isolée (DNS, timeout, TLS, forbidden, unavailable). Ne casse pas
 `/integrations`, le dashboard ni Next.js. 403 proxy logs :

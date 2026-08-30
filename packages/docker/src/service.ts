@@ -304,11 +304,19 @@ export function createDockerService(deps: DockerServiceDeps) {
       const parsed = dockerContainerListSchema.safeParse(result.body);
       if (!parsed.success)
         throw new IntegrationError("INVALID_RESPONSE", "Docker container list is invalid");
-      const items = Object.freeze(
-        parsed.data.map(mapSummary).filter((item): item is DockerContainerSummary => item !== null),
-      );
-      deps.cache.set(loaded.recordId, operation, items, CONTAINER_CACHE_TTL_MS);
-      return items;
+      const items: DockerContainerSummary[] = [];
+      for (const raw of parsed.data) {
+        const item = mapSummary(raw);
+        if (item === null)
+          throw new IntegrationError(
+            "INVALID_RESPONSE",
+            "Docker container list contains an invalid entry",
+          );
+        items.push(item);
+      }
+      const frozen = Object.freeze(items);
+      deps.cache.set(loaded.recordId, operation, frozen, CONTAINER_CACHE_TTL_MS);
+      return frozen;
     },
     async getContainer(
       input: { integrationId: string; containerId: string },
