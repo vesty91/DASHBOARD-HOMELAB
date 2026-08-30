@@ -29,6 +29,7 @@ integration.test
 integration.delete
 
 docker.permissions
+docker.integration.get
 docker.system.get
 docker.containers.list
 docker.containers.get
@@ -246,6 +247,7 @@ Inputs communs : `integrationId` UUID ; `containerId` exactement 64 hex lowercas
 | Route                       | Permission                              | Capability           | Notes                                                                                            |
 | --------------------------- | --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
 | `docker.permissions`        | auth active                             | —                    | Helper UI only : `canRead`, `canLogs`, `canStart`, `canStop`, `canRestart`, `canManage`          |
+| `docker.integration.get`    | use/manage + docker.read/manage         | —                    | `{ id, name, enabled }` uniquement ; pas de réseau Docker ; pas de `config`/`trustedCaPem`       |
 | `docker.system.get`         | use/manage + docker.read/manage         | `containers.read`    | `engineVersion`, `serverApiVersion`, `serverMinApiVersion`, `negotiatedApiVersion` ; pas `/info` |
 | `docker.containers.list`    | idem                                    | `containers.read`    | DTO summary sûr                                                                                  |
 | `docker.containers.get`     | idem                                    | `containers.read`    | DTO inspect sûr                                                                                  |

@@ -8,7 +8,7 @@ import {
   type IntegrationDefinition,
   type IntegrationErrorCode,
 } from "@dashboard/integrations";
-import { pingDocker, readDockerVersion } from "./client";
+import { dockerContextFromIntegration, pingDocker, readDockerVersion } from "./client";
 import {
   dockerConfigSchema,
   dockerSecretSchema,
@@ -48,6 +48,7 @@ export function createDockerIntegrationDefinition(): IntegrationDefinition<
     configFields: [
       { key: "verifyTls", label: "Vérifier TLS", required: false },
       { key: "timeoutMs", label: "Timeout (ms)", required: false },
+      { key: "trustedCaPem", label: "CA de confiance (PEM)", required: false },
     ],
     secretFields: [],
     createClient(ctx) {
@@ -56,8 +57,9 @@ export function createDockerIntegrationDefinition(): IntegrationDefinition<
     async testConnection(ctx): Promise<ConnectionResult> {
       const started = performance.now();
       try {
-        await pingDocker(ctx);
-        const version = await readDockerVersion(ctx);
+        const dockerCtx = dockerContextFromIntegration(ctx);
+        await pingDocker(dockerCtx);
+        const version = await readDockerVersion(dockerCtx);
         return {
           ok: true,
           latencyMs: Math.max(0, Math.round(performance.now() - started)),

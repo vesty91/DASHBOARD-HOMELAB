@@ -115,8 +115,14 @@ Documenter le risque d'un utilisateur ayant `integration.manage`.
 Options :
 
 - verify système par défaut ;
-- certificat custom de confiance ;
+- certificat custom de confiance (`trustedCaPem`, certificat CA public uniquement) ;
 - mode insecure uniquement si explicitement activé par admin avec warning.
+
+Un certificat CA public n'est pas traité comme un secret. Les clés privées ne sont jamais
+acceptées. `trustedCaPem` est stocké dans `integrations.configJson`, pas dans
+`integration_secrets`. La validation de chaîne, d'expiration et de hostname reste active.
+`trustedCaPem` est incompatible avec `verifyTls=false`. Le trust custom est local à la
+requête : jamais `NODE_TLS_REJECT_UNAUTHORIZED`, jamais `https.globalAgent`.
 
 Ne jamais désactiver TLS globalement.
 
@@ -206,6 +212,11 @@ containers.start
 containers.stop
 containers.restart
 ```
+
+`docker.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Docker
+(`integration.use|manage` + `docker.read|manage`). `integration.read` n'est pas requis pour
+ouvrir `/integrations/[id]` d'une intégration Docker. La projection n'inclut pas `baseUrl`,
+`config`, `trustedCaPem`, secrets ni `configRevision`.
 
 Pas d'inventaire `GET /images/json`. Pas de generic invoke. Pas de widget Docker dans cette phase.
 

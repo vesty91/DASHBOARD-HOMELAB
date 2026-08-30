@@ -581,6 +581,7 @@ describe("docker tRPC router", () => {
         canRestart: false,
         canManage: false,
       })),
+      getIntegrationMetadata: vi.fn(),
       getSystem: vi.fn(),
       listContainers: vi.fn(async () => []),
       getContainer: vi.fn(),
@@ -591,6 +592,34 @@ describe("docker tRPC router", () => {
       restartContainer: vi.fn(),
       ...overrides,
     }) as DockerService;
+
+  it("returns safe Docker metadata for a delegated reader without config", async () => {
+    const dockerService = dockerServices({
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Proxy maison",
+        enabled: true,
+      })),
+    });
+    const result = await createCaller({
+      actor: dockerActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker: dockerService,
+    }).docker.integration.get({ integrationId });
+    expect(result).toEqual({
+      id: integrationId,
+      name: "Proxy maison",
+      enabled: true,
+    });
+    expect(result).not.toHaveProperty("baseUrl");
+    expect(result).not.toHaveProperty("config");
+    expect(result).not.toHaveProperty("trustedCaPem");
+    expect(result).not.toHaveProperty("secrets");
+    expect(result).not.toHaveProperty("configRevision");
+    expect(dockerService.getIntegrationMetadata).toHaveBeenCalledWith(integrationId, dockerActor);
+  });
 
   it("rejects invalid container ids before calling Docker", async () => {
     const dockerService = dockerServices();

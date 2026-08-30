@@ -47,6 +47,7 @@ import type {
   DockerContainerDetail,
   DockerContainerStats,
   DockerContainerSummary,
+  DockerIntegrationMetadata,
   DockerLogResult,
   DockerPermissionsView,
   DockerSystemInfo,
@@ -90,6 +91,10 @@ function verifyTlsFromConfig(config: JsonObject): boolean {
   return config.verifyTls !== false;
 }
 
+function trustedCaFromConfig(config: JsonObject): string | undefined {
+  return typeof config.trustedCaPem === "string" ? config.trustedCaPem : undefined;
+}
+
 function cachedValue<T>(
   cache: IntegrationCache,
   integrationId: string,
@@ -120,12 +125,14 @@ export function createDockerService(deps: DockerServiceDeps) {
       throw new IntegrationError("MISCONFIGURED", "Invalid Docker configuration");
     requireCapability(definition.capabilities, capability);
     const config = parsed.data as JsonObject;
+    const trustedCaPem = trustedCaFromConfig(config);
     return {
       recordId: record.id,
       ctx: {
         baseUrl: record.baseUrl,
         verifyTls: verifyTlsFromConfig(config),
         timeoutMs: timeoutFromConfig(config),
+        ...(trustedCaPem === undefined ? {} : { trustedCaPem }),
         request: (options) =>
           deps.request({
             ...options,
@@ -134,6 +141,9 @@ export function createDockerService(deps: DockerServiceDeps) {
             allowedSchemes: options.allowedSchemes ?? definition.allowedSchemes,
             maxRetries: 0,
             maxRedirects: 0,
+            ...(trustedCaPem === undefined || options.trustedCaPem !== undefined
+              ? {}
+              : { trustedCaPem }),
           }),
       },
     };
@@ -250,6 +260,20 @@ export function createDockerService(deps: DockerServiceDeps) {
   return {
     permissions(actor: DockerActor): DockerPermissionsView {
       return dockerPermissionsView(actor);
+    },
+    async getIntegrationMetadata(
+      integrationId: string,
+      actor: DockerActor,
+    ): Promise<DockerIntegrationMetadata> {
+      assertDockerAccess(actor, "read");
+      const record = await deps.store.findById(integrationId);
+      if (!record || record.type !== DOCKER_INTEGRATION_ID)
+        throw new IntegrationError("NOT_FOUND", "Définition Docker introuvable");
+      return Object.freeze({
+        id: record.id,
+        name: record.name,
+        enabled: record.enabled,
+      });
     },
     async getSystem(integrationId: string, actor: DockerActor): Promise<DockerSystemInfo> {
       assertDockerAccess(actor, "read");

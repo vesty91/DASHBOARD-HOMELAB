@@ -14,6 +14,7 @@ test-results/
 
 # Runtime
 appdata/
+packages/integrations/src/__tls_tmp/
 *.sqlite
 *.sqlite3
 

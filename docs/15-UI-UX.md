@@ -133,6 +133,12 @@ Création/édition Docker : aide « Utilisez l'URL HTTP(S) interne de votre Dock
 Placeholder `http://socket-proxy:2375` sans `defaultValue`. Avertissement : accès daemon
 hautement privilégié, proxy restreint, ne pas publier le port.
 
+Création/édition Docker : champ optionnel « CA de confiance (PEM) », désactivé si
+« Vérifier TLS » est décoché. Aide : coller uniquement le certificat CA public.
+
+`/integrations/[id]` Docker s'ouvre pour un lecteur délégué (`integration.use` + `docker.read`)
+via `docker.integration.get` : le titre est le nom réel, sans `integration.read` ni config.
+
 `/integrations/[id]` (type `docker`) : header nom + sous-titre Docker ; version Engine et API
 négociée réelles ; compteurs calculés depuis `listContainers` (total, running, exited,
 restarting, paused). Liste desktop en table dense, mobile en cards : icône reconnue, nom,

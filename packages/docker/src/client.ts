@@ -32,7 +32,20 @@ export interface DockerClientContext {
   readonly baseUrl: string;
   readonly verifyTls: boolean;
   readonly timeoutMs: number;
+  readonly trustedCaPem?: string;
   readonly request: DockerRequestFn;
+}
+
+export function dockerContextFromIntegration(
+  ctx: IntegrationClientContext<DockerConfig, DockerSecrets>,
+): DockerClientContext {
+  return {
+    baseUrl: ctx.baseUrl,
+    verifyTls: ctx.verifyTls,
+    timeoutMs: ctx.timeoutMs,
+    request: ctx.request,
+    ...(ctx.config.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.config.trustedCaPem }),
+  };
 }
 
 function failHttp(result: SecureHttpResult, fallback: string): never {
@@ -70,6 +83,7 @@ async function dockerFetch(
     maxRedirects: 0,
     maxBodyBytes: options.maxBodyBytes,
     ...(options.onBodyLimit === undefined ? {} : { onBodyLimit: options.onBodyLimit }),
+    ...(ctx.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.trustedCaPem }),
   });
   if (!result.ok) throw new IntegrationError(result.code, "Docker request failed");
   return result;

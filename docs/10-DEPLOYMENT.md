@@ -144,6 +144,10 @@ Le service web ne monte jamais le socket. Le proxy reste sur le réseau Docker i
 Aucun `ports:` vers l'hôte (ne pas publier 2375). `docker.sock` est monté read-only
 **uniquement dans le proxy**.
 
+Un proxy HTTPS signé par une CA privée homelab utilise `verifyTls=true` et le champ
+`trustedCaPem` (certificat CA public uniquement). Ne pas désactiver la vérification TLS
+et ne jamais coller une clé privée. Le dashboard conserve la validation hostname.
+
 `CONTAINERS=1` + `POST=0` ne suffit pas. Un proxy durci doit contrôler les sous-routes GET
 sensibles. LinuxServer socket-proxy a ajouté le 18 août 2026 :
 `ALLOW_ARCHIVE`, `ALLOW_CHANGES`, `ALLOW_EXPORT`, `ALLOW_LOGS`, `ALLOW_TOP`.

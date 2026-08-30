@@ -8,6 +8,7 @@ import {
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
+import { TEST_TRUSTED_CA_PEM } from "@dashboard/integrations/test-tls-fixtures";
 import { dockerIntegrationDefinition } from "./definition";
 import { MemoryDockerActionRateLimiter } from "./rate-limiter";
 import { createDockerService } from "./service";
@@ -155,9 +156,10 @@ function serviceFor(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   cache = new MemoryIntegrationCache(),
   limiter = new MemoryDockerActionRateLimiter(),
+  store = createMemoryStore(),
 ) {
   return createDockerService({
-    store: createMemoryStore(),
+    store,
     registry: createIntegrationRegistry().register(dockerIntegrationDefinition).freeze(),
     cache,
     actionRateLimiter: limiter,
@@ -471,6 +473,92 @@ describe("DockerService", () => {
     await expect(
       managed.listContainers({ integrationId: INTEGRATION_ID }, manager),
     ).resolves.toEqual([]);
+  });
+
+  it("returns safe Docker metadata for delegated readers without a network call", async () => {
+    const reader = actor(["integration.use", "docker.read"]);
+    const docker = serviceFor(async () => {
+      throw new Error("network should not be called");
+    });
+    await expect(docker.getIntegrationMetadata(INTEGRATION_ID, reader)).resolves.toEqual({
+      id: INTEGRATION_ID,
+      name: "Docker",
+      enabled: true,
+    });
+    const serialized = JSON.stringify(await docker.getIntegrationMetadata(INTEGRATION_ID, reader));
+    expect(serialized).not.toMatch(/baseUrl|trustedCaPem|configRevision|secrets|PASSWORD/u);
+    await expect(
+      docker.getIntegrationMetadata(INTEGRATION_ID, actor(["docker.read"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      docker.getIntegrationMetadata(INTEGRATION_ID, actor(["integration.use"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      docker.getIntegrationMetadata(INTEGRATION_ID, { userId: null, subject: null }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      docker.getIntegrationMetadata("00000000-0000-4000-8000-000000000099", reader),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const otherType = serviceFor(
+      async () => {
+        throw new Error("network should not be called");
+      },
+      new MemoryIntegrationCache(),
+      new MemoryDockerActionRateLimiter(),
+      createMemoryStore({ type: "http-health", name: "Health" }),
+    );
+    await expect(otherType.getIntegrationMetadata(INTEGRATION_ID, reader)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "Définition Docker introuvable",
+    });
+    const disabled = serviceFor(
+      async () => {
+        throw new Error("network should not be called");
+      },
+      new MemoryIntegrationCache(),
+      new MemoryDockerActionRateLimiter(),
+      createMemoryStore({
+        enabled: false,
+        name: "Proxy off",
+        config: {
+          verifyTls: true,
+          timeoutMs: 8000,
+          trustedCaPem: "-----BEGIN CERTIFICATE-----\nSHOULD-NOT-LEAK\n-----END CERTIFICATE-----",
+        },
+      }),
+    );
+    await expect(disabled.getIntegrationMetadata(INTEGRATION_ID, reader)).resolves.toEqual({
+      id: INTEGRATION_ID,
+      name: "Proxy off",
+      enabled: false,
+    });
+    expect(
+      JSON.stringify(await disabled.getIntegrationMetadata(INTEGRATION_ID, reader)),
+    ).not.toContain("trustedCaPem");
+  });
+
+  it("forwards trustedCaPem on Docker runtime requests", async () => {
+    const seen: Array<string | undefined> = [];
+    const docker = serviceFor(
+      async (options) => {
+        seen.push(options.trustedCaPem);
+        const href = String(options.url);
+        if (href.endsWith("/version")) return jsonResult(versionPayload());
+        throw new Error(href);
+      },
+      new MemoryIntegrationCache(),
+      new MemoryDockerActionRateLimiter(),
+      createMemoryStore({
+        config: { verifyTls: true, timeoutMs: 8000, trustedCaPem: TEST_TRUSTED_CA_PEM },
+      }),
+    );
+    const system = await docker.getSystem(INTEGRATION_ID, systemAdmin);
+    expect(
+      seen.some((value) => typeof value === "string" && value.includes("BEGIN CERTIFICATE")),
+    ).toBe(true);
+    expect(JSON.stringify(system)).not.toMatch(/trustedCaPem|BEGIN CERTIFICATE|baseUrl/u);
   });
 
   it("rate-limits actions and does not cache errors", async () => {

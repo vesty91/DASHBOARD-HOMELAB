@@ -83,6 +83,12 @@ export interface DockerSystemInfo {
   readonly arch: string | null;
 }
 
+export interface DockerIntegrationMetadata {
+  readonly id: string;
+  readonly name: string;
+  readonly enabled: boolean;
+}
+
 export interface DockerPermissionsView {
   readonly canRead: boolean;
   readonly canLogs: boolean;

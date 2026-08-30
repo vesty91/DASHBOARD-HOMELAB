@@ -1,11 +1,54 @@
 import { z } from "zod";
-import { DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, MIN_TIMEOUT_MS } from "@dashboard/integrations";
+import {
+  DEFAULT_TIMEOUT_MS,
+  MAX_TIMEOUT_MS,
+  MIN_TIMEOUT_MS,
+  normalizeTrustedCaPem,
+} from "@dashboard/integrations";
 import { CONTAINER_ID_PATTERN } from "./policy";
 
-export const dockerConfigSchema = z.object({
-  verifyTls: z.boolean().default(true),
-  timeoutMs: z.number().int().min(MIN_TIMEOUT_MS).max(MAX_TIMEOUT_MS).default(DEFAULT_TIMEOUT_MS),
-});
+/**
+ * A public CA certificate is configuration, not a secret.
+ * Private keys are never accepted. Do not persist them in integration_secrets.
+ */
+
+export const dockerConfigSchema = z
+  .object({
+    verifyTls: z.boolean().default(true),
+    timeoutMs: z.number().int().min(MIN_TIMEOUT_MS).max(MAX_TIMEOUT_MS).default(DEFAULT_TIMEOUT_MS),
+    trustedCaPem: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.trustedCaPem === undefined || data.trustedCaPem.trim() === "") return;
+    try {
+      normalizeTrustedCaPem(data.trustedCaPem);
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["trustedCaPem"],
+        message: error instanceof Error ? error.message : "Invalid trusted CA PEM",
+      });
+      return;
+    }
+    if (data.verifyTls === false) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["trustedCaPem"],
+        message: "trustedCaPem cannot be set when verifyTls is false",
+      });
+    }
+  })
+  .transform((data) => {
+    const trustedCaPem =
+      data.trustedCaPem === undefined || data.trustedCaPem.trim() === ""
+        ? undefined
+        : normalizeTrustedCaPem(data.trustedCaPem);
+    return {
+      verifyTls: data.verifyTls,
+      timeoutMs: data.timeoutMs,
+      ...(trustedCaPem === undefined ? {} : { trustedCaPem }),
+    };
+  });
 
 export const dockerSecretSchema = z.object({}).strict();
 
@@ -14,6 +57,10 @@ export const dockerContainerIdSchema = z.string().regex(CONTAINER_ID_PATTERN);
 export const dockerListInputSchema = z.object({
   integrationId: z.uuid(),
   limit: z.number().int().min(1).max(200).default(100),
+});
+
+export const dockerIntegrationInputSchema = z.object({
+  integrationId: z.uuid(),
 });
 
 export const dockerContainerInputSchema = z.object({

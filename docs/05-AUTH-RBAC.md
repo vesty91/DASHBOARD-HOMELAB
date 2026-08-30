@@ -154,6 +154,8 @@ jamais accordé à un simple lecteur.
 
 Phase 8 n'ajoute aucune permission. Lecture Docker exige
 (`integration.use` ou `integration.manage`) **et** (`docker.read` ou `docker.manage`).
+Cette conjonction suffit pour `docker.integration.get` et `/integrations/[id]` Docker :
+`integration.read` n'est pas requis et n'est pas accordé implicitement.
 Logs / start / stop / restart suivent la même conjonction avec `docker.logs|start|stop|restart`.
 Le rôle `ADMIN` par défaut **n'obtient pas** `docker.*`. Seul `SYSTEM_ADMIN` les reçoit toutes ;
 la délégation passe par groupes/permissions existants.

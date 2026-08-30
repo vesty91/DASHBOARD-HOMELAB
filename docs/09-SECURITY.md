@@ -167,6 +167,10 @@ Hardening Phase 8 :
 - POST Docker : `maxRetries = 0`, `maxRedirects = 0` ;
 - IDs conteneur = 64 hex lowercase ; aucun path/method arbitrary ;
 - SSRF inchangé (LAN OK, loopback/link-local/metadata bloqués) ;
+- CA privée optionnelle (`trustedCaPem`) : trust local à la requête, `rejectUnauthorized`
+  reste `true`, hostname/SNI conservés, clés privées refusées ;
+- `docker.integration.get` : metadata sûre `{ id, name, enabled }` ; un lecteur Docker
+  délégué n'a pas besoin de `integration.read` et ne reçoit pas la config ;
 - audit persistant des actions Docker différé (aucune table Phase 8).
 
 Voir ADR 0008.

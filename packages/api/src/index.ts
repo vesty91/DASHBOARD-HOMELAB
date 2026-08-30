@@ -31,6 +31,7 @@ import {
 import {
   dockerActionInputSchema,
   dockerContainerInputSchema,
+  dockerIntegrationInputSchema,
   dockerListInputSchema,
   dockerLogsInputSchema,
   type DockerService,
@@ -271,6 +272,13 @@ export const integrationsRouter = t.router({
 });
 export const dockerRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.docker.permissions(ctx.actor)),
+  integration: t.router({
+    get: t.procedure
+      .input(dockerIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.docker.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
   system: t.router({
     get: t.procedure
       .input(z.object({ integrationId: z.uuid() }))

@@ -161,7 +161,10 @@ de strings, sans accès Docker runtime.
 Docker est le premier adapter de production, composé dans `apps/web`, pas dans le registry
 générique Phase 7. Le transport est HTTP(S) vers un Docker Socket Proxy restreint. Un
 utilisateur autorisé (`integration.use|manage` et `docker.read|manage`) peut lister et
-inspecter les conteneurs. Un utilisateur sans `docker.restart` reçoit `FORBIDDEN` sur
+inspecter les conteneurs, et ouvrir `/integrations/[id]` via `docker.integration.get`
+sans `integration.read`. Un proxy HTTPS à CA privée fonctionne avec `verifyTls=true` et
+`trustedCaPem` (certificat CA public, jamais une clé privée) ; hostname et chaîne restent
+validés. Un utilisateur sans `docker.restart` reçoit `FORBIDDEN` sur
 restart, y compris en appel API manuel (AC-011 reste vrai). L'allowlist d'endpoints est
 exacte ; aucun generic invoke ni path/method arbitrary. Les IDs exposés à l'API sont 64 hex
 lowercase. Les DTO excluent Env, Labels, Mounts, Command et HostConfig. Les logs sont bornés,

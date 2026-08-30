@@ -8,6 +8,7 @@ import {
   type AddressResolver,
 } from "@dashboard/monitoring";
 import { classifyHttpStatus, type IntegrationErrorCode } from "./errors";
+import { normalizeTrustedCaPem } from "./trusted-ca";
 import { isBlockedHostname, parseIntegrationUrl } from "./urls";
 
 export const DEFAULT_TIMEOUT_MS = 8_000;
@@ -29,6 +30,7 @@ export interface SecureHttpRequest {
   maxBodyBytes?: number;
   onBodyLimit?: "reject" | "truncate";
   verifyTls?: boolean;
+  trustedCaPem?: string;
   allowedSchemes?: readonly string[];
   maxRedirects?: number;
   maxRetries?: number;
@@ -46,6 +48,15 @@ export type SecureHttpResult =
       truncated?: boolean;
     }
   | { ok: false; code: IntegrationErrorCode; latencyMs: number };
+
+function isTlsFailure(error: NodeJS.ErrnoException): boolean {
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  if (code.startsWith("ERR_TLS") || code.startsWith("ERR_SSL")) return true;
+  if (code.includes("CERT") || code.includes("SSL")) return true;
+  if (code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE") return true;
+  return /certificate|hostname|altname|unknown.?ca/iu.test(message);
+}
 
 function remainingMs(deadline: number): number {
   return Math.max(1, deadline - performance.now());
@@ -135,6 +146,15 @@ function onceRequest(
   if (isBlockedHostname(parsed.hostname)) return Promise.resolve(fail("TARGET_BLOCKED"));
   const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/gu, "");
   const verifyTls = options.verifyTls !== false;
+  let trustedCaPem: string | undefined;
+  if (options.trustedCaPem !== undefined && options.trustedCaPem.trim() !== "") {
+    try {
+      trustedCaPem = normalizeTrustedCaPem(options.trustedCaPem);
+    } catch {
+      return Promise.resolve(fail("MISCONFIGURED"));
+    }
+    if (!verifyTls) return Promise.resolve(fail("MISCONFIGURED"));
+  }
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const method = options.method ?? "GET";
   const resolver = options.resolver ?? systemResolver;
@@ -153,6 +173,10 @@ function onceRequest(
     const insecureAgent =
       parsed.protocol === "https:" && !verifyTls
         ? new https.Agent({ rejectUnauthorized: false })
+        : undefined;
+    const trustedCaAgent =
+      parsed.protocol === "https:" && verifyTls && trustedCaPem
+        ? new https.Agent({ rejectUnauthorized: true, ca: trustedCaPem })
         : undefined;
     const headers: http.OutgoingHttpHeaders = {
       "user-agent": INTEGRATION_USER_AGENT,
@@ -174,6 +198,7 @@ function onceRequest(
         session.response?.destroy();
         session.request?.destroy();
         insecureAgent?.destroy();
+        trustedCaAgent?.destroy();
         resolve(result);
       };
       const requestOptions: https.RequestOptions = {
@@ -189,6 +214,7 @@ function onceRequest(
       Object.assign(requestOptions, { autoSelectFamily: false });
       if (parsed.protocol === "https:" && !net.isIP(hostname)) requestOptions.servername = hostname;
       if (insecureAgent) requestOptions.agent = insecureAgent;
+      else if (trustedCaAgent) requestOptions.agent = trustedCaAgent;
       const request = client.request(parsed, requestOptions, (response) => {
         session.response = response;
         const chunks: Buffer[] = [];
@@ -243,12 +269,7 @@ function onceRequest(
       request.on("error", (error: NodeJS.ErrnoException) => {
         const code = error.code ?? "";
         if (code === "ETIMEDOUT") finish(fail("TIMEOUT"));
-        else if (
-          code.startsWith("ERR_TLS") ||
-          code.includes("CERT") ||
-          code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
-        )
-          finish(fail("TLS_ERROR"));
+        else if (isTlsFailure(error)) finish(fail("TLS_ERROR"));
         else finish(fail("UNREACHABLE"));
       });
       if (options.body && method !== "HEAD") request.write(options.body);

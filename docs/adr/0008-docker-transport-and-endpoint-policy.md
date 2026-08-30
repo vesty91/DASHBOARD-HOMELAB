@@ -102,5 +102,9 @@ L'application compose Docker dans `apps/web` via `createApplicationIntegrationRe
 
 - `@dashboard/docker` devient le premier adapter de production ;
 - l'UI `/integrations/[id]` et `/integrations/[id]/containers/[containerId]` consomme des DTO sûrs ;
+- `/integrations/[id]` d'une intégration Docker s'ouvre via `docker.integration.get`
+  (`{ id, name, enabled }`) pour un lecteur délégué, sans `integration.read` ni config ;
+- un proxy HTTPS à CA privée utilise `trustedCaPem` (CA publique, pas un secret) avec
+  `verifyTls=true` ; hostname et chaîne restent validés ; clés privées et mTLS restent hors scope ;
 - le rôle `ADMIN` par défaut ne reçoit pas les permissions `docker.*` ;
 - la reconnaissance d'apps réutilise `@dashboard/app-library` sans inventer d'URL.

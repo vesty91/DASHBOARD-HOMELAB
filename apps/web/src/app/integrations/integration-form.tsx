@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { IntegrationCatalogEntry, IntegrationDto } from "@dashboard/integrations";
-import { Alert, Button, Field, Input, Select } from "@dashboard/ui";
+import { Alert, Button, Field, Input, Select, Textarea } from "@dashboard/ui";
 
 export function IntegrationForm({
   action,
@@ -14,10 +14,12 @@ export function IntegrationForm({
   integration?: IntegrationDto;
 }) {
   const [selectedType, setSelectedType] = useState(integration?.type ?? catalog[0]?.id ?? "");
+  const [verifyTls, setVerifyTls] = useState(integration?.config.verifyTls !== false);
   const showDockerHelp = selectedType === "docker";
-  const verifyTls = integration?.config.verifyTls !== false;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
+  const trustedCaPem =
+    typeof integration?.config.trustedCaPem === "string" ? integration.config.trustedCaPem : "";
   return (
     <form action={action} className="ui-form ui-form-wide ui-form-grid">
       <Field label="Type">
@@ -65,7 +67,13 @@ export function IntegrationForm({
       </label>
       <label className="ui-field">
         <span className="ui-label">
-          <input name="verifyTls" type="checkbox" defaultChecked={verifyTls} /> Vérifier TLS
+          <input
+            name="verifyTls"
+            type="checkbox"
+            checked={verifyTls}
+            onChange={(event) => setVerifyTls(event.target.checked)}
+          />{" "}
+          Vérifier TLS
         </span>
       </label>
       {!verifyTls ? (
@@ -76,6 +84,21 @@ export function IntegrationForm({
       <Field label="Timeout ms">
         <Input name="timeoutMs" type="number" min={500} max={30000} defaultValue={timeoutMs} />
       </Field>
+      {showDockerHelp ? (
+        <Field
+          label="CA de confiance (PEM, optionnel)"
+          hint="Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+        >
+          <Textarea
+            name="trustedCaPem"
+            rows={8}
+            disabled={!verifyTls}
+            defaultValue={trustedCaPem}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </Field>
+      ) : null}
       <Button variant="primary" type="submit">
         Enregistrer
       </Button>
