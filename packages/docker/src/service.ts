@@ -275,7 +275,13 @@ export function createDockerService(deps: DockerServiceDeps) {
         input.containerId,
         version.negotiatedApiVersion,
       );
-      return mapDetail(raw);
+      const detail = mapDetail(raw);
+      if (detail.id !== input.containerId)
+        throw new IntegrationError(
+          "INVALID_RESPONSE",
+          "Docker inspect returned a different container id",
+        );
+      return detail;
     },
     async getContainerStats(
       input: { integrationId: string; containerId: string },

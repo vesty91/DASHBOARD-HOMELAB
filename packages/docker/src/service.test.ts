@@ -251,6 +251,19 @@ describe("DockerService", () => {
     ).resolves.toMatchObject({ text: "kept\n", truncated: true });
   });
 
+  it("rejects inspect payloads whose container id differs from the request", async () => {
+    const other = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const docker = serviceFor(async (options) => {
+      const href = String(options.url);
+      if (href.endsWith("/version")) return jsonResult(versionPayload());
+      if (href.endsWith("/json")) return jsonResult({ ...inspectPayload(), Id: other });
+      throw new Error(href);
+    });
+    await expect(
+      docker.getContainer({ integrationId: INTEGRATION_ID, containerId: ID }, systemAdmin),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
   it("rejects non-object Docker stats payloads", async () => {
     await expect(
       serviceFor(async (options) => {
