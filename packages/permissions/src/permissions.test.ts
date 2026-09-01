@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hasPermission, requirePermission, resolvePermissions } from "./index";
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  hasPermission,
+  requirePermission,
+  resolvePermissions,
+} from "./index";
 const active = { status: "active" as const, isSystemAdmin: false };
 describe("permission resolver", () => {
   it("denies by default", () => {
@@ -24,8 +29,13 @@ describe("permission resolver", () => {
       ),
     ).toBe(false);
   });
+  it("does not grant Docker or Synology permissions to the default ADMIN role", () => {
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("docker.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("synology.read");
+  });
   it("grants active system admins the catalog", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "backup.manage")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "synology.read")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
   });
 });

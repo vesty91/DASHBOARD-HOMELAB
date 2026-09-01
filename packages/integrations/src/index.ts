@@ -50,6 +50,13 @@ export {
   integrationUrlSchema,
 } from "./schemas";
 export {
+  collectSecretStringValues,
+  clearServerManagedSecret,
+  loadIntegrationSecrets,
+  persistServerManagedSecret,
+  redactKnownSecretValues,
+} from "./secrets";
+export {
   createIntegrationService,
   type IntegrationService,
   type IntegrationServiceDeps,

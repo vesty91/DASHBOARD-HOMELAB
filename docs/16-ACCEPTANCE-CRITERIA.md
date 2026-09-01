@@ -172,3 +172,16 @@ chargés uniquement sur demande, et exigent `docker.logs`. Les actions se limite
 start/stop/restart ; kill/exec/remove sont absents. Le web ne monte pas `docker.sock`.
 La reconnaissance réutilise App Library et n'invente aucune URL d'application. Aucune
 migration DB. Aucune fake data de production. Pas de widget Docker dans cette phase.
+
+## AC-032 Synology DSM Integration
+
+Synology est le second adapter de production, composé dans `apps/web`. Transport HTTP(S) vers
+l'origine DSM via `/webapi/entry.cgi` uniquement. Login POST hors URL. Un utilisateur autorisé
+(`integration.use|manage` et `synology.read`) ouvre `/integrations/[id]` via
+`synology.integration.get` sans `integration.read`. Un NAS HTTPS à CA privée fonctionne avec
+`verifyTls=true` et `trustedCaPem`. Les DTO excluent mot de passe, SID, synotoken, DID, OTP et
+numéros de série. CPU/RAM/volumes/disques affichent des valeurs réelles ou « Indisponible ».
+Une section Storage en timeout laisse system/CPU visibles (`degraded`). 2FA : enrollment OTP
+transitoire et secret `deviceId` server-managed ; `clearDevice` n'efface que le jeton local.
+Refresh manuel 10/min. Aucune action destructive. Aucune migration DB. Pas de widget Synology.
+Pas de generic invoke. Le rôle `ADMIN` par défaut n'obtient pas `synology.read`.

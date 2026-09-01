@@ -16,4 +16,16 @@ describe("configFromForm", () => {
       "-----BEGIN CERTIFICATE-----\nABC  \n-----END CERTIFICATE-----",
     );
   });
+
+  it("includes a trimmed Synology account without treating it as a secret", () => {
+    const form = new FormData();
+    form.set("verifyTls", "on");
+    form.set("timeoutMs", "8000");
+    form.set("account", " monitor ");
+    expect(configFromForm(form)).toEqual({
+      verifyTls: true,
+      timeoutMs: 8000,
+      account: "monitor",
+    });
+  });
 });

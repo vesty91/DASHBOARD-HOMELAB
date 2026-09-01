@@ -68,6 +68,9 @@ importers:
       '@dashboard/secrets':
         specifier: workspace:*
         version: link:../../packages/secrets
+      '@dashboard/synology':
+        specifier: workspace:*
+        version: link:../../packages/synology
       '@dashboard/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -150,6 +153,9 @@ importers:
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../permissions
+      '@dashboard/synology':
+        specifier: workspace:*
+        version: link:../synology
       '@dashboard/widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -324,6 +330,28 @@ importers:
 
   packages/shared:
     devDependencies:
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/synology:
+    dependencies:
+      '@dashboard/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@dashboard/secrets':
+        specifier: workspace:*
+        version: link:../secrets
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))

@@ -96,6 +96,7 @@ packages/
   widgets/
   integrations/
   docker/
+  synology/
   permissions/
   secrets/
   monitoring/

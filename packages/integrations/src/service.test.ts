@@ -110,6 +110,24 @@ function createMemoryStore(): IntegrationStore & { secrets: Map<string, Encrypte
         updatedAt: now(),
       });
     },
+    async deleteSecret(integrationId, key) {
+      const current = rows.get(integrationId);
+      const existing = secrets.get(integrationId) ?? [];
+      if (!existing.some((row) => row.key === key)) return false;
+      secrets.set(
+        integrationId,
+        existing.filter((row) => row.key !== key),
+      );
+      if (current)
+        rows.set(integrationId, {
+          ...current,
+          configRevision: current.configRevision + 1,
+          status: "unknown",
+          lastCheckedAt: null,
+          updatedAt: now(),
+        });
+      return true;
+    },
     async persistConnectionResult(id, revision, status) {
       const current = rows.get(id);
       if (!current || current.configRevision !== revision) return false;
@@ -192,6 +210,57 @@ describe("integration service", () => {
       service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, reader),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(service.test(created.id, reader)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("refuses user-facing setSecret for server-managed fields and loads secrets via the shared helper", async () => {
+    const store = createMemoryStore();
+    const managed = createTestHttpIntegrationDefinition();
+    const definition: IntegrationDefinition = {
+      ...managed,
+      id: "test-managed",
+      secretFields: [
+        ...managed.secretFields,
+        {
+          key: "deviceId",
+          label: "Device",
+          required: false,
+          serverManaged: true,
+          valueSchema: z.string().min(1).max(64),
+        },
+      ],
+      secretSchema: z.object({
+        apiKey: z.string().min(1),
+        deviceId: z.string().min(1).max(64).optional(),
+      }),
+    };
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [definition]);
+    const created = await service.create(
+      {
+        type: "test-managed",
+        name: "Managed",
+        baseUrl: "http://192.168.1.8:3000",
+        enabled: true,
+        config: { path: "/health" },
+      },
+      admin,
+    );
+    await expect(
+      service.setSecret({ integrationId: created.id, key: "deviceId", value: "DID-1" }, admin),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, admin);
+    const { loadIntegrationSecrets, persistServerManagedSecret, clearServerManagedSecret } =
+      await import("./secrets");
+    const loaded = await loadIntegrationSecrets(store, definition, created.id, keyring);
+    expect(loaded.apiKey).toBe(SENTINEL);
+    expect(loaded).not.toHaveProperty("deviceId");
+    await persistServerManagedSecret(store, definition, created.id, "deviceId", "DID-1", keyring);
+    const withDevice = await loadIntegrationSecrets(store, definition, created.id, keyring);
+    expect(withDevice.deviceId).toBe("DID-1");
+    expect(await clearServerManagedSecret(store, definition, created.id, "deviceId")).toBe(true);
+    expect(
+      (await loadIntegrationSecrets(store, definition, created.id, keyring)).deviceId,
+    ).toBeUndefined();
+    expect(JSON.stringify(await service.get(created.id, admin))).not.toContain("DID-1");
   });
 
   it("maps local HTTP outcomes and ignores stale results", async () => {

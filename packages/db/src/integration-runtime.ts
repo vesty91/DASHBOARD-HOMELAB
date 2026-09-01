@@ -49,6 +49,7 @@ interface IntegrationStore {
   listSecretStates(integrationId: string): Promise<readonly { key: string; configured: true }[]>;
   loadEncryptedSecrets(integrationId: string): Promise<readonly EncryptedSecretRow[]>;
   upsertSecret(integrationId: string, secret: EncryptedSecretRow): Promise<void>;
+  deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,
     revision: number,
@@ -223,6 +224,25 @@ export function createSqliteIntegrationStore(db: DatabaseSync): IntegrationStore
         throw error;
       }
     },
+    async deleteSecret(integrationId, key) {
+      const now = Date.now();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const result = db
+          .prepare("DELETE FROM integration_secrets WHERE integration_id=? AND key=?")
+          .run(integrationId, key);
+        if (result.changes === 1) {
+          db.prepare(
+            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=? WHERE id=?",
+          ).run(now, integrationId);
+        }
+        db.exec("COMMIT");
+        return result.changes === 1;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async persistConnectionResult(id, revision, status) {
       return (
         db
@@ -327,6 +347,29 @@ export function createPostgresqlIntegrationStore(pool: Pool): IntegrationStore {
           [integrationId],
         );
         await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async deleteSecret(integrationId, key) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await client.query(
+          "DELETE FROM integration_secrets WHERE integration_id=$1 AND key=$2",
+          [integrationId, key],
+        );
+        if (result.rowCount === 1) {
+          await client.query(
+            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=now() WHERE id=$1",
+            [integrationId],
+          );
+        }
+        await client.query("COMMIT");
+        return result.rowCount === 1;
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;

@@ -5,15 +5,16 @@ import { getBoardCaller } from "../../lib/server/board-api";
 import { configFromForm } from "./integration-form-config";
 
 export async function createIntegrationAction(formData: FormData) {
-  await (
-    await getBoardCaller()
-  ).integration.create({
-    type: String(formData.get("type") ?? ""),
+  const caller = await getBoardCaller();
+  const type = String(formData.get("type") ?? "");
+  const created = await caller.integration.create({
+    type,
     name: String(formData.get("name") ?? ""),
     baseUrl: String(formData.get("baseUrl") ?? ""),
     enabled: formData.get("enabled") === "on",
     config: configFromForm(formData),
   });
+  if (type === "synology") redirect(`/integrations/${created.id}/edit`);
   redirect("/integrations");
 }
 

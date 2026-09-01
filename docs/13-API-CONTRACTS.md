@@ -39,6 +39,13 @@ docker.containers.start
 docker.containers.stop
 docker.containers.restart
 
+synology.permissions
+synology.integration.get
+synology.overview.get
+synology.overview.refresh
+synology.auth.enrollDevice
+synology.auth.clearDevice
+
 widget.catalog
 widget.data
 
@@ -270,3 +277,29 @@ Stats : `cpuPercent`, `memoryUsageBytes`, `memoryLimitBytes`, `memoryPercent`, `
 Erreurs : `UNAUTHORIZED`, `FORBIDDEN` (RBAC ou 403 proxy), `NOT_FOUND`, `CONFLICT` (409),
 `TOO_MANY_REQUESTS`, `TIMEOUT`, `BAD_REQUEST` (validation / DNS / TLS / réponse invalide).
 ID invalide : `BAD_REQUEST` sans requête Docker.
+
+# Synology API — Phase 9
+
+Routeur tRPC `synology` (aucun generic invoke, aucun `method`/`path` client).
+Input : `integrationId` UUID.
+
+| Route                        | Permission                 | Capability                                        | Notes                                                                                   |
+| ---------------------------- | -------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `synology.permissions`       | auth active                | —                                                 | Helper UI : `canRead`, `canManageAuth`                                                  |
+| `synology.integration.get`   | use/manage + synology.read | —                                                 | `{ id, name, enabled }` ; pas de réseau DSM ; pas de `config`/`trustedCaPem`/secrets    |
+| `synology.overview.get`      | use/manage + synology.read | `system.read` + `resources.read` + `storage.read` | Vue unique ; cache 15 s (5 s si partiel) ; SID jamais caché                             |
+| `synology.overview.refresh`  | use/manage + synology.read | idem                                              | Invalide le cache ; 10 requêtes / min / acteur / intégration                            |
+| `synology.auth.enrollDevice` | integration.manage         | —                                                 | OTP 4–8 digits transitoire ; persiste `deviceId` server-managed ; ne renvoie pas le DID |
+| `synology.auth.clearDevice`  | integration.manage         | —                                                 | Efface uniquement le jeton local                                                        |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `system` /
+`resources` / `storage` chacune `{ status, data, reason? }`.
+System : `model`, `dsmVersion`, `uptimeSeconds`, `systemTemperatureC`, `ramTotalBytes`,
+`cpuCores`, `cpuFamily`, `cpuSeries` (null si absent).
+Resources : CPU `user+system+other`, RAM en octets.
+Volumes / disks : capacité, utilisé, état, température, SMART si présent.
+
+Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
+
+`status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage
+en échec n'invente pas 0 % et n'échoue pas toute la page.

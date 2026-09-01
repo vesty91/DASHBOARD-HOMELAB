@@ -187,7 +187,7 @@ et ignore un résultat stale. Voir ADR 0007.
 
 ## 12. Intégration Docker
 
-Statut sur la branche `phase-8-docker` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE / merged (PR #10), tag `phase-8-complete`.
 
 Premier adapter de production. Composé dans `apps/web` (`createApplicationIntegrationRegistry`),
 jamais importé par `@dashboard/integrations`. Voir ADR 0008.
@@ -222,11 +222,25 @@ Pas d'inventaire `GET /images/json`. Pas de generic invoke. Pas de widget Docker
 
 ## 13. Synology
 
-Priorité 1.
+Statut sur la branche `phase-9-synology` : IMPLEMENTED / REVIEW.
 
-Prévoir adapter orienté DSM API.
+Adapter `synology` composé dans `apps/web`. Transport HTTP(S) vers l'origine DSM.
+Login POST hors URL. Allowlist CGI `entry.cgi` uniquement. Voir ADR 0009.
 
-Ne pas dépendre d'une seule API non officielle si une API officielle est disponible.
+Capabilities :
+
+```text
+system.read
+resources.read
+storage.read
+```
+
+`synology.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Synology
+(`integration.use|manage` + `synology.read`). `integration.read` n'est pas requis.
+La projection n'inclut pas `baseUrl`, `config`, `trustedCaPem`, secrets ni `configRevision`.
+
+2FA : OTP transitoire + `deviceId` server-managed. Pas d'action destructive. Pas de widget
+Synology. Refresh manuel 10/min. Cache overview 15 s (5 s si partiel).
 
 ## 14. Jellyfin
 

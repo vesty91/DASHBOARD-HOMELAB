@@ -130,6 +130,15 @@ docker.manage
 
 Ne pas donner `docker.manage` aux simples viewers.
 
+## 8b. Synology permissions fines
+
+```text
+synology.read
+```
+
+Ne pas donner `synology.read` aux simples viewers. Lecture seule en Phase 9. L'enrollment OTP
+utilise `integration.manage` (`canManageAuth`), pas une permission `synology.manage`.
+
 ## 9. Matrice initiale
 
 | Action                  | Viewer | User | Editor | Admin | System Admin |
@@ -159,6 +168,12 @@ Cette conjonction suffit pour `docker.integration.get` et `/integrations/[id]` D
 Logs / start / stop / restart suivent la même conjonction avec `docker.logs|start|stop|restart`.
 Le rôle `ADMIN` par défaut **n'obtient pas** `docker.*`. Seul `SYSTEM_ADMIN` les reçoit toutes ;
 la délégation passe par groupes/permissions existants.
+
+Phase 9 : lecture Synology exige (`integration.use` ou `integration.manage`) **et**
+`synology.read`. Cette conjonction suffit pour `synology.integration.get` et
+`/integrations/[id]` Synology : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `synology.read`. `synology.auth.enrollDevice` / `clearDevice`
+exigent `integration.manage`.
 
 ## 10. Audit
 

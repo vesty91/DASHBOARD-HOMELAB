@@ -1,0 +1,78 @@
+# ADR 0009 — Synology session and API policy
+
+## Statut
+
+Accepté pour la Phase 9.
+
+## Contexte
+
+La Phase 9 ajoute le second adapter de production : Synology DSM. Le NAS expose une API web
+sessionnelle (`SYNO.API.Auth`) et des APIs Core / DSM.Info / Storage. Les identifiants, le SID,
+le SynoToken et le jeton d'appareil de confiance sont des secrets. Une CA privée homelab est
+fréquente sur le port 5001. DSM 7 exige souvent un OTP ; un appareil de confiance permet la
+lecture sans OTP à chaque requête.
+
+## Décisions
+
+### 1. Package `@dashboard/synology`
+
+Composé dans `apps/web` (`createApplicationIntegrationRegistry`), jamais importé par
+`@dashboard/integrations`. `createProductionIntegrationRegistry()` reste vide. Pas de widget
+Synology. Pas de realtime / polling. Pas d'action destructive (reboot, shutdown, FileStation,
+User). Aucune migration DB (`0000`–`0004` immuables).
+
+### 2. Auth sessionnelle, credentials hors URL
+
+Bootstrap fixe : `GET /webapi/entry.cgi` `SYNO.API.Info` v1 `query` sur une allowlist d'APIs
+(jamais `query=all`). Login / logout en POST `application/x-www-form-urlencoded` vers
+`/webapi/entry.cgi` uniquement. `account` / `passwd` / OTP / `_sid` ne sont jamais des query
+params. Session nommée `DashboardHomelab`, `format=sid`. Auth v6 : `enable_syno_token=yes`.
+Le SID est transmis via `Cookie: id=<sid>` et le header `SynoToken` si présent. Logout dans un
+`finally`. Le SID n'est pas mis en cache. Au plus une réauthentification pour les codes session
+106 / 107 / 119 ; jamais pour 400 / 401 / 403 / 404.
+
+### 3. 2FA et appareil de confiance
+
+OTP transitoire uniquement via `synology.auth.enrollDevice`. Le DID renvoyé par DSM est stocké
+chiffré comme secret `deviceId` server-managed. `synology.auth.clearDevice` n'efface que le
+jeton local. SID / SynoToken / OTP / DID ne sont jamais renvoyés au navigateur ni journalisés.
+
+### 4. Transport
+
+Uniquement `secureRequest`, `maxRetries: 0`, `maxRedirects: 0`. Path découvert autre que
+`entry.cgi` : section `unavailable` / `INVALID_RESPONSE`, jamais appelé. Corps JSON ~256 KiB
+sauf Storage ~2 MiB.
+
+### 5. DTO assainis et vue partielle
+
+Overview global `available | degraded` avec `fetchedAt`. Chaque section
+`available | degraded | unavailable` + `reason`. Timeout Storage ne masque pas system / CPU /
+RAM. Tailles trop grandes pour `MAX_SAFE_INTEGER` → `null` (pas d'arrondi). RAM DSM.Info en
+MB, utilization `total_real` / `avail_real` en KB, DTO en octets. CPU = `user+system+other` ;
+incohérent → `null`. Températures hors −20..150 °C → `null`. Jamais de numéro de série.
+
+Cache overview : 15 s si complet, ~5 s si partiel. Refresh manuel limité à 10/min par acteur
+et intégration.
+
+Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
+`trustedCaPem`, secrets, `configRevision`.
+
+### 6. Permissions
+
+Une seule permission Synology : `synology.read`. Lecture = auth active **et**
+(`integration.use` ou `integration.manage`) **et** `synology.read`. Enrollment OTP :
+`integration.manage` (`canManageAuth`). Le rôle `ADMIN` par défaut n'obtient pas
+`synology.read`. Un type d'intégration incorrect (ex. ID Docker) renvoie `NOT_FOUND`
+non-oracle, même message que metadata.
+
+### 7. tRPC
+
+`synology.permissions`, `synology.integration.get`, `synology.overview.get`,
+`synology.overview.refresh`, `synology.auth.enrollDevice`, `synology.auth.clearDevice`.
+Aucun generic invoke (`api` / `method` / `path` client).
+
+## Conséquences
+
+Le compte DSM est de la configuration (`account`), le mot de passe un secret utilisateur, le
+jeton d'appareil un secret server-managed. L'UI n'expose pas `deviceId`. Les métriques inconnues
+affichent « Indisponible », jamais `0` / `0 %` / `0 °C`.
