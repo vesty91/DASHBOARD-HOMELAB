@@ -460,4 +460,65 @@ describe("integration service", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect((await service.get(created.id, admin)).config).toEqual({ path: "/health" });
   });
+
+  it("redacts Synology generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "synology",
+        displayName: "Synology DSM",
+      },
+    ]);
+    const synology = await service.create(
+      {
+        type: "synology",
+        name: "NAS",
+        baseUrl: "https://nas.example:5001",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: false },
+      },
+      admin,
+    );
+    await service.setSecret({ integrationId: synology.id, key: "apiKey", value: SENTINEL }, admin);
+    const probe = await service.create(
+      {
+        type: "test-http",
+        name: "Probe",
+        baseUrl: "http://192.168.1.5:3000",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const managed = await service.get(synology.id, admin);
+    expect(managed.baseUrl).toBe("https://nas.example:5001/");
+    expect(managed.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: false });
+    expect(managed.secrets.apiKey).toEqual({ configured: true });
+    expect(managed.capabilities).toEqual(["test.ping"]);
+    const restricted = await service.get(synology.id, reader);
+    expect(restricted).toMatchObject({
+      id: synology.id,
+      type: "synology",
+      name: "NAS",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(JSON.stringify(restricted)).not.toContain("nas.example");
+    expect(JSON.stringify(restricted)).not.toContain("apiKey");
+    const listed = await service.list(reader, { limit: 10 });
+    const listedSynology = listed.items.find((item) => item.id === synology.id);
+    expect(listedSynology).toMatchObject({
+      baseUrl: "",
+      config: {},
+      secrets: {},
+      capabilities: [],
+    });
+    const listedProbe = listed.items.find((item) => item.id === probe.id);
+    expect(listedProbe?.baseUrl).toBe("http://192.168.1.5:3000/");
+    expect(listedProbe?.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: true });
+  });
 });

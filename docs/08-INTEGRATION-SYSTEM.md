@@ -238,6 +238,8 @@ storage.read
 `synology.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Synology
 (`integration.use|manage` + `synology.read`). `integration.read` n'est pas requis.
 La projection n'inclut pas `baseUrl`, `config`, `trustedCaPem`, secrets ni `configRevision`.
+`integration.list` / `integration.get` omettent aussi `baseUrl`, `config`, `capabilities` et
+l'état des secrets d'un record `synology` pour tout acteur sans `integration.manage`.
 
 2FA : OTP transitoire + `deviceId` server-managed. Pas d'action destructive. Pas de widget
 Synology. Refresh manuel 10/min. Cache overview 15 s (5 s si partiel).

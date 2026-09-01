@@ -176,7 +176,8 @@ CA PEM optionnelle avec aide distincte de Docker.
 (volumes + disques). Métrique `null` → « Indisponible », jamais « 0 % » / « 0 °C » pour une
 valeur inconnue. Section en échec : alerte de raison (`timeout`, privilège, API indisponible).
 DSM down : alerte isolée, pas d'error boundary Next.js. Page d'édition : OTP transitoire et
-« Oublier l'appareil de confiance » (jeton local seulement). Pas d'action reboot/FileStation.
+« Oublier l'appareil de confiance » avec confirmation (jeton local seulement). Pas d'action
+reboot/FileStation.
 
 ## 14. Search/Spotlight
 

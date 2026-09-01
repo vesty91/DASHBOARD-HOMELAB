@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Button, Field, Input } from "@dashboard/ui";
+import { Alert, Button, ConfirmDialog, Field, Input } from "@dashboard/ui";
 import { clearSynologyDeviceAction, enrollSynologyDeviceAction } from "./synology-actions";
 import type { SynologyActionOutcome } from "./synology-action-result";
 
@@ -14,6 +14,7 @@ export function SynologyDeviceControl({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   async function run(action: () => Promise<SynologyActionOutcome>) {
     setBusy(true);
@@ -60,14 +61,31 @@ export function SynologyDeviceControl({
           Enregistrer l&apos;appareil de confiance
         </Button>
       </form>
-      <Button
-        variant="secondary"
-        type="button"
-        disabled={busy}
-        onClick={() => run(() => clearSynologyDeviceAction(integrationId))}
-      >
-        Oublier l&apos;appareil de confiance
-      </Button>
+      {confirmingClear ? (
+        <ConfirmDialog
+          title="Oublier l'appareil de confiance ?"
+          confirmLabel="Oublier l'appareil"
+          onCancel={() => setConfirmingClear(false)}
+          onConfirm={() => {
+            setConfirmingClear(false);
+            void run(() => clearSynologyDeviceAction(integrationId));
+          }}
+        >
+          <p>
+            Cette action n&apos;efface que le jeton local. La lecture DSM avec 2FA pourra échouer
+            jusqu&apos;à un nouvel enregistrement OTP.
+          </p>
+        </ConfirmDialog>
+      ) : (
+        <Button
+          variant="secondary"
+          type="button"
+          disabled={busy}
+          onClick={() => setConfirmingClear(true)}
+        >
+          Oublier l&apos;appareil de confiance
+        </Button>
+      )}
     </section>
   );
 }

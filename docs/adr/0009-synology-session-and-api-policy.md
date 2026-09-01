@@ -55,7 +55,10 @@ Cache overview : 15 s si complet, ~5 s si partiel. Refresh manuel limité à 10/
 et intégration.
 
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
-`trustedCaPem`, secrets, `configRevision`.
+`trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent
+`baseUrl`, `config`, `capabilities` et l'état des secrets d'un record Synology sans
+`integration.manage`. `testConnection` exige `SYNO.DSM.Info` disponible : un login réussi ne
+marque pas l'intégration `available`.
 
 ### 6. Permissions
 

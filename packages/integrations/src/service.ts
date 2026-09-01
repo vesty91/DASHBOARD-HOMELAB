@@ -73,10 +73,15 @@ function sanitizeMetadata(value: unknown, depth = 0): unknown {
   return undefined;
 }
 
+function canSeeRestrictedIntegrationDetails(actor: IntegrationActor): boolean {
+  return Boolean(actor.subject && hasPermission(actor.subject, "integration.manage"));
+}
+
 async function toDto(
   store: IntegrationStore,
   registry: IntegrationRegistry,
   record: IntegrationRecord,
+  actor: IntegrationActor,
 ): Promise<IntegrationDto> {
   const definition = registry.get(record.type);
   const states = await store.listSecretStates(record.id);
@@ -85,7 +90,7 @@ async function toDto(
     for (const field of definition.secretFields)
       secrets[field.key] = { configured: states.some((state) => state.key === field.key) };
   else for (const state of states) secrets[state.key] = { configured: true };
-  return {
+  const dto: IntegrationDto = {
     id: record.id,
     type: record.type,
     name: record.name,
@@ -101,6 +106,15 @@ async function toDto(
     capabilities: definition ? [...definition.capabilities] : [],
     secrets,
   };
+  if (record.type === "synology" && !canSeeRestrictedIntegrationDetails(actor))
+    return {
+      ...dto,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    };
+  return dto;
 }
 
 function requireKeyring(keyring: SecretKeyring | undefined): SecretKeyring {
@@ -124,7 +138,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       const hasMore = rows.length > input.limit;
       const page = hasMore ? rows.slice(0, input.limit) : rows;
       return {
-        items: await Promise.all(page.map((row) => toDto(store, registry, row))),
+        items: await Promise.all(page.map((row) => toDto(store, registry, row, actor))),
         nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
       };
     },
@@ -132,7 +146,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       requireAccess(actor, "integration.read");
       const record = await store.findById(id);
       if (!record) throw new IntegrationError("NOT_FOUND", "Integration not found");
-      return toDto(store, registry, record);
+      return toDto(store, registry, record, actor);
     },
     async create(input: IntegrationCreateInput, actor: IntegrationActor) {
       requireAccess(actor, "integration.create");
@@ -149,7 +163,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
         config,
         createdBy: actor.userId,
       });
-      return toDto(store, registry, created);
+      return toDto(store, registry, created, actor);
     },
     async update(input: ReturnType<typeof integrationUpdateSchema.parse>, actor: IntegrationActor) {
       requireAccess(actor, "integration.manage");
@@ -181,7 +195,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       });
       if (!updated) throw new IntegrationError("NOT_FOUND", "Integration not found");
       if (bumpRevision) cache.invalidate(updated.id);
-      return toDto(store, registry, updated);
+      return toDto(store, registry, updated, actor);
     },
     async setSecret(
       input: { integrationId: string; key: string; value: string },

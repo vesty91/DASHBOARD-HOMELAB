@@ -243,6 +243,9 @@ capabilities, config/secret field labels). Aucun schéma Zod interne ni secret n
 catalogue générique vide reste valide. La composition application Phase 8 enregistre Docker.
 `integration.call` / `integration.invoke` / `docker.request` n'existent pas.
 
+Pour un record `type=synology`, `integration.list` et `integration.get` n'exposent `baseUrl`,
+`config`, `capabilities` ni l'état des secrets qu'aux acteurs avec `integration.manage`.
+
 # Docker API — Phase 8
 
 Routeur tRPC `docker` (aucun generic invoke, aucun `method`/`path` client).

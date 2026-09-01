@@ -300,15 +300,41 @@ export async function fetchSynologyOverview(ctx: SynologyClientContext): Promise
   };
 }
 
+function systemUnavailableError(reason: SynologySectionReason | undefined): IntegrationError {
+  switch (reason) {
+    case "timeout":
+      return new IntegrationError("TIMEOUT", "DSM system information timed out");
+    case "permission-denied":
+      return new IntegrationError("FORBIDDEN", "DSM system information is forbidden");
+    case "unsupported-version":
+      return new IntegrationError("UNSUPPORTED_VERSION", "DSM system API version is not supported");
+    case "invalid-response":
+      return new IntegrationError("INVALID_RESPONSE", "DSM system information is invalid");
+    case "api-unavailable":
+      return new IntegrationError("NOT_FOUND", "DSM system information is unavailable");
+    case "unknown":
+    case undefined:
+      return new IntegrationError("UNKNOWN", "DSM system information is unavailable");
+    default: {
+      const _exhaustive: never = reason;
+      return new IntegrationError("UNKNOWN", String(_exhaustive));
+    }
+  }
+}
+
 export async function testSynologyConnection(
   ctx: SynologyClientContext,
 ): Promise<{ model: string | null; dsmVersion: string | null; uptimeSeconds: number | null }> {
   return withSession(ctx, async (session, discovered) => {
     const system = await loadSystem(ctx, session, discovered);
+    if (system.status !== "available" || !system.data)
+      throw systemUnavailableError(
+        system.status !== "available" ? system.reason : "invalid-response",
+      );
     return {
-      model: system.data?.model ?? null,
-      dsmVersion: system.data?.dsmVersion ?? null,
-      uptimeSeconds: system.data?.uptimeSeconds ?? null,
+      model: system.data.model,
+      dsmVersion: system.data.dsmVersion,
+      uptimeSeconds: system.data.uptimeSeconds,
     };
   });
 }

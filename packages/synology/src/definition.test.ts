@@ -9,6 +9,31 @@ function json(body: unknown) {
   return { ok: true as const, status: 200, body: Buffer.from(JSON.stringify(body)), latencyMs: 2 };
 }
 
+const DEFAULT_API_INFO = {
+  "SYNO.API.Auth": { path: "entry.cgi", minVersion: 3, maxVersion: 6 },
+  "SYNO.DSM.Info": { path: "entry.cgi", minVersion: 1, maxVersion: 2 },
+  "SYNO.Core.System": { path: "entry.cgi", minVersion: 1, maxVersion: 3 },
+  "SYNO.Core.System.Utilization": { path: "entry.cgi", minVersion: 1, maxVersion: 1 },
+  "SYNO.Storage.CGI.Storage": { path: "entry.cgi", minVersion: 1, maxVersion: 1 },
+};
+
+function mockDsmTransport(
+  options: { url: URL | string; method?: string; body?: string },
+  responses: Record<string, ReturnType<typeof json>> = {},
+  infoData: Record<string, unknown> = DEFAULT_API_INFO,
+) {
+  const href = String(options.url);
+  const api = new URL(href).searchParams.get("api");
+  if (api === "SYNO.API.Info") return json({ success: true, data: infoData });
+  if (options.method === "POST") {
+    if (options.body?.includes("method=login"))
+      return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+    return json({ success: true, data: {} });
+  }
+  if (api && responses[api]) return responses[api];
+  throw new Error(href);
+}
+
 describe("Synology integration definition", () => {
   it("declares account in config, password as a secret, and deviceId as server-managed", () => {
     expect(synologyIntegrationDefinition.id).toBe("synology");
@@ -120,5 +145,46 @@ describe("Synology integration definition", () => {
     expect(seenCa.every((value) => value === TEST_TRUSTED_CA_PEM)).toBe(true);
     expect(urls.every((value) => value.includes("/webapi/entry.cgi"))).toBe(true);
     expect(methods.includes("POST")).toBe(true);
+  });
+
+  it("fails the connection test when DSM.Info is forbidden after login", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) =>
+        mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({ success: false, error: { code: 105 } }),
+        }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("FORBIDDEN");
+  });
+
+  it("fails the connection test when DSM.Info is missing from discovery", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) =>
+        mockDsmTransport(
+          options,
+          {},
+          {
+            "SYNO.API.Auth": { path: "entry.cgi", minVersion: 3, maxVersion: 6 },
+            "SYNO.Core.System": { path: "entry.cgi", minVersion: 1, maxVersion: 3 },
+            "SYNO.Core.System.Utilization": { path: "entry.cgi", minVersion: 1, maxVersion: 1 },
+            "SYNO.Storage.CGI.Storage": { path: "entry.cgi", minVersion: 1, maxVersion: 1 },
+          },
+        ),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("NOT_FOUND");
   });
 });
