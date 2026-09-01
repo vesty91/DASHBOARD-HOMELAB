@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import type { DockerIntegrationMetadata } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type {
@@ -279,23 +280,13 @@ function SectionStatus({ section }: { section: SynologySection<unknown> }) {
   }
 }
 
-async function SynologyIntegrationDetail({
+async function SynologyOverviewPanel({
   id,
-  metadata,
   caller,
 }: {
   id: string;
-  metadata: SynologyIntegrationMetadata;
   caller: Awaited<ReturnType<typeof getBoardCaller>>;
 }) {
-  if (!metadata.enabled) {
-    return (
-      <PageContainer>
-        <PageHeader title={metadata.name} description="Synology DSM" />
-        <Alert tone="warning">Cette intégration Synology est désactivée.</Alert>
-      </PageContainer>
-    );
-  }
   let error: string | null = null;
   let overview: SynologyOverview | null = null;
   try {
@@ -307,9 +298,7 @@ async function SynologyIntegrationDetail({
   const resources = overview?.resources.data;
   const storage = overview?.storage.data;
   return (
-    <PageContainer>
-      <PageHeader title={metadata.name} description="Synology DSM" />
-      <SynologyRefreshButton integrationId={id} />
+    <>
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {overview?.status === "degraded" ? (
         <Alert tone="warning">
@@ -403,6 +392,34 @@ async function SynologyIntegrationDetail({
           </section>
         </>
       ) : null}
+    </>
+  );
+}
+
+async function SynologyIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: SynologyIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Synology DSM" />
+        <Alert tone="warning">Cette intégration Synology est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Synology DSM" />
+      <SynologyRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement des informations DSM…</p>}>
+        <SynologyOverviewPanel id={id} caller={caller} />
+      </Suspense>
     </PageContainer>
   );
 }

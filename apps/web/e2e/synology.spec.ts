@@ -52,13 +52,18 @@ test("creates a Synology integration without calling DSM from the browser", asyn
   await expect(page.getByLabel("Appareil de confiance DSM")).toHaveCount(0);
   await page.goto("/integrations");
   await expect(page.getByRole("heading", { name: "NAS Lab" })).toBeVisible();
-  await page.getByRole("link", { name: "Ouvrir" }).last().click();
-  await expect(page.getByRole("heading", { name: "NAS Lab" })).toBeVisible();
+  await page
+    .locator("article.ui-card")
+    .filter({ has: page.getByRole("heading", { name: "NAS Lab" }) })
+    .getByRole("link", { name: "Ouvrir" })
+    .click();
+  await expect(page).toHaveURL(/\/integrations\/[0-9a-f-]{36}$/i);
+  await expect(page.getByRole("heading", { level: 1, name: "NAS Lab" })).toBeVisible();
   await expect(page.getByText("Synology DSM", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|identifiants/i).first(),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Application error")).toHaveCount(0);
   expect(leaked).toEqual([]);
 });
