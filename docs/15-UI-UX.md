@@ -103,6 +103,10 @@ Si un user n'a pas permission de configurer :
 - ne pas afficher bouton inutilisable ;
 - serveur protège quand même.
 
+`/admin/groups` : seul `SYSTEM_ADMIN` voit et enregistre les permissions supplémentaires
+d'un groupe (`integration.use`, `synology.read`, `docker.*`, etc.). Un `ADMIN` conserve la
+création de groupes et n'accède pas à ce formulaire.
+
 ## 11. Accessibility
 
 - clavier ;

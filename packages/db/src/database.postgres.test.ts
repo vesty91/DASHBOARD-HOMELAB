@@ -440,4 +440,75 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       await client.close();
     }
   });
+
+  it("persists extra group permission grants without changing builtin roles", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await migratePostgresql(client.pool);
+      const auth = createPostgresqlAuthStore(client.pool);
+      await auth.createFirstAdmin({
+        username: "Admin",
+        usernameCanonical: "admin",
+        passwordHash: "hash",
+      });
+      const member = await auth.createLocalUser({
+        username: "Reader",
+        usernameCanonical: "reader",
+        passwordHash: "hash",
+        roleName: "VIEWER",
+      });
+      const group = await auth.createGroupWithRoleAndOptionalMember({
+        name: "NAS readers",
+        roleName: "VIEWER",
+        userId: member.id,
+      });
+      const before = await auth.resolvePermissionSubject(member.id);
+      expect(before?.groupPermissions).not.toContain("synology.read");
+      const viewerCount = (
+        await client.pool.query(
+          "select count(*)::int count from role_permissions where role_id=$1",
+          ["00000000-0000-4000-8000-000000000005"],
+        )
+      ).rows[0].count;
+      await auth.setGroupPermissionGrants(group.id, ["synology.read", "integration.use"]);
+      expect(await auth.listGroupPermissionGrants(group.id)).toEqual([
+        "integration.use",
+        "synology.read",
+      ]);
+      const granted = await auth.resolvePermissionSubject(member.id);
+      expect(granted?.groupPermissions).toEqual(
+        expect.arrayContaining([
+          "app.read",
+          "integration.read",
+          "integration.use",
+          "synology.read",
+        ]),
+      );
+      expect(
+        (
+          await client.pool.query("select count(*)::int count from group_roles where group_id=$1", [
+            group.id,
+          ])
+        ).rows[0].count,
+      ).toBe(2);
+      expect(
+        (
+          await client.pool.query(
+            "select count(*)::int count from role_permissions where role_id=$1",
+            ["00000000-0000-4000-8000-000000000005"],
+          )
+        ).rows[0].count,
+      ).toBe(viewerCount);
+      await auth.setGroupPermissionGrants(group.id, ["integration.use"]);
+      const reduced = await auth.resolvePermissionSubject(member.id);
+      expect(reduced?.groupPermissions).toContain("integration.use");
+      expect(reduced?.groupPermissions).not.toContain("synology.read");
+      await expect(
+        auth.setGroupPermissionGrants(group.id, ["not.a.permission"]),
+      ).rejects.toMatchObject({ code: "INVALID_PERMISSION" });
+    } finally {
+      await client.close();
+    }
+  });
 });

@@ -30,7 +30,9 @@ export {
   mapVolumes,
   mbToBytes,
   parseSafeIntegerBytes,
+  parseStoragePayload,
   parseUptimeSeconds,
+  parseUtilizationPayload,
 } from "./dto";
 export { SynologyError, mapDsmErrorCode, toIntegrationError } from "./errors";
 export {

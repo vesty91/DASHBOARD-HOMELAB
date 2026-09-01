@@ -348,6 +348,131 @@ describe("SynologyService", () => {
     expect(overview.storage.reason).toBe("timeout");
   });
 
+  it("marks Core.System request failures as degraded without hiding DSM.Info", async () => {
+    const timeout = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System") return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+      return dsmRequest()(options);
+    });
+    const timedOut = await timeout.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(timedOut.status).toBe("degraded");
+    expect(timedOut.system.status).toBe("degraded");
+    expect(timedOut.system.reason).toBe("timeout");
+    expect(timedOut.system.data?.model).toBe("DS920+");
+    expect(timedOut.system.data?.cpuCores).toBeNull();
+
+    const forbidden = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System") return json({ success: false, error: { code: 105 } });
+      return dsmRequest()(options);
+    });
+    const denied = await forbidden.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(denied.system.status).toBe("degraded");
+    expect(denied.system.reason).toBe("permission-denied");
+    expect(denied.system.data?.dsmVersion).toBe("DSM 7.2.2");
+
+    const malformed = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System") return json({ success: true, data: "not-an-object" });
+      return dsmRequest()(options);
+    });
+    const invalid = await malformed.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(invalid.system.status).toBe("degraded");
+    expect(invalid.system.reason).toBe("invalid-response");
+    expect(invalid.system.data?.model).toBe("DS920+");
+
+    const missing = createService(async (options) => {
+      const href = String(options.url);
+      const api = new URL(href).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        const payload = infoPayload();
+        const { "SYNO.Core.System": _core, ...data } = payload.data;
+        return json({ success: true, data });
+      }
+      if (api === "SYNO.Core.System") throw new Error("Core.System must not be called");
+      return dsmRequest()(options);
+    });
+    const withoutCore = await missing.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(withoutCore.system.status).toBe("available");
+    expect(withoutCore.system.data?.model).toBe("DS920+");
+    expect(withoutCore.system.data?.cpuCores).toBeNull();
+  });
+
+  it("retries a Core.System session error once", async () => {
+    let coreCalls = 0;
+    let logins = 0;
+    const { synology } = createService(async (options) => {
+      const href = String(options.url);
+      const api = new URL(href).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST") {
+        if (options.body?.includes("method=login")) {
+          logins += 1;
+          return json({
+            success: true,
+            data: { sid: `SID${logins}`, synotoken: `TOK${logins}` },
+          });
+        }
+        return json({ success: true, data: {} });
+      }
+      if (api === "SYNO.Core.System") {
+        coreCalls += 1;
+        if (coreCalls === 1) return json({ success: false, error: { code: 119 } });
+        return dsmRequest()(options);
+      }
+      return dsmRequest()(options);
+    });
+    const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.system.status).toBe("available");
+    expect(overview.system.data?.cpuCores).toBe(4);
+    expect(coreCalls).toBeGreaterThanOrEqual(2);
+    expect(logins).toBe(2);
+  });
+
+  it("rejects malformed storage and utilization payloads as invalid-response", async () => {
+    const storage = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage") return json({ success: true, data: { volumes: [] } });
+      return dsmRequest()(options);
+    });
+    const storageOverview = await storage.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(storageOverview.storage.status).toBe("unavailable");
+    expect(storageOverview.storage.reason).toBe("invalid-response");
+    expect(storageOverview.storage.data).toBeNull();
+
+    const utilization = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System.Utilization") return json({ success: true, data: {} });
+      return dsmRequest()(options);
+    });
+    const utilizationOverview = await utilization.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(utilizationOverview.resources.status).toBe("unavailable");
+    expect(utilizationOverview.resources.reason).toBe("invalid-response");
+    expect(utilizationOverview.resources.data).toBeNull();
+  });
+
+  it("accepts a delegated reader whose permissions come from group grants", async () => {
+    const { synology } = createService();
+    const reader = {
+      userId: "00000000-0000-4000-8000-000000000099",
+      subject: {
+        status: "active" as const,
+        isSystemAdmin: false,
+        directPermissions: [] as const,
+        groupPermissions: ["integration.use", "synology.read"],
+      },
+    };
+    await expect(synology.getOverview(INTEGRATION_ID, reader)).resolves.toMatchObject({
+      status: "available",
+    });
+    await expect(
+      synology.getOverview(INTEGRATION_ID, {
+        ...reader,
+        subject: { ...reader.subject, groupPermissions: ["integration.use"] },
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("retries a session error once then logs out", async () => {
     let infoCalls = 0;
     let logins = 0;

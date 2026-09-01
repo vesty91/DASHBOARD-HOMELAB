@@ -1,8 +1,9 @@
-import { hasPermission } from "@dashboard/permissions";
+import { canAssignGroupPermissionGrants, hasPermission } from "@dashboard/permissions";
 import { Button, Field, Input, PageContainer, PageHeader, Select } from "@dashboard/ui";
 import { requireAdminPagePermission } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
 import { createGroupAction } from "./actions";
+import { GroupPermissionGrantsForm } from "./group-permission-grants-form";
 
 export default async function GroupsPage() {
   const session = await requireAdminPagePermission("group.read");
@@ -13,6 +14,16 @@ export default async function GroupsPage() {
     authStore.resolvePermissionSubject(session.user.id),
   ]);
   const canManage = Boolean(subject && hasPermission(subject, "group.manage"));
+  const canGrant = Boolean(subject && canAssignGroupPermissionGrants(subject));
+  const grants = canGrant
+    ? await Promise.all(
+        groups.map(async (group) => ({
+          id: group.id,
+          permissions: await authStore.listGroupPermissionGrants(group.id),
+        })),
+      )
+    : [];
+  const grantsById = new Map(grants.map((entry) => [entry.id, entry.permissions]));
   return (
     <PageContainer>
       <PageHeader title="Groupes" description="Rôles partagés et appartenances." />
@@ -66,6 +77,17 @@ export default async function GroupsPage() {
           </tbody>
         </table>
       </div>
+      {canGrant
+        ? groups.map((group) => (
+            <section key={group.id}>
+              <h2 className="ui-section-title">{group.name}</h2>
+              <GroupPermissionGrantsForm
+                groupId={group.id}
+                granted={grantsById.get(group.id) ?? []}
+              />
+            </section>
+          ))
+        : null}
     </PageContainer>
   );
 }

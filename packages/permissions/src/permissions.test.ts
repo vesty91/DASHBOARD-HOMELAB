@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ROLE_PERMISSIONS,
+  canAssignGroupPermissionGrants,
   hasPermission,
+  isPermission,
   requirePermission,
   resolvePermissions,
 } from "./index";
@@ -37,5 +39,18 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "backup.manage")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "synology.read")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
+  });
+  it("reserves extra group permission grants to active system admins", () => {
+    expect(isPermission("synology.read")).toBe(true);
+    expect(isPermission("not.a.permission")).toBe(false);
+    expect(
+      canAssignGroupPermissionGrants({
+        status: "active",
+        isSystemAdmin: false,
+        directPermissions: DEFAULT_ROLE_PERMISSIONS.ADMIN,
+      }),
+    ).toBe(false);
+    expect(canAssignGroupPermissionGrants({ status: "active", isSystemAdmin: true })).toBe(true);
+    expect(canAssignGroupPermissionGrants({ status: "disabled", isSystemAdmin: true })).toBe(false);
   });
 });

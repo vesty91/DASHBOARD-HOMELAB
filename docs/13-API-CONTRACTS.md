@@ -305,4 +305,6 @@ Volumes / disks : capacité, utilisé, état, température, SMART si présent.
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage
-en échec n'invente pas 0 % et n'échoue pas toute la page.
+en échec n'invente pas 0 % et n'échoue pas toute la page. Un payload Storage/Utilization
+structurellement invalide est `invalid-response`. Core.System annoncé mais en échec : section
+système `degraded` avec DSM.Info conservé.

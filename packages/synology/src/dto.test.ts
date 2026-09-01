@@ -8,7 +8,9 @@ import {
   mapVolumes,
   mbToBytes,
   parseSafeIntegerBytes,
+  parseStoragePayload,
   parseUptimeSeconds,
+  parseUtilizationPayload,
 } from "./dto";
 
 describe("Synology DTO mapping", () => {
@@ -95,5 +97,65 @@ describe("Synology DTO mapping", () => {
     expect(() => mapDisks(Array.from({ length: 65 }, (_, index) => ({ id: `d${index}` })))).toThrow(
       IntegrationError,
     );
+  });
+
+  it("accepts modern and legacy storage envelopes and rejects malformed ones", () => {
+    expect(parseStoragePayload({ volumes: [], disks: [] })).toEqual({ volumes: [], disks: [] });
+    expect(parseStoragePayload({ vol_info: [{ id: "v1" }], hdd_info: [] })).toEqual({
+      volumes: [{ id: "v1" }],
+      disks: [],
+    });
+    for (const invalid of [
+      {},
+      { volumes: [] },
+      { disks: [] },
+      { volumes: {}, disks: [] },
+      { volumes: [], disks: "bad" },
+      { vol_info: null, hdd_info: [] },
+      { volumes: [], disks: [], vol_info: [], hdd_info: [] },
+    ]) {
+      expect(() => parseStoragePayload(invalid)).toThrow(IntegrationError);
+    }
+  });
+
+  it("accepts utilization payloads with numeric strings and rejects malformed ones", () => {
+    expect(() =>
+      parseUtilizationPayload({
+        cpu: { user_load: "12", system_load: "3", other_load: "0" },
+        memory: { total_real: "4096", avail_real: "1024" },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      parseUtilizationPayload({
+        cpu: { user_load: 12, system_load: 3, other_load: 0 },
+        memory: { memory_size: 2048, avail_real: 512 },
+      }),
+    ).not.toThrow();
+    for (const invalid of [
+      {},
+      { cpu: {} },
+      { memory: {} },
+      { cpu: {}, memory: {} },
+      { cpu: null, memory: { total_real: 1, avail_real: 1 } },
+      { cpu: { user_load: 1, system_load: 1, other_load: 1 }, memory: null },
+      { cpu: "bad", memory: { total_real: 1, avail_real: 1 } },
+      { cpu: { user_load: 1, system_load: 1, other_load: 1 }, memory: [] },
+      { cpu: { user_load: 1, system_load: 1, other_load: 1 }, memory: { total_real: 1 } },
+      { cpu: { user_load: 1, system_load: 1, other_load: 1 }, memory: { avail_real: 1 } },
+      {
+        cpu: { user_load: Number.NaN, system_load: 1, other_load: 1 },
+        memory: { total_real: 1, avail_real: 1 },
+      },
+      {
+        cpu: { user_load: 1, system_load: 1, other_load: 1 },
+        memory: { total_real: Number.POSITIVE_INFINITY, avail_real: 1 },
+      },
+      {
+        cpu: { user_load: "nope", system_load: 1, other_load: 1 },
+        memory: { total_real: 1, avail_real: 1 },
+      },
+    ]) {
+      expect(() => parseUtilizationPayload(invalid)).toThrow(IntegrationError);
+    }
   });
 });

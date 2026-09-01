@@ -159,6 +159,55 @@ export function emptyResources(): SynologyResourcesDto {
   };
 }
 
+function invalidPayload(message: string): never {
+  throw new IntegrationError("INVALID_RESPONSE", message);
+}
+
+function requireObjectRecord(value: unknown, message: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) invalidPayload(message);
+  return value as Record<string, unknown>;
+}
+
+function arrayField(record: Record<string, unknown>, key: string): unknown[] | undefined {
+  if (!(key in record)) return undefined;
+  if (!Array.isArray(record[key])) invalidPayload("DSM storage payload is invalid");
+  return record[key] as unknown[];
+}
+
+export function parseStoragePayload(raw: unknown): { volumes: unknown; disks: unknown } {
+  const record = requireObjectRecord(raw, "DSM storage payload is invalid");
+  const volumes = arrayField(record, "volumes");
+  const disks = arrayField(record, "disks");
+  const volInfo = arrayField(record, "vol_info");
+  const hddInfo = arrayField(record, "hdd_info");
+  const modern = volumes !== undefined && disks !== undefined;
+  const legacy = volInfo !== undefined && hddInfo !== undefined;
+  if (modern && volInfo === undefined && hddInfo === undefined) return { volumes, disks };
+  if (legacy && volumes === undefined && disks === undefined)
+    return { volumes: volInfo, disks: hddInfo };
+  invalidPayload("DSM storage payload is invalid");
+}
+
+export function parseUtilizationPayload(raw: unknown): unknown {
+  const record = requireObjectRecord(raw, "DSM utilization payload is invalid");
+  const cpu = requireObjectRecord(record.cpu, "DSM utilization CPU is invalid");
+  const memory = requireObjectRecord(record.memory, "DSM utilization memory is invalid");
+  if (
+    parsePercentLoad(cpu.user_load) === null ||
+    parsePercentLoad(cpu.system_load) === null ||
+    parsePercentLoad(cpu.other_load) === null
+  )
+    invalidPayload("DSM utilization CPU is invalid");
+  if (kibToBytes(memory.avail_real) === null) invalidPayload("DSM utilization memory is invalid");
+  if (kibToBytes(memory.total_real ?? memory.memory_size) === null)
+    invalidPayload("DSM utilization memory is invalid");
+  return record;
+}
+
+export function parseCoreSystemPayload(raw: unknown): Record<string, unknown> {
+  return requireObjectRecord(raw, "DSM Core.System payload is invalid");
+}
+
 export function mapResources(raw: unknown): SynologyResourcesDto {
   const record = recordOf(raw);
   const cpu = recordOf(record.cpu);
@@ -198,6 +247,17 @@ export function mapResources(raw: unknown): SynologyResourcesDto {
     swapTotalBytes,
     swapUsedPercent,
   };
+}
+
+export function assertUsefulResources(dto: SynologyResourcesDto): void {
+  if (
+    dto.cpuUserPercent === null ||
+    dto.cpuSystemPercent === null ||
+    dto.cpuOtherPercent === null ||
+    dto.memoryTotalBytes === null ||
+    dto.memoryAvailableBytes === null
+  )
+    invalidPayload("DSM utilization payload is incomplete");
 }
 
 function volumeFree(

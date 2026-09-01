@@ -70,9 +70,15 @@ export function resolvePermissions(subject: PermissionSubject): ReadonlySet<Perm
     ),
   );
 }
+export function isPermission(value: string): value is Permission {
+  return (PERMISSIONS as readonly string[]).includes(value);
+}
 export function hasPermission(subject: PermissionSubject, permission: Permission): boolean {
   return resolvePermissions(subject).has(permission);
 }
 export function requirePermission(subject: PermissionSubject, permission: Permission): void {
   if (!hasPermission(subject, permission)) throw new PermissionError("Permission denied");
+}
+export function canAssignGroupPermissionGrants(subject: PermissionSubject): boolean {
+  return subject.status === "active" && subject.isSystemAdmin;
 }

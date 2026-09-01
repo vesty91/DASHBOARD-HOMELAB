@@ -1,7 +1,17 @@
 import { IntegrationError, type IntegrationClientContext } from "@dashboard/integrations";
 import { parseDiscoveredApis, requireOkEnvelope, type DiscoveredApis } from "./api-discovery";
 import { login, logout, sessionHeaders, type DsmSession, type LoginInput } from "./auth";
-import { mapDisks, mapResources, mapSystemInfo, mapVolumes, storageLooksDegraded } from "./dto";
+import {
+  assertUsefulResources,
+  mapDisks,
+  mapResources,
+  mapSystemInfo,
+  mapVolumes,
+  parseStoragePayload,
+  parseUtilizationPayload,
+  parseCoreSystemPayload,
+  storageLooksDegraded,
+} from "./dto";
 import { isRetryableSessionError, SynologyError, throwMapped, toIntegrationError } from "./errors";
 import { INFO_QUERY, SYNOLOGY_ENTRY_CGI } from "./policy";
 import type { SynologyConfig, SynologySecrets } from "./schemas";
@@ -171,15 +181,21 @@ async function loadSystem(
     };
   try {
     const dsmInfo = await dsmGet(ctx, session, buildDsmInfoRequest(discovered.dsmInfo.version));
-    let core: unknown;
-    if (discovered.system.available && discovered.system.version !== null) {
-      try {
-        core = await dsmGet(ctx, session, buildSystemRequest(discovered.system.version));
-      } catch {
-        core = undefined;
-      }
+    if (!discovered.system.available || discovered.system.version === null)
+      return { status: "available", data: mapSystemInfo(dsmInfo) };
+    try {
+      const core = parseCoreSystemPayload(
+        await dsmGet(ctx, session, buildSystemRequest(discovered.system.version)),
+      );
+      return { status: "available", data: mapSystemInfo(dsmInfo, core) };
+    } catch (error) {
+      if (isRetryableSessionError(error)) throw error;
+      return {
+        status: "degraded",
+        data: mapSystemInfo(dsmInfo),
+        reason: sectionReasonFromError(error),
+      };
     }
-    return { status: "available", data: mapSystemInfo(dsmInfo, core) };
   } catch (error) {
     if (isRetryableSessionError(error)) throw error;
     return unavailable(error);
@@ -199,7 +215,9 @@ async function loadResources(
     };
   try {
     const raw = await dsmGet(ctx, session, buildUtilizationRequest());
-    return { status: "available", data: mapResources(raw) };
+    const data = mapResources(parseUtilizationPayload(raw));
+    assertUsefulResources(data);
+    return { status: "available", data };
   } catch (error) {
     if (isRetryableSessionError(error)) throw error;
     return unavailable(error);
@@ -219,9 +237,9 @@ async function loadStorage(
     };
   try {
     const raw = await dsmGet(ctx, session, buildStorageRequest(), SYNOLOGY_STORAGE_MAX_BYTES);
-    const record = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-    const volumes = mapVolumes(record.volumes ?? record.vol_info);
-    const disks = mapDisks(record.disks ?? record.hdd_info);
+    const payload = parseStoragePayload(raw);
+    const volumes = mapVolumes(payload.volumes);
+    const disks = mapDisks(payload.disks);
     return {
       status: storageLooksDegraded(volumes, disks) ? "degraded" : "available",
       data: { volumes, disks },
@@ -327,10 +345,8 @@ export async function testSynologyConnection(
 ): Promise<{ model: string | null; dsmVersion: string | null; uptimeSeconds: number | null }> {
   return withSession(ctx, async (session, discovered) => {
     const system = await loadSystem(ctx, session, discovered);
-    if (system.status !== "available" || !system.data)
-      throw systemUnavailableError(
-        system.status !== "available" ? system.reason : "invalid-response",
-      );
+    if (system.status === "unavailable" || !system.data)
+      throw systemUnavailableError(system.reason);
     return {
       model: system.data.model,
       dsmVersion: system.data.dsmVersion,

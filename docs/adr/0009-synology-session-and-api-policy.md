@@ -47,7 +47,11 @@ sauf Storage ~2 MiB.
 
 Overview global `available | degraded` avec `fetchedAt`. Chaque section
 `available | degraded | unavailable` + `reason`. Timeout Storage ne masque pas system / CPU /
-RAM. Tailles trop grandes pour `MAX_SAFE_INTEGER` → `null` (pas d'arrondi). RAM DSM.Info en
+RAM. `SYNO.DSM.Info` est la source système principale ; `SYNO.Core.System` est un enrichissement.
+S'il est annoncé mais échoue (hors session retryable), la section système est `degraded` avec
+les données DSM.Info. Un payload Storage ou Utilization malformé est `unavailable` /
+`invalid-response`, pas une liste vide « available ». Tailles trop grandes pour
+`MAX_SAFE_INTEGER` → `null` (pas d'arrondi). RAM DSM.Info en
 MB, utilization `total_real` / `avail_real` en KB, DTO en octets. CPU = `user+system+other` ;
 incohérent → `null`. Températures hors −20..150 °C → `null`. Jamais de numéro de série.
 
@@ -58,15 +62,17 @@ Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/
 `trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent
 `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record Synology sans
 `integration.manage`. `testConnection` exige `SYNO.DSM.Info` disponible : un login réussi ne
-marque pas l'intégration `available`.
+marque pas l'intégration `available`. Un échec optionnel de Core.System ne fait pas échouer
+le test si DSM.Info est valide.
 
 ### 6. Permissions
 
 Une seule permission Synology : `synology.read`. Lecture = auth active **et**
 (`integration.use` ou `integration.manage`) **et** `synology.read`. Enrollment OTP :
 `integration.manage` (`canManageAuth`). Le rôle `ADMIN` par défaut n'obtient pas
-`synology.read`. Un type d'intégration incorrect (ex. ID Docker) renvoie `NOT_FOUND`
-non-oracle, même message que metadata.
+`synology.read`. La délégation persistante utilise des permissions supplémentaires de groupe
+(`GROUP_GRANTS_<groupId>`), modifiables uniquement par `SYSTEM_ADMIN`. Un type d'intégration
+incorrect (ex. ID Docker) renvoie `NOT_FOUND` non-oracle, même message que metadata.
 
 ### 7. tRPC
 

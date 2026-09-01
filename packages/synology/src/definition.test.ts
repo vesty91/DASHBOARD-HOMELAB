@@ -187,4 +187,29 @@ describe("Synology integration definition", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("NOT_FOUND");
   });
+
+  it("succeeds the connection test when DSM.Info is valid even if Core.System degrades", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.Core.System")
+          return { ok: false as const, code: "TIMEOUT" as const, latencyMs: 8000 };
+        return mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({
+            success: true,
+            data: { model: "DS920+", version_string: "DSM 7.2", ram: 8192 },
+          }),
+        });
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok)
+      expect(result.metadata).toMatchObject({ model: "DS920+", dsmVersion: "DSM 7.2" });
+  });
 });
