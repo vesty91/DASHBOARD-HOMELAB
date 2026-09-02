@@ -449,6 +449,16 @@ describe("SynologyService", () => {
     expect(utilizationOverview.resources.status).toBe("unavailable");
     expect(utilizationOverview.resources.reason).toBe("invalid-response");
     expect(utilizationOverview.resources.data).toBeNull();
+
+    const dsmInfo = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") return json({ success: true, data: {} });
+      return dsmRequest()(options);
+    });
+    const dsmInfoOverview = await dsmInfo.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(dsmInfoOverview.system.status).toBe("unavailable");
+    expect(dsmInfoOverview.system.reason).toBe("invalid-response");
+    expect(dsmInfoOverview.system.data).toBeNull();
   });
 
   it("accepts a delegated reader whose permissions come from group grants", async () => {

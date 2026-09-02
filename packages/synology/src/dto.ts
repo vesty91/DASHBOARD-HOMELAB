@@ -208,6 +208,22 @@ export function parseCoreSystemPayload(raw: unknown): Record<string, unknown> {
   return requireObjectRecord(raw, "DSM Core.System payload is invalid");
 }
 
+export function parseDsmInfoPayload(raw: unknown): Record<string, unknown> {
+  return requireObjectRecord(raw, "DSM.Info payload is invalid");
+}
+
+export function assertUsefulSystemInfo(dto: SynologySystemDto): void {
+  if (
+    dto.model === null &&
+    dto.dsmVersion === null &&
+    dto.uptimeSeconds === null &&
+    dto.systemTemperatureC === null &&
+    dto.temperatureWarning === null &&
+    dto.ramTotalBytes === null
+  )
+    invalidPayload("DSM.Info payload is incomplete");
+}
+
 export function mapResources(raw: unknown): SynologyResourcesDto {
   const record = recordOf(raw);
   const cpu = recordOf(record.cpu);

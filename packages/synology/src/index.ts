@@ -30,6 +30,7 @@ export {
   mapVolumes,
   mbToBytes,
   parseSafeIntegerBytes,
+  parseDsmInfoPayload,
   parseStoragePayload,
   parseUptimeSeconds,
   parseUtilizationPayload,

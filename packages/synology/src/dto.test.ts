@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { IntegrationError } from "@dashboard/integrations";
 import {
+  assertUsefulSystemInfo,
   kibToBytes,
   mapDisks,
   mapResources,
   mapSystemInfo,
   mapVolumes,
   mbToBytes,
+  parseDsmInfoPayload,
   parseSafeIntegerBytes,
   parseStoragePayload,
   parseUptimeSeconds,
@@ -97,6 +99,22 @@ describe("Synology DTO mapping", () => {
     expect(() => mapDisks(Array.from({ length: 65 }, (_, index) => ({ id: `d${index}` })))).toThrow(
       IntegrationError,
     );
+  });
+
+  it("rejects empty or non-object DSM.Info payloads", () => {
+    expect(parseDsmInfoPayload({ model: "DS920+", ram: 4096 })).toEqual({
+      model: "DS920+",
+      ram: 4096,
+    });
+    for (const invalid of [undefined, null, "bad", []]) {
+      expect(() => parseDsmInfoPayload(invalid)).toThrow(IntegrationError);
+    }
+    expect(() => assertUsefulSystemInfo(mapSystemInfo(parseDsmInfoPayload({})))).toThrow(
+      IntegrationError,
+    );
+    expect(() =>
+      assertUsefulSystemInfo(mapSystemInfo(parseDsmInfoPayload({ serial: "SECRET" }))),
+    ).toThrow(IntegrationError);
   });
 
   it("accepts modern and legacy storage envelopes and rejects malformed ones", () => {

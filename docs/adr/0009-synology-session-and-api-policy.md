@@ -49,7 +49,7 @@ Overview global `available | degraded` avec `fetchedAt`. Chaque section
 `available | degraded | unavailable` + `reason`. Timeout Storage ne masque pas system / CPU /
 RAM. `SYNO.DSM.Info` est la source système principale ; `SYNO.Core.System` est un enrichissement.
 S'il est annoncé mais échoue (hors session retryable), la section système est `degraded` avec
-les données DSM.Info. Un payload Storage ou Utilization malformé est `unavailable` /
+les données DSM.Info. Un payload DSM.Info, Storage ou Utilization malformé est `unavailable` /
 `invalid-response`, pas une liste vide « available ». Tailles trop grandes pour
 `MAX_SAFE_INTEGER` → `null` (pas d'arrondi). RAM DSM.Info en
 MB, utilization `total_real` / `avail_real` en KB, DTO en octets. CPU = `user+system+other` ;

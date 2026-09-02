@@ -188,6 +188,23 @@ describe("Synology integration definition", () => {
     if (!result.ok) expect(result.code).toBe("NOT_FOUND");
   });
 
+  it("fails the connection test when DSM.Info returns an empty object", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) =>
+        mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({ success: true, data: {} }),
+        }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("INVALID_RESPONSE");
+  });
+
   it("succeeds the connection test when DSM.Info is valid even if Core.System degrades", async () => {
     const result = await synologyIntegrationDefinition.testConnection({
       integrationId: INTEGRATION_ID,

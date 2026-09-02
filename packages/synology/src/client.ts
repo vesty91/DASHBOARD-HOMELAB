@@ -3,13 +3,15 @@ import { parseDiscoveredApis, requireOkEnvelope, type DiscoveredApis } from "./a
 import { login, logout, sessionHeaders, type DsmSession, type LoginInput } from "./auth";
 import {
   assertUsefulResources,
+  assertUsefulSystemInfo,
   mapDisks,
   mapResources,
   mapSystemInfo,
   mapVolumes,
+  parseCoreSystemPayload,
+  parseDsmInfoPayload,
   parseStoragePayload,
   parseUtilizationPayload,
-  parseCoreSystemPayload,
   storageLooksDegraded,
 } from "./dto";
 import { isRetryableSessionError, SynologyError, throwMapped, toIntegrationError } from "./errors";
@@ -180,9 +182,13 @@ async function loadSystem(
       reason: discovered.dsmInfo.reason ?? "api-unavailable",
     };
   try {
-    const dsmInfo = await dsmGet(ctx, session, buildDsmInfoRequest(discovered.dsmInfo.version));
+    const dsmInfo = parseDsmInfoPayload(
+      await dsmGet(ctx, session, buildDsmInfoRequest(discovered.dsmInfo.version)),
+    );
+    const base = mapSystemInfo(dsmInfo);
+    assertUsefulSystemInfo(base);
     if (!discovered.system.available || discovered.system.version === null)
-      return { status: "available", data: mapSystemInfo(dsmInfo) };
+      return { status: "available", data: base };
     try {
       const core = parseCoreSystemPayload(
         await dsmGet(ctx, session, buildSystemRequest(discovered.system.version)),
@@ -192,7 +198,7 @@ async function loadSystem(
       if (isRetryableSessionError(error)) throw error;
       return {
         status: "degraded",
-        data: mapSystemInfo(dsmInfo),
+        data: base,
         reason: sectionReasonFromError(error),
       };
     }
