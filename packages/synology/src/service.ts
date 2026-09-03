@@ -29,6 +29,7 @@ import {
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { SYNOLOGY_INTEGRATION_ID } from "./definition";
 import { SynologyError, toIntegrationError } from "./errors";
+import type { SynologyRefreshFence } from "./refresh-fence";
 import type { SynologyConfig, SynologySecrets } from "./schemas";
 import type {
   SynologyActor,
@@ -45,6 +46,7 @@ export interface SynologyServiceDeps {
   cache: IntegrationCache;
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>;
   refreshRateLimiter: IntegrationRateLimiter;
+  refreshFence: SynologyRefreshFence;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -87,6 +89,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
   async function loadContext(
     integrationId: string,
     capability: string,
+    refreshGeneration = 0,
   ): Promise<{
     ctx: SynologyClientContext;
     recordId: string;
@@ -115,7 +118,11 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     return {
       recordId: record.id,
       secrets,
-      cacheOperation: synologyOverviewCacheOperation(record.configRevision, encryptedSecrets),
+      cacheOperation: synologyOverviewCacheOperation(
+        record.configRevision,
+        encryptedSecrets,
+        refreshGeneration,
+      ),
       ctx: synologyContextFromIntegration({
         integrationId: record.id,
         baseUrl: record.baseUrl,
@@ -139,8 +146,11 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     };
   }
 
-  async function overviewFor(integrationId: string): Promise<SynologyOverview> {
-    const loaded = await loadContext(integrationId, "system.read");
+  async function overviewFor(
+    integrationId: string,
+    refreshGeneration: number,
+  ): Promise<SynologyOverview> {
+    const loaded = await loadContext(integrationId, "system.read", refreshGeneration);
     requireCapability(definition().capabilities, "resources.read");
     requireCapability(definition().capabilities, "storage.read");
     const cached = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
@@ -155,7 +165,8 @@ export function createSynologyService(deps: SynologyServiceDeps) {
         resources: Object.freeze(overview.resources),
         storage: Object.freeze(overview.storage),
       });
-      deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
+      if (deps.refreshFence.current(integrationId) === refreshGeneration)
+        deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
       return frozen;
     } catch (error) {
       redactError(error, { ...loaded.secrets, account: loaded.ctx.account });
@@ -182,14 +193,15 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     },
     async getOverview(integrationId: string, actor: SynologyActor): Promise<SynologyOverview> {
       assertSynologyAccess(actor, "read");
-      return overviewFor(integrationId);
+      return overviewFor(integrationId, deps.refreshFence.current(integrationId));
     },
     async refreshOverview(integrationId: string, actor: SynologyActor): Promise<SynologyOverview> {
       assertSynologyAccess(actor, "read");
       if (!deps.refreshRateLimiter.tryConsume(actor.userId ?? "anonymous", integrationId))
         throw new IntegrationError("RATE_LIMITED", "Too many Synology refreshes");
+      const generation = deps.refreshFence.advance(integrationId);
       deps.cache.invalidate(integrationId);
-      return overviewFor(integrationId);
+      return overviewFor(integrationId, generation);
     },
     async enrollDevice(
       integrationId: string,

@@ -50,6 +50,11 @@ export {
 } from "./policy";
 export { MemorySynologyRefreshRateLimiter, SYNOLOGY_REFRESH_RATE_LIMIT } from "./rate-limiter";
 export {
+  MemorySynologyRefreshFence,
+  SYNOLOGY_REFRESH_FENCE_MAX_ENTRIES,
+  type SynologyRefreshFence,
+} from "./refresh-fence";
+export {
   synologyConfigSchema,
   synologyEnrollDeviceSchema,
   synologyIntegrationInputSchema,

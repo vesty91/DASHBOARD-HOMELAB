@@ -59,7 +59,9 @@ Cache overview : 15 s si complet, ~5 s si partiel. La clé d'opération est
 `synology.overview:<sha256>` calculée depuis `configRevision` et l'état chiffré des secrets
 (`key`, `ciphertext`, `iv`, `authTag`, `keyVersion`) — jamais le plaintext. Un fetch déjà en
 vol peut encore écrire son ancienne génération ; la nouvelle configuration ne la lit pas.
-`refreshOverview` invalide toutes les générations de l'intégration.
+`refreshOverview` avance d'abord une génération de refresh runtime partagée
+(`MemorySynologyRefreshFence`), invalide le cache, puis relit avec cette génération.
+Une requête commencée avant le refresh ne peut plus écrire la clé active.
 
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
 `trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent

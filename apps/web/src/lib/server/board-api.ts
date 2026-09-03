@@ -3,7 +3,11 @@ import { createBoardService } from "@dashboard/boards";
 import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
-import { createSynologyService, MemorySynologyRefreshRateLimiter } from "@dashboard/synology";
+import {
+  createSynologyService,
+  MemorySynologyRefreshFence,
+  MemorySynologyRefreshRateLimiter,
+} from "@dashboard/synology";
 import {
   createIntegrationService,
   MemoryIntegrationCache,
@@ -24,6 +28,7 @@ const globalRuntime = globalThis as typeof globalThis & {
     rateLimiter: MemoryTestRateLimiter;
     dockerActionRateLimiter: MemoryDockerActionRateLimiter;
     synologyRefreshRateLimiter: MemorySynologyRefreshRateLimiter;
+    synologyRefreshFence: MemorySynologyRefreshFence;
   };
 };
 
@@ -34,6 +39,7 @@ function integrationRuntime() {
     rateLimiter: new MemoryTestRateLimiter(),
     dockerActionRateLimiter: new MemoryDockerActionRateLimiter(),
     synologyRefreshRateLimiter: new MemorySynologyRefreshRateLimiter(),
+    synologyRefreshFence: new MemorySynologyRefreshFence(),
   });
 }
 
@@ -70,6 +76,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       cache: runtime.cache,
       request: secureRequest,
       refreshRateLimiter: runtime.synologyRefreshRateLimiter,
+      refreshFence: runtime.synologyRefreshFence,
       ...(keyring ? { keyring } : {}),
     }),
   };

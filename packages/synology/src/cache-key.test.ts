@@ -28,6 +28,7 @@ describe("synologyOverviewCacheOperation", () => {
     const same = synologyOverviewCacheOperation(1, [{ key: "password", ...password }]);
     const revised = synologyOverviewCacheOperation(2, [{ key: "password", ...password }]);
     const rotated = synologyOverviewCacheOperation(1, [{ key: "password", ...nextPassword }]);
+    const refreshed = synologyOverviewCacheOperation(1, [{ key: "password", ...password }], 1);
     const enrolled = synologyOverviewCacheOperation(1, [
       { key: "deviceId", ...device },
       { key: "password", ...password },
@@ -37,9 +38,10 @@ describe("synologyOverviewCacheOperation", () => {
     expect(same).toBe(baseline);
     expect(revised).not.toBe(baseline);
     expect(rotated).not.toBe(baseline);
+    expect(refreshed).not.toBe(baseline);
     expect(enrolled).not.toBe(baseline);
     expect(cleared).toBe(baseline);
-    const serialized = [baseline, revised, rotated, enrolled].join("\n");
+    const serialized = [baseline, revised, rotated, refreshed, enrolled].join("\n");
     expect(serialized).not.toMatch(/s3cret|n3wpass|DID-SECRET|password|deviceId/u);
   });
 });

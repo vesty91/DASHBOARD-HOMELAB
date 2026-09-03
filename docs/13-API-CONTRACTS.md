@@ -310,4 +310,4 @@ Utilization structurellement invalide est `invalid-response`. Un élément volum
 malformé (null, scalaire, tableau, objet sans identité DSM reconnue) rend aussi Storage
 `invalid-response` ; `volumes: []` et `disks: []` restent valides. Core.System annoncé mais en
 échec : section système `degraded` avec DSM.Info conservé. Cache overview lié à une génération
-de connexion, pas seulement à `synology.overview`.
+de connexion et à une génération de refresh manuel runtime, pas seulement à `synology.overview`.

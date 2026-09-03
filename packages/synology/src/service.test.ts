@@ -12,6 +12,7 @@ import { createEnvKeyring, encryptSecret, type SecretKeyring } from "@dashboard/
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { synologyIntegrationDefinition } from "./definition";
 import { MemorySynologyRefreshRateLimiter } from "./rate-limiter";
+import { MemorySynologyRefreshFence } from "./refresh-fence";
 import { createSynologyService } from "./service";
 
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -240,19 +241,55 @@ function createService(
 ) {
   const { store, keyring, secrets } = createMemoryStore(record);
   const cache = new MemoryIntegrationCache();
+  const refreshFence = new MemorySynologyRefreshFence();
   return {
     store,
     cache,
     secrets,
     keyring,
+    refreshFence,
     synology: createSynologyService({
       store,
       registry: createIntegrationRegistry().register(synologyIntegrationDefinition).freeze(),
       cache,
       request,
       refreshRateLimiter,
+      refreshFence,
       keyring,
     }),
+  };
+}
+
+function createSharedRuntime(
+  request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
+  refreshRateLimiter = new MemorySynologyRefreshRateLimiter(),
+) {
+  const { store, keyring, secrets } = createMemoryStore();
+  const cache = new MemoryIntegrationCache();
+  const refreshFence = new MemorySynologyRefreshFence();
+  const registry = createIntegrationRegistry().register(synologyIntegrationDefinition).freeze();
+  const makeService = (
+    serviceRequest: (options: SecureHttpRequest) => Promise<SecureHttpResult> = request,
+  ) =>
+    createSynologyService({
+      store,
+      registry,
+      cache,
+      request: serviceRequest,
+      refreshRateLimiter,
+      refreshFence,
+      keyring,
+    });
+  return { store, cache, secrets, keyring, refreshFence, makeService };
+}
+
+function dsmInfoData(model: string) {
+  return {
+    model,
+    version_string: "DSM 7.2",
+    uptime: "1:00:00",
+    ram: 4096,
+    temperature: 40,
   };
 }
 
@@ -782,5 +819,178 @@ describe("SynologyService", () => {
     const emptyOverview = await empty.synology.getOverview(INTEGRATION_ID, systemAdmin);
     expect(emptyOverview.storage.status).toBe("available");
     expect(emptyOverview.storage.data).toEqual({ volumes: [], disks: [] });
+  });
+
+  it("serves a second getOverview from cache without another DSM fetch", async () => {
+    let dsmInfoCalls = 0;
+    const { synology } = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        return json({ success: true, data: dsmInfoData("NAS-CACHED") });
+      }
+      return dsmRequest()(options);
+    });
+    const first = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    const second = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(first.system.data?.model).toBe("NAS-CACHED");
+    expect(second.system.data?.model).toBe("NAS-CACHED");
+    expect(dsmInfoCalls).toBe(1);
+  });
+
+  it("does not let a stale in-flight getOverview replace a later refresh across services", async () => {
+    const oldStarted = createBarrier();
+    const releaseOld = createBarrier();
+    const newStarted = createBarrier();
+    let dsmInfoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          oldStarted.release();
+          await releaseOld.promise;
+          return json({ success: true, data: dsmInfoData("NAS-OLD") });
+        }
+        newStarted.release();
+        return json({ success: true, data: dsmInfoData("NAS-FRESH") });
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const serviceC = runtime.makeService();
+    expect(serviceA).not.toBe(serviceB);
+    const inFlight = serviceA.getOverview(INTEGRATION_ID, systemAdmin);
+    await oldStarted.promise;
+    const refreshed = serviceB.refreshOverview(INTEGRATION_ID, systemAdmin);
+    await newStarted.promise;
+    const fresh = await refreshed;
+    expect(fresh.system.data?.model).toBe("NAS-FRESH");
+    expect(runtime.refreshFence.current(INTEGRATION_ID)).toBe(1);
+    releaseOld.release();
+    const stale = await inFlight;
+    expect(stale.system.data?.model).toBe("NAS-OLD");
+    const cached = await serviceC.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cached.system.data?.model).toBe("NAS-FRESH");
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("does not serve OLD from cache when OLD finishes after advance but before NEW", async () => {
+    const oldStarted = createBarrier();
+    const releaseOld = createBarrier();
+    const newStarted = createBarrier();
+    const releaseNew = createBarrier();
+    let dsmInfoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          oldStarted.release();
+          await releaseOld.promise;
+          return json({ success: true, data: dsmInfoData("NAS-OLD") });
+        }
+        newStarted.release();
+        await releaseNew.promise;
+        return json({ success: true, data: dsmInfoData("NAS-FRESH") });
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const inFlight = serviceA.getOverview(INTEGRATION_ID, systemAdmin);
+    await oldStarted.promise;
+    const refreshed = serviceB.refreshOverview(INTEGRATION_ID, systemAdmin);
+    await newStarted.promise;
+    releaseOld.release();
+    const stale = await inFlight;
+    expect(stale.system.data?.model).toBe("NAS-OLD");
+    releaseNew.release();
+    const fresh = await refreshed;
+    expect(fresh.system.data?.model).toBe("NAS-FRESH");
+    const cached = await serviceB.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cached.system.data?.model).toBe("NAS-FRESH");
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("keeps the later concurrent refresh as the active cache generation", async () => {
+    const firstStarted = createBarrier();
+    const releaseFirst = createBarrier();
+    const secondStarted = createBarrier();
+    const releaseSecond = createBarrier();
+    let dsmInfoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          firstStarted.release();
+          await releaseFirst.promise;
+          return json({ success: true, data: dsmInfoData("NAS-A") });
+        }
+        secondStarted.release();
+        await releaseSecond.promise;
+        return json({ success: true, data: dsmInfoData("NAS-B") });
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const serviceC = runtime.makeService();
+    const first = serviceA.refreshOverview(INTEGRATION_ID, systemAdmin);
+    await firstStarted.promise;
+    const second = serviceB.refreshOverview(INTEGRATION_ID, systemAdmin);
+    await secondStarted.promise;
+    releaseSecond.release();
+    const later = await second;
+    expect(later.system.data?.model).toBe("NAS-B");
+    expect(runtime.refreshFence.current(INTEGRATION_ID)).toBe(2);
+    releaseFirst.release();
+    const earlier = await first;
+    expect(earlier.system.data?.model).toBe("NAS-A");
+    const cached = await serviceC.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cached.system.data?.model).toBe("NAS-B");
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("does not advance the refresh generation when rate-limited", async () => {
+    const limiter = new MemorySynologyRefreshRateLimiter(1, 60_000, () => 1_000);
+    const created = createService(dsmRequest(), undefined, limiter);
+    await created.synology.refreshOverview(INTEGRATION_ID, systemAdmin);
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(1);
+    await expect(
+      created.synology.refreshOverview(INTEGRATION_ID, systemAdmin),
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(1);
+  });
+
+  it("does not restore the pre-refresh cache after a failed refresh", async () => {
+    let infoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        if (infoCalls === 2) return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+        return json(infoPayload());
+      }
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: { ...dsmInfoData(infoCalls === 1 ? "NAS-FIRST" : "NAS-RETRY") },
+        });
+      return dsmRequest()(options);
+    });
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(first.system.data?.model).toBe("NAS-FIRST");
+    await expect(
+      created.synology.refreshOverview(INTEGRATION_ID, systemAdmin),
+    ).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(1);
+    const next = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(next.system.data?.model).toBe("NAS-RETRY");
+    expect(infoCalls).toBe(3);
   });
 });
