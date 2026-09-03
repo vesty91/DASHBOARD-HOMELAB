@@ -1691,7 +1691,7 @@ button[aria-pressed="true"] {
 }
 
 .synology-table th {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-weight: 600;
 }
 

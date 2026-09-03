@@ -1,4 +1,5 @@
 import { IntegrationError } from "@dashboard/integrations";
+import { z } from "zod";
 import type {
   SynologyDiskDto,
   SynologyResourcesDto,
@@ -112,6 +113,29 @@ export function normalizeStatus(value: unknown): string {
     return "critical";
   return raw.length > MAX_STATUS ? raw.slice(0, MAX_STATUS) : raw;
 }
+
+const VOLUME_IDENTITY_KEYS = ["id", "num_id", "name", "vol_desc", "desc"] as const;
+const DISK_IDENTITY_KEYS = ["id", "name", "diskPath"] as const;
+
+const dsmIdentityValueSchema = z.union([z.string(), z.number()]);
+
+const dsmVolumeElementSchema = z
+  .object({
+    id: dsmIdentityValueSchema.optional(),
+    num_id: dsmIdentityValueSchema.optional(),
+    name: dsmIdentityValueSchema.optional(),
+    vol_desc: dsmIdentityValueSchema.optional(),
+    desc: dsmIdentityValueSchema.optional(),
+  })
+  .passthrough();
+
+const dsmDiskElementSchema = z
+  .object({
+    id: dsmIdentityValueSchema.optional(),
+    name: dsmIdentityValueSchema.optional(),
+    diskPath: dsmIdentityValueSchema.optional(),
+  })
+  .passthrough();
 
 function recordOf(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -288,16 +312,44 @@ function volumeFree(
   };
 }
 
+function usefulIdentity(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return boundText(String(value), MAX_ID);
+  if (typeof value === "string") return boundText(value, MAX_NAME);
+  return null;
+}
+
+function requireStorageIdentity(record: Record<string, unknown>, keys: readonly string[]): string {
+  for (const key of keys) {
+    const identity = usefulIdentity(record[key]);
+    if (identity) return identity;
+  }
+  invalidPayload("DSM storage item is invalid");
+}
+
+function parseStorageElement(
+  value: unknown,
+  schema: typeof dsmVolumeElementSchema | typeof dsmDiskElementSchema,
+  keys: readonly string[],
+): { record: Record<string, unknown>; identity: string } {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) invalidPayload("DSM storage item is invalid");
+  return { record: parsed.data, identity: requireStorageIdentity(parsed.data, keys) };
+}
+
 export function mapVolumes(raw: unknown): readonly SynologyVolumeDto[] {
   const items = Array.isArray(raw) ? raw : [];
   if (items.length > MAX_VOLUMES)
     throw new IntegrationError("INVALID_RESPONSE", "DSM returned too many volumes");
-  return items.map((item, index) => {
-    const record = recordOf(item);
+  return items.map((item) => {
+    const { record, identity } = parseStorageElement(
+      item,
+      dsmVolumeElementSchema,
+      VOLUME_IDENTITY_KEYS,
+    );
     const size = recordOf(record.size);
     const totalBytes = parseSafeIntegerBytes(size.total ?? record.total_size);
     const usedBytes = parseSafeIntegerBytes(size.used ?? record.used_size);
-    const id = sanitizeId(record.id ?? record.num_id, `volume-${index + 1}`);
+    const id = sanitizeId(record.id ?? record.num_id ?? identity, identity);
     const name = boundText(record.vol_desc ?? record.desc ?? record.name, MAX_NAME) ?? id;
     return {
       id,
@@ -317,9 +369,13 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
   const items = Array.isArray(raw) ? raw : [];
   if (items.length > MAX_DISKS)
     throw new IntegrationError("INVALID_RESPONSE", "DSM returned too many disks");
-  return items.map((item, index) => {
-    const record = recordOf(item);
-    const id = sanitizeId(record.id ?? record.diskPath ?? record.name, `disk-${index + 1}`);
+  return items.map((item) => {
+    const { record, identity } = parseStorageElement(
+      item,
+      dsmDiskElementSchema,
+      DISK_IDENTITY_KEYS,
+    );
+    const id = sanitizeId(record.id ?? record.diskPath ?? record.name, identity);
     const displayName = boundText(record.name ?? record.id, MAX_NAME) ?? id;
     return {
       id,

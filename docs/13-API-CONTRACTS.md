@@ -306,5 +306,8 @@ Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `b
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage
 en échec n'invente pas 0 % et n'échoue pas toute la page. Un payload DSM.Info, Storage ou
-Utilization structurellement invalide est `invalid-response`. Core.System annoncé mais en
-échec : section système `degraded` avec DSM.Info conservé.
+Utilization structurellement invalide est `invalid-response`. Un élément volume/disque
+malformé (null, scalaire, tableau, objet sans identité DSM reconnue) rend aussi Storage
+`invalid-response` ; `volumes: []` et `disks: []` restent valides. Core.System annoncé mais en
+échec : section système `degraded` avec DSM.Info conservé. Cache overview lié à une génération
+de connexion, pas seulement à `synology.overview`.

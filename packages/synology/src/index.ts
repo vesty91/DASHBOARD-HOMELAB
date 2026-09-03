@@ -1,4 +1,5 @@
 export { assertSynologyAccess, synologyPermissionsView } from "./access";
+export { SYNOLOGY_OVERVIEW_CACHE_PREFIX, synologyOverviewCacheOperation } from "./cache-key";
 export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,

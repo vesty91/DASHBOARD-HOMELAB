@@ -89,7 +89,7 @@ describe("Synology DTO mapping", () => {
     expect(disks[0]?.smartStatus).toBeNull();
     expect(disks[0]?.temperatureC).toBe(31);
     expect(JSON.stringify(disks)).not.toMatch(/DISK-SERIAL/u);
-    expect(mapDisks([{ temp: 200 }])[0]?.temperatureC).toBeNull();
+    expect(mapDisks([{ id: "sata1", temp: 200 }])[0]?.temperatureC).toBeNull();
   });
 
   it("rejects oversized storage inventories", () => {
@@ -115,6 +115,20 @@ describe("Synology DTO mapping", () => {
     expect(() =>
       assertUsefulSystemInfo(mapSystemInfo(parseDsmInfoPayload({ serial: "SECRET" }))),
     ).toThrow(IntegrationError);
+  });
+
+  it("rejects malformed storage array elements and keeps empty arrays valid", () => {
+    expect(mapVolumes([])).toEqual([]);
+    expect(mapDisks([])).toEqual([]);
+    for (const invalid of [null, "disk", 42, [], {}, { unknown: "value" }, { foo: "bar" }]) {
+      expect(() => mapVolumes([invalid])).toThrow(IntegrationError);
+      expect(() => mapDisks([invalid])).toThrow(IntegrationError);
+    }
+    expect(mapVolumes([{ id: "volume_1" }])[0]?.id).toBe("volume_1");
+    expect(mapVolumes([{ num_id: 2 }])[0]?.id).toBe("2");
+    expect(mapVolumes([{ vol_desc: "Volume 1" }])[0]?.name).toBe("Volume 1");
+    expect(mapDisks([{ name: "Drive 1" }])[0]?.displayName).toBe("Drive 1");
+    expect(mapDisks([{ diskPath: "sata1" }])[0]?.id).toBe("sata1");
   });
 
   it("accepts modern and legacy storage envelopes and rejects malformed ones", () => {

@@ -26,6 +26,7 @@ import {
   synologyContextFromIntegration,
   type SynologyClientContext,
 } from "./client";
+import { synologyOverviewCacheOperation } from "./cache-key";
 import { SYNOLOGY_INTEGRATION_ID } from "./definition";
 import { SynologyError, toIntegrationError } from "./errors";
 import type { SynologyConfig, SynologySecrets } from "./schemas";
@@ -36,7 +37,6 @@ import type {
   SynologyPermissionsView,
 } from "./types";
 
-const OVERVIEW_OPERATION = "synology.overview";
 const DEVICE_SECRET_KEY = "deviceId";
 
 export interface SynologyServiceDeps {
@@ -87,7 +87,12 @@ export function createSynologyService(deps: SynologyServiceDeps) {
   async function loadContext(
     integrationId: string,
     capability: string,
-  ): Promise<{ ctx: SynologyClientContext; recordId: string; secrets: SynologySecrets }> {
+  ): Promise<{
+    ctx: SynologyClientContext;
+    recordId: string;
+    secrets: SynologySecrets;
+    cacheOperation: string;
+  }> {
     const record = await deps.store.findById(integrationId);
     if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
       throw new IntegrationError("NOT_FOUND", "Définition Synology introuvable");
@@ -105,10 +110,12 @@ export function createSynologyService(deps: SynologyServiceDeps) {
       record.id,
       deps.keyring,
     )) as SynologySecrets;
+    const encryptedSecrets = await deps.store.loadEncryptedSecrets(record.id);
     const trustedCaPem = trustedCaFromConfig(config as JsonObject);
     return {
       recordId: record.id,
       secrets,
+      cacheOperation: synologyOverviewCacheOperation(record.configRevision, encryptedSecrets),
       ctx: synologyContextFromIntegration({
         integrationId: record.id,
         baseUrl: record.baseUrl,
@@ -136,7 +143,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     const loaded = await loadContext(integrationId, "system.read");
     requireCapability(definition().capabilities, "resources.read");
     requireCapability(definition().capabilities, "storage.read");
-    const cached = deps.cache.get(loaded.recordId, OVERVIEW_OPERATION) as
+    const cached = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
       SynologyOverview | undefined;
     if (cached) return cached;
     try {
@@ -148,7 +155,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
         resources: Object.freeze(overview.resources),
         storage: Object.freeze(overview.storage),
       });
-      deps.cache.set(loaded.recordId, OVERVIEW_OPERATION, frozen, overviewCacheTtl(frozen));
+      deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
       return frozen;
     } catch (error) {
       redactError(error, { ...loaded.secrets, account: loaded.ctx.account });

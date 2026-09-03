@@ -9,6 +9,7 @@ import {
   type SecureHttpResult,
 } from "@dashboard/integrations";
 import { createEnvKeyring, encryptSecret, type SecretKeyring } from "@dashboard/secrets";
+import { synologyOverviewCacheOperation } from "./cache-key";
 import { synologyIntegrationDefinition } from "./definition";
 import { MemorySynologyRefreshRateLimiter } from "./rate-limiter";
 import { createSynologyService } from "./service";
@@ -92,8 +93,22 @@ function createMemoryStore(record?: Partial<IntegrationRecord>): {
       async create() {
         throw new Error("unused");
       },
-      async update() {
-        return undefined;
+      async update(input) {
+        const current = rows.get(input.id);
+        if (!current) return undefined;
+        const next: IntegrationRecord = {
+          ...current,
+          ...(input.name === undefined ? {} : { name: input.name }),
+          ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+          ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
+          ...(input.config === undefined ? {} : { config: input.config }),
+          configRevision: input.bumpRevision ? current.configRevision + 1 : current.configRevision,
+          status: input.resetStatus ? "unknown" : current.status,
+          lastCheckedAt: input.resetStatus ? null : current.lastCheckedAt,
+          updatedAt: new Date(),
+        };
+        rows.set(input.id, next);
+        return next;
       },
       async delete() {
         return false;
@@ -210,19 +225,30 @@ function dsmRequest(): (options: SecureHttpRequest) => Promise<SecureHttpResult>
   };
 }
 
+function createBarrier() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
 function createService(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult> = dsmRequest(),
   record?: Partial<IntegrationRecord>,
   refreshRateLimiter = new MemorySynologyRefreshRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore(record);
+  const cache = new MemoryIntegrationCache();
   return {
+    store,
+    cache,
     secrets,
     keyring,
     synology: createSynologyService({
       store,
       registry: createIntegrationRegistry().register(synologyIntegrationDefinition).freeze(),
-      cache: new MemoryIntegrationCache(),
+      cache,
       request,
       refreshRateLimiter,
       keyring,
@@ -572,5 +598,189 @@ describe("SynologyService", () => {
     await expect(synology.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
       code: "RATE_LIMITED",
     });
+  });
+
+  it("does not serve a stale overview after the configuration revision changes during fetch", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    let dsmInfoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          started.release();
+          await release.promise;
+          return json({
+            success: true,
+            data: {
+              model: "DS-A",
+              version_string: "DSM 7.1",
+              uptime: "1:00:00",
+              ram: 4096,
+              temperature: 40,
+            },
+          });
+        }
+        return json({
+          success: true,
+          data: {
+            model: "DS-B",
+            version_string: "DSM 7.2",
+            uptime: "2:00:00",
+            ram: 8192,
+            temperature: 41,
+          },
+        });
+      }
+      return dsmRequest()(options);
+    });
+    const reader = actor(["integration.use", "synology.read"]);
+    const inFlight = created.synology.getOverview(INTEGRATION_ID, reader);
+    await started.promise;
+    await created.store.update({
+      id: INTEGRATION_ID,
+      baseUrl: "https://nas-b.example:5001/",
+      bumpRevision: true,
+      resetStatus: true,
+    });
+    created.cache.invalidate(INTEGRATION_ID);
+    release.release();
+    const stale = await inFlight;
+    expect(stale.system.data?.model).toBe("DS-A");
+    const next = await created.synology.getOverview(INTEGRATION_ID, reader);
+    expect(next.system.data?.model).toBe("DS-B");
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("does not serve a stale overview after the password changes during fetch", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    let dsmInfoCalls = 0;
+    let usedNewPassword = false;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        if (options.body.includes("passwd=n3wpass")) {
+          usedNewPassword = true;
+          return json({ success: true, data: { sid: "SID-NEW", synotoken: "TOK-NEW" } });
+        }
+        expect(options.body).toContain("passwd=s3cret");
+        return json({ success: true, data: { sid: "SID-OLD", synotoken: "TOK-OLD" } });
+      }
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          started.release();
+          await release.promise;
+          return json({
+            success: true,
+            data: {
+              model: "DS-OLD",
+              version_string: "DSM 7.1",
+              uptime: "1:00:00",
+              ram: 4096,
+              temperature: 40,
+            },
+          });
+        }
+        return json({
+          success: true,
+          data: {
+            model: "DS-NEW",
+            version_string: "DSM 7.2",
+            uptime: "2:00:00",
+            ram: 8192,
+            temperature: 41,
+          },
+        });
+      }
+      return dsmRequest()(options);
+    });
+    const reader = actor(["integration.use", "synology.read"]);
+    const before = synologyOverviewCacheOperation(1, [...created.secrets]);
+    const inFlight = created.synology.getOverview(INTEGRATION_ID, reader);
+    await started.promise;
+    const encrypted = encryptSecret(created.keyring, {
+      integrationId: INTEGRATION_ID,
+      key: "password",
+      plaintext: "n3wpass",
+    });
+    await created.store.upsertSecret(INTEGRATION_ID, { key: "password", ...encrypted });
+    created.cache.invalidate(INTEGRATION_ID);
+    const after = synologyOverviewCacheOperation(1, [...created.secrets]);
+    expect(after).not.toBe(before);
+    expect(`${before}${after}`).not.toMatch(/s3cret|n3wpass/u);
+    release.release();
+    const stale = await inFlight;
+    expect(stale.system.data?.model).toBe("DS-OLD");
+    const next = await created.synology.getOverview(INTEGRATION_ID, reader);
+    expect(next.system.data?.model).toBe("DS-NEW");
+    expect(usedNewPassword).toBe(true);
+    expect(JSON.stringify(next)).not.toMatch(/s3cret|n3wpass|SID-OLD|SID-NEW/u);
+  });
+
+  it("does not reuse an overview cached before deviceId enrollment or clear", async () => {
+    let dsmInfoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        return json({
+          success: true,
+          data: {
+            model: `DS-${dsmInfoCalls}`,
+            version_string: "DSM 7.2",
+            uptime: "1:00:00",
+            ram: 4096,
+            temperature: 40,
+          },
+        });
+      }
+      return dsmRequest()(options);
+    });
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(first.system.data?.model).toBe("DS-1");
+    const device = encryptSecret(created.keyring, {
+      integrationId: INTEGRATION_ID,
+      key: "deviceId",
+      plaintext: "DID-SECRET",
+    });
+    await created.store.upsertSecret(INTEGRATION_ID, { key: "deviceId", ...device });
+    const enrolled = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(enrolled.system.data?.model).toBe("DS-2");
+    await created.store.deleteSecret(INTEGRATION_ID, "deviceId");
+    const cleared = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cleared.system.data?.model).not.toBe("DS-2");
+    expect(dsmInfoCalls).toBe(2);
+    expect(JSON.stringify({ first, enrolled, cleared })).not.toMatch(/DID-SECRET/u);
+  });
+
+  it("rejects malformed storage array elements as invalid-response", async () => {
+    for (const data of [
+      { volumes: [null], disks: [] },
+      { volumes: [], disks: [{}] },
+      { volumes: [{ foo: "bar" }], disks: [] },
+    ]) {
+      const created = createService(async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.Storage.CGI.Storage") return json({ success: true, data });
+        return dsmRequest()(options);
+      });
+      const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+      expect(overview.storage.status).toBe("unavailable");
+      expect(overview.storage.reason).toBe("invalid-response");
+      expect(overview.storage.data).toBeNull();
+    }
+
+    const empty = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({ success: true, data: { volumes: [], disks: [] } });
+      return dsmRequest()(options);
+    });
+    const emptyOverview = await empty.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(emptyOverview.storage.status).toBe("available");
+    expect(emptyOverview.storage.data).toEqual({ volumes: [], disks: [] });
   });
 });
