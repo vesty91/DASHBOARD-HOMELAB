@@ -401,7 +401,36 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         keyVersion: 1,
       });
       expect((await store.findById(created.id))?.configRevision).toBe(2);
-      expect(await store.persistConnectionResult(created.id, 2, "available")).toBe(true);
+      expect(
+        await store.upsertSecretIfRevision(created.id, 2, {
+          key: "deviceId",
+          ciphertext: "ZGlk",
+          iv: "aXY=",
+          authTag: "dGFn",
+          keyVersion: 1,
+        }),
+      ).toBe(true);
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some(
+          (row) => row.key === "deviceId" && row.ciphertext === "ZGlk",
+        ),
+      ).toBe(true);
+      expect(
+        await store.upsertSecretIfRevision(created.id, 2, {
+          key: "deviceId",
+          ciphertext: "c3RhbGU=",
+          iv: "aXY=",
+          authTag: "dGFn",
+          keyVersion: 1,
+        }),
+      ).toBe(false);
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).find((row) => row.key === "deviceId")
+          ?.ciphertext,
+      ).toBe("ZGlk");
+      expect(await store.persistConnectionResult(created.id, 3, "available")).toBe(true);
       expect(await store.persistConnectionResult(created.id, 1, "unavailable")).toBe(false);
       expect((await store.findById(created.id))?.status).toBe("available");
       await Promise.all([
@@ -416,7 +445,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(await store.findById(created.id)).toMatchObject({
         enabled: false,
         baseUrl: "http://10.0.0.11:3000",
-        configRevision: 4,
+        configRevision: 5,
       });
       await expect(
         client.pool.query("update integrations set config_revision=0 where id=$1", [created.id]),

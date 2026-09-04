@@ -54,6 +54,7 @@ export {
   clearServerManagedSecret,
   loadIntegrationSecrets,
   persistServerManagedSecret,
+  persistServerManagedSecretIfRevision,
   redactKnownSecretValues,
 } from "./secrets";
 export {

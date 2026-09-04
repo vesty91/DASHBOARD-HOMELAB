@@ -86,6 +86,25 @@ export async function loadIntegrationSecrets(
   return parsed.data as JsonObject;
 }
 
+function encryptServerManagedSecret(
+  definition: IntegrationDefinition,
+  integrationId: string,
+  key: string,
+  plaintext: string,
+  keyring: SecretKeyring | undefined,
+): EncryptedSecretRow {
+  const field = definition.secretFields.find((entry) => entry.key === key);
+  if (!field?.serverManaged)
+    throw new IntegrationError("FORBIDDEN", "This secret is not server-managed");
+  const value = field.valueSchema.parse(plaintext);
+  const encrypted = encryptSecret(requireKeyring(keyring), {
+    integrationId,
+    key,
+    plaintext: value,
+  });
+  return { key, ...encrypted };
+}
+
 export async function persistServerManagedSecret(
   store: IntegrationStore,
   definition: IntegrationDefinition,
@@ -94,19 +113,22 @@ export async function persistServerManagedSecret(
   plaintext: string,
   keyring: SecretKeyring | undefined,
 ): Promise<EncryptedSecretRow> {
-  const field = definition.secretFields.find((entry) => entry.key === key);
-  if (!field?.serverManaged)
-    throw new IntegrationError("FORBIDDEN", "This secret is not server-managed");
-  const value = field.valueSchema.parse(plaintext);
-  const active = requireKeyring(keyring);
-  const encrypted = encryptSecret(active, {
-    integrationId,
-    key,
-    plaintext: value,
-  });
-  const row = { key, ...encrypted };
+  const row = encryptServerManagedSecret(definition, integrationId, key, plaintext, keyring);
   await store.upsertSecret(integrationId, row);
   return row;
+}
+
+export async function persistServerManagedSecretIfRevision(
+  store: IntegrationStore,
+  definition: IntegrationDefinition,
+  integrationId: string,
+  key: string,
+  plaintext: string,
+  expectedRevision: number,
+  keyring: SecretKeyring | undefined,
+): Promise<boolean> {
+  const row = encryptServerManagedSecret(definition, integrationId, key, plaintext, keyring);
+  return store.upsertSecretIfRevision(integrationId, expectedRevision, row);
 }
 
 export async function clearServerManagedSecret(

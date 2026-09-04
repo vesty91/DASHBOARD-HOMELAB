@@ -138,6 +138,11 @@ export interface IntegrationStore {
   listSecretStates(integrationId: string): Promise<readonly IntegrationSecretState[]>;
   loadEncryptedSecrets(integrationId: string): Promise<readonly EncryptedSecretRow[]>;
   upsertSecret(integrationId: string, secret: EncryptedSecretRow): Promise<void>;
+  upsertSecretIfRevision(
+    integrationId: string,
+    expectedRevision: number,
+    secret: EncryptedSecretRow,
+  ): Promise<boolean>;
   deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,

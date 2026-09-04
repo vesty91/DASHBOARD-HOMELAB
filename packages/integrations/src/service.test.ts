@@ -110,6 +110,20 @@ function createMemoryStore(): IntegrationStore & { secrets: Map<string, Encrypte
         updatedAt: now(),
       });
     },
+    async upsertSecretIfRevision(integrationId, expectedRevision, secret) {
+      const current = rows.get(integrationId);
+      if (!current || current.configRevision !== expectedRevision) return false;
+      const existing = secrets.get(integrationId) ?? [];
+      secrets.set(integrationId, [...existing.filter((row) => row.key !== secret.key), secret]);
+      rows.set(integrationId, {
+        ...current,
+        configRevision: current.configRevision + 1,
+        status: "unknown",
+        lastCheckedAt: null,
+        updatedAt: now(),
+      });
+      return true;
+    },
     async deleteSecret(integrationId, key) {
       const current = rows.get(integrationId);
       const existing = secrets.get(integrationId) ?? [];
@@ -248,8 +262,12 @@ describe("integration service", () => {
       service.setSecret({ integrationId: created.id, key: "deviceId", value: "DID-1" }, admin),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, admin);
-    const { loadIntegrationSecrets, persistServerManagedSecret, clearServerManagedSecret } =
-      await import("./secrets");
+    const {
+      loadIntegrationSecrets,
+      persistServerManagedSecret,
+      persistServerManagedSecretIfRevision,
+      clearServerManagedSecret,
+    } = await import("./secrets");
     const loaded = await loadIntegrationSecrets(store, definition, created.id, keyring);
     expect(loaded.apiKey).toBe(SENTINEL);
     expect(loaded).not.toHaveProperty("deviceId");
@@ -261,6 +279,35 @@ describe("integration service", () => {
       (await loadIntegrationSecrets(store, definition, created.id, keyring)).deviceId,
     ).toBeUndefined();
     expect(JSON.stringify(await service.get(created.id, admin))).not.toContain("DID-1");
+    expect(
+      await persistServerManagedSecretIfRevision(
+        store,
+        definition,
+        created.id,
+        "deviceId",
+        "DID-2",
+        (await store.findById(created.id))!.configRevision,
+        keyring,
+      ),
+    ).toBe(true);
+    const afterCas = await store.findById(created.id);
+    expect(afterCas?.configRevision).toBe(5);
+    expect(
+      await persistServerManagedSecretIfRevision(
+        store,
+        definition,
+        created.id,
+        "deviceId",
+        "DID-STALE",
+        3,
+        keyring,
+      ),
+    ).toBe(false);
+    expect((await store.findById(created.id))?.configRevision).toBe(5);
+    expect((await loadIntegrationSecrets(store, definition, created.id, keyring)).deviceId).toBe(
+      "DID-2",
+    );
+    expect(JSON.stringify(await service.get(created.id, admin))).not.toContain("DID-STALE");
   });
 
   it("maps local HTTP outcomes and ignores stale results", async () => {

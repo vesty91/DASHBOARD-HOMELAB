@@ -10,6 +10,7 @@ import {
   mapSystemInfo,
   mapVolumes,
   mbToBytes,
+  parseCoreSystemPayload,
   parseDsmInfoPayload,
   parseSafeIntegerBytes,
   parseStoragePayload,
@@ -242,6 +243,26 @@ describe("Synology DTO mapping", () => {
       },
     ]) {
       expect(() => parseUtilizationPayload(invalid)).toThrow(IntegrationError);
+    }
+  });
+
+  it("rejects empty or unrecognized Core.System payloads and keeps useful zeros", () => {
+    expect(parseCoreSystemPayload({ cpu_cores: 4 })).toEqual({ cpu_cores: 4 });
+    expect(parseCoreSystemPayload({ cpu_family: "Intel" })).toEqual({ cpu_family: "Intel" });
+    expect(parseCoreSystemPayload({ cpu_series: "J4125" })).toEqual({ cpu_series: "J4125" });
+    expect(parseCoreSystemPayload({ sys_temp: 40 })).toEqual({ sys_temp: 40 });
+    expect(parseCoreSystemPayload({ temperature_warn: false })).toEqual({
+      temperature_warn: false,
+    });
+    expect(parseCoreSystemPayload({ up_time: 0 })).toEqual({ up_time: 0 });
+    for (const invalid of [
+      {},
+      { foo: "bar" },
+      { cpu_cores: "garbage" },
+      { cpu_family: "" },
+      { temperature: "not-a-number" },
+    ]) {
+      expect(() => parseCoreSystemPayload(invalid)).toThrow(IntegrationError);
     }
   });
 

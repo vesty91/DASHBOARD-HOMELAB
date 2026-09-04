@@ -49,6 +49,11 @@ interface IntegrationStore {
   listSecretStates(integrationId: string): Promise<readonly { key: string; configured: true }[]>;
   loadEncryptedSecrets(integrationId: string): Promise<readonly EncryptedSecretRow[]>;
   upsertSecret(integrationId: string, secret: EncryptedSecretRow): Promise<void>;
+  upsertSecretIfRevision(
+    integrationId: string,
+    expectedRevision: number,
+    secret: EncryptedSecretRow,
+  ): Promise<boolean>;
   deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,
@@ -224,6 +229,41 @@ export function createSqliteIntegrationStore(db: DatabaseSync): IntegrationStore
         throw error;
       }
     },
+    async upsertSecretIfRevision(integrationId, expectedRevision, secret) {
+      const now = Date.now();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const bumped = db
+          .prepare(
+            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=? WHERE id=? AND config_revision=?",
+          )
+          .run(now, integrationId, expectedRevision);
+        if (bumped.changes !== 1) {
+          db.exec("COMMIT");
+          return false;
+        }
+        db.prepare(
+          `INSERT INTO integration_secrets(id,integration_id,key,ciphertext,iv,auth_tag,key_version,created_at,updated_at)
+           VALUES(?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(integration_id,key) DO UPDATE SET ciphertext=excluded.ciphertext,iv=excluded.iv,auth_tag=excluded.auth_tag,key_version=excluded.key_version,updated_at=excluded.updated_at`,
+        ).run(
+          randomUUID(),
+          integrationId,
+          secret.key,
+          secret.ciphertext,
+          secret.iv,
+          secret.authTag,
+          secret.keyVersion,
+          now,
+          now,
+        );
+        db.exec("COMMIT");
+        return true;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async deleteSecret(integrationId, key) {
       const now = Date.now();
       db.exec("BEGIN IMMEDIATE");
@@ -347,6 +387,41 @@ export function createPostgresqlIntegrationStore(pool: Pool): IntegrationStore {
           [integrationId],
         );
         await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async upsertSecretIfRevision(integrationId, expectedRevision, secret) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const bumped = await client.query(
+          "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=now() WHERE id=$1 AND config_revision=$2 RETURNING id",
+          [integrationId, expectedRevision],
+        );
+        if (bumped.rowCount !== 1) {
+          await client.query("ROLLBACK");
+          return false;
+        }
+        await client.query(
+          `INSERT INTO integration_secrets(id,integration_id,key,ciphertext,iv,auth_tag,key_version,created_at,updated_at)
+           VALUES($1,$2,$3,$4,$5,$6,$7,now(),now())
+           ON CONFLICT (integration_id, key) DO UPDATE SET ciphertext=EXCLUDED.ciphertext,iv=EXCLUDED.iv,auth_tag=EXCLUDED.auth_tag,key_version=EXCLUDED.key_version,updated_at=now()`,
+          [
+            randomUUID(),
+            integrationId,
+            secret.key,
+            secret.ciphertext,
+            secret.iv,
+            secret.authTag,
+            secret.keyVersion,
+          ],
+        );
+        await client.query("COMMIT");
+        return true;
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;

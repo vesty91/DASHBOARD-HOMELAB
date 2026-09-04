@@ -254,8 +254,24 @@ export function parseUtilizationPayload(raw: unknown): unknown {
   return record;
 }
 
+export function hasUsefulCoreSystemData(record: Record<string, unknown>): boolean {
+  const mapped = mapSystemInfo({}, record);
+  return (
+    mapped.model !== null ||
+    mapped.dsmVersion !== null ||
+    mapped.uptimeSeconds !== null ||
+    mapped.systemTemperatureC !== null ||
+    mapped.temperatureWarning !== null ||
+    mapped.cpuCores !== null ||
+    mapped.cpuFamily !== null ||
+    mapped.cpuSeries !== null
+  );
+}
+
 export function parseCoreSystemPayload(raw: unknown): Record<string, unknown> {
-  return requireObjectRecord(raw, "DSM Core.System payload is invalid");
+  const record = requireObjectRecord(raw, "DSM Core.System payload is invalid");
+  if (!hasUsefulCoreSystemData(record)) invalidPayload("DSM Core.System payload is incomplete");
+  return record;
 }
 
 export function parseDsmInfoPayload(raw: unknown): Record<string, unknown> {

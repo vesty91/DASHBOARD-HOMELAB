@@ -70,8 +70,11 @@ Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/
 `trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent
 `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record Synology sans
 `integration.manage`. `testConnection` exige `SYNO.DSM.Info` disponible : un login réussi ne
-marque pas l'intégration `available`. Un échec optionnel de Core.System ne fait pas échouer
-le test si DSM.Info est valide.
+marque pas l'intégration `available`. Un échec optionnel de Core.System — y compris un
+objet vide ou sans champ reconnu — dégrade la section système mais ne fait pas échouer
+le test si DSM.Info est valide. L'enrollment OTP persiste `deviceId` uniquement via
+`upsertSecretIfRevision` (CAS sur `configRevision`) : un changement d'URL, de mot de
+passe ou de secret pendant l'attente DSM jette le DID reçu.
 
 ### 6. Permissions
 

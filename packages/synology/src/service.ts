@@ -6,7 +6,7 @@ import {
   clearServerManagedSecret,
   collectSecretStringValues,
   loadIntegrationSecrets,
-  persistServerManagedSecret,
+  persistServerManagedSecretIfRevision,
   redactKnownSecretValues,
   requireCapability,
   type IntegrationCache,
@@ -97,6 +97,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     recordId: string;
     secrets: SynologySecrets;
     cacheOperation: string;
+    configRevision: number;
   }> {
     const record = await deps.store.findById(integrationId);
     if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
@@ -120,6 +121,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     return {
       recordId: record.id,
       secrets,
+      configRevision: record.configRevision,
       cacheOperation: synologyOverviewCacheOperation(
         record.configRevision,
         encryptedSecrets,
@@ -219,14 +221,20 @@ export function createSynologyService(deps: SynologyServiceDeps) {
       const loaded = await loadContext(integrationId, "system.read");
       try {
         const enrolled = await enrollTrustedDevice(loaded.ctx, otpCode);
-        await persistServerManagedSecret(
+        const persisted = await persistServerManagedSecretIfRevision(
           deps.store,
           definition(),
           loaded.recordId,
           DEVICE_SECRET_KEY,
           enrolled.did,
+          loaded.configRevision,
           deps.keyring,
         );
+        if (!persisted)
+          throw new IntegrationError(
+            "STALE_RESULT",
+            "Synology configuration changed during device enrollment",
+          );
         deps.cache.invalidate(loaded.recordId);
         return { enrolled: true };
       } catch (error) {

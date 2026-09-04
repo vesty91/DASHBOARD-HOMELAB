@@ -160,6 +160,53 @@ describe("SQLite integration store", () => {
     }
   });
 
+  it("writes a secret only when the config revision matches", async () => {
+    const { client, store } = await setup();
+    try {
+      const created = await store.create({
+        type: "test-http",
+        name: "CAS",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: {},
+        createdBy: null,
+      });
+      expect(created.configRevision).toBe(1);
+      const first = encryptSecret(keyring, {
+        integrationId: created.id,
+        key: "deviceId",
+        plaintext: "DID-A",
+      });
+      expect(await store.upsertSecretIfRevision(created.id, 1, { key: "deviceId", ...first })).toBe(
+        true,
+      );
+      expect((await store.findById(created.id))?.configRevision).toBe(2);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some((row) => row.key === "deviceId"),
+      ).toBe(true);
+      const stale = encryptSecret(keyring, {
+        integrationId: created.id,
+        key: "deviceId",
+        plaintext: "DID-STALE",
+      });
+      expect(await store.upsertSecretIfRevision(created.id, 1, { key: "deviceId", ...stale })).toBe(
+        false,
+      );
+      expect((await store.findById(created.id))?.configRevision).toBe(2);
+      const kept = (await store.loadEncryptedSecrets(created.id)).find(
+        (row) => row.key === "deviceId",
+      )!;
+      expect(
+        decryptSecret(keyring, {
+          ...kept,
+          integrationId: created.id,
+        }),
+      ).toBe("DID-A");
+    } finally {
+      client.close();
+    }
+  });
+
   it("nulls app and item integration references on delete", async () => {
     const { client, store } = await setup();
     try {

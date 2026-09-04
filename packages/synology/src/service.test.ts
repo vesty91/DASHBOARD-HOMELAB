@@ -8,7 +8,12 @@ import {
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
-import { createEnvKeyring, encryptSecret, type SecretKeyring } from "@dashboard/secrets";
+import {
+  createEnvKeyring,
+  decryptSecret,
+  encryptSecret,
+  type SecretKeyring,
+} from "@dashboard/secrets";
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { synologyIntegrationDefinition } from "./definition";
 import { MemorySynologyOverviewCoalescer } from "./overview-coalescer";
@@ -121,15 +126,48 @@ function createMemoryStore(record?: Partial<IntegrationRecord>): {
       async loadEncryptedSecrets() {
         return [...secrets];
       },
-      async upsertSecret(_id, secret) {
+      async upsertSecret(id, secret) {
+        const current = rows.get(id);
+        if (!current) return;
         const index = secrets.findIndex((item) => item.key === secret.key);
         if (index >= 0) secrets[index] = secret;
         else secrets.push(secret);
+        rows.set(id, {
+          ...current,
+          configRevision: current.configRevision + 1,
+          status: "unknown",
+          lastCheckedAt: null,
+          updatedAt: new Date(),
+        });
       },
-      async deleteSecret(_id, key) {
+      async upsertSecretIfRevision(id, expectedRevision, secret) {
+        const current = rows.get(id);
+        if (!current || current.configRevision !== expectedRevision) return false;
+        const index = secrets.findIndex((item) => item.key === secret.key);
+        if (index >= 0) secrets[index] = secret;
+        else secrets.push(secret);
+        rows.set(id, {
+          ...current,
+          configRevision: current.configRevision + 1,
+          status: "unknown",
+          lastCheckedAt: null,
+          updatedAt: new Date(),
+        });
+        return true;
+      },
+      async deleteSecret(id, key) {
+        const current = rows.get(id);
         const index = secrets.findIndex((item) => item.key === key);
         if (index < 0) return false;
         secrets.splice(index, 1);
+        if (current)
+          rows.set(id, {
+            ...current,
+            configRevision: current.configRevision + 1,
+            status: "unknown",
+            lastCheckedAt: null,
+            updatedAt: new Date(),
+          });
         return true;
       },
       async persistConnectionResult() {
@@ -449,6 +487,30 @@ describe("SynologyService", () => {
     expect(invalid.system.status).toBe("degraded");
     expect(invalid.system.reason).toBe("invalid-response");
     expect(invalid.system.data?.model).toBe("DS920+");
+
+    const empty = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System") return json({ success: true, data: {} });
+      return dsmRequest()(options);
+    });
+    const emptyCore = await empty.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(emptyCore.status).toBe("degraded");
+    expect(emptyCore.system.status).toBe("degraded");
+    expect(emptyCore.system.reason).toBe("invalid-response");
+    expect(emptyCore.system.data?.model).toBe("DS920+");
+    expect(emptyCore.system.data?.cpuCores).toBeNull();
+    expect(emptyCore.resources.status).toBe("available");
+    expect(emptyCore.storage.status).toBe("available");
+
+    const unrelated = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System") return json({ success: true, data: { foo: "bar" } });
+      return dsmRequest()(options);
+    });
+    const unrelatedCore = await unrelated.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(unrelatedCore.system.status).toBe("degraded");
+    expect(unrelatedCore.system.reason).toBe("invalid-response");
+    expect(unrelatedCore.system.data?.model).toBe("DS920+");
 
     const missing = createService(async (options) => {
       const href = String(options.url);
@@ -794,8 +856,8 @@ describe("SynologyService", () => {
     expect(enrolled.system.data?.model).toBe("DS-2");
     await created.store.deleteSecret(INTEGRATION_ID, "deviceId");
     const cleared = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
-    expect(cleared.system.data?.model).not.toBe("DS-2");
-    expect(dsmInfoCalls).toBe(2);
+    expect(cleared.system.data?.model).toBe("DS-3");
+    expect(dsmInfoCalls).toBe(3);
     expect(JSON.stringify({ first, enrolled, cleared })).not.toMatch(/DID-SECRET/u);
   });
 
@@ -1191,5 +1253,183 @@ describe("SynologyService", () => {
     expect(memoryOverview.resources.status).toBe("unavailable");
     expect(memoryOverview.resources.reason).toBe("invalid-response");
     expect(memoryOverview.resources.data).toBeNull();
+  });
+
+  it("discards a stale device enrollment after the password changes", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        started.release();
+        await release.promise;
+        return json({
+          success: true,
+          data: { sid: "SID-OLD", synotoken: "TOK-OLD", did: "DID-OLD" },
+        });
+      }
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(1);
+    const pending = created.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await started.promise;
+    const nextPassword = encryptSecret(created.keyring, {
+      integrationId: INTEGRATION_ID,
+      key: "password",
+      plaintext: "n3wpass",
+    });
+    await created.store.upsertSecret(INTEGRATION_ID, { key: "password", ...nextPassword });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    release.release();
+    await expect(pending).rejects.toMatchObject({ code: "STALE_RESULT" });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    const password = created.secrets.find((row) => row.key === "password");
+    expect(password).toBeDefined();
+    expect(
+      decryptSecret(created.keyring, {
+        ...password!,
+        integrationId: INTEGRATION_ID,
+      }),
+    ).toBe("n3wpass");
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-OLD|n3wpass|s3cret/u);
+  });
+
+  it("discards a stale device enrollment after the configuration changes", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        started.release();
+        await release.promise;
+        return json({
+          success: true,
+          data: { sid: "SID-OLD", synotoken: "TOK-OLD", did: "DID-OLD" },
+        });
+      }
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    const pending = created.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await started.promise;
+    await created.store.update({
+      id: INTEGRATION_ID,
+      baseUrl: "https://nas-b.example:5001/",
+      bumpRevision: true,
+      resetStatus: true,
+    });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    release.release();
+    await expect(pending).rejects.toMatchObject({ code: "STALE_RESULT" });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.baseUrl).toBe(
+      "https://nas-b.example:5001/",
+    );
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-OLD/u);
+  });
+
+  it("does not rewrite a device token after clearDevice changes the revision", async () => {
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login"))
+        return json({
+          success: true,
+          data: { sid: "SID-1", synotoken: "TOK-1", did: "DID-FIRST" },
+        });
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    await created.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+
+    const started = createBarrier();
+    const release = createBarrier();
+    const racing = createSynologyService({
+      store: created.store,
+      registry: createIntegrationRegistry().register(synologyIntegrationDefinition).freeze(),
+      cache: created.cache,
+      request: async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") return json(infoPayload());
+        if (options.method === "POST" && options.body?.includes("method=login")) {
+          started.release();
+          await release.promise;
+          return json({
+            success: true,
+            data: { sid: "SID-2", synotoken: "TOK-2", did: "DID-STALE" },
+          });
+        }
+        if (options.method === "POST") return json({ success: true, data: {} });
+        throw new Error(String(options.url));
+      },
+      refreshRateLimiter: new MemorySynologyRefreshRateLimiter(),
+      refreshFence: created.refreshFence,
+      overviewCoalescer: created.overviewCoalescer,
+      keyring: created.keyring,
+    });
+    const pending = racing.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await started.promise;
+    await created.synology.clearDevice(INTEGRATION_ID, adminDefault);
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(3);
+    release.release();
+    await expect(pending).rejects.toMatchObject({ code: "STALE_RESULT" });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-FIRST|DID-STALE/u);
+  });
+
+  it("lets only the first concurrent enrollment persist its device token", async () => {
+    const firstStarted = createBarrier();
+    const releaseFirst = createBarrier();
+    const secondStarted = createBarrier();
+    const releaseSecond = createBarrier();
+    let logins = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        logins += 1;
+        if (logins === 1) {
+          firstStarted.release();
+          await releaseFirst.promise;
+          return json({
+            success: true,
+            data: { sid: "SID-A", synotoken: "TOK-A", did: "DID-A" },
+          });
+        }
+        secondStarted.release();
+        await releaseSecond.promise;
+        return json({
+          success: true,
+          data: { sid: "SID-B", synotoken: "TOK-B", did: "DID-B" },
+        });
+      }
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    const first = created.synology.enrollDevice(INTEGRATION_ID, "111111", adminDefault);
+    await firstStarted.promise;
+    const second = created.synology.enrollDevice(INTEGRATION_ID, "222222", adminDefault);
+    await secondStarted.promise;
+    releaseFirst.release();
+    await expect(first).resolves.toEqual({ enrolled: true });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    releaseSecond.release();
+    await expect(second).rejects.toMatchObject({ code: "STALE_RESULT" });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    const device = created.secrets.find((row) => row.key === "deviceId");
+    expect(device).toBeDefined();
+    expect(
+      decryptSecret(created.keyring, {
+        ...device!,
+        integrationId: INTEGRATION_ID,
+      }),
+    ).toBe("DID-A");
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-A|DID-B/u);
   });
 });
