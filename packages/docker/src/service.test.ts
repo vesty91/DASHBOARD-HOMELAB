@@ -87,6 +87,12 @@ function createMemoryStore(record?: Partial<IntegrationRecord>): IntegrationStor
       return [];
     },
     async upsertSecret() {},
+    async upsertSecretIfRevision() {
+      return false;
+    },
+    async deleteSecret() {
+      return false;
+    },
     async persistConnectionResult() {
       return true;
     },

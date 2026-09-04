@@ -16,6 +16,7 @@ packages/
   widgets/
   integrations/
   docker/
+  synology/
   permissions/
   secrets/
   monitoring/
@@ -120,6 +121,21 @@ Responsable :
 
 Ne dépend pas de `@dashboard/web`, Next, React, Drizzle ni `@dashboard/db`.
 `packages/integrations` ne dépend pas de Docker.
+
+### packages/synology
+
+Responsable :
+
+- client DSM HTTP(S) via `secureRequest` ;
+- bootstrap `SYNO.API.Info` sur `/webapi/entry.cgi` uniquement ;
+- login POST hors URL, SID en cookie de requête, logout en `finally` ;
+- 2FA via OTP transitoire et secret `deviceId` server-managed ;
+- DTO sûrs (jamais mot de passe, SID, OTP, DID, numéros de série) ;
+- overview partiel system / resources / storage ;
+- `SynologyService` sur store / registry / cache / `loadIntegrationSecrets`.
+
+Ne dépend pas de `@dashboard/web`, Next, React, Drizzle ni `@dashboard/db`.
+`packages/integrations` ne dépend pas de Synology.
 
 ### Composition des adapters
 

@@ -110,6 +110,38 @@ function createMemoryStore(): IntegrationStore & { secrets: Map<string, Encrypte
         updatedAt: now(),
       });
     },
+    async upsertSecretIfRevision(integrationId, expectedRevision, secret) {
+      const current = rows.get(integrationId);
+      if (!current || current.configRevision !== expectedRevision) return false;
+      const existing = secrets.get(integrationId) ?? [];
+      secrets.set(integrationId, [...existing.filter((row) => row.key !== secret.key), secret]);
+      rows.set(integrationId, {
+        ...current,
+        configRevision: current.configRevision + 1,
+        status: "unknown",
+        lastCheckedAt: null,
+        updatedAt: now(),
+      });
+      return true;
+    },
+    async deleteSecret(integrationId, key) {
+      const current = rows.get(integrationId);
+      const existing = secrets.get(integrationId) ?? [];
+      if (!existing.some((row) => row.key === key)) return false;
+      secrets.set(
+        integrationId,
+        existing.filter((row) => row.key !== key),
+      );
+      if (current)
+        rows.set(integrationId, {
+          ...current,
+          configRevision: current.configRevision + 1,
+          status: "unknown",
+          lastCheckedAt: null,
+          updatedAt: now(),
+        });
+      return true;
+    },
     async persistConnectionResult(id, revision, status) {
       const current = rows.get(id);
       if (!current || current.configRevision !== revision) return false;
@@ -192,6 +224,90 @@ describe("integration service", () => {
       service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, reader),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(service.test(created.id, reader)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("refuses user-facing setSecret for server-managed fields and loads secrets via the shared helper", async () => {
+    const store = createMemoryStore();
+    const managed = createTestHttpIntegrationDefinition();
+    const definition: IntegrationDefinition = {
+      ...managed,
+      id: "test-managed",
+      secretFields: [
+        ...managed.secretFields,
+        {
+          key: "deviceId",
+          label: "Device",
+          required: false,
+          serverManaged: true,
+          valueSchema: z.string().min(1).max(64),
+        },
+      ],
+      secretSchema: z.object({
+        apiKey: z.string().min(1),
+        deviceId: z.string().min(1).max(64).optional(),
+      }),
+    };
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [definition]);
+    const created = await service.create(
+      {
+        type: "test-managed",
+        name: "Managed",
+        baseUrl: "http://192.168.1.8:3000",
+        enabled: true,
+        config: { path: "/health" },
+      },
+      admin,
+    );
+    await expect(
+      service.setSecret({ integrationId: created.id, key: "deviceId", value: "DID-1" }, admin),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await service.setSecret({ integrationId: created.id, key: "apiKey", value: SENTINEL }, admin);
+    const {
+      loadIntegrationSecrets,
+      persistServerManagedSecret,
+      persistServerManagedSecretIfRevision,
+      clearServerManagedSecret,
+    } = await import("./secrets");
+    const loaded = await loadIntegrationSecrets(store, definition, created.id, keyring);
+    expect(loaded.apiKey).toBe(SENTINEL);
+    expect(loaded).not.toHaveProperty("deviceId");
+    await persistServerManagedSecret(store, definition, created.id, "deviceId", "DID-1", keyring);
+    const withDevice = await loadIntegrationSecrets(store, definition, created.id, keyring);
+    expect(withDevice.deviceId).toBe("DID-1");
+    expect(await clearServerManagedSecret(store, definition, created.id, "deviceId")).toBe(true);
+    expect(
+      (await loadIntegrationSecrets(store, definition, created.id, keyring)).deviceId,
+    ).toBeUndefined();
+    expect(JSON.stringify(await service.get(created.id, admin))).not.toContain("DID-1");
+    expect(
+      await persistServerManagedSecretIfRevision(
+        store,
+        definition,
+        created.id,
+        "deviceId",
+        "DID-2",
+        (await store.findById(created.id))!.configRevision,
+        keyring,
+      ),
+    ).toBe(true);
+    const afterCas = await store.findById(created.id);
+    expect(afterCas?.configRevision).toBe(5);
+    expect(
+      await persistServerManagedSecretIfRevision(
+        store,
+        definition,
+        created.id,
+        "deviceId",
+        "DID-STALE",
+        3,
+        keyring,
+      ),
+    ).toBe(false);
+    expect((await store.findById(created.id))?.configRevision).toBe(5);
+    expect((await loadIntegrationSecrets(store, definition, created.id, keyring)).deviceId).toBe(
+      "DID-2",
+    );
+    expect(JSON.stringify(await service.get(created.id, admin))).not.toContain("DID-STALE");
   });
 
   it("maps local HTTP outcomes and ignores stale results", async () => {
@@ -390,5 +506,66 @@ describe("integration service", () => {
       service.update({ id: created.id, config: { apiKey: "SECRET" } }, admin),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect((await service.get(created.id, admin)).config).toEqual({ path: "/health" });
+  });
+
+  it("redacts Synology generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "synology",
+        displayName: "Synology DSM",
+      },
+    ]);
+    const synology = await service.create(
+      {
+        type: "synology",
+        name: "NAS",
+        baseUrl: "https://nas.example:5001",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: false },
+      },
+      admin,
+    );
+    await service.setSecret({ integrationId: synology.id, key: "apiKey", value: SENTINEL }, admin);
+    const probe = await service.create(
+      {
+        type: "test-http",
+        name: "Probe",
+        baseUrl: "http://192.168.1.5:3000",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const managed = await service.get(synology.id, admin);
+    expect(managed.baseUrl).toBe("https://nas.example:5001/");
+    expect(managed.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: false });
+    expect(managed.secrets.apiKey).toEqual({ configured: true });
+    expect(managed.capabilities).toEqual(["test.ping"]);
+    const restricted = await service.get(synology.id, reader);
+    expect(restricted).toMatchObject({
+      id: synology.id,
+      type: "synology",
+      name: "NAS",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(JSON.stringify(restricted)).not.toContain("nas.example");
+    expect(JSON.stringify(restricted)).not.toContain("apiKey");
+    const listed = await service.list(reader, { limit: 10 });
+    const listedSynology = listed.items.find((item) => item.id === synology.id);
+    expect(listedSynology).toMatchObject({
+      baseUrl: "",
+      config: {},
+      secrets: {},
+      capabilities: [],
+    });
+    const listedProbe = listed.items.find((item) => item.id === probe.id);
+    expect(listedProbe?.baseUrl).toBe("http://192.168.1.5:3000/");
+    expect(listedProbe?.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: true });
   });
 });

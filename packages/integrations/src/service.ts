@@ -1,15 +1,14 @@
 import { performance } from "node:perf_hooks";
-import {
-  decryptSecret,
-  encryptSecret,
-  redact,
-  SecretError,
-  type SecretKeyring,
-} from "@dashboard/secrets";
+import { encryptSecret, redact, type SecretKeyring } from "@dashboard/secrets";
 import { hasPermission } from "@dashboard/permissions";
 import { assertConfigExcludesSecretKeys } from "./definition";
 import { IntegrationError, type IntegrationErrorCode } from "./errors";
 import { DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, MIN_TIMEOUT_MS, secureRequest } from "./http-client";
+import {
+  collectSecretStringValues,
+  loadIntegrationSecrets,
+  redactKnownSecretValues,
+} from "./secrets";
 import type { IntegrationRegistry } from "./registry";
 import {
   integrationCreateSchema,
@@ -20,7 +19,6 @@ import type {
   IntegrationActor,
   IntegrationCache,
   IntegrationCreateInput,
-  IntegrationDefinition,
   IntegrationDto,
   IntegrationRateLimiter,
   IntegrationRecord,
@@ -57,37 +55,6 @@ function verifyTlsFromConfig(config: JsonObject): boolean {
   return config.verifyTls !== false;
 }
 
-export function collectSecretStringValues(secrets: unknown): string[] {
-  const values: string[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value === "string" && value.length > 0) values.push(value);
-    else if (Array.isArray(value)) for (const entry of value) visit(entry);
-    else if (value && typeof value === "object")
-      for (const entry of Object.values(value as JsonObject)) visit(entry);
-  };
-  visit(secrets);
-  return [...new Set(values)].sort((left, right) => right.length - left.length);
-}
-
-export function redactKnownSecretValues(value: unknown, secretValues: readonly string[]): unknown {
-  if (secretValues.length === 0) return value;
-  if (typeof value === "string") {
-    let output = value;
-    for (const secret of secretValues)
-      if (output.includes(secret)) output = output.split(secret).join("[REDACTED]");
-    return output;
-  }
-  if (Array.isArray(value))
-    return value.map((entry) => redactKnownSecretValues(entry, secretValues));
-  if (value && typeof value === "object") {
-    const output: JsonObject = {};
-    for (const [key, entry] of Object.entries(value as JsonObject))
-      output[key] = redactKnownSecretValues(entry, secretValues);
-    return output;
-  }
-  return value;
-}
-
 function sanitizeMetadata(value: unknown, depth = 0): unknown {
   if (depth > 3) return undefined;
   if (value === null || typeof value === "boolean") return value;
@@ -106,10 +73,15 @@ function sanitizeMetadata(value: unknown, depth = 0): unknown {
   return undefined;
 }
 
+function canSeeRestrictedIntegrationDetails(actor: IntegrationActor): boolean {
+  return Boolean(actor.subject && hasPermission(actor.subject, "integration.manage"));
+}
+
 async function toDto(
   store: IntegrationStore,
   registry: IntegrationRegistry,
   record: IntegrationRecord,
+  actor: IntegrationActor,
 ): Promise<IntegrationDto> {
   const definition = registry.get(record.type);
   const states = await store.listSecretStates(record.id);
@@ -118,7 +90,7 @@ async function toDto(
     for (const field of definition.secretFields)
       secrets[field.key] = { configured: states.some((state) => state.key === field.key) };
   else for (const state of states) secrets[state.key] = { configured: true };
-  return {
+  const dto: IntegrationDto = {
     id: record.id,
     type: record.type,
     name: record.name,
@@ -134,6 +106,15 @@ async function toDto(
     capabilities: definition ? [...definition.capabilities] : [],
     secrets,
   };
+  if (record.type === "synology" && !canSeeRestrictedIntegrationDetails(actor))
+    return {
+      ...dto,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    };
+  return dto;
 }
 
 function requireKeyring(keyring: SecretKeyring | undefined): SecretKeyring {
@@ -157,7 +138,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       const hasMore = rows.length > input.limit;
       const page = hasMore ? rows.slice(0, input.limit) : rows;
       return {
-        items: await Promise.all(page.map((row) => toDto(store, registry, row))),
+        items: await Promise.all(page.map((row) => toDto(store, registry, row, actor))),
         nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
       };
     },
@@ -165,7 +146,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       requireAccess(actor, "integration.read");
       const record = await store.findById(id);
       if (!record) throw new IntegrationError("NOT_FOUND", "Integration not found");
-      return toDto(store, registry, record);
+      return toDto(store, registry, record, actor);
     },
     async create(input: IntegrationCreateInput, actor: IntegrationActor) {
       requireAccess(actor, "integration.create");
@@ -182,7 +163,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
         config,
         createdBy: actor.userId,
       });
-      return toDto(store, registry, created);
+      return toDto(store, registry, created, actor);
     },
     async update(input: ReturnType<typeof integrationUpdateSchema.parse>, actor: IntegrationActor) {
       requireAccess(actor, "integration.manage");
@@ -214,7 +195,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       });
       if (!updated) throw new IntegrationError("NOT_FOUND", "Integration not found");
       if (bumpRevision) cache.invalidate(updated.id);
-      return toDto(store, registry, updated);
+      return toDto(store, registry, updated, actor);
     },
     async setSecret(
       input: { integrationId: string; key: string; value: string },
@@ -229,6 +210,8 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       if (!definition) throw new IntegrationError("MISCONFIGURED", "Unknown integration type");
       const field = definition.secretFields.find((entry) => entry.key === parsed.key);
       if (!field) throw new IntegrationError("VALIDATION_ERROR", "Unknown secret field");
+      if (field.serverManaged)
+        throw new IntegrationError("FORBIDDEN", "This secret is server-managed");
       const value = field.valueSchema.parse(parsed.value);
       const encrypted = encryptSecret(activeKeyring, {
         integrationId: current.id,
@@ -267,7 +250,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       const config = parsedConfig.data as JsonObject;
       let secrets: JsonObject = {};
       try {
-        secrets = await loadSecrets(store, definition, current.id, keyring);
+        secrets = await loadIntegrationSecrets(store, definition, current.id, keyring);
       } catch (error) {
         if (error instanceof IntegrationError && error.code === "SECRETS_NOT_CONFIGURED")
           return {
@@ -385,48 +368,6 @@ function shouldPersistFailure(code: IntegrationErrorCode): boolean {
 function classifyThrown(error: unknown): IntegrationErrorCode {
   if (error instanceof IntegrationError) return error.code;
   return "UNKNOWN";
-}
-
-async function loadSecrets(
-  store: IntegrationStore,
-  definition: IntegrationDefinition,
-  integrationId: string,
-  keyring: SecretKeyring | undefined,
-): Promise<JsonObject> {
-  const required = definition.secretFields.filter((field) => field.required);
-  const rows = await store.loadEncryptedSecrets(integrationId);
-  if (required.length > 0 && !keyring && rows.length > 0)
-    throw new IntegrationError("SECRETS_NOT_CONFIGURED", "SECRET_ENCRYPTION_KEY is not configured");
-  if (required.some((field) => !rows.some((row) => row.key === field.key)))
-    throw new IntegrationError("MISCONFIGURED", "Required secrets are not configured");
-  if (rows.length === 0) {
-    const parsed = definition.secretSchema.safeParse({});
-    if (!parsed.success)
-      throw new IntegrationError("MISCONFIGURED", "Required secrets are not configured");
-    return parsed.data as JsonObject;
-  }
-  const active = requireKeyring(keyring);
-  const secrets: JsonObject = {};
-  for (const row of rows) {
-    try {
-      secrets[row.key] = decryptSecret(active, {
-        integrationId,
-        key: row.key,
-        ciphertext: row.ciphertext,
-        iv: row.iv,
-        authTag: row.authTag,
-        keyVersion: row.keyVersion,
-      });
-    } catch (error) {
-      if (error instanceof SecretError)
-        throw new IntegrationError("MISCONFIGURED", "Unable to decrypt secrets");
-      throw error;
-    }
-  }
-  const parsed = definition.secretSchema.safeParse(secrets);
-  if (!parsed.success)
-    throw new IntegrationError("MISCONFIGURED", "Required secrets are not configured");
-  return parsed.data as JsonObject;
 }
 
 export type IntegrationService = ReturnType<typeof createIntegrationService>;

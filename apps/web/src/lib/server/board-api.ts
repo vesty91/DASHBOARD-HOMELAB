@@ -4,6 +4,12 @@ import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
+  createSynologyService,
+  MemorySynologyOverviewCoalescer,
+  MemorySynologyRefreshFence,
+  MemorySynologyRefreshRateLimiter,
+} from "@dashboard/synology";
+import {
   createIntegrationService,
   MemoryIntegrationCache,
   MemoryTestRateLimiter,
@@ -22,6 +28,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     cache: MemoryIntegrationCache;
     rateLimiter: MemoryTestRateLimiter;
     dockerActionRateLimiter: MemoryDockerActionRateLimiter;
+    synologyRefreshRateLimiter: MemorySynologyRefreshRateLimiter;
+    synologyRefreshFence: MemorySynologyRefreshFence;
+    synologyOverviewCoalescer: MemorySynologyOverviewCoalescer;
   };
 };
 
@@ -31,6 +40,9 @@ function integrationRuntime() {
     cache: new MemoryIntegrationCache(),
     rateLimiter: new MemoryTestRateLimiter(),
     dockerActionRateLimiter: new MemoryDockerActionRateLimiter(),
+    synologyRefreshRateLimiter: new MemorySynologyRefreshRateLimiter(),
+    synologyRefreshFence: new MemorySynologyRefreshFence(),
+    synologyOverviewCoalescer: new MemorySynologyOverviewCoalescer(),
   });
 }
 
@@ -60,6 +72,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       cache: runtime.cache,
       actionRateLimiter: runtime.dockerActionRateLimiter,
       request: secureRequest,
+    }),
+    synology: createSynologyService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.synologyRefreshRateLimiter,
+      refreshFence: runtime.synologyRefreshFence,
+      overviewCoalescer: runtime.synologyOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
     }),
   };
 }

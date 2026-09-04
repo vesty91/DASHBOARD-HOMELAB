@@ -401,7 +401,36 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         keyVersion: 1,
       });
       expect((await store.findById(created.id))?.configRevision).toBe(2);
-      expect(await store.persistConnectionResult(created.id, 2, "available")).toBe(true);
+      expect(
+        await store.upsertSecretIfRevision(created.id, 2, {
+          key: "deviceId",
+          ciphertext: "ZGlk",
+          iv: "aXY=",
+          authTag: "dGFn",
+          keyVersion: 1,
+        }),
+      ).toBe(true);
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some(
+          (row) => row.key === "deviceId" && row.ciphertext === "ZGlk",
+        ),
+      ).toBe(true);
+      expect(
+        await store.upsertSecretIfRevision(created.id, 2, {
+          key: "deviceId",
+          ciphertext: "c3RhbGU=",
+          iv: "aXY=",
+          authTag: "dGFn",
+          keyVersion: 1,
+        }),
+      ).toBe(false);
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).find((row) => row.key === "deviceId")
+          ?.ciphertext,
+      ).toBe("ZGlk");
+      expect(await store.persistConnectionResult(created.id, 3, "available")).toBe(true);
       expect(await store.persistConnectionResult(created.id, 1, "unavailable")).toBe(false);
       expect((await store.findById(created.id))?.status).toBe("available");
       await Promise.all([
@@ -416,7 +445,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(await store.findById(created.id)).toMatchObject({
         enabled: false,
         baseUrl: "http://10.0.0.11:3000",
-        configRevision: 4,
+        configRevision: 5,
       });
       await expect(
         client.pool.query("update integrations set config_revision=0 where id=$1", [created.id]),
@@ -436,6 +465,77 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
           )
         ).rows[0],
       ).toEqual({ count: 0 });
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("persists extra group permission grants without changing builtin roles", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await migratePostgresql(client.pool);
+      const auth = createPostgresqlAuthStore(client.pool);
+      await auth.createFirstAdmin({
+        username: "Admin",
+        usernameCanonical: "admin",
+        passwordHash: "hash",
+      });
+      const member = await auth.createLocalUser({
+        username: "Reader",
+        usernameCanonical: "reader",
+        passwordHash: "hash",
+        roleName: "VIEWER",
+      });
+      const group = await auth.createGroupWithRoleAndOptionalMember({
+        name: "NAS readers",
+        roleName: "VIEWER",
+        userId: member.id,
+      });
+      const before = await auth.resolvePermissionSubject(member.id);
+      expect(before?.groupPermissions).not.toContain("synology.read");
+      const viewerCount = (
+        await client.pool.query(
+          "select count(*)::int count from role_permissions where role_id=$1",
+          ["00000000-0000-4000-8000-000000000005"],
+        )
+      ).rows[0].count;
+      await auth.setGroupPermissionGrants(group.id, ["synology.read", "integration.use"]);
+      expect(await auth.listGroupPermissionGrants(group.id)).toEqual([
+        "integration.use",
+        "synology.read",
+      ]);
+      const granted = await auth.resolvePermissionSubject(member.id);
+      expect(granted?.groupPermissions).toEqual(
+        expect.arrayContaining([
+          "app.read",
+          "integration.read",
+          "integration.use",
+          "synology.read",
+        ]),
+      );
+      expect(
+        (
+          await client.pool.query("select count(*)::int count from group_roles where group_id=$1", [
+            group.id,
+          ])
+        ).rows[0].count,
+      ).toBe(2);
+      expect(
+        (
+          await client.pool.query(
+            "select count(*)::int count from role_permissions where role_id=$1",
+            ["00000000-0000-4000-8000-000000000005"],
+          )
+        ).rows[0].count,
+      ).toBe(viewerCount);
+      await auth.setGroupPermissionGrants(group.id, ["integration.use"]);
+      const reduced = await auth.resolvePermissionSubject(member.id);
+      expect(reduced?.groupPermissions).toContain("integration.use");
+      expect(reduced?.groupPermissions).not.toContain("synology.read");
+      await expect(
+        auth.setGroupPermissionGrants(group.id, ["not.a.permission"]),
+      ).rejects.toMatchObject({ code: "INVALID_PERMISSION" });
     } finally {
       await client.close();
     }

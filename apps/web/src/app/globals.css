@@ -1582,7 +1582,8 @@ button[aria-pressed="true"] {
 .docker-summary,
 .docker-detail,
 .docker-stats,
-.docker-logs {
+.docker-logs,
+.synology-summary {
   margin: 1rem 0;
   padding: 1rem 1.1rem;
   border: 1px solid var(--border);
@@ -1591,7 +1592,8 @@ button[aria-pressed="true"] {
 }
 
 .docker-summary p,
-.docker-detail p {
+.docker-detail p,
+.synology-summary p {
   margin: 0.25rem 0;
 }
 
@@ -1671,6 +1673,37 @@ button[aria-pressed="true"] {
   font-size: 0.8125rem;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.synology-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1.5rem;
+  overflow-x: auto;
+}
+
+.synology-table th,
+.synology-table td {
+  padding: 0.7rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.synology-table th {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.synology-toolbar,
+.synology-device {
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.synology-device .ui-form {
+  margin: 0;
 }
 
 @media (min-width: 900px) {

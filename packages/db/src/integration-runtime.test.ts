@@ -68,6 +68,9 @@ describe("SQLite integration store", () => {
           integrationId: created.id,
         }),
       ).toBe(PLAINTEXT);
+      expect(await store.deleteSecret(created.id, "apiKey")).toBe(true);
+      expect(await store.loadEncryptedSecrets(created.id)).toEqual([]);
+      expect(await store.deleteSecret(created.id, "apiKey")).toBe(false);
       const other = await store.create({
         type: "test-http",
         name: "Other",
@@ -86,8 +89,8 @@ describe("SQLite integration store", () => {
           keyVersion: loaded.keyVersion,
         }),
       ).toThrow();
-      expect(await store.persistConnectionResult(created.id, 2, "available")).toBe(true);
-      expect(await store.persistConnectionResult(created.id, 1, "unavailable")).toBe(false);
+      expect(await store.persistConnectionResult(created.id, 3, "available")).toBe(true);
+      expect(await store.persistConnectionResult(created.id, 2, "unavailable")).toBe(false);
       expect((await store.findById(created.id))?.status).toBe("available");
       const renamed = await store.update({
         id: created.id,
@@ -95,14 +98,14 @@ describe("SQLite integration store", () => {
         bumpRevision: false,
         resetStatus: false,
       });
-      expect(renamed).toMatchObject({ name: "Renamed", status: "available", configRevision: 2 });
+      expect(renamed).toMatchObject({ name: "Renamed", status: "available", configRevision: 3 });
       const reset = await store.update({
         id: created.id,
         baseUrl: "http://10.0.0.99:3000",
         bumpRevision: true,
         resetStatus: true,
       });
-      expect(reset).toMatchObject({ status: "unknown", configRevision: 3, lastCheckedAt: null });
+      expect(reset).toMatchObject({ status: "unknown", configRevision: 4, lastCheckedAt: null });
       const initial = await store.findById(created.id);
       await Promise.all([
         store.update({
@@ -152,6 +155,53 @@ describe("SQLite integration store", () => {
           .prepare("SELECT count(*) count FROM integration_secrets WHERE integration_id=?")
           .get(created.id)?.count,
       ).toBe(0);
+    } finally {
+      client.close();
+    }
+  });
+
+  it("writes a secret only when the config revision matches", async () => {
+    const { client, store } = await setup();
+    try {
+      const created = await store.create({
+        type: "test-http",
+        name: "CAS",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: {},
+        createdBy: null,
+      });
+      expect(created.configRevision).toBe(1);
+      const first = encryptSecret(keyring, {
+        integrationId: created.id,
+        key: "deviceId",
+        plaintext: "DID-A",
+      });
+      expect(await store.upsertSecretIfRevision(created.id, 1, { key: "deviceId", ...first })).toBe(
+        true,
+      );
+      expect((await store.findById(created.id))?.configRevision).toBe(2);
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some((row) => row.key === "deviceId"),
+      ).toBe(true);
+      const stale = encryptSecret(keyring, {
+        integrationId: created.id,
+        key: "deviceId",
+        plaintext: "DID-STALE",
+      });
+      expect(await store.upsertSecretIfRevision(created.id, 1, { key: "deviceId", ...stale })).toBe(
+        false,
+      );
+      expect((await store.findById(created.id))?.configRevision).toBe(2);
+      const kept = (await store.loadEncryptedSecrets(created.id)).find(
+        (row) => row.key === "deviceId",
+      )!;
+      expect(
+        decryptSecret(keyring, {
+          ...kept,
+          integrationId: created.id,
+        }),
+      ).toBe("DID-A");
     } finally {
       client.close();
     }

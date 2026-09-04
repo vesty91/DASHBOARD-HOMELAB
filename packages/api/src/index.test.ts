@@ -5,15 +5,20 @@ import {
   type BoardRepository,
   type BoardService,
 } from "@dashboard/boards";
-import { createCaller } from "./index";
+import { createCaller as createAppCaller, type ApiContext } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
+import type { SynologyService } from "@dashboard/synology";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
   subject: { status: "active" as const, isSystemAdmin: false },
 };
+const synology = {} as SynologyService;
+function createCaller(context: Omit<ApiContext, "synology"> & { synology?: SynologyService }) {
+  return createAppCaller({ synology, ...context });
+}
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({
     list: vi.fn(async () => []),
@@ -769,5 +774,132 @@ describe("docker tRPC router", () => {
         docker: dockerService,
       }).docker.containers.logs({ integrationId, containerId: ID }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("synology tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000019";
+  const synologyActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "synology.read"],
+    },
+  };
+  const overview = {
+    status: "available" as const,
+    fetchedAt: "2026-09-01T12:00:00.000Z",
+    system: {
+      status: "available" as const,
+      data: {
+        model: "DS920+",
+        dsmVersion: "DSM 7.2",
+        uptimeSeconds: 3600,
+        systemTemperatureC: 41,
+        temperatureWarning: null,
+        ramTotalBytes: 8,
+        cpuCores: 4,
+        cpuFamily: "Intel",
+        cpuSeries: "J4125",
+      },
+    },
+    resources: {
+      status: "available" as const,
+      data: {
+        cpuTotalPercent: 12,
+        cpuUserPercent: 10,
+        cpuSystemPercent: 2,
+        cpuOtherPercent: 0,
+        memoryTotalBytes: 2,
+        memoryAvailableBytes: 1,
+        memoryUsedBytes: 1,
+        memoryPercentUsed: 50,
+        swapTotalBytes: null,
+        swapUsedPercent: null,
+      },
+    },
+    storage: {
+      status: "available" as const,
+      data: {
+        volumes: [
+          {
+            id: "volume_1",
+            name: "Volume 1",
+            filesystem: "btrfs",
+            raidType: "raid1",
+            status: "normal",
+            usedBytes: 10,
+            totalBytes: 100,
+            freeBytes: 90,
+            usedPercent: 10,
+            temperatureC: null,
+          },
+        ],
+        disks: [
+          {
+            id: "sata1",
+            displayName: "Drive 1",
+            vendor: "WD",
+            model: "WD80",
+            type: "HDD",
+            totalBytes: 8000,
+            status: "normal",
+            temperatureC: 33,
+            smartStatus: "normal",
+            sizeBytes: 8000,
+            badSectorWarning: null,
+            remainingLifeWarning: null,
+          },
+        ],
+      },
+    },
+  };
+
+  it("returns safe Synology metadata and overview for a delegated reader", async () => {
+    const synologyService = {
+      permissions: vi.fn(() => ({ canRead: true, canManageAuth: false })),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "NAS Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overview),
+      refreshOverview: vi.fn(async () => overview),
+      enrollDevice: vi.fn(async () => ({ enrolled: true as const })),
+      clearDevice: vi.fn(async () => ({ cleared: true as const })),
+    } as unknown as SynologyService;
+    const caller = createCaller({
+      actor: synologyActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      synology: synologyService,
+    });
+    const metadata = await caller.synology.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "NAS Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    expect(metadata).not.toHaveProperty("config");
+    expect(metadata).not.toHaveProperty("trustedCaPem");
+    expect(metadata).not.toHaveProperty("secrets");
+    const loaded = await caller.synology.overview.get({ integrationId });
+    expect(loaded.system.data?.model).toBe("DS920+");
+    expect(JSON.stringify(loaded)).not.toMatch(/password|sid|serial|trustedCaPem|DID-SECRET/u);
+    expect(synologyService.getOverview).toHaveBeenCalledWith(integrationId, synologyActor);
+    const refreshed = await caller.synology.overview.refresh({ integrationId });
+    expect(refreshed.status).toBe("available");
+    expect(synologyService.refreshOverview).toHaveBeenCalledWith(integrationId, synologyActor);
+    await expect(
+      caller.synology.auth.enrollDevice({ integrationId, otpCode: "123456" }),
+    ).resolves.toEqual({ enrolled: true });
+    await expect(caller.synology.auth.clearDevice({ integrationId })).resolves.toEqual({
+      cleared: true,
+    });
+    expect(synologyService.enrollDevice).toHaveBeenCalledWith(
+      integrationId,
+      "123456",
+      synologyActor,
+    );
   });
 });

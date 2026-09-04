@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { hasPermission, requirePermission, resolvePermissions } from "./index";
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  canAssignGroupPermissionGrants,
+  hasPermission,
+  isPermission,
+  requirePermission,
+  resolvePermissions,
+} from "./index";
 const active = { status: "active" as const, isSystemAdmin: false };
 describe("permission resolver", () => {
   it("denies by default", () => {
@@ -24,8 +31,26 @@ describe("permission resolver", () => {
       ),
     ).toBe(false);
   });
+  it("does not grant Docker or Synology permissions to the default ADMIN role", () => {
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("docker.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("synology.read");
+  });
   it("grants active system admins the catalog", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "backup.manage")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "synology.read")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
+  });
+  it("reserves extra group permission grants to active system admins", () => {
+    expect(isPermission("synology.read")).toBe(true);
+    expect(isPermission("not.a.permission")).toBe(false);
+    expect(
+      canAssignGroupPermissionGrants({
+        status: "active",
+        isSystemAdmin: false,
+        directPermissions: DEFAULT_ROLE_PERMISSIONS.ADMIN,
+      }),
+    ).toBe(false);
+    expect(canAssignGroupPermissionGrants({ status: "active", isSystemAdmin: true })).toBe(true);
+    expect(canAssignGroupPermissionGrants({ status: "disabled", isSystemAdmin: true })).toBe(false);
   });
 });
