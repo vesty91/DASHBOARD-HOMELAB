@@ -11,6 +11,7 @@ import {
 import { createEnvKeyring, encryptSecret, type SecretKeyring } from "@dashboard/secrets";
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { synologyIntegrationDefinition } from "./definition";
+import { MemorySynologyOverviewCoalescer } from "./overview-coalescer";
 import { MemorySynologyRefreshRateLimiter } from "./rate-limiter";
 import { MemorySynologyRefreshFence } from "./refresh-fence";
 import { createSynologyService } from "./service";
@@ -242,12 +243,14 @@ function createService(
   const { store, keyring, secrets } = createMemoryStore(record);
   const cache = new MemoryIntegrationCache();
   const refreshFence = new MemorySynologyRefreshFence();
+  const overviewCoalescer = new MemorySynologyOverviewCoalescer();
   return {
     store,
     cache,
     secrets,
     keyring,
     refreshFence,
+    overviewCoalescer,
     synology: createSynologyService({
       store,
       registry: createIntegrationRegistry().register(synologyIntegrationDefinition).freeze(),
@@ -255,6 +258,7 @@ function createService(
       request,
       refreshRateLimiter,
       refreshFence,
+      overviewCoalescer,
       keyring,
     }),
   };
@@ -267,6 +271,7 @@ function createSharedRuntime(
   const { store, keyring, secrets } = createMemoryStore();
   const cache = new MemoryIntegrationCache();
   const refreshFence = new MemorySynologyRefreshFence();
+  const overviewCoalescer = new MemorySynologyOverviewCoalescer();
   const registry = createIntegrationRegistry().register(synologyIntegrationDefinition).freeze();
   const makeService = (
     serviceRequest: (options: SecureHttpRequest) => Promise<SecureHttpResult> = request,
@@ -278,9 +283,10 @@ function createSharedRuntime(
       request: serviceRequest,
       refreshRateLimiter,
       refreshFence,
+      overviewCoalescer,
       keyring,
     });
-  return { store, cache, secrets, keyring, refreshFence, makeService };
+  return { store, cache, secrets, keyring, refreshFence, overviewCoalescer, makeService };
 }
 
 function dsmInfoData(model: string) {
@@ -992,5 +998,198 @@ describe("SynologyService", () => {
     const next = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
     expect(next.system.data?.model).toBe("NAS-RETRY");
     expect(infoCalls).toBe(3);
+  });
+
+  it("coalesces concurrent getOverview cache misses across distinct services", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    const counts = { login: 0, dsmInfo: 0, utilization: 0, storage: 0, logout: 0 };
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        counts.login += 1;
+        return dsmRequest()(options);
+      }
+      if (options.method === "POST") {
+        counts.logout += 1;
+        return dsmRequest()(options);
+      }
+      if (api === "SYNO.DSM.Info") {
+        counts.dsmInfo += 1;
+        started.release();
+        await release.promise;
+        return json({ success: true, data: dsmInfoData("NAS-SHARED") });
+      }
+      if (api === "SYNO.Core.System.Utilization") {
+        counts.utilization += 1;
+        return dsmRequest()(options);
+      }
+      if (api === "SYNO.Storage.CGI.Storage") {
+        counts.storage += 1;
+        return dsmRequest()(options);
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const serviceC = runtime.makeService();
+    expect(serviceA).not.toBe(serviceB);
+    const pending = Promise.all([
+      serviceA.getOverview(INTEGRATION_ID, systemAdmin),
+      serviceB.getOverview(INTEGRATION_ID, systemAdmin),
+      serviceC.getOverview(INTEGRATION_ID, systemAdmin),
+    ]);
+    await started.promise;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(counts.dsmInfo).toBe(1);
+    expect(runtime.overviewCoalescer.size).toBe(1);
+    release.release();
+    const settled = await pending;
+    expect(settled.map((overview) => overview.system.data?.model)).toEqual([
+      "NAS-SHARED",
+      "NAS-SHARED",
+      "NAS-SHARED",
+    ]);
+    expect(counts).toEqual({ login: 1, dsmInfo: 1, utilization: 1, storage: 1, logout: 1 });
+    const cached = await runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cached.system.data?.model).toBe("NAS-SHARED");
+    expect(counts.dsmInfo).toBe(1);
+    expect(runtime.overviewCoalescer.size).toBe(0);
+  });
+
+  it("retries after a coalesced overview failure", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    let fail = true;
+    let infoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        if (fail) {
+          started.release();
+          await release.promise;
+          return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+        }
+        return json(infoPayload());
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const first = serviceA.getOverview(INTEGRATION_ID, systemAdmin);
+    await started.promise;
+    const second = serviceB.getOverview(INTEGRATION_ID, systemAdmin);
+    release.release();
+    await expect(first).rejects.toMatchObject({ code: "TIMEOUT" });
+    await expect(second).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(infoCalls).toBe(1);
+    fail = false;
+    const recovered = await runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin);
+    expect(recovered.system.data?.model).toBe("DS920+");
+    expect(infoCalls).toBe(2);
+  });
+
+  it("does not coalesce a refresh with an older in-flight getOverview", async () => {
+    const oldStarted = createBarrier();
+    const releaseOld = createBarrier();
+    let dsmInfoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) {
+          oldStarted.release();
+          await releaseOld.promise;
+          return json({ success: true, data: dsmInfoData("NAS-OLD") });
+        }
+        return json({ success: true, data: dsmInfoData("NAS-FRESH") });
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const inFlight = serviceA.getOverview(INTEGRATION_ID, systemAdmin);
+    await oldStarted.promise;
+    const refreshed = await serviceB.refreshOverview(INTEGRATION_ID, systemAdmin);
+    expect(refreshed.system.data?.model).toBe("NAS-FRESH");
+    releaseOld.release();
+    expect((await inFlight).system.data?.model).toBe("NAS-OLD");
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("coalesces concurrent getOverview calls that share a refresh generation", async () => {
+    const refreshStarted = createBarrier();
+    const releaseRefresh = createBarrier();
+    let dsmInfoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info") {
+        dsmInfoCalls += 1;
+        if (dsmInfoCalls === 1) return json({ success: true, data: dsmInfoData("NAS-FIRST") });
+        refreshStarted.release();
+        await releaseRefresh.promise;
+        return json({ success: true, data: dsmInfoData("NAS-GEN1") });
+      }
+      return dsmRequest()(options);
+    });
+    const serviceA = runtime.makeService();
+    const serviceB = runtime.makeService();
+    const serviceC = runtime.makeService();
+    await serviceA.getOverview(INTEGRATION_ID, systemAdmin);
+    const refresh = serviceA.refreshOverview(INTEGRATION_ID, systemAdmin);
+    await refreshStarted.promise;
+    const joined = Promise.all([
+      serviceB.getOverview(INTEGRATION_ID, systemAdmin),
+      serviceC.getOverview(INTEGRATION_ID, systemAdmin),
+    ]);
+    releaseRefresh.release();
+    const [fresh, [fromB, fromC]] = await Promise.all([refresh, joined]);
+    expect([fresh, fromB, fromC].map((overview) => overview.system.data?.model)).toEqual([
+      "NAS-GEN1",
+      "NAS-GEN1",
+      "NAS-GEN1",
+    ]);
+    expect(dsmInfoCalls).toBe(2);
+  });
+
+  it("marks inconsistent utilization totals as an unavailable resources section", async () => {
+    const cpu = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System.Utilization")
+        return json({
+          success: true,
+          data: {
+            cpu: { user_load: 60, system_load: 60, other_load: 0 },
+            memory: { total_real: 4096, avail_real: 1024 },
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const cpuOverview = await cpu.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cpuOverview.status).toBe("degraded");
+    expect(cpuOverview.resources.status).toBe("unavailable");
+    expect(cpuOverview.resources.reason).toBe("invalid-response");
+    expect(cpuOverview.resources.data).toBeNull();
+    expect(cpuOverview.system.status).toBe("available");
+    expect(cpuOverview.storage.status).toBe("available");
+
+    const memory = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Core.System.Utilization")
+        return json({
+          success: true,
+          data: {
+            cpu: { user_load: 1, system_load: 1, other_load: 1 },
+            memory: { total_real: 4096, avail_real: 5000 },
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const memoryOverview = await memory.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(memoryOverview.status).toBe("degraded");
+    expect(memoryOverview.resources.status).toBe("unavailable");
+    expect(memoryOverview.resources.reason).toBe("invalid-response");
+    expect(memoryOverview.resources.data).toBeNull();
   });
 });

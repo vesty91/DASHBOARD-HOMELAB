@@ -212,19 +212,45 @@ export function parseStoragePayload(raw: unknown): { volumes: unknown; disks: un
   invalidPayload("DSM storage payload is invalid");
 }
 
+export function validateCpuLoads(cpu: Record<string, unknown>): {
+  user: number;
+  system: number;
+  other: number;
+  total: number;
+} {
+  const user = parsePercentLoad(cpu.user_load);
+  const system = parsePercentLoad(cpu.system_load);
+  const other = parsePercentLoad(cpu.other_load);
+  if (user === null || system === null || other === null)
+    invalidPayload("DSM utilization CPU is invalid");
+  const total = user + system + other;
+  if (!Number.isFinite(total) || total < 0 || total > 100)
+    invalidPayload("DSM utilization CPU is invalid");
+  return { user, system, other, total };
+}
+
+export function validateMemoryTotals(memory: Record<string, unknown>): {
+  availableBytes: number;
+  totalBytes: number;
+} {
+  const availableBytes = kibToBytes(memory.avail_real);
+  const totalBytes = kibToBytes(memory.total_real ?? memory.memory_size);
+  if (
+    availableBytes === null ||
+    totalBytes === null ||
+    totalBytes <= 0 ||
+    availableBytes > totalBytes
+  )
+    invalidPayload("DSM utilization memory is invalid");
+  return { availableBytes, totalBytes };
+}
+
 export function parseUtilizationPayload(raw: unknown): unknown {
   const record = requireObjectRecord(raw, "DSM utilization payload is invalid");
   const cpu = requireObjectRecord(record.cpu, "DSM utilization CPU is invalid");
   const memory = requireObjectRecord(record.memory, "DSM utilization memory is invalid");
-  if (
-    parsePercentLoad(cpu.user_load) === null ||
-    parsePercentLoad(cpu.system_load) === null ||
-    parsePercentLoad(cpu.other_load) === null
-  )
-    invalidPayload("DSM utilization CPU is invalid");
-  if (kibToBytes(memory.avail_real) === null) invalidPayload("DSM utilization memory is invalid");
-  if (kibToBytes(memory.total_real ?? memory.memory_size) === null)
-    invalidPayload("DSM utilization memory is invalid");
+  validateCpuLoads(cpu);
+  validateMemoryTotals(memory);
   return record;
 }
 
@@ -252,40 +278,20 @@ export function mapResources(raw: unknown): SynologyResourcesDto {
   const record = recordOf(raw);
   const cpu = recordOf(record.cpu);
   const memory = recordOf(record.memory);
-  const user = parsePercentLoad(cpu.user_load);
-  const system = parsePercentLoad(cpu.system_load);
-  const other = parsePercentLoad(cpu.other_load);
-  const cpuTotalPercent =
-    user !== null && system !== null && other !== null
-      ? user + system + other <= 100
-        ? user + system + other
-        : null
-      : null;
-  const memoryTotalBytes = kibToBytes(memory.total_real ?? memory.memory_size);
-  const memoryAvailableBytes = kibToBytes(memory.avail_real);
-  const memoryUsedBytes =
-    memoryTotalBytes !== null &&
-    memoryAvailableBytes !== null &&
-    memoryAvailableBytes <= memoryTotalBytes
-      ? memoryTotalBytes - memoryAvailableBytes
-      : null;
-  const memoryPercentUsed =
-    memoryUsedBytes !== null && memoryTotalBytes !== null && memoryTotalBytes > 0
-      ? (memoryUsedBytes / memoryTotalBytes) * 100
-      : null;
-  const swapTotalBytes = kibToBytes(memory.total_swap);
-  const swapUsedPercent = parsePercentLoad(memory.swap_usage);
+  const { user, system, other, total } = validateCpuLoads(cpu);
+  const { availableBytes, totalBytes } = validateMemoryTotals(memory);
+  const memoryUsedBytes = totalBytes - availableBytes;
   return {
-    cpuTotalPercent,
+    cpuTotalPercent: total,
     cpuUserPercent: user,
     cpuSystemPercent: system,
     cpuOtherPercent: other,
-    memoryTotalBytes,
-    memoryAvailableBytes,
+    memoryTotalBytes: totalBytes,
+    memoryAvailableBytes: availableBytes,
     memoryUsedBytes,
-    memoryPercentUsed,
-    swapTotalBytes,
-    swapUsedPercent,
+    memoryPercentUsed: (memoryUsedBytes / totalBytes) * 100,
+    swapTotalBytes: kibToBytes(memory.total_swap),
+    swapUsedPercent: parsePercentLoad(memory.swap_usage),
   };
 }
 
@@ -294,8 +300,11 @@ export function assertUsefulResources(dto: SynologyResourcesDto): void {
     dto.cpuUserPercent === null ||
     dto.cpuSystemPercent === null ||
     dto.cpuOtherPercent === null ||
+    dto.cpuTotalPercent === null ||
     dto.memoryTotalBytes === null ||
-    dto.memoryAvailableBytes === null
+    dto.memoryAvailableBytes === null ||
+    dto.memoryUsedBytes === null ||
+    dto.memoryPercentUsed === null
   )
     invalidPayload("DSM utilization payload is incomplete");
 }

@@ -35,6 +35,8 @@ export {
   parseStoragePayload,
   parseUptimeSeconds,
   parseUtilizationPayload,
+  validateCpuLoads,
+  validateMemoryTotals,
 } from "./dto";
 export { SynologyError, mapDsmErrorCode, toIntegrationError } from "./errors";
 export {
@@ -48,6 +50,11 @@ export {
   assertSynologyEndpointAllowed,
   isAllowedDsmCgiPath,
 } from "./policy";
+export {
+  MemorySynologyOverviewCoalescer,
+  SYNOLOGY_OVERVIEW_COALESCER_MAX_IN_FLIGHT,
+  type SynologyOverviewCoalescer,
+} from "./overview-coalescer";
 export { MemorySynologyRefreshRateLimiter, SYNOLOGY_REFRESH_RATE_LIMIT } from "./rate-limiter";
 export {
   MemorySynologyRefreshFence,

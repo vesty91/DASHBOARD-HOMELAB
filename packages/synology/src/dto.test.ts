@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { IntegrationError } from "@dashboard/integrations";
 import {
+  assertUsefulResources,
   assertUsefulSystemInfo,
+  emptyResources,
   kibToBytes,
   mapDisks,
   mapResources,
@@ -13,6 +15,8 @@ import {
   parseStoragePayload,
   parseUptimeSeconds,
   parseUtilizationPayload,
+  validateCpuLoads,
+  validateMemoryTotals,
 } from "./dto";
 
 describe("Synology DTO mapping", () => {
@@ -58,11 +62,57 @@ describe("Synology DTO mapping", () => {
     expect(mapped.memoryAvailableBytes).toBe(256 * 1024);
     expect(mapped.memoryUsedBytes).toBe(768 * 1024);
     expect(mapped.cpuTotalPercent).not.toBe(0);
-    const inconsistent = mapResources({
-      cpu: { user_load: 90, system_load: 20, other_load: 5 },
-      memory: {},
-    });
-    expect(inconsistent.cpuTotalPercent).toBeNull();
+    expect(() =>
+      mapResources({
+        cpu: { user_load: 90, system_load: 20, other_load: 5 },
+        memory: { total_real: 1024, avail_real: 256 },
+      }),
+    ).toThrow(IntegrationError);
+  });
+
+  it("rejects inconsistent CPU aggregates and invalid memory totals", () => {
+    const validMemory = { total_real: 4096, avail_real: 1024 };
+    expect(() =>
+      parseUtilizationPayload({
+        cpu: { user_load: 100, system_load: 0, other_load: 0 },
+        memory: validMemory,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      parseUtilizationPayload({
+        cpu: { user_load: 33.3, system_load: 33.3, other_load: 33.4 },
+        memory: validMemory,
+      }),
+    ).not.toThrow();
+    expect(validateCpuLoads({ user_load: 33.3, system_load: 33.3, other_load: 33.4 }).total).toBe(
+      100,
+    );
+    expect(validateMemoryTotals({ total_real: 4096, avail_real: 4096 }).availableBytes).toBe(
+      4096 * 1024,
+    );
+    for (const cpu of [
+      { user_load: 60, system_load: 60, other_load: 0 },
+      { user_load: 33.4, system_load: 33.4, other_load: 33.4 },
+      { user_load: Number.NaN, system_load: 0, other_load: 0 },
+      { user_load: Number.POSITIVE_INFINITY, system_load: 0, other_load: 0 },
+      { user_load: -1, system_load: 0, other_load: 0 },
+    ]) {
+      expect(() => parseUtilizationPayload({ cpu, memory: validMemory })).toThrow(IntegrationError);
+    }
+    const validCpu = { user_load: 1, system_load: 1, other_load: 1 };
+    expect(() =>
+      parseUtilizationPayload({ cpu: validCpu, memory: { total_real: 4096, avail_real: 1024 } }),
+    ).not.toThrow();
+    for (const memory of [
+      { total_real: 4096, avail_real: 5000 },
+      { total_real: 0, avail_real: 0 },
+      { avail_real: 1024 },
+      { total_real: 4096 },
+      { total_real: "nope", avail_real: 1 },
+      { total_real: 4096, avail_real: Number.NaN },
+    ]) {
+      expect(() => parseUtilizationPayload({ cpu: validCpu, memory })).toThrow(IntegrationError);
+    }
   });
 
   it("returns null for oversized integers instead of rounding", () => {
@@ -186,8 +236,33 @@ describe("Synology DTO mapping", () => {
         cpu: { user_load: "nope", system_load: 1, other_load: 1 },
         memory: { total_real: 1, avail_real: 1 },
       },
+      {
+        cpu: { user_load: 1, system_load: 1, other_load: 1 },
+        memory: { total_real: 0, avail_real: 0 },
+      },
     ]) {
       expect(() => parseUtilizationPayload(invalid)).toThrow(IntegrationError);
     }
+  });
+
+  it("rejects resource DTOs that lost their aggregate fields", () => {
+    const mapped = mapResources({
+      cpu: { user_load: 10, system_load: 5, other_load: 1 },
+      memory: { total_real: 1024, avail_real: 256 },
+    });
+    expect(() => assertUsefulResources(mapped)).not.toThrow();
+    expect(() => assertUsefulResources(emptyResources())).toThrow(IntegrationError);
+    expect(() =>
+      assertUsefulResources({
+        ...mapped,
+        cpuTotalPercent: null,
+      }),
+    ).toThrow(IntegrationError);
+    expect(() =>
+      assertUsefulResources({
+        ...mapped,
+        memoryPercentUsed: null,
+      }),
+    ).toThrow(IntegrationError);
   });
 });

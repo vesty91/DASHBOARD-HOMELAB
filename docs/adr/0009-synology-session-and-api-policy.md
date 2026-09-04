@@ -53,15 +53,18 @@ les données DSM.Info. Un payload DSM.Info, Storage ou Utilization malformé est
 `invalid-response`, pas une liste vide « available ». Tailles trop grandes pour
 `MAX_SAFE_INTEGER` → `null` (pas d'arrondi). RAM DSM.Info en
 MB, utilization `total_real` / `avail_real` en KB, DTO en octets. CPU = `user+system+other` ;
-incohérent → `null`. Températures hors −20..150 °C → `null`. Jamais de numéro de série.
+somme hors `[0, 100]`, mémoire `avail > total` ou total `<= 0` → `invalid-response`.
+Températures hors −20..150 °C → `null`. Jamais de numéro de série.
 
 Cache overview : 15 s si complet, ~5 s si partiel. La clé d'opération est
-`synology.overview:<sha256>` calculée depuis `configRevision` et l'état chiffré des secrets
-(`key`, `ciphertext`, `iv`, `authTag`, `keyVersion`) — jamais le plaintext. Un fetch déjà en
-vol peut encore écrire son ancienne génération ; la nouvelle configuration ne la lit pas.
-`refreshOverview` avance d'abord une génération de refresh runtime partagée
-(`MemorySynologyRefreshFence`), invalide le cache, puis relit avec cette génération.
-Une requête commencée avant le refresh ne peut plus écrire la clé active.
+`synology.overview:<sha256>` calculée depuis `configRevision`, la génération de refresh
+et l'état chiffré des secrets (`key`, `ciphertext`, `iv`, `authTag`, `keyVersion`) — jamais
+le plaintext. Un fetch déjà en vol peut encore écrire son ancienne génération ; la nouvelle
+configuration ne la lit pas. `refreshOverview` avance d'abord une génération de refresh
+runtime partagée (`MemorySynologyRefreshFence`), invalide le cache, puis relit avec cette
+génération. Une requête commencée avant le refresh ne peut plus écrire la clé active.
+Les cache misses d'une même génération sont coalescés par
+`MemorySynologyOverviewCoalescer` (runtime partagé, pas de `globalThis` dans le package).
 
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
 `trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent

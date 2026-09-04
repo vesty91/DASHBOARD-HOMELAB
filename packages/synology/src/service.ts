@@ -29,6 +29,7 @@ import {
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { SYNOLOGY_INTEGRATION_ID } from "./definition";
 import { SynologyError, toIntegrationError } from "./errors";
+import type { SynologyOverviewCoalescer } from "./overview-coalescer";
 import type { SynologyRefreshFence } from "./refresh-fence";
 import type { SynologyConfig, SynologySecrets } from "./schemas";
 import type {
@@ -47,6 +48,7 @@ export interface SynologyServiceDeps {
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>;
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: SynologyRefreshFence;
+  overviewCoalescer: SynologyOverviewCoalescer;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -156,21 +158,26 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     const cached = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
       SynologyOverview | undefined;
     if (cached) return cached;
-    try {
-      const overview = await fetchSynologyOverview(loaded.ctx);
-      const frozen = Object.freeze({
-        status: overview.status,
-        fetchedAt: overview.fetchedAt,
-        system: Object.freeze(overview.system),
-        resources: Object.freeze(overview.resources),
-        storage: Object.freeze(overview.storage),
-      });
-      if (deps.refreshFence.current(integrationId) === refreshGeneration)
-        deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
-      return frozen;
-    } catch (error) {
-      redactError(error, { ...loaded.secrets, account: loaded.ctx.account });
-    }
+    return deps.overviewCoalescer.run(`${loaded.recordId}:${loaded.cacheOperation}`, async () => {
+      const rechecked = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
+        SynologyOverview | undefined;
+      if (rechecked) return rechecked;
+      try {
+        const overview = await fetchSynologyOverview(loaded.ctx);
+        const frozen = Object.freeze({
+          status: overview.status,
+          fetchedAt: overview.fetchedAt,
+          system: Object.freeze(overview.system),
+          resources: Object.freeze(overview.resources),
+          storage: Object.freeze(overview.storage),
+        });
+        if (deps.refreshFence.current(integrationId) === refreshGeneration)
+          deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
+        return frozen;
+      } catch (error) {
+        redactError(error, { ...loaded.secrets, account: loaded.ctx.account });
+      }
+    });
   }
 
   return {
