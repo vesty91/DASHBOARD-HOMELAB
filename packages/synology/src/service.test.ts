@@ -3,6 +3,7 @@ import {
   MemoryIntegrationCache,
   createIntegrationRegistry,
   type EncryptedSecretRow,
+  type IntegrationRateLimiter,
   type IntegrationRecord,
   type IntegrationStore,
   type SecureHttpRequest,
@@ -22,6 +23,7 @@ import { MemorySynologyRefreshFence } from "./refresh-fence";
 import { createSynologyService } from "./service";
 
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
+const MISSING_INTEGRATION_ID = "22222222-2222-4222-8222-222222222222";
 const KEY = Buffer.alloc(32, 9).toString("base64");
 
 const systemAdmin = {
@@ -276,7 +278,7 @@ function createBarrier() {
 function createService(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult> = dsmRequest(),
   record?: Partial<IntegrationRecord>,
-  refreshRateLimiter = new MemorySynologyRefreshRateLimiter(),
+  refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore(record);
   const cache = new MemoryIntegrationCache();
@@ -304,7 +306,7 @@ function createService(
 
 function createSharedRuntime(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
-  refreshRateLimiter = new MemorySynologyRefreshRateLimiter(),
+  refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore();
   const cache = new MemoryIntegrationCache();
@@ -703,6 +705,126 @@ describe("SynologyService", () => {
     await expect(synology.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
       code: "RATE_LIMITED",
     });
+  });
+
+  it("rejects a Docker integration refresh before touching the shared cache, fence, or limiter", async () => {
+    let requestCalls = 0;
+    let rateLimiterCalls = 0;
+    const reader = actor(["integration.use", "synology.read"]);
+    const created = createService(
+      async (options) => {
+        requestCalls += 1;
+        return dsmRequest()(options);
+      },
+      { type: "docker", name: "Docker Host", baseUrl: "http://127.0.0.1:2375/" },
+      {
+        tryConsume() {
+          rateLimiterCalls += 1;
+          return true;
+        },
+      },
+    );
+    created.cache.set(INTEGRATION_ID, "docker.version", { marker: "version" }, 60_000);
+    created.cache.set(INTEGRATION_ID, "docker.containers.list", { marker: "containers" }, 60_000);
+    created.cache.set(INTEGRATION_ID, "docker.containers.stats:abc", { marker: "stats" }, 60_000);
+    created.cache.set(MISSING_INTEGRATION_ID, "docker.version", { marker: "unrelated" }, 60_000);
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(0);
+
+    await expect(created.synology.refreshOverview(INTEGRATION_ID, reader)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "Définition Synology introuvable",
+    });
+
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(0);
+    expect(rateLimiterCalls).toBe(0);
+    expect(requestCalls).toBe(0);
+    expect(created.cache.get(INTEGRATION_ID, "docker.version")).toEqual({ marker: "version" });
+    expect(created.cache.get(INTEGRATION_ID, "docker.containers.list")).toEqual({
+      marker: "containers",
+    });
+    expect(created.cache.get(INTEGRATION_ID, "docker.containers.stats:abc")).toEqual({
+      marker: "stats",
+    });
+    expect(created.cache.get(MISSING_INTEGRATION_ID, "docker.version")).toEqual({
+      marker: "unrelated",
+    });
+  });
+
+  it("rejects a missing integration refresh without mutating fence, limiter, or cache", async () => {
+    let requestCalls = 0;
+    let rateLimiterCalls = 0;
+    const reader = actor(["integration.use", "synology.read"]);
+    const created = createService(
+      async (options) => {
+        requestCalls += 1;
+        return dsmRequest()(options);
+      },
+      undefined,
+      {
+        tryConsume() {
+          rateLimiterCalls += 1;
+          return true;
+        },
+      },
+    );
+    created.cache.set(INTEGRATION_ID, "docker.version", { marker: "kept" }, 60_000);
+    created.cache.set(
+      MISSING_INTEGRATION_ID,
+      "docker.containers.list",
+      { marker: "missing" },
+      60_000,
+    );
+    expect(created.refreshFence.current(MISSING_INTEGRATION_ID)).toBe(0);
+
+    await expect(
+      created.synology.refreshOverview(MISSING_INTEGRATION_ID, reader),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "Définition Synology introuvable",
+    });
+
+    expect(created.refreshFence.current(MISSING_INTEGRATION_ID)).toBe(0);
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(0);
+    expect(rateLimiterCalls).toBe(0);
+    expect(requestCalls).toBe(0);
+    expect(created.cache.get(INTEGRATION_ID, "docker.version")).toEqual({ marker: "kept" });
+    expect(created.cache.get(MISSING_INTEGRATION_ID, "docker.containers.list")).toEqual({
+      marker: "missing",
+    });
+  });
+
+  it("still advances the fence and refreshes cache for a valid Synology integration", async () => {
+    let rateLimiterCalls = 0;
+    let dsmInfoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.DSM.Info") dsmInfoCalls += 1;
+        return dsmRequest()(options);
+      },
+      undefined,
+      {
+        tryConsume() {
+          rateLimiterCalls += 1;
+          return true;
+        },
+      },
+    );
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(first.system.data?.model).toBe("DS920+");
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(0);
+    expect(rateLimiterCalls).toBe(0);
+    expect(dsmInfoCalls).toBe(1);
+
+    const refreshed = await created.synology.refreshOverview(INTEGRATION_ID, systemAdmin);
+    expect(refreshed.system.data?.model).toBe("DS920+");
+    expect(created.refreshFence.current(INTEGRATION_ID)).toBe(1);
+    expect(rateLimiterCalls).toBe(1);
+    expect(dsmInfoCalls).toBe(2);
+
+    const cached = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cached.system.data?.model).toBe("DS920+");
+    expect(dsmInfoCalls).toBe(2);
   });
 
   it("does not serve a stale overview after the configuration revision changes during fetch", async () => {

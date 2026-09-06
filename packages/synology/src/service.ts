@@ -12,6 +12,7 @@ import {
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationRateLimiter,
+  type IntegrationRecord,
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
@@ -88,6 +89,13 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     return registered as IntegrationDefinition<SynologyConfig, SynologySecrets>;
   }
 
+  async function requireSynologyRecord(integrationId: string): Promise<IntegrationRecord> {
+    const record = await deps.store.findById(integrationId);
+    if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
+      throw new IntegrationError("NOT_FOUND", "Définition Synology introuvable");
+    return record;
+  }
+
   async function loadContext(
     integrationId: string,
     capability: string,
@@ -99,9 +107,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     cacheOperation: string;
     configRevision: number;
   }> {
-    const record = await deps.store.findById(integrationId);
-    if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
-      throw new IntegrationError("NOT_FOUND", "Définition Synology introuvable");
+    const record = await requireSynologyRecord(integrationId);
     if (!record.enabled)
       throw new IntegrationError("MISCONFIGURED", "Synology integration is disabled");
     const synologyDefinition = definition();
@@ -191,9 +197,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
       actor: SynologyActor,
     ): Promise<SynologyIntegrationMetadata> {
       assertSynologyAccess(actor, "read");
-      const record = await deps.store.findById(integrationId);
-      if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
-        throw new IntegrationError("NOT_FOUND", "Définition Synology introuvable");
+      const record = await requireSynologyRecord(integrationId);
       return Object.freeze({
         id: record.id,
         name: record.name,
@@ -206,6 +210,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     },
     async refreshOverview(integrationId: string, actor: SynologyActor): Promise<SynologyOverview> {
       assertSynologyAccess(actor, "read");
+      await requireSynologyRecord(integrationId);
       if (!deps.refreshRateLimiter.tryConsume(actor.userId ?? "anonymous", integrationId))
         throw new IntegrationError("RATE_LIMITED", "Too many Synology refreshes");
       const generation = deps.refreshFence.advance(integrationId);
@@ -243,9 +248,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     },
     async clearDevice(integrationId: string, actor: SynologyActor): Promise<{ cleared: true }> {
       assertSynologyAccess(actor, "manageAuth");
-      const record = await deps.store.findById(integrationId);
-      if (!record || record.type !== SYNOLOGY_INTEGRATION_ID)
-        throw new IntegrationError("NOT_FOUND", "Définition Synology introuvable");
+      const record = await requireSynologyRecord(integrationId);
       await clearServerManagedSecret(deps.store, definition(), record.id, DEVICE_SECRET_KEY);
       deps.cache.invalidate(record.id);
       return { cleared: true };
