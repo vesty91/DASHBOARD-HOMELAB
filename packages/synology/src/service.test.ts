@@ -18,12 +18,16 @@ import {
 import { synologyOverviewCacheOperation } from "./cache-key";
 import { synologyIntegrationDefinition } from "./definition";
 import { MemorySynologyOverviewCoalescer } from "./overview-coalescer";
-import { MemorySynologyRefreshRateLimiter } from "./rate-limiter";
+import {
+  MemorySynologyEnrollmentRateLimiter,
+  MemorySynologyRefreshRateLimiter,
+} from "./rate-limiter";
 import { MemorySynologyRefreshFence } from "./refresh-fence";
 import { createSynologyService } from "./service";
 
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
 const MISSING_INTEGRATION_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_INTEGRATION_ID = "33333333-3333-4333-8333-333333333333";
 const KEY = Buffer.alloc(32, 9).toString("base64");
 const MALICIOUS_SID = "SID-SUPER-SECRET-001";
 const MALICIOUS_TOKEN = "TOKEN-SUPER-SECRET-002";
@@ -383,6 +387,7 @@ function createService(
   record?: Partial<IntegrationRecord>,
   refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
   storeOptions: { password?: string; deviceId?: string } = {},
+  enrollmentRateLimiter: IntegrationRateLimiter = new MemorySynologyEnrollmentRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore(record, storeOptions);
   const cache = new MemoryIntegrationCache();
@@ -395,12 +400,14 @@ function createService(
     keyring,
     refreshFence,
     overviewCoalescer,
+    enrollmentRateLimiter,
     synology: createSynologyService({
       store,
       registry: createIntegrationRegistry().register(synologyIntegrationDefinition).freeze(),
       cache,
       request,
       refreshRateLimiter,
+      enrollmentRateLimiter,
       refreshFence,
       overviewCoalescer,
       keyring,
@@ -411,6 +418,7 @@ function createService(
 function createSharedRuntime(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
+  enrollmentRateLimiter: IntegrationRateLimiter = new MemorySynologyEnrollmentRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore();
   const cache = new MemoryIntegrationCache();
@@ -426,11 +434,40 @@ function createSharedRuntime(
       cache,
       request: serviceRequest,
       refreshRateLimiter,
+      enrollmentRateLimiter,
       refreshFence,
       overviewCoalescer,
       keyring,
     });
-  return { store, cache, secrets, keyring, refreshFence, overviewCoalescer, makeService };
+  return {
+    store,
+    cache,
+    secrets,
+    keyring,
+    refreshFence,
+    overviewCoalescer,
+    enrollmentRateLimiter,
+    makeService,
+  };
+}
+
+function enrollTransport(
+  onLogin?: (body: string | undefined) => SecureHttpResult | undefined,
+): (options: SecureHttpRequest) => Promise<SecureHttpResult> {
+  return async (options) => {
+    const api = new URL(String(options.url)).searchParams.get("api");
+    if (api === "SYNO.API.Info") return json(infoPayload());
+    if (options.method === "POST" && options.body?.includes("method=login")) {
+      const override = onLogin?.(options.body);
+      if (override) return override;
+      return json({
+        success: true,
+        data: { sid: "SIDTOKEN", synotoken: "TOK", did: "DID-SECRET" },
+      });
+    }
+    if (options.method === "POST") return json({ success: true, data: {} });
+    throw new Error(String(options.url));
+  };
 }
 
 function dsmInfoData(model: string) {
@@ -1816,6 +1853,7 @@ describe("SynologyService", () => {
         throw new Error(String(options.url));
       },
       refreshRateLimiter: new MemorySynologyRefreshRateLimiter(),
+      enrollmentRateLimiter: created.enrollmentRateLimiter,
       refreshFence: created.refreshFence,
       overviewCoalescer: created.overviewCoalescer,
       keyring: created.keyring,
@@ -1879,5 +1917,255 @@ describe("SynologyService", () => {
       }),
     ).toBe("DID-A");
     expect(JSON.stringify(created.secrets)).not.toMatch(/DID-A|DID-B/u);
+  });
+
+  it("rate-limits trusted-device enrollment before a sixth DSM login", async () => {
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => 1_000);
+    const { synology } = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return undefined;
+      }),
+      undefined,
+      undefined,
+      {},
+      limiter,
+    );
+    for (let attempt = 0; attempt < 5; attempt += 1)
+      await expect(synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault)).resolves.toEqual({
+        enrolled: true,
+      });
+    await expect(
+      synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      message: "Too many Synology device enrollment attempts",
+    });
+    expect(loginCalls).toBe(5);
+  });
+
+  it("counts invalid OTP enrollments against the limiter before blocking the sixth", async () => {
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => 1_000);
+    const { synology } = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return json({ success: false, error: { code: 404 } });
+      }),
+      undefined,
+      undefined,
+      {},
+      limiter,
+    );
+    for (let attempt = 0; attempt < 5; attempt += 1)
+      await expect(
+        synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(loginCalls).toBe(5);
+  });
+
+  it("resets enrollment attempts after the rate-limit window", async () => {
+    let now = 1_000;
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => now);
+    const { synology } = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return undefined;
+      }),
+      undefined,
+      undefined,
+      {},
+      limiter,
+    );
+    for (let attempt = 0; attempt < 5; attempt += 1)
+      await synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await expect(
+      synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    now = 1_000 + 60_001;
+    await expect(synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault)).resolves.toEqual({
+      enrolled: true,
+    });
+    expect(loginCalls).toBe(6);
+  });
+
+  it("isolates enrollment quotas by actor and integration", async () => {
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => 1_000);
+    const first = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return undefined;
+      }),
+      undefined,
+      undefined,
+      {},
+      limiter,
+    );
+    const second = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return undefined;
+      }),
+      { id: OTHER_INTEGRATION_ID },
+      undefined,
+      {},
+      limiter,
+    );
+    for (let attempt = 0; attempt < 5; attempt += 1)
+      await first.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await expect(
+      first.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    await expect(
+      first.synology.enrollDevice(INTEGRATION_ID, "654321", systemAdmin),
+    ).resolves.toEqual({ enrolled: true });
+    await expect(
+      second.synology.enrollDevice(OTHER_INTEGRATION_ID, "654321", adminDefault),
+    ).resolves.toEqual({ enrolled: true });
+    expect(loginCalls).toBe(7);
+  });
+
+  it("shares the enrollment limiter across recreated services", async () => {
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => 1_000);
+    const runtime = createSharedRuntime(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return undefined;
+      }),
+      undefined,
+      limiter,
+    );
+    const service1 = runtime.makeService();
+    const service2 = runtime.makeService();
+    for (let attempt = 0; attempt < 3; attempt += 1)
+      await service1.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    for (let attempt = 0; attempt < 2; attempt += 1)
+      await service2.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await expect(
+      service2.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(loginCalls).toBe(5);
+  });
+
+  it("does not consume the enrollment limiter for a wrong-type integration", async () => {
+    let requestCalls = 0;
+    let limiterCalls = 0;
+    const { synology } = createService(
+      async (options) => {
+        requestCalls += 1;
+        return enrollTransport()(options);
+      },
+      { type: "docker", name: "Docker Host", baseUrl: "http://127.0.0.1:2375/" },
+      undefined,
+      {},
+      {
+        tryConsume() {
+          limiterCalls += 1;
+          return true;
+        },
+      },
+    );
+    await expect(
+      synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(limiterCalls).toBe(0);
+    expect(requestCalls).toBe(0);
+  });
+
+  it("does not consume the enrollment limiter for disabled or misconfigured integrations", async () => {
+    let requestCalls = 0;
+    let limiterCalls = 0;
+    const limiter: IntegrationRateLimiter = {
+      tryConsume() {
+        limiterCalls += 1;
+        return true;
+      },
+    };
+    const counting = async (options: SecureHttpRequest) => {
+      requestCalls += 1;
+      return enrollTransport()(options);
+    };
+    const disabled = createService(counting, { enabled: false }, undefined, {}, limiter);
+    await expect(
+      disabled.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "MISCONFIGURED" });
+    const misconfigured = createService(counting, { config: {} }, undefined, {}, limiter);
+    await expect(
+      misconfigured.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "MISCONFIGURED" });
+    const missingPassword = createService(counting, undefined, undefined, {}, limiter);
+    missingPassword.secrets.splice(0);
+    await expect(
+      missingPassword.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).rejects.toMatchObject({ code: "MISCONFIGURED" });
+    expect(limiterCalls).toBe(0);
+    expect(requestCalls).toBe(0);
+  });
+
+  it("marks inconsistent volume capacity as invalid-response without dropping healthy sections", async () => {
+    const { synology } = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [
+              {
+                id: "volume_ok",
+                status: "normal",
+                size: { total: "1000", used: "400" },
+              },
+              {
+                id: "volume_bad",
+                status: "normal",
+                size: { total: "1000", used: "1001" },
+              },
+            ],
+            disks: [{ id: "sata1", status: "normal" }],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.status).toBe("degraded");
+    expect(overview.storage.status).toBe("unavailable");
+    expect(overview.storage.reason).toBe("invalid-response");
+    expect(overview.storage.data).toBeNull();
+    expect(overview.system.status).toBe("available");
+    expect(overview.resources.status).toBe("available");
+  });
+
+  it("keeps coherent degraded volume health distinct from invalid capacity", async () => {
+    const { synology } = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [
+              {
+                id: "volume_1",
+                status: "degraded",
+                size: { total: "1000", used: "500" },
+              },
+            ],
+            disks: [{ id: "sata1", status: "normal" }],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.status).toBe("degraded");
+    expect(overview.storage.status).toBe("degraded");
+    expect(overview.storage.reason).toBeUndefined();
+    expect(overview.storage.data?.volumes[0]?.usedBytes).toBe(500);
+    expect(overview.storage.data?.volumes[0]?.totalBytes).toBe(1000);
   });
 });

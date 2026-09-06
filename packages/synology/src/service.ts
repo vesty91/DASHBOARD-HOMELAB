@@ -48,6 +48,7 @@ export interface SynologyServiceDeps {
   cache: IntegrationCache;
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>;
   refreshRateLimiter: IntegrationRateLimiter;
+  enrollmentRateLimiter: IntegrationRateLimiter;
   refreshFence: SynologyRefreshFence;
   overviewCoalescer: SynologyOverviewCoalescer;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
@@ -224,6 +225,10 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     ): Promise<{ enrolled: true }> {
       assertSynologyAccess(actor, "manageAuth");
       const loaded = await loadContext(integrationId, "system.read");
+      const userId = actor.userId;
+      if (!userId) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
+      if (!deps.enrollmentRateLimiter.tryConsume(userId, integrationId))
+        throw new IntegrationError("RATE_LIMITED", "Too many Synology device enrollment attempts");
       try {
         const enrolled = await enrollTrustedDevice(loaded.ctx, otpCode);
         const persisted = await persistServerManagedSecretIfRevision(

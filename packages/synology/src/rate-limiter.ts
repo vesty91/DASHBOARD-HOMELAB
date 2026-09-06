@@ -4,15 +4,19 @@ export const SYNOLOGY_REFRESH_RATE_LIMIT = 10;
 export const SYNOLOGY_REFRESH_RATE_WINDOW_MS = 60_000;
 export const SYNOLOGY_REFRESH_MAX_TRACKED_KEYS = 10_000;
 
-export class MemorySynologyRefreshRateLimiter implements IntegrationRateLimiter {
+export const SYNOLOGY_ENROLLMENT_RATE_LIMIT = 5;
+export const SYNOLOGY_ENROLLMENT_RATE_WINDOW_MS = 60_000;
+export const SYNOLOGY_ENROLLMENT_MAX_TRACKED_KEYS = 10_000;
+
+class MemorySynologyRateLimiter implements IntegrationRateLimiter {
   readonly #hits = new Map<string, number[]>();
   readonly #maxTrackedKeys: number;
 
   constructor(
-    readonly limit = SYNOLOGY_REFRESH_RATE_LIMIT,
-    readonly windowMs = SYNOLOGY_REFRESH_RATE_WINDOW_MS,
-    private readonly now: () => number = () => Date.now(),
-    maxTrackedKeys = SYNOLOGY_REFRESH_MAX_TRACKED_KEYS,
+    readonly limit: number,
+    readonly windowMs: number,
+    private readonly now: () => number,
+    maxTrackedKeys: number,
   ) {
     this.#maxTrackedKeys = Math.max(1, maxTrackedKeys);
   }
@@ -44,5 +48,27 @@ export class MemorySynologyRefreshRateLimiter implements IntegrationRateLimiter 
       if (oldest === undefined) return;
       this.#hits.delete(oldest);
     }
+  }
+}
+
+export class MemorySynologyRefreshRateLimiter extends MemorySynologyRateLimiter {
+  constructor(
+    limit = SYNOLOGY_REFRESH_RATE_LIMIT,
+    windowMs = SYNOLOGY_REFRESH_RATE_WINDOW_MS,
+    now: () => number = () => Date.now(),
+    maxTrackedKeys = SYNOLOGY_REFRESH_MAX_TRACKED_KEYS,
+  ) {
+    super(limit, windowMs, now, maxTrackedKeys);
+  }
+}
+
+export class MemorySynologyEnrollmentRateLimiter extends MemorySynologyRateLimiter {
+  constructor(
+    limit = SYNOLOGY_ENROLLMENT_RATE_LIMIT,
+    windowMs = SYNOLOGY_ENROLLMENT_RATE_WINDOW_MS,
+    now: () => number = () => Date.now(),
+    maxTrackedKeys = SYNOLOGY_ENROLLMENT_MAX_TRACKED_KEYS,
+  ) {
+    super(limit, windowMs, now, maxTrackedKeys);
   }
 }

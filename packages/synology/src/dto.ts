@@ -355,12 +355,17 @@ export function assertUsefulResources(dto: SynologyResourcesDto): void {
     invalidPayload("DSM utilization payload is incomplete");
 }
 
+export function validateVolumeUsage(usedBytes: number | null, totalBytes: number | null): void {
+  if (totalBytes !== null && totalBytes <= 0) invalidPayload("DSM volume usage is invalid");
+  if (usedBytes !== null && totalBytes !== null && usedBytes > totalBytes)
+    invalidPayload("DSM volume usage is invalid");
+}
+
 function volumeFree(
   usedBytes: number | null,
   totalBytes: number | null,
 ): { freeBytes: number | null; usedPercent: number | null } {
-  if (usedBytes === null || totalBytes === null || totalBytes <= 0 || usedBytes > totalBytes)
-    return { freeBytes: null, usedPercent: null };
+  if (usedBytes === null || totalBytes === null) return { freeBytes: null, usedPercent: null };
   return {
     freeBytes: totalBytes - usedBytes,
     usedPercent: (usedBytes / totalBytes) * 100,
@@ -404,6 +409,7 @@ export function mapVolumes(raw: unknown): readonly SynologyVolumeDto[] {
     const size = recordOf(record.size);
     const totalBytes = parseSafeIntegerBytes(size.total ?? record.total_size);
     const usedBytes = parseSafeIntegerBytes(size.used ?? record.used_size);
+    validateVolumeUsage(usedBytes, totalBytes);
     const id = sanitizeId(record.id ?? record.num_id ?? identity, identity);
     const name = boundText(record.vol_desc ?? record.desc ?? record.name, MAX_NAME) ?? id;
     return {

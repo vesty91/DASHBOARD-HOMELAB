@@ -20,6 +20,7 @@ import {
   systemSectionStatus,
   validateCpuLoads,
   validateMemoryTotals,
+  validateVolumeUsage,
 } from "./dto";
 
 describe("Synology DTO mapping", () => {
@@ -340,5 +341,53 @@ describe("Synology DTO mapping", () => {
       mapSystemInfo({ temperature_warn: false }, { temperature_warn: true }).temperatureWarning,
     ).toBe(true);
     expect(systemSectionStatus(mapSystemInfo({ model: "DS920+" }))).toBe("available");
+  });
+
+  it("rejects inconsistent volume usage and keeps missing sizes nullable", () => {
+    const volume = (size: Record<string, unknown>) => ({ id: "volume_1", size });
+    expect(mapVolumes([volume({ total: 1000, used: 0 })])[0]).toMatchObject({
+      totalBytes: 1000,
+      usedBytes: 0,
+      freeBytes: 1000,
+      usedPercent: 0,
+    });
+    expect(mapVolumes([volume({ total: 1000, used: 500 })])[0]).toMatchObject({
+      freeBytes: 500,
+      usedPercent: 50,
+    });
+    expect(mapVolumes([volume({ total: 1000, used: 1000 })])[0]).toMatchObject({
+      freeBytes: 0,
+      usedPercent: 100,
+    });
+    expect(() => mapVolumes([volume({ total: 1000, used: 1001 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: 0, used: 0 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: 0 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: "1000", used: "1001" })])).toThrow(IntegrationError);
+    expect(() =>
+      mapVolumes([
+        volume({ total: 1000, used: 400 }),
+        { id: "volume_2", size: { total: 1000, used: 1001 } },
+      ]),
+    ).toThrow(IntegrationError);
+    const missingTotal = mapVolumes([volume({ used: 500 })])[0];
+    expect(missingTotal?.usedBytes).toBe(500);
+    expect(missingTotal?.totalBytes).toBeNull();
+    expect(missingTotal?.freeBytes).toBeNull();
+    expect(missingTotal?.usedPercent).toBeNull();
+    const missingUsed = mapVolumes([volume({ total: 1000 })])[0];
+    expect(missingUsed?.totalBytes).toBe(1000);
+    expect(missingUsed?.usedBytes).toBeNull();
+    expect(missingUsed?.freeBytes).toBeNull();
+    expect(missingUsed?.usedPercent).toBeNull();
+    const oversized = mapVolumes([volume({ total: "9007199254740993", used: "1" })])[0];
+    expect(oversized?.totalBytes).toBeNull();
+    expect(oversized?.usedBytes).toBe(1);
+    expect(oversized?.freeBytes).toBeNull();
+    expect(() => validateVolumeUsage(1001, 1000)).toThrow(IntegrationError);
+    expect(() => validateVolumeUsage(0, 0)).toThrow(IntegrationError);
+    expect(() => validateVolumeUsage(null, 0)).toThrow(IntegrationError);
+    expect(() => validateVolumeUsage(500, null)).not.toThrow();
+    expect(() => validateVolumeUsage(null, 1000)).not.toThrow();
+    expect(() => validateVolumeUsage(1000, 1000)).not.toThrow();
   });
 });

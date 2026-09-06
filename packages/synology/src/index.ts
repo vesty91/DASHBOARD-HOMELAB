@@ -37,6 +37,7 @@ export {
   parseUtilizationPayload,
   validateCpuLoads,
   validateMemoryTotals,
+  validateVolumeUsage,
 } from "./dto";
 export { SynologyError, mapDsmErrorCode, toIntegrationError } from "./errors";
 export {
@@ -55,7 +56,12 @@ export {
   SYNOLOGY_OVERVIEW_COALESCER_MAX_IN_FLIGHT,
   type SynologyOverviewCoalescer,
 } from "./overview-coalescer";
-export { MemorySynologyRefreshRateLimiter, SYNOLOGY_REFRESH_RATE_LIMIT } from "./rate-limiter";
+export {
+  MemorySynologyEnrollmentRateLimiter,
+  MemorySynologyRefreshRateLimiter,
+  SYNOLOGY_ENROLLMENT_RATE_LIMIT,
+  SYNOLOGY_REFRESH_RATE_LIMIT,
+} from "./rate-limiter";
 export {
   MemorySynologyRefreshFence,
   SYNOLOGY_REFRESH_FENCE_MAX_ENTRIES,

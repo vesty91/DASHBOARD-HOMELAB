@@ -5,6 +5,7 @@ import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
   createSynologyService,
+  MemorySynologyEnrollmentRateLimiter,
   MemorySynologyOverviewCoalescer,
   MemorySynologyRefreshFence,
   MemorySynologyRefreshRateLimiter,
@@ -29,6 +30,7 @@ const globalRuntime = globalThis as typeof globalThis & {
     rateLimiter: MemoryTestRateLimiter;
     dockerActionRateLimiter: MemoryDockerActionRateLimiter;
     synologyRefreshRateLimiter: MemorySynologyRefreshRateLimiter;
+    synologyEnrollmentRateLimiter: MemorySynologyEnrollmentRateLimiter;
     synologyRefreshFence: MemorySynologyRefreshFence;
     synologyOverviewCoalescer: MemorySynologyOverviewCoalescer;
   };
@@ -41,6 +43,7 @@ function integrationRuntime() {
     rateLimiter: new MemoryTestRateLimiter(),
     dockerActionRateLimiter: new MemoryDockerActionRateLimiter(),
     synologyRefreshRateLimiter: new MemorySynologyRefreshRateLimiter(),
+    synologyEnrollmentRateLimiter: new MemorySynologyEnrollmentRateLimiter(),
     synologyRefreshFence: new MemorySynologyRefreshFence(),
     synologyOverviewCoalescer: new MemorySynologyOverviewCoalescer(),
   });
@@ -79,6 +82,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       cache: runtime.cache,
       request: secureRequest,
       refreshRateLimiter: runtime.synologyRefreshRateLimiter,
+      enrollmentRateLimiter: runtime.synologyEnrollmentRateLimiter,
       refreshFence: runtime.synologyRefreshFence,
       overviewCoalescer: runtime.synologyOverviewCoalescer,
       ...(keyring ? { keyring } : {}),

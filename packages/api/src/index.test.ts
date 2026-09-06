@@ -902,4 +902,25 @@ describe("synology tRPC router", () => {
       synologyActor,
     );
   });
+
+  it("maps Synology enrollment rate limits to TOO_MANY_REQUESTS", async () => {
+    const synologyService = {
+      enrollDevice: vi.fn(async () => {
+        throw new IntegrationError("RATE_LIMITED", "Too many Synology device enrollment attempts");
+      }),
+    } as unknown as SynologyService;
+    await expect(
+      createCaller({
+        actor: synologyActor,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        synology: synologyService,
+      }).synology.auth.enrollDevice({ integrationId, otpCode: "123456" }),
+    ).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too many Synology device enrollment attempts",
+    });
+  });
 });
