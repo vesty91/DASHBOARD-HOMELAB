@@ -243,6 +243,28 @@ function statusLabel(value: string): string {
   }
 }
 
+function statusBadgeTone(value: string): "success" | "warning" | "danger" | "neutral" {
+  switch (value) {
+    case "normal":
+      return "success";
+    case "degraded":
+    case "warning":
+      return "warning";
+    case "critical":
+    case "crashed":
+    case "error":
+    case "failed":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+function smartStatusBadge(status: string | null) {
+  if (status === null) return "Indisponible";
+  return <Badge tone={statusBadgeTone(status)}>{statusLabel(status)}</Badge>;
+}
+
 function sectionReasonLabel(reason: SynologySectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -315,6 +337,9 @@ async function SynologyOverviewPanel({
             <p>DSM {system?.dsmVersion ?? "Indisponible"}</p>
             <p>Uptime {formatUptime(system?.uptimeSeconds ?? null)}</p>
             <p>Température {formatTemperature(system?.systemTemperatureC ?? null)}</p>
+            {system?.temperatureWarning === true ? (
+              <Alert tone="warning">DSM signale une température système anormale.</Alert>
+            ) : null}
             <p>RAM totale {formatBytes(system?.ramTotalBytes ?? null)}</p>
           </section>
           <section className="synology-summary">
@@ -378,10 +403,18 @@ async function SynologyOverviewPanel({
                       <td>{disk.model ?? "Indisponible"}</td>
                       <td>{formatBytes(disk.sizeBytes)}</td>
                       <td>
-                        <Badge>{statusLabel(disk.status)}</Badge>
+                        <Badge tone={statusBadgeTone(disk.status)}>
+                          {statusLabel(disk.status)}
+                        </Badge>
+                        {disk.badSectorWarning === true ? (
+                          <Badge tone="warning">Secteurs défectueux</Badge>
+                        ) : null}
+                        {disk.remainingLifeWarning === true ? (
+                          <Badge tone="warning">Durée de vie restante faible</Badge>
+                        ) : null}
                       </td>
                       <td>{formatTemperature(disk.temperatureC)}</td>
-                      <td>{disk.smartStatus ? statusLabel(disk.smartStatus) : "Indisponible"}</td>
+                      <td>{smartStatusBadge(disk.smartStatus)}</td>
                     </tr>
                   ))}
                 </tbody>

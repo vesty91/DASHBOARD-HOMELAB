@@ -253,4 +253,73 @@ describe("Synology integration definition", () => {
     if (result.ok)
       expect(result.metadata).toMatchObject({ model: "DS920+", dsmVersion: "DSM 7.2" });
   });
+
+  it("succeeds the connection test when DSM reports a temperature warning", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) =>
+        mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({
+            success: true,
+            data: {
+              model: "DS920+",
+              version_string: "DSM 7.2",
+              ram: 8192,
+              temperature: 75,
+              temperature_warn: true,
+            },
+          }),
+        }),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok)
+      expect(result.metadata).toMatchObject({ model: "DS920+", dsmVersion: "DSM 7.2" });
+  });
+
+  it("redacts credentials reflected into testConnection metadata", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "PASSWORD-SUPER-SECRET-004" },
+      request: async (options) => {
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({
+            success: true,
+            data: { sid: "SID-SUPER-SECRET-001", synotoken: "TOKEN-SUPER-SECRET-002" },
+          });
+        return mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({
+            success: true,
+            data: {
+              model: "PASSWORD-SUPER-SECRET-004",
+              version_string: "DSM-SID-SUPER-SECRET-001",
+              ram: 8192,
+            },
+          }),
+          "SYNO.Core.System": json({
+            success: true,
+            data: { cpu_cores: 4, cpu_family: "TOKEN-SUPER-SECRET-002" },
+          }),
+        });
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(JSON.stringify(result.metadata)).not.toMatch(
+        /PASSWORD-SUPER-SECRET-004|SID-SUPER-SECRET-001|TOKEN-SUPER-SECRET-002/u,
+      );
+      expect(result.metadata).toMatchObject({
+        model: "[REDACTED]",
+        dsmVersion: "DSM-[REDACTED]",
+      });
+    }
+  });
 });

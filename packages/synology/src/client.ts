@@ -1,4 +1,9 @@
-import { IntegrationError, type IntegrationClientContext } from "@dashboard/integrations";
+import {
+  collectSecretStringValues,
+  IntegrationError,
+  redactKnownSecretValues,
+  type IntegrationClientContext,
+} from "@dashboard/integrations";
 import { parseDiscoveredApis, requireOkEnvelope, type DiscoveredApis } from "./api-discovery";
 import { login, logout, sessionHeaders, type DsmSession, type LoginInput } from "./auth";
 import {
@@ -13,6 +18,7 @@ import {
   parseStoragePayload,
   parseUtilizationPayload,
   storageLooksDegraded,
+  systemSectionStatus,
 } from "./dto";
 import { isRetryableSessionError, SynologyError, throwMapped, toIntegrationError } from "./errors";
 import { INFO_QUERY, SYNOLOGY_ENTRY_CGI } from "./policy";
@@ -118,6 +124,19 @@ async function discoverApis(ctx: SynologyClientContext): Promise<DiscoveredApis>
   return parseDiscoveredApis(requireOkEnvelope(result, "DSM API discovery failed"));
 }
 
+function dsmResponseSecretValues(
+  ctx: SynologyClientContext,
+  session: DsmSession,
+): readonly string[] {
+  return collectSecretStringValues({
+    password: ctx.password,
+    deviceId: ctx.deviceId,
+    sid: session.sid,
+    synoToken: session.synoToken,
+    did: session.did,
+  });
+}
+
 async function dsmGet(
   ctx: SynologyClientContext,
   session: DsmSession,
@@ -129,7 +148,8 @@ async function dsmGet(
     headers: sessionHeaders(session),
     maxBodyBytes,
   });
-  return requireOkEnvelope(result, "DSM request failed");
+  const raw = requireOkEnvelope(result, "DSM request failed");
+  return redactKnownSecretValues(raw, dsmResponseSecretValues(ctx, session));
 }
 
 function sectionReasonFromError(error: unknown): SynologySectionReason {
@@ -188,12 +208,13 @@ async function loadSystem(
     const base = mapSystemInfo(dsmInfo);
     assertUsefulSystemInfo(base);
     if (!discovered.system.available || discovered.system.version === null)
-      return { status: "available", data: base };
+      return { status: systemSectionStatus(base), data: base };
     try {
       const core = parseCoreSystemPayload(
         await dsmGet(ctx, session, buildSystemRequest(discovered.system.version)),
       );
-      return { status: "available", data: mapSystemInfo(dsmInfo, core) };
+      const data = mapSystemInfo(dsmInfo, core);
+      return { status: systemSectionStatus(data), data };
     } catch (error) {
       if (isRetryableSessionError(error)) throw error;
       return {

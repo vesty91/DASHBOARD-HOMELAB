@@ -16,6 +16,8 @@ import {
   parseStoragePayload,
   parseUptimeSeconds,
   parseUtilizationPayload,
+  storageLooksDegraded,
+  systemSectionStatus,
   validateCpuLoads,
   validateMemoryTotals,
 } from "./dto";
@@ -285,5 +287,58 @@ describe("Synology DTO mapping", () => {
         memoryPercentUsed: null,
       }),
     ).toThrow(IntegrationError);
+  });
+
+  it("normalizes SMART statuses and degrades storage for disk health flags", () => {
+    expect(mapDisks([{ id: "sata1", smart_status: "failing" }])[0]?.smartStatus).toBe("degraded");
+    expect(mapDisks([{ id: "sata1", smart_status: "critical" }])[0]?.smartStatus).toBe("critical");
+    expect(mapDisks([{ id: "sata1", smart_status: "unhealthy" }])[0]?.smartStatus).toBe("degraded");
+    expect(mapDisks([{ id: "sata1", smart_status: "bad" }])[0]?.smartStatus).toBe("degraded");
+    expect(mapDisks([{ id: "sata1" }])[0]?.smartStatus).toBeNull();
+    const healthy = mapDisks([
+      {
+        id: "sata1",
+        status: "normal",
+        smart_status: "normal",
+        bad_sector: false,
+        remain_life_warning: false,
+      },
+    ]);
+    expect(storageLooksDegraded([], healthy)).toBe(false);
+    const missingFlags = mapDisks([{ id: "sata1", status: "normal" }]);
+    expect(missingFlags[0]?.badSectorWarning).toBeNull();
+    expect(missingFlags[0]?.remainingLifeWarning).toBeNull();
+    expect(storageLooksDegraded([], missingFlags)).toBe(false);
+    expect(
+      storageLooksDegraded([], mapDisks([{ id: "sata1", status: "normal", bad_sector: true }])),
+    ).toBe(true);
+    expect(
+      storageLooksDegraded(
+        [],
+        mapDisks([{ id: "sata1", status: "normal", remain_life_warning: true }]),
+      ),
+    ).toBe(true);
+    expect(
+      storageLooksDegraded(
+        [],
+        mapDisks([{ id: "sata1", status: "normal", smart_status: "failing" }]),
+      ),
+    ).toBe(true);
+    expect(
+      storageLooksDegraded(
+        [],
+        mapDisks([{ id: "sata1", status: "normal", smart_status: "critical" }]),
+      ),
+    ).toBe(true);
+    expect(systemSectionStatus(mapSystemInfo({ model: "DS920+", temperature_warn: true }))).toBe(
+      "degraded",
+    );
+    expect(systemSectionStatus(mapSystemInfo({ model: "DS920+", temperature_warn: false }))).toBe(
+      "available",
+    );
+    expect(
+      mapSystemInfo({ temperature_warn: false }, { temperature_warn: true }).temperatureWarning,
+    ).toBe(true);
+    expect(systemSectionStatus(mapSystemInfo({ model: "DS920+" }))).toBe("available");
   });
 });

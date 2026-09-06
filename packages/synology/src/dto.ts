@@ -90,6 +90,12 @@ export function parseTemperatureC(value: unknown): number | null {
   return parsed;
 }
 
+function parseTemperatureWarning(...values: unknown[]): boolean | null {
+  const flags = values.filter((value): value is boolean => typeof value === "boolean");
+  if (flags.length === 0) return null;
+  return flags.some(Boolean);
+}
+
 export function parsePercentLoad(value: unknown): number | null {
   const parsed = parseFiniteNumber(value);
   if (parsed === null || parsed < 0 || parsed > 100) return null;
@@ -108,10 +114,39 @@ export function normalizeStatus(value: unknown): string {
   if (!raw) return "unknown";
   const normalized = raw.toLocaleLowerCase("und").replaceAll(" ", "_");
   if (normalized === "ok" || normalized === "good" || normalized === "healthy") return "normal";
-  if (normalized === "attention" || normalized === "failing") return "degraded";
+  if (
+    normalized === "attention" ||
+    normalized === "failing" ||
+    normalized === "unhealthy" ||
+    normalized === "bad" ||
+    normalized === "abnormal"
+  )
+    return "degraded";
   if (normalized === "crashed" || normalized === "error" || normalized === "failed")
     return "critical";
   return raw.length > MAX_STATUS ? raw.slice(0, MAX_STATUS) : raw;
+}
+
+export function normalizeOptionalStatus(value: unknown): string | null {
+  const raw = boundText(value, MAX_STATUS);
+  return raw === null ? null : normalizeStatus(raw);
+}
+
+export function statusLooksDegraded(value: string | null): boolean {
+  if (value === null) return false;
+  const normalized = value.toLocaleLowerCase("und");
+  return (
+    normalized === "degraded" ||
+    normalized === "warning" ||
+    normalized === "critical" ||
+    normalized === "crashed" ||
+    normalized === "error" ||
+    normalized === "failed"
+  );
+}
+
+export function systemSectionStatus(data: SynologySystemDto): "available" | "degraded" {
+  return data.temperatureWarning === true ? "degraded" : "available";
 }
 
 const VOLUME_IDENTITY_KEYS = ["id", "num_id", "name", "vol_desc", "desc"] as const;
@@ -155,12 +190,7 @@ export function mapSystemInfo(dsmInfo: unknown, coreSystem?: unknown): SynologyS
     systemTemperatureC: parseTemperatureC(
       info.temperature ?? info.sys_temp ?? core.sys_temp ?? core.temperature,
     ),
-    temperatureWarning:
-      typeof info.temperature_warn === "boolean"
-        ? info.temperature_warn
-        : typeof core.temperature_warn === "boolean"
-          ? core.temperature_warn
-          : null,
+    temperatureWarning: parseTemperatureWarning(info.temperature_warn, core.temperature_warn),
     ramTotalBytes: mbToBytes(info.ram ?? info.ram_mb),
     cpuCores: cpuCores !== null && Number.isInteger(cpuCores) && cpuCores > 0 ? cpuCores : null,
     cpuFamily: boundText(core.cpu_family ?? core.cpuFamily, MAX_MODEL),
@@ -409,7 +439,7 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
       model: boundText(record.model, MAX_MODEL),
       type: boundText(record.type ?? record.diskType, MAX_STATUS),
       status: normalizeStatus(record.status),
-      smartStatus: boundText(record.smart_status ?? record.smartStatus, MAX_STATUS),
+      smartStatus: normalizeOptionalStatus(record.smart_status ?? record.smartStatus),
       temperatureC: parseTemperatureC(record.temp ?? record.temperature),
       sizeBytes: parseSafeIntegerBytes(record.size_total ?? record.size ?? record.total_size),
       badSectorWarning:
@@ -428,9 +458,14 @@ export function storageLooksDegraded(
   volumes: readonly SynologyVolumeDto[],
   disks: readonly SynologyDiskDto[],
 ): boolean {
-  const bad = new Set(["degraded", "warning", "critical", "crashed", "error", "failed"]);
   return (
-    volumes.some((volume) => bad.has(volume.status.toLocaleLowerCase("und"))) ||
-    disks.some((disk) => bad.has(disk.status.toLocaleLowerCase("und")))
+    volumes.some((volume) => statusLooksDegraded(volume.status)) ||
+    disks.some(
+      (disk) =>
+        statusLooksDegraded(disk.status) ||
+        statusLooksDegraded(disk.smartStatus) ||
+        disk.badSectorWarning === true ||
+        disk.remainingLifeWarning === true,
+    )
   );
 }

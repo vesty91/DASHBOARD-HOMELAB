@@ -25,6 +25,14 @@ import { createSynologyService } from "./service";
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
 const MISSING_INTEGRATION_ID = "22222222-2222-4222-8222-222222222222";
 const KEY = Buffer.alloc(32, 9).toString("base64");
+const MALICIOUS_SID = "SID-SUPER-SECRET-001";
+const MALICIOUS_TOKEN = "TOKEN-SUPER-SECRET-002";
+const MALICIOUS_DID = "DID-SUPER-SECRET-003";
+const MALICIOUS_PASSWORD = "PASSWORD-SUPER-SECRET-004";
+const MALICIOUS_SECRET = new RegExp(
+  [MALICIOUS_PASSWORD, MALICIOUS_SID, MALICIOUS_TOKEN, MALICIOUS_DID].join("|"),
+  "u",
+);
 
 const systemAdmin = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -60,13 +68,17 @@ function json(body: unknown): SecureHttpResult {
   return { ok: true, status: 200, body: Buffer.from(JSON.stringify(body)), latencyMs: 4 };
 }
 
-function createMemoryStore(record?: Partial<IntegrationRecord>): {
+function createMemoryStore(
+  record?: Partial<IntegrationRecord>,
+  options: { password?: string; deviceId?: string } = {},
+): {
   store: IntegrationStore;
   keyring: SecretKeyring;
   secrets: EncryptedSecretRow[];
 } {
   const keyring = createEnvKeyring(KEY);
   if (!keyring) throw new Error("keyring");
+  const plaintextPassword = options.password ?? "s3cret";
   const row: IntegrationRecord = {
     id: INTEGRATION_ID,
     type: "synology",
@@ -86,9 +98,19 @@ function createMemoryStore(record?: Partial<IntegrationRecord>): {
   const password = encryptSecret(keyring, {
     integrationId: row.id,
     key: "password",
-    plaintext: "s3cret",
+    plaintext: plaintextPassword,
   });
   const secrets: EncryptedSecretRow[] = [{ key: "password", ...password }];
+  if (options.deviceId) {
+    secrets.push({
+      key: "deviceId",
+      ...encryptSecret(keyring, {
+        integrationId: row.id,
+        key: "deviceId",
+        plaintext: options.deviceId,
+      }),
+    });
+  }
   return {
     keyring,
     secrets,
@@ -267,6 +289,87 @@ function dsmRequest(): (options: SecureHttpRequest) => Promise<SecureHttpResult>
   };
 }
 
+function utilizationPayload() {
+  return {
+    cpu: { user_load: 12, system_load: 3, other_load: 0, idle_load: 85 },
+    memory: { total_real: 4096, avail_real: 1024, real_usage: 75 },
+  };
+}
+
+function maliciousDsmRequest(mode: "system" | "storage" | "health" = "system") {
+  return async (options: SecureHttpRequest): Promise<SecureHttpResult> => {
+    const href = String(options.url);
+    const api = new URL(href).searchParams.get("api");
+    if (api === "SYNO.API.Info") return json(infoPayload());
+    if (options.method === "POST") {
+      if (options.body?.includes("method=login")) {
+        expect(options.body).toContain(`passwd=${MALICIOUS_PASSWORD}`);
+        return json({
+          success: true,
+          data: { sid: MALICIOUS_SID, synotoken: MALICIOUS_TOKEN, did: MALICIOUS_DID },
+        });
+      }
+      return json({ success: true, data: {} });
+    }
+    if (api === "SYNO.DSM.Info")
+      return json({
+        success: true,
+        data: {
+          model: MALICIOUS_PASSWORD,
+          version_string: `DSM-${MALICIOUS_SID}`,
+          uptime: "1:00:00",
+          ram: 4096,
+          temperature: 40,
+        },
+      });
+    if (api === "SYNO.Core.System")
+      return json({
+        success: true,
+        data: {
+          cpu_cores: 4,
+          cpu_family: MALICIOUS_TOKEN,
+          cpu_series: MALICIOUS_DID,
+        },
+      });
+    if (api === "SYNO.Core.System.Utilization")
+      return json({ success: true, data: utilizationPayload() });
+    if (api === "SYNO.Storage.CGI.Storage") {
+      if (mode === "system")
+        return json({
+          success: true,
+          data: { volumes: [{ id: "volume_1", status: "normal" }], disks: [{ id: "sata1" }] },
+        });
+      return json({
+        success: true,
+        data: {
+          volumes: [
+            {
+              id: MALICIOUS_PASSWORD,
+              vol_desc: MALICIOUS_SID,
+              filesystem: MALICIOUS_TOKEN,
+              status: "normal",
+              size: { total: "1000", used: "400" },
+            },
+          ],
+          disks: [
+            {
+              id: "sata1",
+              name: MALICIOUS_PASSWORD,
+              vendor: MALICIOUS_SID,
+              model: MALICIOUS_TOKEN,
+              status: mode === "health" ? "normal" : MALICIOUS_DID,
+              smart_status: mode === "health" ? MALICIOUS_PASSWORD : "normal",
+              size_total: "8000",
+              temp: 34,
+            },
+          ],
+        },
+      });
+    }
+    throw new Error(href);
+  };
+}
+
 function createBarrier() {
   let release!: () => void;
   const promise = new Promise<void>((resolve) => {
@@ -279,8 +382,9 @@ function createService(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult> = dsmRequest(),
   record?: Partial<IntegrationRecord>,
   refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
+  storeOptions: { password?: string; deviceId?: string } = {},
 ) {
-  const { store, keyring, secrets } = createMemoryStore(record);
+  const { store, keyring, secrets } = createMemoryStore(record, storeOptions);
   const cache = new MemoryIntegrationCache();
   const refreshFence = new MemorySynologyRefreshFence();
   const overviewCoalescer = new MemorySynologyOverviewCoalescer();
@@ -358,6 +462,56 @@ describe("SynologyService", () => {
     expect(serialized).not.toMatch(
       /NAS-SERIAL|DISK-SERIAL|CORE-SERIAL|s3cret|SIDTOKEN|passwd|baseUrl|hostname/u,
     );
+  });
+
+  it("redacts credentials reflected in successful DSM system fields and cache hits", async () => {
+    let dsmInfoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.DSM.Info") dsmInfoCalls += 1;
+        return maliciousDsmRequest("system")(options);
+      },
+      undefined,
+      undefined,
+      { password: MALICIOUS_PASSWORD, deviceId: MALICIOUS_DID },
+    );
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    const second = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(dsmInfoCalls).toBe(1);
+    expect(JSON.stringify(first)).not.toMatch(MALICIOUS_SECRET);
+    expect(JSON.stringify(second)).not.toMatch(MALICIOUS_SECRET);
+    expect(first.system.data?.model).toBe("[REDACTED]");
+    expect(first.system.data?.dsmVersion).toBe("DSM-[REDACTED]");
+    expect(first.system.data?.cpuFamily).toBe("[REDACTED]");
+    expect(first.system.data?.cpuSeries).toBe("[REDACTED]");
+  });
+
+  it("redacts credentials reflected in successful DSM storage fields", async () => {
+    const created = createService(maliciousDsmRequest("storage"), undefined, undefined, {
+      password: MALICIOUS_PASSWORD,
+      deviceId: MALICIOUS_DID,
+    });
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(JSON.stringify(overview)).not.toMatch(MALICIOUS_SECRET);
+    expect(overview.storage.data?.volumes[0]?.id).toBe("_REDACTED_");
+    expect(overview.storage.data?.volumes[0]?.name).toBe("[REDACTED]");
+    expect(overview.storage.data?.volumes[0]?.filesystem).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.displayName).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.vendor).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.model).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.status).toBe("[REDACTED]");
+  });
+
+  it("does not treat a redacted SMART string as a disk health failure", async () => {
+    const created = createService(maliciousDsmRequest("health"), undefined, undefined, {
+      password: MALICIOUS_PASSWORD,
+      deviceId: MALICIOUS_DID,
+    });
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(JSON.stringify(overview)).not.toMatch(MALICIOUS_SECRET);
+    expect(overview.storage.data?.disks[0]?.smartStatus).toBe("[REDACTED]");
+    expect(overview.storage.status).toBe("available");
   });
 
   it("allows metadata for a delegated reader without integration.read", async () => {
@@ -529,6 +683,178 @@ describe("SynologyService", () => {
     expect(withoutCore.system.status).toBe("available");
     expect(withoutCore.system.data?.model).toBe("DS920+");
     expect(withoutCore.system.data?.cpuCores).toBeNull();
+  });
+
+  it("marks the system section degraded when DSM reports a temperature warning", async () => {
+    const withoutCore = createService(async (options) => {
+      const href = String(options.url);
+      const api = new URL(href).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        const payload = infoPayload();
+        const { "SYNO.Core.System": _core, ...data } = payload.data;
+        return json({ success: true, data });
+      }
+      if (api === "SYNO.Core.System") throw new Error("Core.System must not be called");
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: {
+            model: "DS920+",
+            version_string: "DSM 7.2.2",
+            uptime: "1:00:00",
+            ram: 8192,
+            temperature: 75,
+            temperature_warn: true,
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const warned = await withoutCore.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(warned.status).toBe("degraded");
+    expect(warned.system.status).toBe("degraded");
+    expect(warned.system.reason).toBeUndefined();
+    expect(warned.system.data?.temperatureWarning).toBe(true);
+    expect(warned.system.data?.model).toBe("DS920+");
+
+    const withCore = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: {
+            model: "DS920+",
+            version_string: "DSM 7.2.2",
+            uptime: "1:00:00",
+            ram: 8192,
+            temperature: 40,
+            temperature_warn: false,
+          },
+        });
+      if (api === "SYNO.Core.System")
+        return json({
+          success: true,
+          data: { cpu_cores: 4, temperature_warn: true },
+        });
+      return dsmRequest()(options);
+    });
+    const coreWarned = await withCore.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(coreWarned.system.status).toBe("degraded");
+    expect(coreWarned.system.data?.temperatureWarning).toBe(true);
+
+    const timeout = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: {
+            model: "DS920+",
+            version_string: "DSM 7.2.2",
+            uptime: "1:00:00",
+            ram: 8192,
+            temperature: 75,
+            temperature_warn: true,
+          },
+        });
+      if (api === "SYNO.Core.System") return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+      return dsmRequest()(options);
+    });
+    const timedOut = await timeout.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(timedOut.system.status).toBe("degraded");
+    expect(timedOut.system.reason).toBe("timeout");
+    expect(timedOut.system.data?.temperatureWarning).toBe(true);
+    expect(timedOut.system.data?.model).toBe("DS920+");
+  });
+
+  it("marks storage degraded for disk health warnings while keeping healthy disks available", async () => {
+    const badSector = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [{ id: "volume_1", status: "normal" }],
+            disks: [
+              {
+                id: "sata1",
+                name: "Drive 1",
+                status: "normal",
+                smart_status: "normal",
+                bad_sector: true,
+                remain_life_warning: false,
+              },
+            ],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const badSectorOverview = await badSector.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(badSectorOverview.status).toBe("degraded");
+    expect(badSectorOverview.storage.status).toBe("degraded");
+    expect(badSectorOverview.storage.data?.disks[0]?.badSectorWarning).toBe(true);
+
+    const remainingLife = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [{ id: "volume_1", status: "normal" }],
+            disks: [
+              {
+                id: "sata1",
+                name: "Drive 1",
+                status: "normal",
+                remain_life_warning: true,
+              },
+            ],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const remaining = await remainingLife.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(remaining.storage.status).toBe("degraded");
+    expect(remaining.storage.data?.disks[0]?.remainingLifeWarning).toBe(true);
+
+    const smartFailing = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [{ id: "volume_1", status: "normal" }],
+            disks: [{ id: "sata1", name: "Drive 1", status: "normal", smart_status: "failing" }],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const failing = await smartFailing.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(failing.storage.status).toBe("degraded");
+    expect(failing.storage.data?.disks[0]?.smartStatus).toBe("degraded");
+
+    const healthy = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [{ id: "volume_1", status: "normal" }],
+            disks: [
+              {
+                id: "sata1",
+                name: "Drive 1",
+                status: "normal",
+                smart_status: "normal",
+                bad_sector: false,
+                remain_life_warning: false,
+              },
+            ],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const healthyOverview = await healthy.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(healthyOverview.storage.status).toBe("available");
+    expect(healthyOverview.status).toBe("available");
   });
 
   it("retries a Core.System session error once", async () => {
