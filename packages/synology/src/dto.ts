@@ -361,14 +361,25 @@ export function validateVolumeUsage(usedBytes: number | null, totalBytes: number
     invalidPayload("DSM volume usage is invalid");
 }
 
-export function rejectNegativeByteValue(value: unknown, label: string): void {
-  if (typeof value === "number" && Number.isFinite(value) && value < 0) invalidPayload(label);
-  if (typeof value !== "string") return;
+function presentFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
-  if (trimmed === "") return;
+  if (trimmed === "") return undefined;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) return;
-  if (parsed < 0 || Object.is(parsed, -0)) invalidPayload(label);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export function rejectNegativeByteValue(value: unknown, label: string): void {
+  const parsed = presentFiniteNumber(value);
+  if (parsed === undefined) return;
+  if (parsed < 0 || (typeof value === "string" && Object.is(parsed, -0))) invalidPayload(label);
+}
+
+export function rejectNonPositiveByteValue(value: unknown, label: string): void {
+  const parsed = presentFiniteNumber(value);
+  if (parsed === undefined) return;
+  if (parsed <= 0) invalidPayload(label);
 }
 
 function volumeFree(
@@ -452,6 +463,9 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
     );
     const id = sanitizeId(record.id ?? record.diskPath ?? record.name, identity);
     const displayName = boundText(record.name ?? record.id, MAX_NAME) ?? id;
+    const rawSize = record.size_total ?? record.size ?? record.total_size;
+    rejectNonPositiveByteValue(rawSize, "DSM disk capacity is invalid");
+    const sizeBytes = parseSafeIntegerBytes(rawSize);
     return {
       id,
       displayName,
@@ -461,7 +475,7 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
       status: normalizeStatus(record.status),
       smartStatus: normalizeOptionalStatus(record.smart_status ?? record.smartStatus),
       temperatureC: parseTemperatureC(record.temp ?? record.temperature),
-      sizeBytes: parseSafeIntegerBytes(record.size_total ?? record.size ?? record.total_size),
+      sizeBytes,
       badSectorWarning:
         typeof record.bad_sector === "boolean"
           ? record.bad_sector

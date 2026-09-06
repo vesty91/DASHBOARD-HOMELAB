@@ -2243,6 +2243,51 @@ describe("SynologyService", () => {
     expect(JSON.stringify(overview.storage.data)).not.toContain("1000");
   });
 
+  it("rejects a nonpositive raw disk capacity as invalid-response", async () => {
+    for (const sizeTotal of [0, -1, "-1"] as const) {
+      const { synology } = createService(async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.Storage.CGI.Storage")
+          return json({
+            success: true,
+            data: {
+              volumes: [{ id: "volume_1", status: "normal" }],
+              disks: [{ id: "sata1", status: "normal", size_total: sizeTotal }],
+            },
+          });
+        return dsmRequest()(options);
+      });
+      const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+      expect(overview.status).toBe("degraded");
+      expect(overview.storage.status).toBe("unavailable");
+      expect(overview.storage.reason).toBe("invalid-response");
+      expect(overview.storage.data).toBeNull();
+      expect(overview.system.status).toBe("available");
+      expect(overview.resources.status).toBe("available");
+    }
+  });
+
+  it("keeps coherent degraded disk health distinct from invalid capacity", async () => {
+    const { synology } = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [{ id: "volume_1", status: "normal" }],
+            disks: [{ id: "sata1", status: "degraded", size_total: 1000 }],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.status).toBe("degraded");
+    expect(overview.storage.status).toBe("degraded");
+    expect(overview.storage.reason).toBeUndefined();
+    expect(overview.storage.data?.disks[0]?.sizeBytes).toBe(1000);
+    expect(overview.storage.data?.disks[0]?.status).toBe("degraded");
+  });
+
   it("rejects a negative raw volume size as invalid-response", async () => {
     const { synology } = createService(async (options) => {
       const api = new URL(String(options.url)).searchParams.get("api");

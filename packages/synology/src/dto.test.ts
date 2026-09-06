@@ -19,6 +19,7 @@ import {
   storageLooksDegraded,
   systemSectionStatus,
   rejectNegativeByteValue,
+  rejectNonPositiveByteValue,
   validateCpuLoads,
   validateMemoryTotals,
   validateVolumeUsage,
@@ -407,5 +408,41 @@ describe("Synology DTO mapping", () => {
     );
     expect(() => rejectNegativeByteValue(1000, "DSM volume total is invalid")).not.toThrow();
     expect(() => rejectNegativeByteValue("missing", "DSM volume total is invalid")).not.toThrow();
+  });
+
+  it("rejects present nonpositive disk capacities and keeps missing or oversized sizes nullable", () => {
+    expect(mapDisks([{ id: "sata1", size_total: 1 }])[0]?.sizeBytes).toBe(1);
+    expect(mapDisks([{ id: "sata1", size_total: 1000 }])[0]?.sizeBytes).toBe(1000);
+    expect(mapDisks([{ id: "sata1", size_total: "1000" }])[0]?.sizeBytes).toBe(1000);
+    expect(mapDisks([{ id: "sata1" }])[0]?.sizeBytes).toBeNull();
+    expect(mapDisks([{ id: "sata1", size_total: "9007199254740993" }])[0]?.sizeBytes).toBeNull();
+    expect(mapDisks([{ id: "sata1", size_total: 1000, size: -1 }])[0]?.sizeBytes).toBe(1000);
+    expect(() => mapDisks([{ id: "sata1", size: -1 }])).toThrow(IntegrationError);
+    for (const disk of [
+      { id: "sata1", size_total: 0 },
+      { id: "sata1", size_total: -1 },
+      { id: "sata1", size_total: "0" },
+      { id: "sata1", size_total: "-0" },
+      { id: "sata1", size_total: "-1" },
+      { id: "sata1", size_total: "-1e3" },
+      { id: "sata1", size: -500 },
+      { id: "sata1", total_size: "-500" },
+    ]) {
+      expect(() => mapDisks([disk])).toThrow(IntegrationError);
+    }
+    expect(() => rejectNonPositiveByteValue(0, "DSM disk capacity is invalid")).toThrow(
+      IntegrationError,
+    );
+    expect(() => rejectNonPositiveByteValue(-0, "DSM disk capacity is invalid")).toThrow(
+      IntegrationError,
+    );
+    expect(() => rejectNonPositiveByteValue(null, "DSM disk capacity is invalid")).not.toThrow();
+    expect(() =>
+      rejectNonPositiveByteValue(undefined, "DSM disk capacity is invalid"),
+    ).not.toThrow();
+    expect(() => rejectNonPositiveByteValue(1000, "DSM disk capacity is invalid")).not.toThrow();
+    expect(() =>
+      rejectNonPositiveByteValue("9007199254740993", "DSM disk capacity is invalid"),
+    ).not.toThrow();
   });
 });
