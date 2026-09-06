@@ -33,12 +33,19 @@ const reader = {
   },
 };
 
-function createMemoryStore(): IntegrationStore & { secrets: Map<string, EncryptedSecretRow[]> } {
+function createMemoryStore(): IntegrationStore & {
+  secrets: Map<string, EncryptedSecretRow[]>;
+  setConfigRevision(id: string, revision: number): void;
+} {
   const rows = new Map<string, IntegrationRecord>();
   const secrets = new Map<string, EncryptedSecretRow[]>();
   const now = () => new Date();
   return {
     secrets,
+    setConfigRevision(id, revision) {
+      const current = rows.get(id);
+      if (current) rows.set(id, { ...current, configRevision: revision });
+    },
     async list(limit, cursor) {
       return [...rows.values()]
         .sort((left, right) => left.id.localeCompare(right.id))
@@ -538,11 +545,13 @@ describe("integration service", () => {
       },
       admin,
     );
+    store.setConfigRevision(synology.id, 42);
     const managed = await service.get(synology.id, admin);
     expect(managed.baseUrl).toBe("https://nas.example:5001/");
     expect(managed.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: false });
     expect(managed.secrets.apiKey).toEqual({ configured: true });
     expect(managed.capabilities).toEqual(["test.ping"]);
+    expect(managed.configRevision).toBe(42);
     const restricted = await service.get(synology.id, reader);
     expect(restricted).toMatchObject({
       id: synology.id,
@@ -554,8 +563,12 @@ describe("integration service", () => {
       capabilities: [],
       secrets: {},
     });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect("configRevision" in restricted).toBe(false);
     expect(JSON.stringify(restricted)).not.toContain("nas.example");
     expect(JSON.stringify(restricted)).not.toContain("apiKey");
+    expect(JSON.stringify(restricted)).not.toContain("configRevision");
+    expect(JSON.parse(JSON.stringify(restricted))).not.toHaveProperty("configRevision");
     const listed = await service.list(reader, { limit: 10 });
     const listedSynology = listed.items.find((item) => item.id === synology.id);
     expect(listedSynology).toMatchObject({
@@ -564,8 +577,26 @@ describe("integration service", () => {
       secrets: {},
       capabilities: [],
     });
+    expect(listedSynology).not.toHaveProperty("configRevision");
+    expect(listedSynology && "configRevision" in listedSynology).toBe(false);
+    expect(JSON.stringify(listedSynology)).not.toContain("configRevision");
+    expect(JSON.parse(JSON.stringify(listedSynology))).not.toHaveProperty("configRevision");
     const listedProbe = listed.items.find((item) => item.id === probe.id);
     expect(listedProbe?.baseUrl).toBe("http://192.168.1.5:3000/");
     expect(listedProbe?.config).toEqual({ path: "/health", timeoutMs: 1000, verifyTls: true });
+    expect(listedProbe).toHaveProperty("configRevision");
+    const createdAgain = await service.create(
+      {
+        type: "synology",
+        name: "NAS 2",
+        baseUrl: "https://nas-b.example:5001",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    expect(createdAgain.configRevision).toBe(1);
+    const updated = await service.update({ id: createdAgain.id, name: "NAS 2b" }, admin);
+    expect(updated.configRevision).toBe(1);
   });
 });

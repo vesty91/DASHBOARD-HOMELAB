@@ -18,6 +18,7 @@ import {
   parseUtilizationPayload,
   storageLooksDegraded,
   systemSectionStatus,
+  rejectNegativeByteValue,
   validateCpuLoads,
   validateMemoryTotals,
   validateVolumeUsage,
@@ -389,5 +390,22 @@ describe("Synology DTO mapping", () => {
     expect(() => validateVolumeUsage(500, null)).not.toThrow();
     expect(() => validateVolumeUsage(null, 1000)).not.toThrow();
     expect(() => validateVolumeUsage(1000, 1000)).not.toThrow();
+    expect(() => mapVolumes([volume({ total: -1, used: 0 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: 1000, used: -1 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: "-1", used: 0 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: 1000, used: "-1000" })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: "-1e3", used: 0 })])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume({ total: "-0", used: 0 })])).toThrow(IntegrationError);
+    expect(() =>
+      mapVolumes([{ id: "volume_1", status: "normal", size: { total: 1000, used: -1 } }]),
+    ).toThrow(IntegrationError);
+    expect(() => rejectNegativeByteValue(-1, "DSM volume total is invalid")).toThrow(
+      IntegrationError,
+    );
+    expect(() => rejectNegativeByteValue("-1.5", "DSM volume used size is invalid")).toThrow(
+      IntegrationError,
+    );
+    expect(() => rejectNegativeByteValue(1000, "DSM volume total is invalid")).not.toThrow();
+    expect(() => rejectNegativeByteValue("missing", "DSM volume total is invalid")).not.toThrow();
   });
 });

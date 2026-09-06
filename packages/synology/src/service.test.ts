@@ -2168,4 +2168,106 @@ describe("SynologyService", () => {
     expect(overview.storage.data?.volumes[0]?.usedBytes).toBe(500);
     expect(overview.storage.data?.volumes[0]?.totalBytes).toBe(1000);
   });
+
+  it("redacts a numeric password reflected as a DSM.Info number", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") return json(infoPayload());
+        if (options.method === "POST") {
+          if (options.body?.includes("method=login")) {
+            expect(options.body).toContain("passwd=4096");
+            return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+          }
+          return json({ success: true, data: {} });
+        }
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: {
+              model: "DS920+",
+              version_string: "DSM 7.2",
+              uptime: 4096,
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        return dsmRequest()(options);
+      },
+      undefined,
+      undefined,
+      { password: "4096" },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.system.data?.model).toBe("DS920+");
+    expect(overview.system.data?.uptimeSeconds).toBeNull();
+    expect(JSON.stringify(overview.system.data)).not.toContain("4096");
+  });
+
+  it("redacts a numeric password reflected as a storage total", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") return json(infoPayload());
+        if (options.method === "POST") {
+          if (options.body?.includes("method=login")) {
+            expect(options.body).toContain("passwd=1000");
+            return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+          }
+          return json({ success: true, data: {} });
+        }
+        if (api === "SYNO.Storage.CGI.Storage")
+          return json({
+            success: true,
+            data: {
+              volumes: [
+                {
+                  id: "volume_1",
+                  status: "normal",
+                  size: { total: 1000, used: 400 },
+                },
+              ],
+              disks: [{ id: "sata1", status: "normal" }],
+            },
+          });
+        return dsmRequest()(options);
+      },
+      undefined,
+      undefined,
+      { password: "1000" },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.storage.data?.volumes[0]?.usedBytes).toBe(400);
+    expect(overview.storage.data?.volumes[0]?.totalBytes).toBeNull();
+    expect(overview.storage.data?.volumes[0]?.freeBytes).toBeNull();
+    expect(JSON.stringify(overview.storage.data)).not.toContain("1000");
+  });
+
+  it("rejects a negative raw volume size as invalid-response", async () => {
+    const { synology } = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [
+              {
+                id: "volume_1",
+                status: "normal",
+                size: { total: -1000, used: 0 },
+              },
+            ],
+            disks: [{ id: "sata1", status: "normal" }],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const overview = await synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.status).toBe("degraded");
+    expect(overview.storage.status).toBe("unavailable");
+    expect(overview.storage.reason).toBe("invalid-response");
+    expect(overview.storage.data).toBeNull();
+    expect(overview.system.status).toBe("available");
+    expect(overview.resources.status).toBe("available");
+  });
 });

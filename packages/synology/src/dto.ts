@@ -361,6 +361,16 @@ export function validateVolumeUsage(usedBytes: number | null, totalBytes: number
     invalidPayload("DSM volume usage is invalid");
 }
 
+export function rejectNegativeByteValue(value: unknown, label: string): void {
+  if (typeof value === "number" && Number.isFinite(value) && value < 0) invalidPayload(label);
+  if (typeof value !== "string") return;
+  const trimmed = value.trim();
+  if (trimmed === "") return;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) return;
+  if (parsed < 0 || Object.is(parsed, -0)) invalidPayload(label);
+}
+
 function volumeFree(
   usedBytes: number | null,
   totalBytes: number | null,
@@ -407,8 +417,12 @@ export function mapVolumes(raw: unknown): readonly SynologyVolumeDto[] {
       VOLUME_IDENTITY_KEYS,
     );
     const size = recordOf(record.size);
-    const totalBytes = parseSafeIntegerBytes(size.total ?? record.total_size);
-    const usedBytes = parseSafeIntegerBytes(size.used ?? record.used_size);
+    const rawTotal = size.total ?? record.total_size;
+    const rawUsed = size.used ?? record.used_size;
+    rejectNegativeByteValue(rawTotal, "DSM volume total is invalid");
+    rejectNegativeByteValue(rawUsed, "DSM volume used size is invalid");
+    const totalBytes = parseSafeIntegerBytes(rawTotal);
+    const usedBytes = parseSafeIntegerBytes(rawUsed);
     validateVolumeUsage(usedBytes, totalBytes);
     const id = sanitizeId(record.id ?? record.num_id ?? identity, identity);
     const name = boundText(record.vol_desc ?? record.desc ?? record.name, MAX_NAME) ?? id;

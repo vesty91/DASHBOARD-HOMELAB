@@ -84,7 +84,7 @@ export interface IntegrationDto {
   config: JsonObject;
   status: IntegrationStatus;
   lastCheckedAt: Date | null;
-  configRevision: number;
+  configRevision?: number;
   createdAt: Date;
   updatedAt: Date;
   definitionAvailable: boolean;

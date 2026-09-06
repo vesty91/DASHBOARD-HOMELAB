@@ -322,4 +322,39 @@ describe("Synology integration definition", () => {
       });
     }
   });
+
+  it("redacts a numeric password reflected as a DSM.Info number in testConnection", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "4096" },
+      request: async (options) => {
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        return mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({
+            success: true,
+            data: {
+              model: "DS920+",
+              version_string: "DSM 7.2",
+              uptime: 4096,
+              ram: 8192,
+            },
+          }),
+        });
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.metadata).toEqual({
+        model: "DS920+",
+        dsmVersion: "DSM 7.2",
+      });
+      expect(result.metadata).not.toHaveProperty("uptimeSeconds");
+      expect(JSON.stringify(result.metadata)).not.toContain("4096");
+    }
+  });
 });

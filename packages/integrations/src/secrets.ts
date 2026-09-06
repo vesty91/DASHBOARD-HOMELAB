@@ -19,6 +19,11 @@ export function collectSecretStringValues(secrets: unknown): string[] {
   return [...new Set(values)].sort((left, right) => right.length - left.length);
 }
 
+function redactExactScalar(value: number | boolean, secretValues: readonly string[]): unknown {
+  const representation = String(value);
+  return secretValues.includes(representation) ? "[REDACTED]" : value;
+}
+
 export function redactKnownSecretValues(value: unknown, secretValues: readonly string[]): unknown {
   if (secretValues.length === 0) return value;
   if (typeof value === "string") {
@@ -27,6 +32,9 @@ export function redactKnownSecretValues(value: unknown, secretValues: readonly s
       if (output.includes(secret)) output = output.split(secret).join("[REDACTED]");
     return output;
   }
+  if (typeof value === "number" && Number.isFinite(value))
+    return redactExactScalar(value, secretValues);
+  if (typeof value === "boolean") return redactExactScalar(value, secretValues);
   if (Array.isArray(value))
     return value.map((entry) => redactKnownSecretValues(entry, secretValues));
   if (value && typeof value === "object") {
