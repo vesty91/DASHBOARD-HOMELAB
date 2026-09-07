@@ -20,3 +20,7 @@ export function synologyOverviewCacheOperation(
     .digest("hex");
   return `${SYNOLOGY_OVERVIEW_CACHE_PREFIX}:${digest}`;
 }
+
+export function overviewFailureCacheOperation(cacheOperation: string): string {
+  return `${cacheOperation}:failure`;
+}

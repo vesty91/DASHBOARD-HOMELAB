@@ -357,4 +357,37 @@ describe("Synology integration definition", () => {
       expect(JSON.stringify(result.metadata)).not.toContain("4096");
     }
   });
+
+  it("redacts a configured DSM account reflected into testConnection metadata", async () => {
+    const result = await synologyIntegrationDefinition.testConnection({
+      integrationId: INTEGRATION_ID,
+      baseUrl: "https://nas.example:5001/",
+      verifyTls: true,
+      timeoutMs: 8000,
+      config: { account: "DSM-ACCOUNT-SECRET", verifyTls: true, timeoutMs: 8000 },
+      secrets: { password: "s3cret" },
+      request: async (options) => {
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        return mockDsmTransport(options, {
+          "SYNO.DSM.Info": json({
+            success: true,
+            data: {
+              model: "DSM-ACCOUNT-SECRET",
+              version_string: "DSM-DSM-ACCOUNT-SECRET-build",
+              ram: 8192,
+            },
+          }),
+        });
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(JSON.stringify(result.metadata)).not.toContain("DSM-ACCOUNT-SECRET");
+      expect(result.metadata).toMatchObject({
+        model: "[REDACTED]",
+        dsmVersion: "DSM-[REDACTED]-build",
+      });
+    }
+  });
 });

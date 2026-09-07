@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createEnvKeyring, encryptSecret } from "@dashboard/secrets";
-import { SYNOLOGY_OVERVIEW_CACHE_PREFIX, synologyOverviewCacheOperation } from "./cache-key";
+import {
+  SYNOLOGY_OVERVIEW_CACHE_PREFIX,
+  overviewFailureCacheOperation,
+  synologyOverviewCacheOperation,
+} from "./cache-key";
 
 const KEY = Buffer.alloc(32, 9).toString("base64");
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -43,5 +47,8 @@ describe("synologyOverviewCacheOperation", () => {
     expect(cleared).toBe(baseline);
     const serialized = [baseline, revised, rotated, refreshed, enrolled].join("\n");
     expect(serialized).not.toMatch(/s3cret|n3wpass|DID-SECRET|password|deviceId/u);
+    const failureKey = overviewFailureCacheOperation(baseline);
+    expect(failureKey).toBe(`${baseline}:failure`);
+    expect(failureKey).not.toMatch(/s3cret|n3wpass|DID-SECRET|account|monitor/u);
   });
 });

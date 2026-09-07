@@ -44,6 +44,7 @@ export type { SynologyRequestFn };
 
 export const OVERVIEW_CACHE_TTL_MS = 15_000;
 export const OVERVIEW_PARTIAL_CACHE_TTL_MS = 5_000;
+export const SYNOLOGY_OVERVIEW_FAILURE_TTL_MS = 15_000;
 
 export interface SynologyClientContext extends SynologyTransportContext {
   readonly account: string;
@@ -129,6 +130,7 @@ function dsmResponseSecretValues(
   session: DsmSession,
 ): readonly string[] {
   return collectSecretStringValues({
+    account: ctx.account,
     password: ctx.password,
     deviceId: ctx.deviceId,
     sid: session.sid,

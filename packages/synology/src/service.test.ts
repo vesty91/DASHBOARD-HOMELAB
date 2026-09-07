@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  IntegrationError,
   MemoryIntegrationCache,
   createIntegrationRegistry,
   type EncryptedSecretRow,
@@ -15,7 +16,8 @@ import {
   encryptSecret,
   type SecretKeyring,
 } from "@dashboard/secrets";
-import { synologyOverviewCacheOperation } from "./cache-key";
+import { overviewFailureCacheOperation, synologyOverviewCacheOperation } from "./cache-key";
+import { SYNOLOGY_OVERVIEW_FAILURE_TTL_MS } from "./client";
 import { synologyIntegrationDefinition } from "./definition";
 import { MemorySynologyOverviewCoalescer } from "./overview-coalescer";
 import {
@@ -1542,8 +1544,12 @@ describe("SynologyService", () => {
       created.synology.refreshOverview(INTEGRATION_ID, systemAdmin),
     ).rejects.toMatchObject({ code: "TIMEOUT" });
     expect(created.refreshFence.current(INTEGRATION_ID)).toBe(1);
-    const next = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
-    expect(next.system.data?.model).toBe("NAS-RETRY");
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    expect(infoCalls).toBe(2);
+    const retried = await created.synology.refreshOverview(INTEGRATION_ID, systemAdmin);
+    expect(retried.system.data?.model).toBe("NAS-RETRY");
     expect(infoCalls).toBe(3);
   });
 
@@ -1631,8 +1637,12 @@ describe("SynologyService", () => {
     await expect(first).rejects.toMatchObject({ code: "TIMEOUT" });
     await expect(second).rejects.toMatchObject({ code: "TIMEOUT" });
     expect(infoCalls).toBe(1);
+    await expect(
+      runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin),
+    ).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(infoCalls).toBe(1);
     fail = false;
-    const recovered = await runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin);
+    const recovered = await runtime.makeService().refreshOverview(INTEGRATION_ID, systemAdmin);
     expect(recovered.system.data?.model).toBe("DS920+");
     expect(infoCalls).toBe(2);
   });
@@ -2314,5 +2324,401 @@ describe("SynologyService", () => {
     expect(overview.storage.data).toBeNull();
     expect(overview.system.status).toBe("available");
     expect(overview.resources.status).toBe("available");
+  });
+
+  it("redacts a configured DSM account reflected in successful system fields and cache hits", async () => {
+    const account = "DSM-ACCOUNT-SECRET";
+    let dsmInfoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login")) {
+          expect(options.body).toContain(`account=${account}`);
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        }
+        if (api === "SYNO.DSM.Info") {
+          dsmInfoCalls += 1;
+          return json({
+            success: true,
+            data: {
+              model: account,
+              version_string: `DSM-${account}-build`,
+              uptime: "1:00:00",
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        }
+        return dsmRequest()(options);
+      },
+      { config: { account, verifyTls: true, timeoutMs: 8000 } },
+    );
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    const second = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(dsmInfoCalls).toBe(1);
+    expect(JSON.stringify(first)).not.toContain(account);
+    expect(JSON.stringify(second)).not.toContain(account);
+    expect(first.system.data?.model).toBe("[REDACTED]");
+    expect(first.system.data?.dsmVersion).toBe("DSM-[REDACTED]-build");
+  });
+
+  it("redacts a configured DSM account substring in the model field", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login")) {
+          expect(options.body).toContain("account=vesty");
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        }
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: {
+              model: "NAS-vesty-prod",
+              version_string: "DSM 7.2",
+              uptime: "1:00:00",
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        return dsmRequest()(options);
+      },
+      { config: { account: "vesty", verifyTls: true, timeoutMs: 8000 } },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.system.data?.model).toBe("NAS-[REDACTED]-prod");
+    expect(JSON.stringify(overview)).not.toContain("vesty");
+  });
+
+  it("redacts a numeric DSM account reflected as a DSM.Info number", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login")) {
+          expect(options.body).toContain("account=4096");
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        }
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: {
+              model: "DS920+",
+              version_string: "DSM 7.2",
+              uptime: 4096,
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        return dsmRequest()(options);
+      },
+      { config: { account: "4096", verifyTls: true, timeoutMs: 8000 } },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.system.data?.uptimeSeconds).toBeNull();
+    expect(JSON.stringify(overview.system.data)).not.toContain("4096");
+  });
+
+  it("redacts a configured DSM account reflected in storage fields", async () => {
+    const account = "DSM-ACCOUNT-SECRET";
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        if (api === "SYNO.Storage.CGI.Storage")
+          return json({
+            success: true,
+            data: {
+              volumes: [
+                {
+                  id: "volume_1",
+                  vol_desc: account,
+                  status: "normal",
+                  size: { total: "1000", used: "400" },
+                },
+              ],
+              disks: [
+                {
+                  id: "sata1",
+                  status: "normal",
+                  vendor: account,
+                  model: `DISK-${account}`,
+                  size_total: "8000",
+                },
+              ],
+            },
+          });
+        return dsmRequest()(options);
+      },
+      { config: { account, verifyTls: true, timeoutMs: 8000 } },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(JSON.stringify(overview.storage.data)).not.toContain(account);
+    expect(overview.storage.data?.volumes[0]?.name).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.vendor).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.model).toBe("DISK-[REDACTED]");
+  });
+
+  it("caches a normalized overview auth failure for sequential readers", async () => {
+    let loginCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST") {
+        if (options.body?.includes("method=login")) {
+          loginCalls += 1;
+          return json({ success: false, error: { code: 400 } });
+        }
+        return json({ success: true, data: {} });
+      }
+      throw new Error(String(options.url));
+    });
+    for (let attempt = 0; attempt < 5; attempt += 1)
+      await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject(
+        {
+          code: "UNAUTHORIZED",
+          message: "Identifiants DSM invalides",
+        },
+      );
+    expect(loginCalls).toBe(1);
+    const failure = created.cache.get(
+      INTEGRATION_ID,
+      overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets)),
+    );
+    expect(failure).toEqual({ code: "UNAUTHORIZED", message: "Identifiants DSM invalides" });
+    expect(Object.keys(failure as object)).toEqual(["code", "message"]);
+  });
+
+  it("caches a 2FA-required overview failure without a second DSM login", async () => {
+    let loginCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST") {
+        if (options.body?.includes("method=login")) {
+          loginCalls += 1;
+          return json({ success: false, error: { code: 403 } });
+        }
+        return json({ success: true, data: {} });
+      }
+      throw new Error(String(options.url));
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "MISCONFIGURED",
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "MISCONFIGURED",
+    });
+    expect(loginCalls).toBe(1);
+  });
+
+  it("caches a discovery timeout without repeating the network call", async () => {
+    let infoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+      }
+      return dsmRequest()(options);
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    expect(infoCalls).toBe(1);
+  });
+
+  it("coalesces concurrent overview failures then serves the cached failure", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    let infoCalls = 0;
+    const runtime = createSharedRuntime(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        started.release();
+        await release.promise;
+        return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+      }
+      return dsmRequest()(options);
+    });
+    const pending = Promise.allSettled([
+      runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin),
+      runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin),
+      runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin),
+    ]);
+    await started.promise;
+    release.release();
+    const settled = await pending;
+    expect(settled.every((result) => result.status === "rejected")).toBe(true);
+    expect(infoCalls).toBe(1);
+    await expect(
+      runtime.makeService().getOverview(INTEGRATION_ID, systemAdmin),
+    ).rejects.toMatchObject({ code: "TIMEOUT" });
+    expect(infoCalls).toBe(1);
+  });
+
+  it("expires a cached overview failure and then caches the recovered success", async () => {
+    vi.useFakeTimers();
+    try {
+      let fail = true;
+      let infoCalls = 0;
+      const created = createService(async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") {
+          infoCalls += 1;
+          if (fail) return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+          return json(infoPayload());
+        }
+        return dsmRequest()(options);
+      });
+      await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject(
+        {
+          code: "TIMEOUT",
+        },
+      );
+      await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject(
+        {
+          code: "TIMEOUT",
+        },
+      );
+      expect(infoCalls).toBe(1);
+      fail = false;
+      await vi.advanceTimersByTimeAsync(SYNOLOGY_OVERVIEW_FAILURE_TTL_MS + 1);
+      const recovered = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+      expect(recovered.system.data?.model).toBe("DS920+");
+      expect(infoCalls).toBe(2);
+      const cached = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+      expect(cached.system.data?.model).toBe("DS920+");
+      expect(infoCalls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets a manual refresh bypass a cached overview failure", async () => {
+    let fail = true;
+    let infoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        if (fail) return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+        return json(infoPayload());
+      }
+      return dsmRequest()(options);
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    expect(infoCalls).toBe(1);
+    fail = false;
+    const refreshed = await created.synology.refreshOverview(INTEGRATION_ID, systemAdmin);
+    expect(refreshed.system.data?.model).toBe("DS920+");
+    expect(infoCalls).toBe(2);
+  });
+
+  it("does not reuse a cached overview failure after the password changes", async () => {
+    let loginCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        loginCalls += 1;
+        if (options.body.includes("passwd=n3wpass"))
+          return json({ success: true, data: { sid: "SID-NEW", synotoken: "TOK-NEW" } });
+        return json({ success: false, error: { code: 400 } });
+      }
+      return dsmRequest()(options);
+    });
+    await expect(created.synology.getOverview(INTEGRATION_ID, systemAdmin)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(loginCalls).toBe(1);
+    const encrypted = encryptSecret(created.keyring, {
+      integrationId: INTEGRATION_ID,
+      key: "password",
+      plaintext: "n3wpass",
+    });
+    await created.store.upsertSecret(INTEGRATION_ID, { key: "password", ...encrypted });
+    created.cache.invalidate(INTEGRATION_ID);
+    const recovered = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(recovered.system.data?.model).toBe("DS920+");
+    expect(loginCalls).toBe(2);
+  });
+
+  it("does not write a stale-generation overview failure after refresh", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    let infoCalls = 0;
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") {
+        infoCalls += 1;
+        if (infoCalls === 1) {
+          started.release();
+          await release.promise;
+          return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+        }
+        return json(infoPayload());
+      }
+      return dsmRequest()(options);
+    });
+    const inFlight = created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    await started.promise;
+    const refresh = created.synology.refreshOverview(INTEGRATION_ID, systemAdmin);
+    release.release();
+    await expect(inFlight).rejects.toMatchObject({ code: "TIMEOUT" });
+    const refreshed = await refresh;
+    expect(refreshed.system.data?.model).toBe("DS920+");
+    expect(
+      created.cache.get(
+        INTEGRATION_ID,
+        overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets, 0)),
+      ),
+    ).toBeUndefined();
+    expect(
+      created.cache.get(
+        INTEGRATION_ID,
+        overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets, 1)),
+      ),
+    ).toBeUndefined();
+    expect(infoCalls).toBe(2);
+  });
+
+  it("redacts credentials from a cached overview failure message", async () => {
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info")
+        throw new IntegrationError(
+          "UNAUTHORIZED",
+          "login failed account=monitor password=s3cret sid=SIDTOKEN did=DIDTOKEN",
+        );
+      return dsmRequest()(options);
+    });
+    const first = await created.synology.getOverview(INTEGRATION_ID, systemAdmin).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(first).toMatchObject({ code: "UNAUTHORIZED" });
+    expect(JSON.stringify(first)).not.toMatch(/monitor|s3cret|SIDTOKEN|DIDTOKEN/u);
+    const second = await created.synology.getOverview(INTEGRATION_ID, systemAdmin).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(second).toMatchObject({ code: "UNAUTHORIZED", message: (first as Error).message });
+    expect(JSON.stringify(second)).not.toMatch(/monitor|s3cret|SIDTOKEN|DIDTOKEN/u);
+    const cached = created.cache.get(
+      INTEGRATION_ID,
+      overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets)),
+    );
+    expect(cached).toEqual({ code: "UNAUTHORIZED", message: (first as Error).message });
+    expect(Object.keys(cached as object)).toEqual(["code", "message"]);
   });
 });

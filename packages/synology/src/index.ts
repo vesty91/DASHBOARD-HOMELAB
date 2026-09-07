@@ -1,8 +1,13 @@
 export { assertSynologyAccess, synologyPermissionsView } from "./access";
-export { SYNOLOGY_OVERVIEW_CACHE_PREFIX, synologyOverviewCacheOperation } from "./cache-key";
+export {
+  SYNOLOGY_OVERVIEW_CACHE_PREFIX,
+  overviewFailureCacheOperation,
+  synologyOverviewCacheOperation,
+} from "./cache-key";
 export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
+  SYNOLOGY_OVERVIEW_FAILURE_TTL_MS,
   SYNOLOGY_JSON_MAX_BYTES,
   SYNOLOGY_STORAGE_MAX_BYTES,
   buildApiInfoRequest,

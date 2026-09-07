@@ -1,5 +1,6 @@
 import {
   DEFAULT_TIMEOUT_MS,
+  INTEGRATION_ERROR_CODES,
   IntegrationError,
   MAX_TIMEOUT_MS,
   MIN_TIMEOUT_MS,
@@ -11,6 +12,7 @@ import {
   requireCapability,
   type IntegrationCache,
   type IntegrationDefinition,
+  type IntegrationErrorCode,
   type IntegrationRateLimiter,
   type IntegrationRecord,
   type IntegrationRegistry,
@@ -25,9 +27,10 @@ import {
   fetchSynologyOverview,
   overviewCacheTtl,
   synologyContextFromIntegration,
+  SYNOLOGY_OVERVIEW_FAILURE_TTL_MS,
   type SynologyClientContext,
 } from "./client";
-import { synologyOverviewCacheOperation } from "./cache-key";
+import { overviewFailureCacheOperation, synologyOverviewCacheOperation } from "./cache-key";
 import { SYNOLOGY_INTEGRATION_ID } from "./definition";
 import { SynologyError, toIntegrationError } from "./errors";
 import type { SynologyOverviewCoalescer } from "./overview-coalescer";
@@ -68,18 +71,60 @@ function trustedCaFromConfig(config: JsonObject): string | undefined {
   return typeof config.trustedCaPem === "string" ? config.trustedCaPem : undefined;
 }
 
-function redactError(error: unknown, secrets: unknown): never {
+type CachedSynologyOverviewFailure = Readonly<{
+  code: IntegrationErrorCode;
+  message: string;
+}>;
+
+function normalizedRedactedError(error: unknown, secrets: unknown): IntegrationError {
   const values = collectSecretStringValues(secrets);
-  if (error instanceof IntegrationError) {
-    throw new IntegrationError(error.code, String(redactKnownSecretValues(error.message, values)));
-  }
-  if (error instanceof SynologyError) {
-    throw new IntegrationError(
+  if (error instanceof IntegrationError)
+    return new IntegrationError(error.code, String(redactKnownSecretValues(error.message, values)));
+  if (error instanceof SynologyError)
+    return new IntegrationError(
       toIntegrationError(error).code,
       String(redactKnownSecretValues(error.message, values)),
     );
-  }
   throw error;
+}
+
+function redactError(error: unknown, secrets: unknown): never {
+  throw normalizedRedactedError(error, secrets);
+}
+
+function asCachedOverview(value: unknown): SynologyOverview | undefined {
+  if (!value || typeof value !== "object" || !("fetchedAt" in value)) return undefined;
+  return value as SynologyOverview;
+}
+
+function asCachedOverviewFailure(value: unknown): CachedSynologyOverviewFailure | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.code !== "string" || typeof record.message !== "string") return undefined;
+  if (!(INTEGRATION_ERROR_CODES as readonly string[]).includes(record.code)) return undefined;
+  return { code: record.code as IntegrationErrorCode, message: record.message };
+}
+
+function throwCachedFailure(failure: CachedSynologyOverviewFailure): never {
+  throw new IntegrationError(failure.code, failure.message);
+}
+
+function readCachedOverview(
+  cache: IntegrationCache,
+  recordId: string,
+  cacheOperation: string,
+): SynologyOverview | undefined {
+  return asCachedOverview(cache.get(recordId, cacheOperation));
+}
+
+function readCachedOverviewFailure(
+  cache: IntegrationCache,
+  recordId: string,
+  cacheOperation: string,
+): CachedSynologyOverviewFailure | undefined {
+  return asCachedOverviewFailure(
+    cache.get(recordId, overviewFailureCacheOperation(cacheOperation)),
+  );
 }
 
 export function createSynologyService(deps: SynologyServiceDeps) {
@@ -164,13 +209,23 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     const loaded = await loadContext(integrationId, "system.read", refreshGeneration);
     requireCapability(definition().capabilities, "resources.read");
     requireCapability(definition().capabilities, "storage.read");
-    const cached = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
-      SynologyOverview | undefined;
+    const cached = readCachedOverview(deps.cache, loaded.recordId, loaded.cacheOperation);
     if (cached) return cached;
+    const cachedFailure = readCachedOverviewFailure(
+      deps.cache,
+      loaded.recordId,
+      loaded.cacheOperation,
+    );
+    if (cachedFailure) throwCachedFailure(cachedFailure);
     return deps.overviewCoalescer.run(`${loaded.recordId}:${loaded.cacheOperation}`, async () => {
-      const rechecked = deps.cache.get(loaded.recordId, loaded.cacheOperation) as
-        SynologyOverview | undefined;
+      const rechecked = readCachedOverview(deps.cache, loaded.recordId, loaded.cacheOperation);
       if (rechecked) return rechecked;
+      const recheckedFailure = readCachedOverviewFailure(
+        deps.cache,
+        loaded.recordId,
+        loaded.cacheOperation,
+      );
+      if (recheckedFailure) throwCachedFailure(recheckedFailure);
       try {
         const overview = await fetchSynologyOverview(loaded.ctx);
         const frozen = Object.freeze({
@@ -184,7 +239,18 @@ export function createSynologyService(deps: SynologyServiceDeps) {
           deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
         return frozen;
       } catch (error) {
-        redactError(error, { ...loaded.secrets, account: loaded.ctx.account });
+        const safe = normalizedRedactedError(error, {
+          ...loaded.secrets,
+          account: loaded.ctx.account,
+        });
+        if (deps.refreshFence.current(integrationId) === refreshGeneration)
+          deps.cache.set(
+            loaded.recordId,
+            overviewFailureCacheOperation(loaded.cacheOperation),
+            { code: safe.code, message: safe.message },
+            SYNOLOGY_OVERVIEW_FAILURE_TTL_MS,
+          );
+        throw safe;
       }
     });
   }

@@ -65,8 +65,12 @@ runtime partagée (`MemorySynologyRefreshFence`), invalide le cache, puis relit 
 génération. Une requête commencée avant le refresh ne peut plus écrire la clé active.
 Les cache misses d'une même génération sont coalescés par
 `MemorySynologyOverviewCoalescer` (runtime partagé, pas de `globalThis` dans le package).
+Les failures d'overview normalisées (`code` + `message` redacted uniquement, jamais d'objet
+Error / stack / raw DSM / secret) sont cachées ~15 s sous
+`synology.overview:<sha256>:failure` pour la même génération. Un changement de config ou de
+secret change la clé ; un refresh manuel invalide aussi ce negative cache.
 
-Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
+Jamais exposés : compte DSM configuré, mot de passe, SID, synotoken, DID, OTP, numéro de série NAS/disque, `baseUrl`,
 `trustedCaPem`, secrets, `configRevision`. `integration.list` / `integration.get` omettent
 `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record Synology sans
 `integration.manage`. `testConnection` exige `SYNO.DSM.Info` disponible : un login réussi ne
