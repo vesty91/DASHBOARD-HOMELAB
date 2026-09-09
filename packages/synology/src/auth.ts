@@ -61,7 +61,7 @@ export function buildLogoutRequest(authVersion: number): string {
 export function sessionHeaders(session: DsmSession): Record<string, string> {
   return {
     cookie: `id=${encodeURIComponent(session.sid)}`,
-    ...(session.synoToken ? { SynoToken: session.synoToken } : {}),
+    ...(session.synoToken ? { "X-SYNO-TOKEN": session.synoToken } : {}),
   };
 }
 

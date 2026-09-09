@@ -76,7 +76,7 @@ function json(body: unknown): SecureHttpResult {
 
 function createMemoryStore(
   record?: Partial<IntegrationRecord>,
-  options: { password?: string; deviceId?: string } = {},
+  options: { password?: string; deviceId?: string; idAliases?: readonly string[] } = {},
 ): {
   store: IntegrationStore;
   keyring: SecretKeyring;
@@ -101,6 +101,8 @@ function createMemoryStore(
     ...record,
   };
   const rows = new Map<string, IntegrationRecord>([[row.id, row]]);
+  const aliases = new Set(options.idAliases ?? []);
+  const resolveId = (id: string) => (aliases.has(id) ? row.id : id);
   const password = encryptSecret(keyring, {
     integrationId: row.id,
     key: "password",
@@ -125,13 +127,13 @@ function createMemoryStore(
         return [...rows.values()];
       },
       async findById(id) {
-        return rows.get(id);
+        return rows.get(resolveId(id));
       },
       async create() {
         throw new Error("unused");
       },
       async update(input) {
-        const current = rows.get(input.id);
+        const current = rows.get(resolveId(input.id));
         if (!current) return undefined;
         const next: IntegrationRecord = {
           ...current,
@@ -144,7 +146,7 @@ function createMemoryStore(
           lastCheckedAt: input.resetStatus ? null : current.lastCheckedAt,
           updatedAt: new Date(),
         };
-        rows.set(input.id, next);
+        rows.set(current.id, next);
         return next;
       },
       async delete() {
@@ -153,16 +155,17 @@ function createMemoryStore(
       async listSecretStates() {
         return secrets.map((item) => ({ key: item.key, configured: true as const }));
       },
-      async loadEncryptedSecrets() {
+      async loadEncryptedSecrets(id) {
+        if (!rows.has(resolveId(id))) return [];
         return [...secrets];
       },
       async upsertSecret(id, secret) {
-        const current = rows.get(id);
+        const current = rows.get(resolveId(id));
         if (!current) return;
         const index = secrets.findIndex((item) => item.key === secret.key);
         if (index >= 0) secrets[index] = secret;
         else secrets.push(secret);
-        rows.set(id, {
+        rows.set(current.id, {
           ...current,
           configRevision: current.configRevision + 1,
           status: "unknown",
@@ -171,12 +174,12 @@ function createMemoryStore(
         });
       },
       async upsertSecretIfRevision(id, expectedRevision, secret) {
-        const current = rows.get(id);
+        const current = rows.get(resolveId(id));
         if (!current || current.configRevision !== expectedRevision) return false;
         const index = secrets.findIndex((item) => item.key === secret.key);
         if (index >= 0) secrets[index] = secret;
         else secrets.push(secret);
-        rows.set(id, {
+        rows.set(current.id, {
           ...current,
           configRevision: current.configRevision + 1,
           status: "unknown",
@@ -186,12 +189,12 @@ function createMemoryStore(
         return true;
       },
       async deleteSecret(id, key) {
-        const current = rows.get(id);
+        const current = rows.get(resolveId(id));
         const index = secrets.findIndex((item) => item.key === key);
         if (index < 0) return false;
         secrets.splice(index, 1);
         if (current)
-          rows.set(id, {
+          rows.set(current.id, {
             ...current,
             configRevision: current.configRevision + 1,
             status: "unknown",
@@ -237,9 +240,13 @@ function dsmRequest(): (options: SecureHttpRequest) => Promise<SecureHttpResult>
       expect(options.body).not.toContain("passwd=");
       expect(options.body).not.toContain("account=");
       expect(options.body).toContain("method=logout");
+      expect(Object.prototype.hasOwnProperty.call(options.headers ?? {}, "SynoToken")).toBe(false);
       return json({ success: true, data: {} });
     }
     expect(options.headers?.cookie).toMatch(/^id=/u);
+    expect(Object.prototype.hasOwnProperty.call(options.headers ?? {}, "SynoToken")).toBe(false);
+    if (options.headers?.["X-SYNO-TOKEN"] !== undefined)
+      expect(options.headers["X-SYNO-TOKEN"]).toEqual(expect.any(String));
     if (api === "SYNO.DSM.Info")
       return json({
         success: true,
@@ -388,7 +395,7 @@ function createService(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult> = dsmRequest(),
   record?: Partial<IntegrationRecord>,
   refreshRateLimiter: IntegrationRateLimiter = new MemorySynologyRefreshRateLimiter(),
-  storeOptions: { password?: string; deviceId?: string } = {},
+  storeOptions: { password?: string; deviceId?: string; idAliases?: readonly string[] } = {},
   enrollmentRateLimiter: IntegrationRateLimiter = new MemorySynologyEnrollmentRateLimiter(),
 ) {
   const { store, keyring, secrets } = createMemoryStore(record, storeOptions);
@@ -2720,5 +2727,175 @@ describe("SynologyService", () => {
     );
     expect(cached).toEqual({ code: "UNAUTHORIZED", message: (first as Error).message });
     expect(Object.keys(cached as object)).toEqual(["code", "message"]);
+  });
+
+  it("keys refresh limiter, fence, and cache invalidate by the canonical record id", async () => {
+    const CANONICAL = "abcdef12-3456-7890-abcd-ef1234567890";
+    const ALIAS = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+    const consumed: string[] = [];
+    let infoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") {
+          infoCalls += 1;
+          return json(infoPayload());
+        }
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: { ...dsmInfoData(infoCalls === 1 ? "NAS-STALE" : "NAS-FRESH") },
+          });
+        return dsmRequest()(options);
+      },
+      { id: CANONICAL },
+      {
+        tryConsume(_actorId, integrationId) {
+          consumed.push(integrationId);
+          return true;
+        },
+      },
+      { idAliases: [ALIAS] },
+    );
+
+    const first = await created.synology.getOverview(CANONICAL, systemAdmin);
+    expect(first.system.data?.model).toBe("NAS-STALE");
+    expect(created.refreshFence.current(CANONICAL)).toBe(0);
+    expect(created.refreshFence.current(ALIAS)).toBe(0);
+
+    const refreshed = await created.synology.refreshOverview(ALIAS, systemAdmin);
+    expect(refreshed.system.data?.model).toBe("NAS-FRESH");
+    expect(consumed).toEqual([CANONICAL]);
+    expect(created.refreshFence.current(CANONICAL)).toBe(1);
+    expect(created.refreshFence.current(ALIAS)).toBe(0);
+    expect(infoCalls).toBe(2);
+
+    const cached = await created.synology.getOverview(CANONICAL, systemAdmin);
+    expect(cached.system.data?.model).toBe("NAS-FRESH");
+    expect(infoCalls).toBe(2);
+  });
+
+  it("shares refresh quota across UUID case variants of the same record", async () => {
+    const CANONICAL = "abcdef12-3456-7890-abcd-ef1234567890";
+    const ALIAS = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+    const limiter = new MemorySynologyRefreshRateLimiter(4, 60_000, () => 1_000);
+    let infoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") {
+          infoCalls += 1;
+          return json(infoPayload());
+        }
+        return dsmRequest()(options);
+      },
+      { id: CANONICAL },
+      limiter,
+      { idAliases: [ALIAS] },
+    );
+    const ids = [CANONICAL, ALIAS, CANONICAL, ALIAS];
+    for (const id of ids)
+      await expect(created.synology.refreshOverview(id, systemAdmin)).resolves.toMatchObject({
+        status: expect.stringMatching(/available|degraded/u),
+      });
+    await expect(created.synology.refreshOverview(ALIAS, systemAdmin)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    await expect(created.synology.refreshOverview(CANONICAL, systemAdmin)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    expect(infoCalls).toBe(4);
+  });
+
+  it("reads the canonical refresh generation when getOverview receives an alias id", async () => {
+    const CANONICAL = "abcdef12-3456-7890-abcd-ef1234567890";
+    const ALIAS = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+    let infoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") {
+          infoCalls += 1;
+          return json(infoPayload());
+        }
+        return dsmRequest()(options);
+      },
+      { id: CANONICAL },
+      undefined,
+      { idAliases: [ALIAS] },
+    );
+    expect(created.refreshFence.advance(CANONICAL)).toBe(1);
+    created.cache.set(
+      CANONICAL,
+      overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets, 1)),
+      { code: "TIMEOUT", message: "cached failure" },
+      SYNOLOGY_OVERVIEW_FAILURE_TTL_MS,
+    );
+    await expect(created.synology.getOverview(ALIAS, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+      message: "cached failure",
+    });
+    expect(infoCalls).toBe(0);
+  });
+
+  it("shares overview failure cache across UUID case variants", async () => {
+    const CANONICAL = "abcdef12-3456-7890-abcd-ef1234567890";
+    const ALIAS = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+    let infoCalls = 0;
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") {
+          infoCalls += 1;
+          return { ok: false, code: "TIMEOUT", latencyMs: 8000 };
+        }
+        return dsmRequest()(options);
+      },
+      { id: CANONICAL },
+      undefined,
+      { idAliases: [ALIAS] },
+    );
+    await expect(created.synology.getOverview(ALIAS, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    expect(infoCalls).toBe(1);
+    await expect(created.synology.getOverview(CANONICAL, systemAdmin)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    expect(infoCalls).toBe(1);
+    expect(
+      created.cache.get(
+        CANONICAL,
+        overviewFailureCacheOperation(synologyOverviewCacheOperation(1, created.secrets)),
+      ),
+    ).toMatchObject({ code: "TIMEOUT" });
+  });
+
+  it("shares enrollment quota across UUID case variants of the same record", async () => {
+    const CANONICAL = "abcdef12-3456-7890-abcd-ef1234567890";
+    const ALIAS = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+    let loginCalls = 0;
+    const limiter = new MemorySynologyEnrollmentRateLimiter(5, 60_000, () => 1_000);
+    const { synology } = createService(
+      enrollTransport(() => {
+        loginCalls += 1;
+        return json({ success: false, error: { code: 404 } });
+      }),
+      { id: CANONICAL },
+      undefined,
+      { idAliases: [ALIAS] },
+      limiter,
+    );
+    for (const id of [CANONICAL, CANONICAL, CANONICAL, ALIAS, ALIAS])
+      await expect(synology.enrollDevice(id, "654321", adminDefault)).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
+    await expect(synology.enrollDevice(ALIAS, "654321", adminDefault)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    await expect(synology.enrollDevice(CANONICAL, "654321", adminDefault)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    expect(loginCalls).toBe(5);
   });
 });

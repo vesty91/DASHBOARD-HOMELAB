@@ -273,16 +273,19 @@ export function createSynologyService(deps: SynologyServiceDeps) {
     },
     async getOverview(integrationId: string, actor: SynologyActor): Promise<SynologyOverview> {
       assertSynologyAccess(actor, "read");
-      return overviewFor(integrationId, deps.refreshFence.current(integrationId));
+      const record = await requireSynologyRecord(integrationId);
+      const recordId = record.id;
+      return overviewFor(recordId, deps.refreshFence.current(recordId));
     },
     async refreshOverview(integrationId: string, actor: SynologyActor): Promise<SynologyOverview> {
       assertSynologyAccess(actor, "read");
-      await requireSynologyRecord(integrationId);
-      if (!deps.refreshRateLimiter.tryConsume(actor.userId ?? "anonymous", integrationId))
+      const record = await requireSynologyRecord(integrationId);
+      const recordId = record.id;
+      if (!deps.refreshRateLimiter.tryConsume(actor.userId ?? "anonymous", recordId))
         throw new IntegrationError("RATE_LIMITED", "Too many Synology refreshes");
-      const generation = deps.refreshFence.advance(integrationId);
-      deps.cache.invalidate(integrationId);
-      return overviewFor(integrationId, generation);
+      const generation = deps.refreshFence.advance(recordId);
+      deps.cache.invalidate(recordId);
+      return overviewFor(recordId, generation);
     },
     async enrollDevice(
       integrationId: string,
@@ -293,7 +296,7 @@ export function createSynologyService(deps: SynologyServiceDeps) {
       const loaded = await loadContext(integrationId, "system.read");
       const userId = actor.userId;
       if (!userId) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
-      if (!deps.enrollmentRateLimiter.tryConsume(userId, integrationId))
+      if (!deps.enrollmentRateLimiter.tryConsume(userId, loaded.recordId))
         throw new IntegrationError("RATE_LIMITED", "Too many Synology device enrollment attempts");
       try {
         const enrolled = await enrollTrustedDevice(loaded.ctx, otpCode);

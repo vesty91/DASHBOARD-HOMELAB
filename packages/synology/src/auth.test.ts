@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLoginRequest, buildLogoutRequest } from "./auth";
+import { buildLoginRequest, buildLogoutRequest, sessionHeaders } from "./auth";
 import { SYNOLOGY_DEVICE_NAME, SYNOLOGY_SESSION_NAME } from "./policy";
 
 describe("DSM auth request bodies", () => {
@@ -36,5 +36,29 @@ describe("DSM auth request bodies", () => {
     expect(params.get("device_name")).toBe(SYNOLOGY_DEVICE_NAME);
     expect(buildLogoutRequest(6)).toContain("method=logout");
     expect(buildLogoutRequest(6)).not.toContain("passwd=");
+  });
+});
+
+describe("sessionHeaders", () => {
+  it("sends the DSM CSRF token under X-SYNO-TOKEN and never SynoToken", () => {
+    const headers = sessionHeaders({
+      sid: "SID-123",
+      synoToken: "TOKEN-456",
+      authVersion: 6,
+    });
+    expect(headers.cookie).toBe("id=SID-123");
+    expect(headers["X-SYNO-TOKEN"]).toBe("TOKEN-456");
+    expect(Object.prototype.hasOwnProperty.call(headers, "SynoToken")).toBe(false);
+  });
+
+  it("omits CSRF headers when the session has no synoToken", () => {
+    const headers = sessionHeaders({
+      sid: "SID-123",
+      synoToken: undefined,
+      authVersion: 3,
+    });
+    expect(headers.cookie).toBe("id=SID-123");
+    expect(Object.prototype.hasOwnProperty.call(headers, "X-SYNO-TOKEN")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(headers, "SynoToken")).toBe(false);
   });
 });

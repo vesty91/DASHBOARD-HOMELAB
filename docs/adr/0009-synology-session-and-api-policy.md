@@ -27,9 +27,11 @@ Bootstrap fixe : `GET /webapi/entry.cgi` `SYNO.API.Info` v1 `query` sur une allo
 (jamais `query=all`). Login / logout en POST `application/x-www-form-urlencoded` vers
 `/webapi/entry.cgi` uniquement. `account` / `passwd` / OTP / `_sid` ne sont jamais des query
 params. Session nommée `DashboardHomelab`, `format=sid`. Auth v6 : `enable_syno_token=yes`.
-Le SID est transmis via `Cookie: id=<sid>` et le header `SynoToken` si présent. Logout dans un
-`finally`. Le SID n'est pas mis en cache. Au plus une réauthentification pour les codes session
-106 / 107 / 119 ; jamais pour 400 / 401 / 403 / 404.
+Le SID est transmis via `Cookie: id=<sid>` et le header `X-SYNO-TOKEN` si un synotoken DSM est
+présent (jamais le header legacy `SynoToken`). Logout dans un `finally`. Le SID n'est pas mis
+en cache. Au plus une réauthentification pour les codes session 106 / 107 / 119 ; jamais pour
+400 / 401 / 403 / 404. Les clés runtime (cache, fence, limiters, coalescer) utilisent toujours
+`record.id` canonique retourné par le store, jamais l'orthographe brute du caller.
 
 ### 3. 2FA et appareil de confiance
 
