@@ -2454,7 +2454,7 @@ describe("SynologyService", () => {
     expect(JSON.stringify(overview)).not.toContain("vesty");
   });
 
-  it("redacts a numeric DSM account reflected as a DSM.Info number", async () => {
+  it("redacts a numeric DSM account only when reflected in text fields", async () => {
     const created = createService(
       async (options) => {
         const api = new URL(String(options.url)).searchParams.get("api");
@@ -2466,7 +2466,7 @@ describe("SynologyService", () => {
           return json({
             success: true,
             data: {
-              model: "DS920+",
+              model: "NAS-4096-lab",
               version_string: "DSM 7.2",
               uptime: 4096,
               ram: 8192,
@@ -2478,8 +2478,9 @@ describe("SynologyService", () => {
       { config: { account: "4096", verifyTls: true, timeoutMs: 8000 } },
     );
     const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
-    expect(overview.system.data?.uptimeSeconds).toBeNull();
-    expect(JSON.stringify(overview.system.data)).not.toContain("4096");
+    expect(overview.system.data?.uptimeSeconds).toBe(4096);
+    expect(overview.system.data?.model).toBe("NAS-[REDACTED]-lab");
+    expect(JSON.stringify(overview.system.data?.model)).not.toContain("4096");
   });
 
   it("redacts a configured DSM account reflected in storage fields", async () => {
@@ -2521,6 +2522,133 @@ describe("SynologyService", () => {
     expect(overview.storage.data?.volumes[0]?.name).toBe("[REDACTED]");
     expect(overview.storage.data?.disks[0]?.vendor).toBe("[REDACTED]");
     expect(overview.storage.data?.disks[0]?.model).toBe("DISK-[REDACTED]");
+  });
+
+  it("keeps utilization numbers when the DSM account is 0", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login")) {
+          expect(options.body).toContain("account=0");
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        }
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: {
+              model: "NAS-0-prod",
+              version_string: "DSM 7.2",
+              uptime: "1:00:00",
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        if (api === "SYNO.Core.System.Utilization")
+          return json({
+            success: true,
+            data: {
+              cpu: { user_load: 0, system_load: 5, other_load: 0, idle_load: 95 },
+              memory: { total_real: 4096, avail_real: 2048, real_usage: 50 },
+            },
+          });
+        return dsmRequest()(options);
+      },
+      { config: { account: "0", verifyTls: true, timeoutMs: 8000 } },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.resources.status).toBe("available");
+    expect(overview.resources.data?.cpuUserPercent).toBe(0);
+    expect(overview.resources.data?.cpuSystemPercent).toBe(5);
+    expect(overview.resources.data?.cpuOtherPercent).toBe(0);
+    expect(typeof overview.resources.data?.cpuUserPercent).toBe("number");
+    expect(overview.system.data?.model).toBe("NAS-[REDACTED]-prod");
+    expect(JSON.stringify(overview.resources.data)).not.toContain("[REDACTED]");
+  });
+
+  it("does not redact ordinary telemetry substrings for a short DSM account", async () => {
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+        if (api === "SYNO.DSM.Info")
+          return json({
+            success: true,
+            data: {
+              model: "DataStation",
+              version_string: "DSM 7.2",
+              uptime: "1:00:00",
+              ram: 8192,
+              temperature: 40,
+            },
+          });
+        if (api === "SYNO.Storage.CGI.Storage")
+          return json({
+            success: true,
+            data: {
+              volumes: [
+                {
+                  id: "data",
+                  vol_desc: "data",
+                  status: "normal",
+                  size: { total: "1000", used: "400" },
+                },
+              ],
+              disks: [
+                {
+                  id: "sata1",
+                  status: "normal",
+                  vendor: "Seagate",
+                  model: "ST1000",
+                  size_total: "8000",
+                },
+              ],
+            },
+          });
+        return dsmRequest()(options);
+      },
+      { config: { account: "a", verifyTls: true, timeoutMs: 8000 } },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.system.data?.model).toBe("DataStation");
+    expect(overview.storage.data?.volumes[0]).toMatchObject({ id: "data", name: "data" });
+    expect(overview.storage.data?.disks[0]).toMatchObject({
+      id: "sata1",
+      vendor: "Seagate",
+    });
+  });
+
+  it("marks storage unavailable when normalized volume ids collide", async () => {
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({
+          success: true,
+          data: {
+            volumes: [
+              {
+                id: "data/1",
+                status: "normal",
+                size: { total: "1000", used: "100" },
+              },
+              {
+                id: "data?1",
+                status: "normal",
+                size: { total: "2000", used: "200" },
+              },
+            ],
+            disks: [],
+          },
+        });
+      return dsmRequest()(options);
+    });
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(overview.status).toBe("degraded");
+    expect(overview.storage.status).toBe("unavailable");
+    expect(overview.storage.reason).toBe("invalid-response");
+    expect(overview.storage.data).toBeNull();
+    expect(overview.system.status).toBe("available");
+    expect(overview.resources.status).toBe("available");
   });
 
   it("caches a normalized overview auth failure for sequential readers", async () => {

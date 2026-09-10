@@ -16,6 +16,10 @@ import {
   parseStoragePayload,
   parseUptimeSeconds,
   parseUtilizationPayload,
+  projectAccountSafeDisks,
+  projectAccountSafeSystem,
+  projectAccountSafeVolumes,
+  redactAccountText,
   storageLooksDegraded,
   systemSectionStatus,
   rejectNegativeByteValue,
@@ -444,5 +448,87 @@ describe("Synology DTO mapping", () => {
     expect(() =>
       rejectNonPositiveByteValue("9007199254740993", "DSM disk capacity is invalid"),
     ).not.toThrow();
+  });
+
+  it("redacts account tokens without matching ordinary substrings", () => {
+    expect(redactAccountText("vesty", "vesty")).toBe("[REDACTED]");
+    expect(redactAccountText("NAS-vesty-prod", "vesty")).toBe("NAS-[REDACTED]-prod");
+    expect(redactAccountText("user:vesty", "vesty")).toBe("user:[REDACTED]");
+    expect(redactAccountText("Seagate", "a")).toBe("Seagate");
+    expect(redactAccountText("data", "a")).toBe("data");
+    expect(redactAccountText("sata1", "a")).toBe("sata1");
+    expect(redactAccountText("0", "0")).toBe("[REDACTED]");
+    expect(redactAccountText("NAS-0-prod", "0")).toBe("NAS-[REDACTED]-prod");
+    expect(redactAccountText("DS920+", "0")).toBe("DS920+");
+    expect(redactAccountText("volume10", "0")).toBe("volume10");
+    expect(redactAccountText(null, "vesty")).toBeNull();
+  });
+
+  it("projects account-safe system text without touching numeric fields", () => {
+    const projected = projectAccountSafeSystem(
+      {
+        model: "NAS-vesty-prod",
+        dsmVersion: "DSM-vesty",
+        uptimeSeconds: 0,
+        systemTemperatureC: 40,
+        temperatureWarning: false,
+        ramTotalBytes: 1024,
+        cpuCores: 4,
+        cpuFamily: "vesty",
+        cpuSeries: "Series-vesty",
+      },
+      "vesty",
+    );
+    expect(projected).toMatchObject({
+      model: "NAS-[REDACTED]-prod",
+      dsmVersion: "DSM-[REDACTED]",
+      uptimeSeconds: 0,
+      systemTemperatureC: 40,
+      temperatureWarning: false,
+      ramTotalBytes: 1024,
+      cpuCores: 4,
+      cpuFamily: "[REDACTED]",
+      cpuSeries: "Series-[REDACTED]",
+    });
+  });
+
+  it("rejects colliding normalized volume and disk identifiers", () => {
+    const volume = (id: string) => ({
+      id,
+      status: "normal",
+      size: { total: 1000, used: 100 },
+    });
+    expect(() => mapVolumes([volume("data/1"), volume("data?1")])).toThrow(IntegrationError);
+    expect(() => mapVolumes([volume("sata1"), volume("sata1")])).toThrow(IntegrationError);
+    expect(mapVolumes([volume("data/1"), volume("data/2")]).map((entry) => entry.id)).toEqual([
+      "data_1",
+      "data_2",
+    ]);
+    expect(() =>
+      mapDisks([
+        { id: "disk/1", size_total: 1000 },
+        { id: "disk?1", size_total: 1000 },
+      ]),
+    ).toThrow(IntegrationError);
+    const prefix = "x".repeat(64);
+    expect(() => mapVolumes([volume(`${prefix}A`), volume(`${prefix}B`)])).toThrow(
+      IntegrationError,
+    );
+    expect(mapVolumes([volume("data_1")])).toHaveLength(1);
+    expect(mapDisks([{ id: "data_1", size_total: 1000 }])).toHaveLength(1);
+  });
+
+  it("rejects account-projected storage id collisions", () => {
+    const volumes = mapVolumes([
+      { id: "vesty", status: "normal", size: { total: 1000, used: 1 } },
+      { id: "_redacted_", status: "normal", size: { total: 1000, used: 1 } },
+    ]);
+    expect(() => projectAccountSafeVolumes(volumes, "vesty")).toThrow(IntegrationError);
+    const disks = mapDisks([
+      { id: "vesty", size_total: 1000 },
+      { id: "_redacted_", size_total: 1000 },
+    ]);
+    expect(() => projectAccountSafeDisks(disks, "vesty")).toThrow(IntegrationError);
+    expect(projectAccountSafeDisks([{ ...disks[0]! }], "vesty")[0]?.id).toBe("_redacted_");
   });
 });

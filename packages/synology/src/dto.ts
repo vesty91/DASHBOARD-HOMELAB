@@ -109,6 +109,108 @@ export function sanitizeId(value: unknown, fallback: string): string {
   return cleaned.slice(0, MAX_ID) || fallback;
 }
 
+const ACCOUNT_REDACTION = "[REDACTED]";
+const ACCOUNT_ID_PLACEHOLDER = "_redacted_";
+
+function isAccountTokenBoundary(char: string | undefined): boolean {
+  if (char === undefined) return true;
+  return !/\p{L}|\p{N}/u.test(char);
+}
+
+/** Redacts account tokens in normalized text fields only (never numbers/booleans). */
+export function redactAccountText(value: string | null, account: string): string | null {
+  if (value === null || account.length === 0) return value;
+  let output = "";
+  let cursor = 0;
+  while (cursor < value.length) {
+    const index = value.indexOf(account, cursor);
+    if (index < 0) {
+      output += value.slice(cursor);
+      break;
+    }
+    const before = index === 0 ? undefined : value[index - 1];
+    const afterIndex = index + account.length;
+    const after = afterIndex >= value.length ? undefined : value[afterIndex];
+    output += value.slice(cursor, index);
+    if (isAccountTokenBoundary(before) && isAccountTokenBoundary(after)) {
+      output += ACCOUNT_REDACTION;
+      cursor = afterIndex;
+    } else {
+      output += value[index]!;
+      cursor = index + 1;
+    }
+  }
+  return output;
+}
+
+function projectStorageId(id: string, account: string): string {
+  const redacted = redactAccountText(id, account) ?? id;
+  const withPlaceholder = redacted.split(ACCOUNT_REDACTION).join(ACCOUNT_ID_PLACEHOLDER);
+  return sanitizeId(withPlaceholder, ACCOUNT_ID_PLACEHOLDER);
+}
+
+export function requireUniqueStorageId(
+  seen: Set<string>,
+  id: string,
+  kind: "volume" | "disk",
+): void {
+  if (seen.has(id)) invalidPayload(`DSM ${kind} identifiers are ambiguous`);
+  seen.add(id);
+}
+
+export function projectAccountSafeSystem(
+  dto: SynologySystemDto,
+  account: string,
+): SynologySystemDto {
+  return {
+    ...dto,
+    model: redactAccountText(dto.model, account),
+    dsmVersion: redactAccountText(dto.dsmVersion, account),
+    cpuFamily: redactAccountText(dto.cpuFamily, account),
+    cpuSeries: redactAccountText(dto.cpuSeries, account),
+  };
+}
+
+export function projectAccountSafeVolumes(
+  volumes: readonly SynologyVolumeDto[],
+  account: string,
+): readonly SynologyVolumeDto[] {
+  const seenIds = new Set<string>();
+  return volumes.map((volume) => {
+    const id = projectStorageId(volume.id, account);
+    requireUniqueStorageId(seenIds, id, "volume");
+    return {
+      ...volume,
+      id,
+      name: redactAccountText(volume.name, account) ?? id,
+      filesystem: redactAccountText(volume.filesystem, account),
+      raidType: redactAccountText(volume.raidType, account),
+      status: redactAccountText(volume.status, account) ?? volume.status,
+    };
+  });
+}
+
+export function projectAccountSafeDisks(
+  disks: readonly SynologyDiskDto[],
+  account: string,
+): readonly SynologyDiskDto[] {
+  const seenIds = new Set<string>();
+  return disks.map((disk) => {
+    const id = projectStorageId(disk.id, account);
+    requireUniqueStorageId(seenIds, id, "disk");
+    return {
+      ...disk,
+      id,
+      displayName: redactAccountText(disk.displayName, account) ?? id,
+      vendor: redactAccountText(disk.vendor, account),
+      model: redactAccountText(disk.model, account),
+      type: redactAccountText(disk.type, account),
+      status: redactAccountText(disk.status, account) ?? disk.status,
+      smartStatus: redactAccountText(disk.smartStatus, account),
+    };
+  });
+}
+
 export function normalizeStatus(value: unknown): string {
   const raw = boundText(value, MAX_STATUS);
   if (!raw) return "unknown";
@@ -421,6 +523,7 @@ export function mapVolumes(raw: unknown): readonly SynologyVolumeDto[] {
   const items = Array.isArray(raw) ? raw : [];
   if (items.length > MAX_VOLUMES)
     throw new IntegrationError("INVALID_RESPONSE", "DSM returned too many volumes");
+  const seenIds = new Set<string>();
   return items.map((item) => {
     const { record, identity } = parseStorageElement(
       item,
@@ -436,6 +539,7 @@ export function mapVolumes(raw: unknown): readonly SynologyVolumeDto[] {
     const usedBytes = parseSafeIntegerBytes(rawUsed);
     validateVolumeUsage(usedBytes, totalBytes);
     const id = sanitizeId(record.id ?? record.num_id ?? identity, identity);
+    requireUniqueStorageId(seenIds, id, "volume");
     const name = boundText(record.vol_desc ?? record.desc ?? record.name, MAX_NAME) ?? id;
     return {
       id,
@@ -455,6 +559,7 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
   const items = Array.isArray(raw) ? raw : [];
   if (items.length > MAX_DISKS)
     throw new IntegrationError("INVALID_RESPONSE", "DSM returned too many disks");
+  const seenIds = new Set<string>();
   return items.map((item) => {
     const { record, identity } = parseStorageElement(
       item,
@@ -462,6 +567,7 @@ export function mapDisks(raw: unknown): readonly SynologyDiskDto[] {
       DISK_IDENTITY_KEYS,
     );
     const id = sanitizeId(record.id ?? record.diskPath ?? record.name, identity);
+    requireUniqueStorageId(seenIds, id, "disk");
     const displayName = boundText(record.name ?? record.id, MAX_NAME) ?? id;
     const rawSize = record.size_total ?? record.size ?? record.total_size;
     rejectNonPositiveByteValue(rawSize, "DSM disk capacity is invalid");

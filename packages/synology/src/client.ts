@@ -17,6 +17,9 @@ import {
   parseDsmInfoPayload,
   parseStoragePayload,
   parseUtilizationPayload,
+  projectAccountSafeDisks,
+  projectAccountSafeSystem,
+  projectAccountSafeVolumes,
   storageLooksDegraded,
   systemSectionStatus,
 } from "./dto";
@@ -130,7 +133,6 @@ function dsmResponseSecretValues(
   session: DsmSession,
 ): readonly string[] {
   return collectSecretStringValues({
-    account: ctx.account,
     password: ctx.password,
     deviceId: ctx.deviceId,
     sid: session.sid,
@@ -209,19 +211,22 @@ async function loadSystem(
     );
     const base = mapSystemInfo(dsmInfo);
     assertUsefulSystemInfo(base);
-    if (!discovered.system.available || discovered.system.version === null)
-      return { status: systemSectionStatus(base), data: base };
+    if (!discovered.system.available || discovered.system.version === null) {
+      const status = systemSectionStatus(base);
+      return { status, data: projectAccountSafeSystem(base, ctx.account) };
+    }
     try {
       const core = parseCoreSystemPayload(
         await dsmGet(ctx, session, buildSystemRequest(discovered.system.version)),
       );
       const data = mapSystemInfo(dsmInfo, core);
-      return { status: systemSectionStatus(data), data };
+      const status = systemSectionStatus(data);
+      return { status, data: projectAccountSafeSystem(data, ctx.account) };
     } catch (error) {
       if (isRetryableSessionError(error)) throw error;
       return {
         status: "degraded",
-        data: base,
+        data: projectAccountSafeSystem(base, ctx.account),
         reason: sectionReasonFromError(error),
       };
     }
@@ -269,9 +274,13 @@ async function loadStorage(
     const payload = parseStoragePayload(raw);
     const volumes = mapVolumes(payload.volumes);
     const disks = mapDisks(payload.disks);
+    const status = storageLooksDegraded(volumes, disks) ? "degraded" : "available";
     return {
-      status: storageLooksDegraded(volumes, disks) ? "degraded" : "available",
-      data: { volumes, disks },
+      status,
+      data: {
+        volumes: projectAccountSafeVolumes(volumes, ctx.account),
+        disks: projectAccountSafeDisks(disks, ctx.account),
+      },
     };
   } catch (error) {
     if (isRetryableSessionError(error)) throw error;
