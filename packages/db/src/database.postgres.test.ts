@@ -430,7 +430,25 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
         (await store.loadEncryptedSecrets(created.id)).find((row) => row.key === "deviceId")
           ?.ciphertext,
       ).toBe("ZGlk");
-      expect(await store.persistConnectionResult(created.id, 3, "available")).toBe(true);
+      expect(await store.deleteSecret(created.id, "missing-key")).toBe(false);
+      expect(await store.findById(created.id)).toMatchObject({
+        configRevision: 4,
+        status: "unknown",
+        lastCheckedAt: null,
+      });
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some((row) => row.key === "deviceId"),
+      ).toBe(true);
+      expect(await store.deleteSecret(created.id, "deviceId")).toBe(true);
+      expect(await store.findById(created.id)).toMatchObject({
+        configRevision: 5,
+        status: "unknown",
+        lastCheckedAt: null,
+      });
+      expect(
+        (await store.loadEncryptedSecrets(created.id)).some((row) => row.key === "deviceId"),
+      ).toBe(false);
+      expect(await store.persistConnectionResult(created.id, 5, "available")).toBe(true);
       expect(await store.persistConnectionResult(created.id, 1, "unavailable")).toBe(false);
       expect((await store.findById(created.id))?.status).toBe("available");
       await Promise.all([
@@ -445,7 +463,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(await store.findById(created.id)).toMatchObject({
         enabled: false,
         baseUrl: "http://10.0.0.11:3000",
-        configRevision: 5,
+        configRevision: 7,
       });
       await expect(
         client.pool.query("update integrations set config_revision=0 where id=$1", [created.id]),

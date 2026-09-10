@@ -190,18 +190,18 @@ function createMemoryStore(
       },
       async deleteSecret(id, key) {
         const current = rows.get(resolveId(id));
+        if (!current) return false;
         const index = secrets.findIndex((item) => item.key === key);
-        if (index < 0) return false;
-        secrets.splice(index, 1);
-        if (current)
-          rows.set(current.id, {
-            ...current,
-            configRevision: current.configRevision + 1,
-            status: "unknown",
-            lastCheckedAt: null,
-            updatedAt: new Date(),
-          });
-        return true;
+        const deleted = index >= 0;
+        if (deleted) secrets.splice(index, 1);
+        rows.set(current.id, {
+          ...current,
+          configRevision: current.configRevision + 1,
+          status: "unknown",
+          lastCheckedAt: null,
+          updatedAt: new Date(),
+        });
+        return deleted;
       },
       async persistConnectionResult() {
         return true;
@@ -1884,6 +1884,63 @@ describe("SynologyService", () => {
     await expect(pending).rejects.toMatchObject({ code: "STALE_RESULT" });
     expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
     expect(JSON.stringify(created.secrets)).not.toMatch(/DID-FIRST|DID-STALE/u);
+  });
+
+  it("fences a pending enrollment when clearDevice runs with no stored deviceId", async () => {
+    const started = createBarrier();
+    const release = createBarrier();
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login")) {
+        started.release();
+        await release.promise;
+        return json({
+          success: true,
+          data: { sid: "SID-OLD", synotoken: "TOK-OLD", did: "DID-OLD" },
+        });
+      }
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(1);
+    const pending = created.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault);
+    await started.promise;
+    await created.synology.clearDevice(INTEGRATION_ID, adminDefault);
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    release.release();
+    await expect(pending).rejects.toMatchObject({ code: "STALE_RESULT" });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-OLD/u);
+  });
+
+  it("clears a deviceId that enrollment persisted before clearDevice", async () => {
+    const created = createService(async (options) => {
+      const api = new URL(String(options.url)).searchParams.get("api");
+      if (api === "SYNO.API.Info") return json(infoPayload());
+      if (options.method === "POST" && options.body?.includes("method=login"))
+        return json({
+          success: true,
+          data: { sid: "SID-A", synotoken: "TOK-A", did: "DID-A" },
+        });
+      if (options.method === "POST") return json({ success: true, data: {} });
+      throw new Error(String(options.url));
+    });
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(1);
+    await expect(
+      created.synology.enrollDevice(INTEGRATION_ID, "654321", adminDefault),
+    ).resolves.toEqual({ enrolled: true });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(true);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(2);
+    await expect(created.synology.clearDevice(INTEGRATION_ID, adminDefault)).resolves.toEqual({
+      cleared: true,
+    });
+    expect(created.secrets.some((row) => row.key === "deviceId")).toBe(false);
+    expect((await created.store.findById(INTEGRATION_ID))?.configRevision).toBe(3);
+    expect(JSON.stringify(created.secrets)).not.toMatch(/DID-A/u);
   });
 
   it("lets only the first concurrent enrollment persist its device token", async () => {

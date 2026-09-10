@@ -143,6 +143,7 @@ export interface IntegrationStore {
     expectedRevision: number,
     secret: EncryptedSecretRow,
   ): Promise<boolean>;
+  /** Deletes a secret key when present. Always advances configRevision when the integration exists. */
   deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,

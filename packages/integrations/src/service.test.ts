@@ -133,21 +133,22 @@ function createMemoryStore(): IntegrationStore & {
     },
     async deleteSecret(integrationId, key) {
       const current = rows.get(integrationId);
+      if (!current) return false;
       const existing = secrets.get(integrationId) ?? [];
-      if (!existing.some((row) => row.key === key)) return false;
-      secrets.set(
-        integrationId,
-        existing.filter((row) => row.key !== key),
-      );
-      if (current)
-        rows.set(integrationId, {
-          ...current,
-          configRevision: current.configRevision + 1,
-          status: "unknown",
-          lastCheckedAt: null,
-          updatedAt: now(),
-        });
-      return true;
+      const deleted = existing.some((row) => row.key === key);
+      if (deleted)
+        secrets.set(
+          integrationId,
+          existing.filter((row) => row.key !== key),
+        );
+      rows.set(integrationId, {
+        ...current,
+        configRevision: current.configRevision + 1,
+        status: "unknown",
+        lastCheckedAt: null,
+        updatedAt: now(),
+      });
+      return deleted;
     },
     async persistConnectionResult(id, revision, status) {
       const current = rows.get(id);

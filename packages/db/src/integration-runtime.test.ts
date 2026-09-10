@@ -70,7 +70,11 @@ describe("SQLite integration store", () => {
       ).toBe(PLAINTEXT);
       expect(await store.deleteSecret(created.id, "apiKey")).toBe(true);
       expect(await store.loadEncryptedSecrets(created.id)).toEqual([]);
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
       expect(await store.deleteSecret(created.id, "apiKey")).toBe(false);
+      expect((await store.findById(created.id))?.configRevision).toBe(4);
+      expect((await store.findById(created.id))?.status).toBe("unknown");
+      expect((await store.findById(created.id))?.lastCheckedAt).toBeNull();
       const other = await store.create({
         type: "test-http",
         name: "Other",
@@ -89,7 +93,7 @@ describe("SQLite integration store", () => {
           keyVersion: loaded.keyVersion,
         }),
       ).toThrow();
-      expect(await store.persistConnectionResult(created.id, 3, "available")).toBe(true);
+      expect(await store.persistConnectionResult(created.id, 4, "available")).toBe(true);
       expect(await store.persistConnectionResult(created.id, 2, "unavailable")).toBe(false);
       expect((await store.findById(created.id))?.status).toBe("available");
       const renamed = await store.update({
@@ -98,14 +102,14 @@ describe("SQLite integration store", () => {
         bumpRevision: false,
         resetStatus: false,
       });
-      expect(renamed).toMatchObject({ name: "Renamed", status: "available", configRevision: 3 });
+      expect(renamed).toMatchObject({ name: "Renamed", status: "available", configRevision: 4 });
       const reset = await store.update({
         id: created.id,
         baseUrl: "http://10.0.0.99:3000",
         bumpRevision: true,
         resetStatus: true,
       });
-      expect(reset).toMatchObject({ status: "unknown", configRevision: 4, lastCheckedAt: null });
+      expect(reset).toMatchObject({ status: "unknown", configRevision: 5, lastCheckedAt: null });
       const initial = await store.findById(created.id);
       await Promise.all([
         store.update({
@@ -202,6 +206,48 @@ describe("SQLite integration store", () => {
           integrationId: created.id,
         }),
       ).toBe("DID-A");
+    } finally {
+      client.close();
+    }
+  });
+
+  it("advances configRevision on deleteSecret even when the key is absent", async () => {
+    const { client, store } = await setup();
+    try {
+      const created = await store.create({
+        type: "test-http",
+        name: "Barrier",
+        baseUrl: "http://10.0.0.10:3000",
+        enabled: true,
+        config: {},
+        createdBy: null,
+      });
+      expect(created.configRevision).toBe(1);
+      expect(await store.deleteSecret(created.id, "deviceId")).toBe(false);
+      expect(await store.findById(created.id)).toMatchObject({
+        configRevision: 2,
+        status: "unknown",
+        lastCheckedAt: null,
+      });
+      expect(await store.loadEncryptedSecrets(created.id)).toEqual([]);
+      const device = encryptSecret(keyring, {
+        integrationId: created.id,
+        key: "deviceId",
+        plaintext: "DID-PRESENT",
+      });
+      await store.upsertSecret(created.id, { key: "deviceId", ...device });
+      expect((await store.findById(created.id))?.configRevision).toBe(3);
+      expect(await store.deleteSecret(created.id, "deviceId")).toBe(true);
+      expect(await store.findById(created.id)).toMatchObject({
+        configRevision: 4,
+        status: "unknown",
+        lastCheckedAt: null,
+      });
+      expect(await store.loadEncryptedSecrets(created.id)).toEqual([]);
+      expect(await store.deleteSecret(created.id, "deviceId")).toBe(false);
+      expect((await store.findById(created.id))?.configRevision).toBe(5);
+      expect(await store.deleteSecret(created.id, "deviceId")).toBe(false);
+      expect((await store.findById(created.id))?.configRevision).toBe(6);
     } finally {
       client.close();
     }

@@ -54,6 +54,7 @@ interface IntegrationStore {
     expectedRevision: number,
     secret: EncryptedSecretRow,
   ): Promise<boolean>;
+  /** Deletes a secret key when present. Always advances configRevision when the integration exists. */
   deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,
@@ -268,14 +269,18 @@ export function createSqliteIntegrationStore(db: DatabaseSync): IntegrationStore
       const now = Date.now();
       db.exec("BEGIN IMMEDIATE");
       try {
+        const bumped = db
+          .prepare(
+            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=? WHERE id=?",
+          )
+          .run(now, integrationId);
+        if (bumped.changes !== 1) {
+          db.exec("COMMIT");
+          return false;
+        }
         const result = db
           .prepare("DELETE FROM integration_secrets WHERE integration_id=? AND key=?")
           .run(integrationId, key);
-        if (result.changes === 1) {
-          db.prepare(
-            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=? WHERE id=?",
-          ).run(now, integrationId);
-        }
         db.exec("COMMIT");
         return result.changes === 1;
       } catch (error) {
@@ -433,16 +438,18 @@ export function createPostgresqlIntegrationStore(pool: Pool): IntegrationStore {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        const bumped = await client.query(
+          "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=now() WHERE id=$1 RETURNING id",
+          [integrationId],
+        );
+        if (bumped.rowCount !== 1) {
+          await client.query("ROLLBACK");
+          return false;
+        }
         const result = await client.query(
           "DELETE FROM integration_secrets WHERE integration_id=$1 AND key=$2",
           [integrationId, key],
         );
-        if (result.rowCount === 1) {
-          await client.query(
-            "UPDATE integrations SET config_revision=config_revision+1,status='unknown',last_checked_at=NULL,updated_at=now() WHERE id=$1",
-            [integrationId],
-          );
-        }
         await client.query("COMMIT");
         return result.rowCount === 1;
       } catch (error) {
