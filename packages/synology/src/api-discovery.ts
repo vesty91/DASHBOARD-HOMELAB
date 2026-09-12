@@ -74,13 +74,31 @@ function apiState(
   return { available: true, version };
 }
 
+function authFailureKind(
+  reason: DiscoveredApi["reason"],
+): "UNSUPPORTED_VERSION" | "INVALID_RESPONSE" | "API_UNAVAILABLE" {
+  switch (reason) {
+    case "unsupported-version":
+      return "UNSUPPORTED_VERSION";
+    case "invalid-response":
+      return "INVALID_RESPONSE";
+    case "api-unavailable":
+    case undefined:
+      return "API_UNAVAILABLE";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
 export function parseDiscoveredApis(raw: unknown): DiscoveredApis {
   const parsed = dsmApiInfoSchema.safeParse(raw);
   if (!parsed.success) throw new IntegrationError("INVALID_RESPONSE", "DSM API info is invalid");
   const auth = apiState(parsed.data, "SYNO.API.Auth", 3, 6);
   if (!auth.available || auth.version === null)
     throw new SynologyError(
-      auth.reason === "unsupported-version" ? "UNSUPPORTED_VERSION" : "API_UNAVAILABLE",
+      authFailureKind(auth.reason),
       "DSM does not expose a supported Auth API",
     );
   return {

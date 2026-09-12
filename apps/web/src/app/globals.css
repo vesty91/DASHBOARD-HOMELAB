@@ -1675,11 +1675,22 @@ button[aria-pressed="true"] {
   word-break: break-word;
 }
 
+.synology-table-wrap {
+  margin: 0.75rem 0 1.5rem;
+}
+
 .synology-table {
   width: 100%;
+  margin: 0;
   border-collapse: collapse;
-  margin: 0.75rem 0 1.5rem;
-  overflow-x: auto;
+}
+
+.synology-table-volumes {
+  min-width: 36rem;
+}
+
+.synology-table-disks {
+  min-width: 48rem;
 }
 
 .synology-table th,

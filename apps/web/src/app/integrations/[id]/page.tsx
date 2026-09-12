@@ -356,69 +356,73 @@ async function SynologyOverviewPanel({
             <h2>Stockage</h2>
             <SectionStatus section={overview.storage} />
             {storage?.volumes.length ? (
-              <table className="synology-table">
-                <thead>
-                  <tr>
-                    <th>Volume</th>
-                    <th>Capacité</th>
-                    <th>Utilisé / libre</th>
-                    <th>État</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storage.volumes.map((volume) => (
-                    <tr key={volume.id}>
-                      <td>{volume.name}</td>
-                      <td>{formatBytes(volume.totalBytes)}</td>
-                      <td>
-                        {formatBytes(volume.usedBytes)} / {formatBytes(volume.freeBytes)} (
-                        {formatPercent(volume.usedPercent)})
-                      </td>
-                      <td>
-                        <Badge>{statusLabel(volume.status)}</Badge>
-                      </td>
+              <div className="ui-table-wrap synology-table-wrap">
+                <table className="synology-table synology-table-volumes">
+                  <thead>
+                    <tr>
+                      <th>Volume</th>
+                      <th>Capacité</th>
+                      <th>Utilisé / libre</th>
+                      <th>État</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {storage.volumes.map((volume) => (
+                      <tr key={volume.id}>
+                        <td>{volume.name}</td>
+                        <td>{formatBytes(volume.totalBytes)}</td>
+                        <td>
+                          {formatBytes(volume.usedBytes)} / {formatBytes(volume.freeBytes)} (
+                          {formatPercent(volume.usedPercent)})
+                        </td>
+                        <td>
+                          <Badge>{statusLabel(volume.status)}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : overview.storage.status !== "unavailable" ? (
               <p className="ui-muted">Aucun volume renvoyé par DSM.</p>
             ) : null}
             {storage?.disks.length ? (
-              <table className="synology-table">
-                <thead>
-                  <tr>
-                    <th>Disque</th>
-                    <th>Modèle</th>
-                    <th>Capacité</th>
-                    <th>État</th>
-                    <th>Température</th>
-                    <th>SMART</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storage.disks.map((disk) => (
-                    <tr key={disk.id}>
-                      <td>{disk.displayName}</td>
-                      <td>{disk.model ?? "Indisponible"}</td>
-                      <td>{formatBytes(disk.sizeBytes)}</td>
-                      <td>
-                        <Badge tone={statusBadgeTone(disk.status)}>
-                          {statusLabel(disk.status)}
-                        </Badge>
-                        {disk.badSectorWarning === true ? (
-                          <Badge tone="warning">Secteurs défectueux</Badge>
-                        ) : null}
-                        {disk.remainingLifeWarning === true ? (
-                          <Badge tone="warning">Durée de vie restante faible</Badge>
-                        ) : null}
-                      </td>
-                      <td>{formatTemperature(disk.temperatureC)}</td>
-                      <td>{smartStatusBadge(disk.smartStatus)}</td>
+              <div className="ui-table-wrap synology-table-wrap">
+                <table className="synology-table synology-table-disks">
+                  <thead>
+                    <tr>
+                      <th>Disque</th>
+                      <th>Modèle</th>
+                      <th>Capacité</th>
+                      <th>État</th>
+                      <th>Température</th>
+                      <th>SMART</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {storage.disks.map((disk) => (
+                      <tr key={disk.id}>
+                        <td>{disk.displayName}</td>
+                        <td>{disk.model ?? "Indisponible"}</td>
+                        <td>{formatBytes(disk.sizeBytes)}</td>
+                        <td>
+                          <Badge tone={statusBadgeTone(disk.status)}>
+                            {statusLabel(disk.status)}
+                          </Badge>
+                          {disk.badSectorWarning === true ? (
+                            <Badge tone="warning">Secteurs défectueux</Badge>
+                          ) : null}
+                          {disk.remainingLifeWarning === true ? (
+                            <Badge tone="warning">Durée de vie restante faible</Badge>
+                          ) : null}
+                        </td>
+                        <td>{formatTemperature(disk.temperatureC)}</td>
+                        <td>{smartStatusBadge(disk.smartStatus)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : overview.storage.status !== "unavailable" ? (
               <p className="ui-muted">Aucun disque renvoyé par DSM.</p>
             ) : null}

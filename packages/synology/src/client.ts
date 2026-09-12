@@ -313,13 +313,10 @@ async function withSession<T>(
   ctx: SynologyClientContext,
   operation: (session: DsmSession, discovered: DiscoveredApis) => Promise<T>,
 ): Promise<T> {
-  const discovered = await discoverApis(ctx);
-  let session = await login(
-    ctx.request,
-    transportOf(ctx),
-    loginInput(ctx, discovered.auth.version),
-  );
+  let session: DsmSession | undefined;
   try {
+    const discovered = await discoverApis(ctx);
+    session = await login(ctx.request, transportOf(ctx), loginInput(ctx, discovered.auth.version));
     try {
       return await operation(session, discovered);
     } catch (error) {
@@ -333,9 +330,9 @@ async function withSession<T>(
       return await operation(session, discovered);
     }
   } catch (error) {
-    throwMapped(error);
+    return throwMapped(error);
   } finally {
-    await logout(ctx.request, transportOf(ctx), session);
+    if (session) await logout(ctx.request, transportOf(ctx), session);
   }
 }
 

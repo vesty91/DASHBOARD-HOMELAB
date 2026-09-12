@@ -133,8 +133,30 @@ describe("Synology DTO mapping", () => {
   });
 
   it("parses uptime and never leaks disk serials", () => {
+    expect(parseUptimeSeconds("0:00:00")).toBe(0);
     expect(parseUptimeSeconds("1:02:03")).toBe(3723);
+    expect(parseUptimeSeconds("12:3:4")).toBe(43384);
+    expect(parseUptimeSeconds("24:00:00")).toBe(86400);
+    expect(parseUptimeSeconds("100:59:59")).toBe(100 * 3600 + 59 * 60 + 59);
     expect(parseUptimeSeconds(90)).toBe(90);
+    expect(parseUptimeSeconds("90")).toBe(90);
+    expect(parseUptimeSeconds(0)).toBe(0);
+    for (const invalid of [
+      "1:60:00",
+      "0:00:60",
+      "0:00:99",
+      "1:-1:00",
+      "1:00:-1",
+      "1:1.5:00",
+      "1:00:1.5",
+    ]) {
+      expect(() => parseUptimeSeconds(invalid)).toThrow(IntegrationError);
+      try {
+        parseUptimeSeconds(invalid);
+      } catch (error) {
+        expect(error).toMatchObject({ code: "INVALID_RESPONSE" });
+      }
+    }
     const disks = mapDisks([
       {
         id: "sata1",

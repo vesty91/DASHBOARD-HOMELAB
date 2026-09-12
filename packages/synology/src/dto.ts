@@ -75,8 +75,17 @@ export function parseUptimeSeconds(value: unknown): number | null {
     const hours = Number(parts[0]);
     const minutes = Number(parts[1]);
     const seconds = Number(parts[2]);
-    if (![hours, minutes, seconds].every((part) => Number.isInteger(part) && part >= 0))
-      return null;
+    if (
+      !Number.isInteger(hours) ||
+      hours < 0 ||
+      !Number.isInteger(minutes) ||
+      minutes < 0 ||
+      minutes >= 60 ||
+      !Number.isInteger(seconds) ||
+      seconds < 0 ||
+      seconds >= 60
+    )
+      throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
     return hours * 3600 + minutes * 60 + seconds;
   }
   const asNumber = Number(trimmed);
