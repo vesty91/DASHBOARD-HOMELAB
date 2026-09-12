@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
+import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
 
 export function isNotFoundError(error: unknown): boolean {
   if (error instanceof TRPCError && error.code === "NOT_FOUND") return true;
@@ -12,6 +13,7 @@ export function isNotFoundError(error: unknown): boolean {
 
 export type IntegrationDetailResolution =
   | { kind: "docker"; metadata: DockerIntegrationMetadata }
+  | { kind: "synology"; metadata: SynologyIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -19,6 +21,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<DockerPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<DockerIntegrationMetadata>;
+    };
+  };
+  synology: {
+    permissions: () => Promise<Pick<SynologyPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<SynologyIntegrationMetadata>;
     };
   };
   integration: {
@@ -30,11 +38,20 @@ export async function resolveIntegrationDetail(
   id: string,
   caller: IntegrationDetailCaller,
 ): Promise<IntegrationDetailResolution> {
-  const permissions = await caller.docker.permissions();
-  if (permissions.canRead) {
+  const dockerPermissions = await caller.docker.permissions();
+  if (dockerPermissions.canRead) {
     try {
       const metadata = await caller.docker.integration.get({ integrationId: id });
       return { kind: "docker", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const synologyPermissions = await caller.synology.permissions();
+  if (synologyPermissions.canRead) {
+    try {
+      const metadata = await caller.synology.integration.get({ integrationId: id });
+      return { kind: "synology", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

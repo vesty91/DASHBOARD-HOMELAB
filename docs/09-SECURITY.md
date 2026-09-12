@@ -175,6 +175,24 @@ Hardening Phase 8 :
 
 Voir ADR 0008.
 
+## 12b. Synology
+
+Hardening Phase 9 :
+
+- credentials DSM uniquement côté serveur (`integration_secrets`) ;
+- compte DSM (`account`) en configuration, jamais le mot de passe ;
+- login POST, jamais `passwd` / `_sid` / OTP dans l'URL ;
+- SID via cookie de requête, jamais caché, logout en `finally` ;
+- allowlist CGI `entry.cgi` uniquement ;
+- pas de FileStation, User, reboot, generic invoke ;
+- `ADMIN` par défaut n'obtient pas `synology.read` ;
+- POST DSM : `maxRetries = 0`, `maxRedirects = 0` ;
+- SSRF inchangé ; `trustedCaPem` identique à Docker ;
+- `synology.integration.get` : `{ id, name, enabled }` ;
+- 2FA : OTP transitoire, DID chiffré server-managed, jamais renvoyé au navigateur.
+
+Voir ADR 0009.
+
 ## 13. Logs
 
 Redaction centralisée de clés nommées :

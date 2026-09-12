@@ -1,0 +1,23 @@
+{
+  "name": "@dashboard/synology",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dashboard/integrations": "workspace:*",
+    "@dashboard/permissions": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@dashboard/secrets": "workspace:*",
+    "@types/node": "26.2.0",
+    "vitest": "4.1.11"
+  }
+}

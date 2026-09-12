@@ -96,7 +96,7 @@ L'application compose Docker dans `apps/web` via `createApplicationIntegrationRe
 - aucun realtime / follow / stream ;
 - aucun inventaire `GET /images/json` ;
 - audit persistant des actions Docker différé (aucune table) ;
-- Phase 9 Synology non commencée.
+- Phase 9 Synology : voir ADR 0009.
 
 ## Conséquences
 

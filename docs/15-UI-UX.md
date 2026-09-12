@@ -103,6 +103,10 @@ Si un user n'a pas permission de configurer :
 - ne pas afficher bouton inutilisable ;
 - serveur protège quand même.
 
+`/admin/groups` : seul `SYSTEM_ADMIN` voit et enregistre les permissions supplémentaires
+d'un groupe (`integration.use`, `synology.read`, `docker.*`, etc.). Un `ADMIN` conserve la
+création de groupes et n'accède pas à ce formulaire.
+
 ## 11. Accessibility
 
 - clavier ;
@@ -163,6 +167,21 @@ Docker down : alerte isolée (DNS, timeout, TLS, forbidden, unavailable). Ne cas
 
 App reconnue : lien « Ajouter aux applications » vers `/apps/new?template=<id>` sans URL
 préremplie, uniquement si `app.manage`.
+
+## 13b. Intégrations Synology
+
+`/integrations` : carte Synology avec **Ouvrir** si `synology.read` (conjonction `integration.use`).
+Formulaire : placeholder `https://nas.example:5001` uniquement, compte DSM en configuration,
+mot de passe via `SecretFieldControl` (jamais dans `configJson`), pas de champ libre `deviceId`,
+CA PEM optionnelle avec aide distincte de Docker.
+
+`/integrations/[id]` (type `synology`) : nom réel via `synology.integration.get` sans
+`integration.read`. Bouton **Actualiser**. Sections système, ressources, stockage
+(volumes + disques). Métrique `null` → « Indisponible », jamais « 0 % » / « 0 °C » pour une
+valeur inconnue. Section en échec : alerte de raison (`timeout`, privilège, API indisponible).
+DSM down : alerte isolée, pas d'error boundary Next.js. Page d'édition : OTP transitoire et
+« Oublier l'appareil de confiance » avec confirmation (jeton local seulement). Pas d'action
+reboot/FileStation.
 
 ## 14. Search/Spotlight
 

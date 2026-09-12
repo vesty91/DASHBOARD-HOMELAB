@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hasPermission } from "@dashboard/permissions";
 import { createSqliteClient } from "./client/sqlite";
 import { migrateSqlite } from "./migrations";
 import { createSqliteAuthStore } from "./repositories/auth";
@@ -136,6 +137,83 @@ describe("SQLite authentication repository", () => {
       expect(client.sqlite.prepare("SELECT count(*) count FROM group_members").get()?.count).toBe(
         0,
       );
+    } finally {
+      client.close();
+    }
+  });
+
+  it("persists extra group permission grants without changing builtin roles", async () => {
+    const { client, store } = await setup();
+    try {
+      await store.createFirstAdmin({
+        username: "Admin",
+        usernameCanonical: "admin",
+        passwordHash: "hash",
+      });
+      const member = await store.createLocalUser({
+        username: "Reader",
+        usernameCanonical: "reader",
+        passwordHash: "hash",
+        roleName: "VIEWER",
+      });
+      const group = await store.createGroupWithRoleAndOptionalMember({
+        name: "NAS readers",
+        roleName: "VIEWER",
+        userId: member.id,
+      });
+      const before = await store.resolvePermissionSubject(member.id);
+      expect(before?.groupPermissions).not.toContain("synology.read");
+      expect(before?.groupPermissions).not.toContain("integration.use");
+      const viewerCount = Number(
+        client.sqlite
+          .prepare(
+            "SELECT count(*) count FROM role_permissions WHERE role_id='00000000-0000-4000-8000-000000000005'",
+          )
+          .get()?.count,
+      );
+      await store.setGroupPermissionGrants(group.id, ["synology.read", "integration.use"]);
+      expect(await store.listGroupPermissionGrants(group.id)).toEqual([
+        "integration.use",
+        "synology.read",
+      ]);
+      const granted = await store.resolvePermissionSubject(member.id);
+      expect(granted?.groupPermissions).toEqual(
+        expect.arrayContaining([
+          "app.read",
+          "integration.read",
+          "integration.use",
+          "synology.read",
+        ]),
+      );
+      expect(hasPermission(granted!, "synology.read")).toBe(true);
+      expect(hasPermission(granted!, "integration.use")).toBe(true);
+      expect(
+        Number(
+          client.sqlite
+            .prepare("SELECT count(*) count FROM group_roles WHERE group_id=?")
+            .get(group.id)?.count,
+        ),
+      ).toBe(2);
+      expect(
+        Number(
+          client.sqlite
+            .prepare(
+              "SELECT count(*) count FROM role_permissions WHERE role_id='00000000-0000-4000-8000-000000000005'",
+            )
+            .get()?.count,
+        ),
+      ).toBe(viewerCount);
+      await store.setGroupPermissionGrants(group.id, ["integration.use"]);
+      const reduced = await store.resolvePermissionSubject(member.id);
+      expect(reduced?.groupPermissions).toContain("integration.use");
+      expect(reduced?.groupPermissions).not.toContain("synology.read");
+      expect(hasPermission(reduced!, "synology.read")).toBe(false);
+      await expect(
+        store.setGroupPermissionGrants(group.id, ["not.a.permission"]),
+      ).rejects.toMatchObject({ code: "INVALID_PERMISSION" });
+      await expect(
+        store.setGroupPermissionGrants("00000000-0000-4000-8000-000000000098", ["synology.read"]),
+      ).rejects.toMatchObject({ code: "GROUP_NOT_FOUND" });
     } finally {
       client.close();
     }

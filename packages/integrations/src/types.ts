@@ -19,6 +19,7 @@ export interface SecretFieldMeta<TValue = string> {
   readonly label: string;
   readonly required: boolean;
   readonly valueSchema: z.ZodType<TValue>;
+  readonly serverManaged?: boolean;
 }
 
 export type ConnectionResult =
@@ -83,7 +84,7 @@ export interface IntegrationDto {
   config: JsonObject;
   status: IntegrationStatus;
   lastCheckedAt: Date | null;
-  configRevision: number;
+  configRevision?: number;
   createdAt: Date;
   updatedAt: Date;
   definitionAvailable: boolean;
@@ -98,7 +99,12 @@ export interface IntegrationCatalogEntry {
   description: string;
   capabilities: readonly string[];
   configFields: readonly ConfigFieldMeta[];
-  secretFields: readonly { key: string; label: string; required: boolean }[];
+  secretFields: readonly {
+    key: string;
+    label: string;
+    required: boolean;
+    serverManaged?: boolean;
+  }[];
 }
 
 export interface IntegrationCreateInput {
@@ -132,6 +138,13 @@ export interface IntegrationStore {
   listSecretStates(integrationId: string): Promise<readonly IntegrationSecretState[]>;
   loadEncryptedSecrets(integrationId: string): Promise<readonly EncryptedSecretRow[]>;
   upsertSecret(integrationId: string, secret: EncryptedSecretRow): Promise<void>;
+  upsertSecretIfRevision(
+    integrationId: string,
+    expectedRevision: number,
+    secret: EncryptedSecretRow,
+  ): Promise<boolean>;
+  /** Deletes a secret key when present. Always advances configRevision when the integration exists. */
+  deleteSecret(integrationId: string, key: string): Promise<boolean>;
   persistConnectionResult(
     id: string,
     revision: number,

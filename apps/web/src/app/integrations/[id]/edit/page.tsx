@@ -4,16 +4,19 @@ import { getBoardCaller } from "../../../../lib/server/board-api";
 import { setIntegrationSecretAction, updateIntegrationAction } from "../../actions";
 import { IntegrationForm } from "../../integration-form";
 import { SecretFieldControl } from "../../secret-field-control";
+import { SynologyDeviceControl } from "../../synology-device-control";
 
 export default async function EditIntegrationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const caller = await getBoardCaller();
   if (!(await caller.integration.canManage())) redirect("/forbidden");
-  const [integration, catalog] = await Promise.all([
+  const [integration, catalog, synologyPermissions] = await Promise.all([
     caller.integration.get({ id }),
     caller.integration.catalog(),
+    caller.synology.permissions(),
   ]);
   const definition = catalog.find((entry) => entry.id === integration.type);
+  const secretFields = (definition?.secretFields ?? []).filter((field) => !field.serverManaged);
   return (
     <PageContainer>
       <PageHeader title={`Modifier ${integration.name}`} />
@@ -27,7 +30,7 @@ export default async function EditIntegrationPage({ params }: { params: Promise<
             catalog={catalog}
             action={updateIntegrationAction.bind(null, id)}
           />
-          {definition.secretFields.map((field) => (
+          {secretFields.map((field) => (
             <SecretFieldControl
               key={field.key}
               fieldKey={field.key}
@@ -36,6 +39,12 @@ export default async function EditIntegrationPage({ params }: { params: Promise<
               action={setIntegrationSecretAction.bind(null, id)}
             />
           ))}
+          {integration.type === "synology" && synologyPermissions.canManageAuth ? (
+            <SynologyDeviceControl
+              integrationId={id}
+              deviceConfigured={Boolean(integration.secrets.deviceId?.configured)}
+            />
+          ) : null}
         </>
       ) : (
         <p>

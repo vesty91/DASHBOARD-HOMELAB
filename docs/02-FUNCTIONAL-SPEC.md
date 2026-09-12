@@ -180,7 +180,8 @@ existant. Service Status et les widgets d'intégration restent hors scope.
 
 La Phase 7 livre uniquement le framework d'intégrations (registry générique vide en production, secrets
 chiffrés, test de connexion, SSRF). La Phase 8 enregistre Docker dans la composition application
-(`apps/web`), pas dans `createProductionIntegrationRegistry()`. Synology et les médias restent Phase 9+.
+(`apps/web`), pas dans `createProductionIntegrationRegistry()`. Docker et Synology sont composés
+dans l'application. Les médias restent Phase 10+.
 
 ### Service Status
 
@@ -230,7 +231,7 @@ requête PromQL contrôlée et rendu simple.
 
 ### Docker
 
-Phase 8 (IMPLEMENTED / REVIEW sur `phase-8-docker`) : intégration réelle via Docker Socket Proxy
+Phase 8 (COMPLETE, PR #10) : intégration réelle via Docker Socket Proxy
 HTTP(S). Le dashboard web ne monte jamais `/var/run/docker.sock`.
 
 Lecture :
@@ -257,16 +258,18 @@ sans préremplir d'URL (pas d'IP/port Docker inventés).
 
 ### Synology DSM
 
+Phase 9 (IMPLEMENTED / REVIEW sur `phase-9-synology`) : lecture via l'API DSM.
+
 Lecture :
 
-- informations système ;
-- stockage ;
-- volumes ;
-- disques ;
-- températures quand API disponible ;
-- état.
+- informations système (modèle, version DSM, uptime, RAM, température si disponibles) ;
+- CPU et RAM réels via Utilization ;
+- volumes et disques (capacité, utilisé / libre, état, SMART si l'API l'expose).
 
-Actions destructives hors V1.
+Vue partielle (`available` / `degraded` / `unavailable`) : un timeout Storage n'invente pas
+0 % et n'échoue pas toute la page. 2FA via appareil de confiance (`deviceId` server-managed).
+Actions destructives hors V1. Credentials côté serveur uniquement. Compte DSM en configuration
+(`account`), mot de passe en secret.
 
 ### Jellyfin
 
