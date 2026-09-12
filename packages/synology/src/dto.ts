@@ -183,9 +183,6 @@ export function projectAccountSafeVolumes(
       ...volume,
       id,
       name: redactAccountText(volume.name, account) ?? id,
-      filesystem: redactAccountText(volume.filesystem, account),
-      raidType: redactAccountText(volume.raidType, account),
-      status: redactAccountText(volume.status, account) ?? volume.status,
     };
   });
 }
@@ -204,9 +201,6 @@ export function projectAccountSafeDisks(
       displayName: redactAccountText(disk.displayName, account) ?? id,
       vendor: redactAccountText(disk.vendor, account),
       model: redactAccountText(disk.model, account),
-      type: redactAccountText(disk.type, account),
-      status: redactAccountText(disk.status, account) ?? disk.status,
-      smartStatus: redactAccountText(disk.smartStatus, account),
     };
   });
 }

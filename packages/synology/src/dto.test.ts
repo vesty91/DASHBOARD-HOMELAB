@@ -531,4 +531,139 @@ describe("Synology DTO mapping", () => {
     expect(() => projectAccountSafeDisks(disks, "vesty")).toThrow(IntegrationError);
     expect(projectAccountSafeDisks([{ ...disks[0]! }], "vesty")[0]?.id).toBe("_redacted_");
   });
+
+  it("preserves semantic telemetry while redacting identity fields", () => {
+    const volumes = mapVolumes([
+      {
+        id: "volume-vesty",
+        vol_desc: "backup-vesty",
+        filesystem: "ext4",
+        raid_type: "shr",
+        status: "normal",
+        size: { total: 1000, used: 100 },
+      },
+    ]);
+    const normalVolumes = projectAccountSafeVolumes(volumes, "normal");
+    expect(normalVolumes[0]).toMatchObject({
+      status: "normal",
+      filesystem: "ext4",
+      raidType: "shr",
+    });
+    expect(storageLooksDegraded(normalVolumes, [])).toBe(false);
+
+    const warningVolumes = projectAccountSafeVolumes(
+      mapVolumes([
+        {
+          id: "volume_1",
+          status: "warning",
+          size: { total: 1000, used: 100 },
+        },
+      ]),
+      "warning",
+    );
+    expect(warningVolumes[0]?.status).toBe("warning");
+    expect(storageLooksDegraded(warningVolumes, [])).toBe(true);
+
+    const ext4Volumes = projectAccountSafeVolumes(
+      mapVolumes([
+        {
+          id: "volume_1",
+          filesystem: "ext4",
+          status: "normal",
+          size: { total: 1000, used: 100 },
+        },
+      ]),
+      "ext4",
+    );
+    expect(ext4Volumes[0]?.filesystem).toBe("ext4");
+
+    const shrVolumes = projectAccountSafeVolumes(
+      mapVolumes([
+        {
+          id: "volume_1",
+          raid_type: "shr",
+          status: "normal",
+          size: { total: 1000, used: 100 },
+        },
+      ]),
+      "shr",
+    );
+    expect(shrVolumes[0]?.raidType).toBe("shr");
+
+    const identityVolumes = projectAccountSafeVolumes(volumes, "vesty");
+    expect(JSON.stringify(identityVolumes)).not.toContain("vesty");
+    expect(identityVolumes[0]?.name).toBe("backup-[REDACTED]");
+    expect(identityVolumes[0]?.id).toBe("volume-_redacted_");
+
+    const disks = mapDisks([
+      {
+        id: "disk-vesty",
+        name: "Drive-vesty",
+        vendor: "vendor-vesty",
+        model: "normal",
+        type: "ssd",
+        status: "normal",
+        smart_status: "normal",
+        size_total: 1000,
+      },
+    ]);
+    const normalDisks = projectAccountSafeDisks(disks, "normal");
+    expect(normalDisks[0]).toMatchObject({
+      model: "[REDACTED]",
+      status: "normal",
+      smartStatus: "normal",
+      type: "ssd",
+    });
+    expect(storageLooksDegraded([], normalDisks)).toBe(false);
+
+    const criticalDisks = projectAccountSafeDisks(
+      mapDisks([
+        {
+          id: "sata1",
+          type: "ssd",
+          status: "critical",
+          smart_status: "critical",
+          size_total: 1000,
+        },
+      ]),
+      "critical",
+    );
+    expect(criticalDisks[0]).toMatchObject({
+      status: "critical",
+      smartStatus: "critical",
+      type: "ssd",
+    });
+    expect(storageLooksDegraded([], criticalDisks)).toBe(true);
+
+    const ssdDisks = projectAccountSafeDisks(
+      mapDisks([{ id: "sata1", type: "ssd", status: "normal", size_total: 1000 }]),
+      "ssd",
+    );
+    expect(ssdDisks[0]?.type).toBe("ssd");
+
+    const identityDisks = projectAccountSafeDisks(disks, "vesty");
+    expect(JSON.stringify(identityDisks)).not.toContain("vesty");
+    expect(identityDisks[0]).toMatchObject({
+      id: "disk-_redacted_",
+      displayName: "Drive-[REDACTED]",
+      vendor: "vendor-[REDACTED]",
+      status: "normal",
+      smartStatus: "normal",
+      type: "ssd",
+    });
+
+    const degradedSmart = projectAccountSafeDisks(
+      mapDisks([
+        {
+          id: "sata1",
+          status: "normal",
+          smart_status: "degraded",
+          size_total: 1000,
+        },
+      ]),
+      "degraded",
+    );
+    expect(degradedSmart[0]?.smartStatus).toBe("degraded");
+    expect(storageLooksDegraded([], degradedSmart)).toBe(true);
+  });
 });
