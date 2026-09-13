@@ -134,6 +134,10 @@ Phase 12 ajoute `prometheus-metric` (`publicSafe=false`) : nom de série, derni�
 finie et, en mode plage, une sparkline des derniers points. Même `router.refresh()` 10 s ;
 le navigateur n'envoie jamais de PromQL et ne contacte jamais Prometheus.
 
+Phase 12 ajoute `service-status` (`publicSafe=false`) : agrégateur interne read-only de
+l'état des apps et intégrations déjà connues. Filtrage RBAC serveur. Même
+`router.refresh()` 10 s ; le navigateur ne contacte jamais les APIs externes.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -144,7 +148,8 @@ le navigateur n'envoie jamais de PromQL et ne contacte jamais Prometheus.
 - Immich Stats (`immich-stats`, Phase 11) ;
 - Beszel Hosts (`beszel-hosts`, Phase 12) ;
 - Uptime Kuma Status (`uptime-kuma-status`, Phase 12) ;
-- Prometheus Metric (`prometheus-metric`, Phase 12).
+- Prometheus Metric (`prometheus-metric`, Phase 12) ;
+- Service Status (`service-status`, Phase 12, agrégateur interne).
 
 ## 11. Custom API widget
 

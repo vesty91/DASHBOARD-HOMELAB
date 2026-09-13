@@ -8,6 +8,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ServiceStatusView,
   UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -16,6 +17,7 @@ import type {
   ImmichIntegrationOption,
   JellyfinIntegrationOption,
   PrometheusIntegrationOption,
+  ServiceStatusCatalogOption,
   UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
@@ -38,6 +40,8 @@ export function BoardEditWorkspace({
   prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
+  serviceStatusViews = {},
+  serviceStatusCatalog = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
@@ -53,6 +57,8 @@ export function BoardEditWorkspace({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
+  serviceStatusViews?: Record<string, ServiceStatusView>;
+  serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -156,6 +162,8 @@ export function BoardEditWorkspace({
         prometheusIntegrations={prometheusIntegrations}
         uptimeKumaViews={uptimeKumaViews}
         uptimeKumaIntegrations={uptimeKumaIntegrations}
+        serviceStatusViews={serviceStatusViews}
+        serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

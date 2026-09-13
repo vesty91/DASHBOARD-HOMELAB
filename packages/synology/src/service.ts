@@ -109,6 +109,23 @@ function throwCachedFailure(failure: CachedSynologyOverviewFailure): never {
   throw new IntegrationError(failure.code, failure.message);
 }
 
+const LIST_PAGE_SIZE = 100;
+const LIST_MAX_PAGES = 100;
+
+async function listSynologyRecords(store: IntegrationStore): Promise<IntegrationRecord[]> {
+  const found: IntegrationRecord[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
+    const records = await store.list(LIST_PAGE_SIZE, cursor);
+    for (const record of records) if (record.type === SYNOLOGY_INTEGRATION_ID) found.push(record);
+    if (records.length < LIST_PAGE_SIZE) return found;
+    const nextCursor = records[records.length - 1]?.id;
+    if (!nextCursor || nextCursor === cursor) return found;
+    cursor = nextCursor;
+  }
+  return found;
+}
+
 function readCachedOverview(
   cache: IntegrationCache,
   recordId: string,
@@ -258,6 +275,17 @@ export function createSynologyService(deps: SynologyServiceDeps) {
   return {
     permissions(actor: SynologyActor): SynologyPermissionsView {
       return synologyPermissionsView(actor);
+    },
+    async listIntegrations(actor: SynologyActor): Promise<readonly SynologyIntegrationMetadata[]> {
+      assertSynologyAccess(actor, "read");
+      const records = await listSynologyRecords(deps.store);
+      return records.map((record) =>
+        Object.freeze({
+          id: record.id,
+          name: record.name,
+          enabled: record.enabled,
+        }),
+      );
     },
     async getIntegrationMetadata(
       integrationId: string,

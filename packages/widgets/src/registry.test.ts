@@ -66,6 +66,7 @@ describe("widget registry", () => {
       "immich-stats",
       "jellyfin-sessions",
       "prometheus-metric",
+      "service-status",
       "uptime-kuma-status",
     ]);
     expect(registry.get("clock")).toMatchObject({ version: 1, publicSafe: true });

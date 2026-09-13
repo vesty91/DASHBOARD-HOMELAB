@@ -51,7 +51,9 @@ import {
   synologyIntegrationInputSchema,
   type SynologyService,
 } from "@dashboard/synology";
+import { serviceStatusQuerySchema, type ServiceStatusService } from "@dashboard/monitoring";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
+import { requireServiceStatusActor } from "./service-status";
 
 export interface ApiContext {
   actor: BoardActor & AppActor & IntegrationActor;
@@ -65,6 +67,7 @@ export interface ApiContext {
   beszel: BeszelService;
   prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
+  serviceStatus: ServiceStatusService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -299,6 +302,7 @@ export const dockerRouter = t.router({
       .query(({ ctx, input }) =>
         procedure(() => ctx.docker.getIntegrationMetadata(input.integrationId, ctx.actor)),
       ),
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.docker.listIntegrations(ctx.actor))),
   }),
   system: t.router({
     get: t.procedure
@@ -339,6 +343,7 @@ export const synologyRouter = t.router({
       .query(({ ctx, input }) =>
         procedure(() => ctx.synology.getIntegrationMetadata(input.integrationId, ctx.actor)),
       ),
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.synology.listIntegrations(ctx.actor))),
   }),
   overview: t.router({
     get: t.procedure
@@ -492,6 +497,20 @@ export const uptimeKumaRouter = t.router({
       ),
   }),
 });
+export const serviceStatusRouter = t.router({
+  list: t.procedure.input(serviceStatusQuerySchema.optional()).query(({ ctx, input }) =>
+    procedure(async () => {
+      requireServiceStatusActor(ctx.actor);
+      return ctx.serviceStatus.list(input ?? {}, ctx.actor);
+    }),
+  ),
+  catalog: t.procedure.input(serviceStatusQuerySchema.optional()).query(({ ctx, input }) =>
+    procedure(async () => {
+      requireServiceStatusActor(ctx.actor);
+      return ctx.serviceStatus.catalog(input ?? {}, ctx.actor);
+    }),
+  ),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -504,7 +523,9 @@ export const dashboardRouter = t.router({
   beszel: beszelRouter,
   prometheus: prometheusRouter,
   uptimeKuma: uptimeKumaRouter,
+  serviceStatus: serviceStatusRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;
 export const createCaller = (context: ApiContext) => dashboardRouter.createCaller(context);
+export { createDashboardServiceStatusService } from "./service-status";

@@ -876,6 +876,12 @@ describe("SynologyService", () => {
       name: "NAS Lab",
       enabled: true,
     });
+    await expect(synology.listIntegrations(reader)).resolves.toEqual([
+      { id: INTEGRATION_ID, name: "NAS Lab", enabled: true },
+    ]);
+    await expect(synology.listIntegrations(actor(["synology.read"]))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
     expect(synology.permissions(reader)).toEqual({ canRead: true, canManageAuth: false });
     expect(synology.permissions(adminDefault)).toEqual({ canRead: false, canManageAuth: true });
     expect(synology.permissions(systemAdmin)).toEqual({ canRead: true, canManageAuth: true });

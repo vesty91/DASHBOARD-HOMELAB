@@ -263,6 +263,7 @@ Inputs communs : `integrationId` UUID ; `containerId` exactement 64 hex lowercas
 | Route                       | Permission                              | Capability           | Notes                                                                                            |
 | --------------------------- | --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
 | `docker.permissions`        | auth active                             | —                    | Helper UI only : `canRead`, `canLogs`, `canStart`, `canStop`, `canRestart`, `canManage`          |
+| `docker.integration.list`   | use/manage + docker.read/manage         | —                    | `{ id, name, enabled }[]` ; pas de `integration.read`                                            |
 | `docker.integration.get`    | use/manage + docker.read/manage         | —                    | `{ id, name, enabled }` uniquement ; pas de réseau Docker ; pas de `config`/`trustedCaPem`       |
 | `docker.system.get`         | use/manage + docker.read/manage         | `containers.read`    | `engineVersion`, `serverApiVersion`, `serverMinApiVersion`, `negotiatedApiVersion` ; pas `/info` |
 | `docker.containers.list`    | idem                                    | `containers.read`    | DTO summary sûr ; plafond transport liste 2 MiB (inspect/stats restent 256 KiB)                  |
@@ -295,6 +296,7 @@ Input : `integrationId` UUID.
 | Route                        | Permission                 | Capability                                        | Notes                                                                                   |
 | ---------------------------- | -------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `synology.permissions`       | auth active                | —                                                 | Helper UI : `canRead`, `canManageAuth`                                                  |
+| `synology.integration.list`  | use/manage + synology.read | —                                                 | `{ id, name, enabled }[]` ; pas de `integration.read`                                   |
 | `synology.integration.get`   | use/manage + synology.read | —                                                 | `{ id, name, enabled }` ; pas de réseau DSM ; pas de `config`/`trustedCaPem`/secrets    |
 | `synology.overview.get`      | use/manage + synology.read | `system.read` + `resources.read` + `storage.read` | Vue unique ; cache 15 s (5 s si partiel) ; cache-miss single-flight ; SID jamais caché  |
 | `synology.overview.refresh`  | use/manage + synology.read | idem                                              | Invalide le cache ; 10 requêtes / min / acteur / intégration                            |
@@ -401,6 +403,28 @@ Auth : header `Authorization: Bearer` optionnel. Jamais dans l'URL.
 
 Jamais exposés : jeton Bearer, PromQL dans l'URL, JSON Prometheus brut, labels hors
 `__name__` / `job` / `instance`, `baseUrl`, config.
+
+# Service Status API — Phase 12
+
+Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
+
+| Route                   | Permission                           | Notes                                                                                  |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `serviceStatus.list`    | auth active + per-source specialized | DTO `{ status, items, truncated, partial, fetchedAt }` ; sources non autorisées omises |
+| `serviceStatus.catalog` | auth active + per-source specialized | `{ id, name, sourceType }[]` identités seulement ; pas d'overview                      |
+
+DTO item : `id`, `name`, `sourceType`, `integrationId` nullable, `status`
+(`up` \| `degraded` \| `down` \| `unknown` \| `paused` \| `maintenance`),
+`detail` nullable, `updatedAt` nullable.
+
+Input : `selectedSources` (≤ 8), `selectedIds` (≤ 24, pattern `source:uuid[:container]`),
+`maxItems` 1–24 (défaut 12). IDs dupliqués dédupliqués. IDs invalides refusés.
+
+Jamais exposés : `baseUrl`, config, secrets, apiKey, password, SID, token, headers,
+réponse brute, `integration.list` générique.
+
+Un utilisateur `jellyfin.read` sans `synology.read` ne voit jamais Synology, même si
+les deux IDs sont dans `selectedIds`.
 
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 

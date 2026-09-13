@@ -109,4 +109,57 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("1")).toBeTruthy();
     expect(screen.getByText("1 série")).toBeTruthy();
   });
+
+  it("renders a service status widget from a ready mixed view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "status-1",
+          widgetType: "service-status",
+          widgetVersion: 1,
+          title: "Services",
+          config: {
+            selectedSources: [],
+            selectedIds: [],
+            displayMode: "list",
+            maxItems: 12,
+          },
+          runtimeStatus: "ready",
+        }}
+        serviceStatusView={{
+          status: "ready",
+          overviewStatus: "degraded",
+          displayMode: "list",
+          fetchedAt: "2026-09-13T00:00:00.000Z",
+          truncated: false,
+          partial: true,
+          items: [
+            {
+              id: "jellyfin:11111111-1111-4111-8111-111111111111",
+              name: "Media",
+              sourceType: "jellyfin",
+              integrationId: "11111111-1111-4111-8111-111111111111",
+              status: "up",
+              detail: null,
+              updatedAt: "2026-09-13T00:00:00.000Z",
+            },
+            {
+              id: "app:22222222-2222-4222-8222-222222222222",
+              name: "Docs",
+              sourceType: "app",
+              integrationId: null,
+              status: "down",
+              detail: "Indisponible",
+              updatedAt: null,
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("Media")).toBeTruthy();
+    expect(screen.getByText("Docs")).toBeTruthy();
+    expect(screen.getByText("En ligne")).toBeTruthy();
+    expect(screen.getByText("Hors ligne")).toBeTruthy();
+    expect(screen.getByText("Certaines sources sont indisponibles")).toBeTruthy();
+  });
 });

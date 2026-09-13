@@ -15,6 +15,7 @@ import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
+import type { ServiceStatusService } from "@dashboard/monitoring";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -26,10 +27,20 @@ const immich = {} as ImmichService;
 const beszel = {} as BeszelService;
 const prometheus = {} as PrometheusService;
 const uptimeKuma = {} as UptimeKumaService;
+const serviceStatus = {
+  list: vi.fn(async () => ({
+    status: "available" as const,
+    items: [],
+    truncated: false,
+    partial: false,
+    fetchedAt: "2026-09-13T00:00:00.000Z",
+  })),
+  catalog: vi.fn(async () => ({ items: [] })),
+} as unknown as ServiceStatusService;
 function createCaller(
   context: Omit<
     ApiContext,
-    "synology" | "jellyfin" | "immich" | "beszel" | "prometheus" | "uptimeKuma"
+    "synology" | "jellyfin" | "immich" | "beszel" | "prometheus" | "uptimeKuma" | "serviceStatus"
   > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
@@ -37,6 +48,7 @@ function createCaller(
     beszel?: BeszelService;
     prometheus?: PrometheusService;
     uptimeKuma?: UptimeKumaService;
+    serviceStatus?: ServiceStatusService;
   },
 ) {
   return createAppCaller({
@@ -46,6 +58,7 @@ function createCaller(
     beszel,
     prometheus,
     uptimeKuma,
+    serviceStatus,
     ...context,
   });
 }
@@ -616,6 +629,7 @@ describe("docker tRPC router", () => {
         canRestart: false,
         canManage: false,
       })),
+      listIntegrations: vi.fn(async () => []),
       getIntegrationMetadata: vi.fn(),
       getSystem: vi.fn(),
       listContainers: vi.fn(async () => []),
@@ -889,6 +903,7 @@ describe("synology tRPC router", () => {
   it("returns safe Synology metadata and overview for a delegated reader", async () => {
     const synologyService = {
       permissions: vi.fn(() => ({ canRead: true, canManageAuth: false })),
+      listIntegrations: vi.fn(async () => [{ id: integrationId, name: "NAS Lab", enabled: true }]),
       getIntegrationMetadata: vi.fn(async () => ({
         id: integrationId,
         name: "NAS Lab",
@@ -1011,5 +1026,54 @@ describe("prometheus tRPC router", () => {
       caller.prometheus.query.instant({ integrationId, query: "a".repeat(513) }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(prometheusService.queryInstant).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("serviceStatus tRPC router", () => {
+  it("requires authentication and does not leak secrets", async () => {
+    const listed = {
+      status: "available" as const,
+      truncated: false,
+      partial: false,
+      fetchedAt: "2026-09-13T00:00:00.000Z",
+      items: [
+        {
+          id: "jellyfin:11111111-1111-4111-8111-111111111111",
+          name: "Media",
+          sourceType: "jellyfin" as const,
+          integrationId: "11111111-1111-4111-8111-111111111111",
+          status: "up" as const,
+          detail: null,
+          updatedAt: "2026-09-13T00:00:00.000Z",
+        },
+      ],
+    };
+    const serviceStatusService = {
+      list: vi.fn(async () => listed),
+      catalog: vi.fn(async () => ({
+        items: [{ id: listed.items[0]!.id, name: "Media", sourceType: "jellyfin" as const }],
+      })),
+    } as unknown as ServiceStatusService;
+    const caller = createCaller({
+      actor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      serviceStatus: serviceStatusService,
+    });
+    const result = await caller.serviceStatus.list({});
+    expect(result).toEqual(listed);
+    expect(JSON.stringify(result)).not.toMatch(/apiKey|password|token|baseUrl/u);
+    await expect(
+      createCaller({
+        actor: { userId: null, subject: null },
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        serviceStatus: serviceStatusService,
+      }).serviceStatus.list({}),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

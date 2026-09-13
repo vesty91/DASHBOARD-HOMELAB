@@ -81,6 +81,28 @@ export {
   prometheusMetricDraftConfig,
 } from "./prometheus-metric";
 export type {
+  ServiceStatusCanonical,
+  ServiceStatusConfig,
+  ServiceStatusDisplayMode,
+  ServiceStatusDraftConfig,
+  ServiceStatusItemView,
+  ServiceStatusSourceType,
+  ServiceStatusView,
+} from "./service-status";
+export {
+  SERVICE_STATUS_DEFAULT_MAX_ITEMS,
+  SERVICE_STATUS_DISPLAY_MODES,
+  SERVICE_STATUS_ID_PATTERN,
+  SERVICE_STATUS_MAX_ITEMS,
+  SERVICE_STATUS_SOURCE_TYPES,
+  pruneServiceStatusSelectedIds,
+  serviceStatusConfigSchema,
+  serviceStatusContract,
+  serviceStatusDefaultConfig,
+  serviceStatusDraftConfig,
+  sourceTypeFromServiceStatusId,
+} from "./service-status";
+export type {
   UptimeKumaStatusConfig,
   UptimeKumaStatusDraftConfig,
   UptimeKumaStatusView,

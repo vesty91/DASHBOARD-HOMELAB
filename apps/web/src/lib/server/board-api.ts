@@ -1,6 +1,10 @@
 import "server-only";
 import { createBoardService } from "@dashboard/boards";
-import { createCaller, type BoardApiContext } from "@dashboard/api";
+import {
+  createCaller,
+  createDashboardServiceStatusService,
+  type BoardApiContext,
+} from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
@@ -21,6 +25,7 @@ import {
   MemoryUptimeKumaRefreshFence,
   MemoryUptimeKumaRefreshRateLimiter,
 } from "@dashboard/uptime-kuma";
+import { MemoryServiceStatusCoalescer } from "@dashboard/monitoring";
 import {
   createImmichService,
   MemoryImmichOverviewCoalescer,
@@ -78,6 +83,7 @@ const globalRuntime = globalThis as typeof globalThis & {
     uptimeKumaRefreshRateLimiter: MemoryUptimeKumaRefreshRateLimiter;
     uptimeKumaRefreshFence: MemoryUptimeKumaRefreshFence;
     uptimeKumaOverviewCoalescer: MemoryUptimeKumaOverviewCoalescer;
+    serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
 
@@ -106,6 +112,7 @@ function integrationRuntime() {
     uptimeKumaRefreshRateLimiter: new MemoryUptimeKumaRefreshRateLimiter(),
     uptimeKumaRefreshFence: new MemoryUptimeKumaRefreshFence(),
     uptimeKumaOverviewCoalescer: new MemoryUptimeKumaOverviewCoalescer(),
+    serviceStatusCoalescer: new MemoryServiceStatusCoalescer(),
   });
 }
 
@@ -118,10 +125,79 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     : null;
   const runtime = integrationRuntime();
   const keyring = createEnvKeyring(process.env.SECRET_ENCRYPTION_KEY);
+  const apps = createAppService(database.appStore);
+  const docker = createDockerService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    actionRateLimiter: runtime.dockerActionRateLimiter,
+    request: secureRequest,
+  });
+  const synology = createSynologyService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.synologyRefreshRateLimiter,
+    enrollmentRateLimiter: runtime.synologyEnrollmentRateLimiter,
+    refreshFence: runtime.synologyRefreshFence,
+    overviewCoalescer: runtime.synologyOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
+  const jellyfin = createJellyfinService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.jellyfinRefreshRateLimiter,
+    refreshFence: runtime.jellyfinRefreshFence,
+    overviewCoalescer: runtime.jellyfinOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
+  const immich = createImmichService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.immichRefreshRateLimiter,
+    refreshFence: runtime.immichRefreshFence,
+    overviewCoalescer: runtime.immichOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
+  const beszel = createBeszelService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.beszelRefreshRateLimiter,
+    refreshFence: runtime.beszelRefreshFence,
+    overviewCoalescer: runtime.beszelOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
+  const prometheus = createPrometheusService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.prometheusRefreshRateLimiter,
+    refreshFence: runtime.prometheusRefreshFence,
+    overviewCoalescer: runtime.prometheusOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
+  const uptimeKuma = createUptimeKumaService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.uptimeKumaRefreshRateLimiter,
+    refreshFence: runtime.uptimeKumaRefreshFence,
+    overviewCoalescer: runtime.uptimeKumaOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(database.boardStore, createBuiltInWidgetPolicy()),
-    apps: createAppService(database.appStore),
+    apps,
     integrations: createIntegrationService({
       store: database.integrationStore,
       registry: runtime.registry,
@@ -129,73 +205,23 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       rateLimiter: runtime.rateLimiter,
       ...(keyring ? { keyring } : {}),
     }),
-    docker: createDockerService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      actionRateLimiter: runtime.dockerActionRateLimiter,
-      request: secureRequest,
-    }),
-    synology: createSynologyService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.synologyRefreshRateLimiter,
-      enrollmentRateLimiter: runtime.synologyEnrollmentRateLimiter,
-      refreshFence: runtime.synologyRefreshFence,
-      overviewCoalescer: runtime.synologyOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
-    }),
-    jellyfin: createJellyfinService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.jellyfinRefreshRateLimiter,
-      refreshFence: runtime.jellyfinRefreshFence,
-      overviewCoalescer: runtime.jellyfinOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
-    }),
-    immich: createImmichService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.immichRefreshRateLimiter,
-      refreshFence: runtime.immichRefreshFence,
-      overviewCoalescer: runtime.immichOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
-    }),
-    beszel: createBeszelService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.beszelRefreshRateLimiter,
-      refreshFence: runtime.beszelRefreshFence,
-      overviewCoalescer: runtime.beszelOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
-    }),
-    prometheus: createPrometheusService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.prometheusRefreshRateLimiter,
-      refreshFence: runtime.prometheusRefreshFence,
-      overviewCoalescer: runtime.prometheusOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
-    }),
-    uptimeKuma: createUptimeKumaService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      request: secureRequest,
-      refreshRateLimiter: runtime.uptimeKumaRefreshRateLimiter,
-      refreshFence: runtime.uptimeKumaRefreshFence,
-      overviewCoalescer: runtime.uptimeKumaOverviewCoalescer,
-      ...(keyring ? { keyring } : {}),
+    docker,
+    synology,
+    jellyfin,
+    immich,
+    beszel,
+    prometheus,
+    uptimeKuma,
+    serviceStatus: createDashboardServiceStatusService({
+      apps,
+      docker,
+      synology,
+      jellyfin,
+      immich,
+      beszel,
+      prometheus,
+      uptimeKuma,
+      coalescer: runtime.serviceStatusCoalescer,
     }),
   };
 }

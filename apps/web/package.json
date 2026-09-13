@@ -25,6 +25,7 @@
     "@dashboard/synology": "workspace:*",
     "@dashboard/immich": "workspace:*",
     "@dashboard/jellyfin": "workspace:*",
+    "@dashboard/monitoring": "workspace:*",
     "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/secrets": "workspace:*",
