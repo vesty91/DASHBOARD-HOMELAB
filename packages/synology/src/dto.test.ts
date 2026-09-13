@@ -19,7 +19,10 @@ import {
   projectAccountSafeDisks,
   projectAccountSafeSystem,
   projectAccountSafeVolumes,
+  projectSafeResources,
   redactAccountText,
+  redactCredentialNumber,
+  redactCredentialText,
   storageLooksDegraded,
   systemSectionStatus,
   rejectNegativeByteValue,
@@ -141,6 +144,9 @@ describe("Synology DTO mapping", () => {
     expect(parseUptimeSeconds(90)).toBe(90);
     expect(parseUptimeSeconds("90")).toBe(90);
     expect(parseUptimeSeconds(0)).toBe(0);
+    expect(parseUptimeSeconds(undefined)).toBeNull();
+    expect(parseUptimeSeconds(null)).toBeNull();
+    expect(parseUptimeSeconds("9007199254740991")).toBe(Number.MAX_SAFE_INTEGER);
     for (const invalid of [
       "1:60:00",
       "0:00:60",
@@ -149,6 +155,14 @@ describe("Synology DTO mapping", () => {
       "1:00:-1",
       "1:1.5:00",
       "1:00:1.5",
+      1e308,
+      Number.MAX_VALUE,
+      Number.MAX_SAFE_INTEGER + 1,
+      "1e308",
+      "9007199254740992",
+      "Infinity",
+      "-1",
+      -1,
     ]) {
       expect(() => parseUptimeSeconds(invalid)).toThrow(IntegrationError);
       try {
@@ -472,6 +486,24 @@ describe("Synology DTO mapping", () => {
     ).not.toThrow();
   });
 
+  it("redacts credential text without rewriting numbers or booleans", () => {
+    expect(redactCredentialText("NAS-warning-prod", ["warning"])).toBe("NAS-[REDACTED]-prod");
+    expect(redactCredentialText("SID-SUPER-SECRET-001", ["SID-SUPER-SECRET-001"])).toBe(
+      "[REDACTED]",
+    );
+    expect(redactCredentialText(null, ["warning"])).toBeNull();
+    expect(redactCredentialNumber(4096, ["4096"])).toBeNull();
+    expect(redactCredentialNumber(90, ["4096"])).toBe(90);
+    expect(redactCredentialNumber(null, ["4096"])).toBeNull();
+    expect(projectSafeResources({ ...emptyResources(), cpuUserPercent: 12 }, ["12"])).toEqual({
+      ...emptyResources(),
+      cpuUserPercent: null,
+    });
+    expect(
+      projectSafeResources({ ...emptyResources(), cpuUserPercent: 0 }, ["12"]).cpuUserPercent,
+    ).toBe(0);
+  });
+
   it("redacts account tokens without matching ordinary substrings", () => {
     expect(redactAccountText("vesty", "vesty")).toBe("[REDACTED]");
     expect(redactAccountText("NAS-vesty-prod", "vesty")).toBe("NAS-[REDACTED]-prod");
@@ -512,6 +544,19 @@ describe("Synology DTO mapping", () => {
       cpuFamily: "[REDACTED]",
       cpuSeries: "Series-[REDACTED]",
     });
+    const withSecrets = projectAccountSafeSystem(
+      {
+        ...projected,
+        model: "NAS-warning-prod",
+        uptimeSeconds: 4096,
+        temperatureWarning: true,
+      },
+      "monitor",
+      ["warning", "4096"],
+    );
+    expect(withSecrets.model).toBe("NAS-[REDACTED]-prod");
+    expect(withSecrets.uptimeSeconds).toBeNull();
+    expect(withSecrets.temperatureWarning).toBe(true);
   });
 
   it("rejects colliding normalized volume and disk identifiers", () => {

@@ -18,16 +18,37 @@ const API_INFO = {
   "SYNO.Storage.CGI.Storage": { path: "entry.cgi", minVersion: 1, maxVersion: 1 },
 };
 
-function baseCtx(request: SynologyRequestFn) {
+function baseCtx(request: SynologyRequestFn, password = "s3cret") {
   return synologyContextFromIntegration({
     integrationId: "11111111-1111-4111-8111-111111111111",
     baseUrl: "https://nas.example:5001/",
     verifyTls: true,
     timeoutMs: 8000,
     config: { account: "monitor", verifyTls: true, timeoutMs: 8000 },
-    secrets: { password: "s3cret" },
+    secrets: { password },
     request,
   });
+}
+
+function utilizationOk() {
+  return json({
+    success: true,
+    data: {
+      cpu: { user_load: 1, system_load: 1, other_load: 0, idle_load: 98 },
+      memory: { total_real: 4096, avail_real: 2048, real_usage: 50 },
+    },
+  });
+}
+
+function sessionOk(options: SecureHttpRequest, href: string): SecureHttpResult | undefined {
+  const api = new URL(href).searchParams.get("api");
+  if (api === "SYNO.API.Info") return json({ success: true, data: API_INFO });
+  if (options.method === "POST" && options.body?.includes("method=login"))
+    return json({ success: true, data: { sid: "SID-123", synotoken: "TOKEN-456" } });
+  if (options.method === "POST" && options.body?.includes("method=logout"))
+    return json({ success: true, data: {} });
+  if (api === "SYNO.Core.System.Utilization") return utilizationOk();
+  return undefined;
 }
 
 describe("Synology client session headers", () => {
@@ -173,6 +194,56 @@ describe("Synology client session headers", () => {
             cpu: { user_load: 1, system_load: 1, other_load: 0, idle_load: 98 },
             memory: { total_real: 4096, avail_real: 2048, real_usage: 50 },
           },
+        });
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({ success: true, data: { volumes: [], disks: [] } });
+      throw new Error(href);
+    };
+    const overview = await fetchSynologyOverview(baseCtx(request));
+    expect(overview.system.status).toBe("degraded");
+    expect(overview.system.data?.model).toBe("DS920+");
+    expect(overview.system.data?.uptimeSeconds).toBeNull();
+    expect(overview.system.reason).toBe("invalid-response");
+  });
+
+  it("marks system unavailable when DSM.Info uptime is an unsafe number", async () => {
+    const request: SynologyRequestFn = async (options) => {
+      const href = String(options.url);
+      const handled = sessionOk(options, href);
+      if (handled) return handled;
+      const api = new URL(href).searchParams.get("api");
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: { model: "DS920+", version_string: "DSM 7.2", uptime: 1e308, ram: 8192 },
+        });
+      if (api === "SYNO.Storage.CGI.Storage")
+        return json({ success: true, data: { volumes: [], disks: [] } });
+      throw new Error(href);
+    };
+    const overview = await fetchSynologyOverview(baseCtx(request));
+    expect(overview.system).toMatchObject({
+      status: "unavailable",
+      data: null,
+      reason: "invalid-response",
+    });
+  });
+
+  it("keeps DSM.Info available when only Core.System uptime is an unsafe number", async () => {
+    const request: SynologyRequestFn = async (options) => {
+      const href = String(options.url);
+      const handled = sessionOk(options, href);
+      if (handled) return handled;
+      const api = new URL(href).searchParams.get("api");
+      if (api === "SYNO.DSM.Info")
+        return json({
+          success: true,
+          data: { model: "DS920+", version_string: "DSM 7.2", ram: 8192, temperature: 40 },
+        });
+      if (api === "SYNO.Core.System")
+        return json({
+          success: true,
+          data: { cpu_cores: 4, cpu_family: "Intel", up_time: 1e308 },
         });
       if (api === "SYNO.Storage.CGI.Storage")
         return json({ success: true, data: { volumes: [], disks: [] } });

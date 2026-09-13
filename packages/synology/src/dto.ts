@@ -1,4 +1,4 @@
-import { IntegrationError } from "@dashboard/integrations";
+import { IntegrationError, redactKnownSecretValues } from "@dashboard/integrations";
 import { z } from "zod";
 import type {
   SynologyDiskDto,
@@ -66,8 +66,18 @@ export function kibToBytes(value: unknown): number | null {
   return bytes;
 }
 
+function requireSafeUptimeSeconds(value: number): number {
+  if (!Number.isFinite(value) || value < 0)
+    throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
+  const seconds = Math.floor(value);
+  if (!Number.isSafeInteger(seconds))
+    throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
+  return seconds;
+}
+
 export function parseUptimeSeconds(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return Math.floor(value);
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number") return requireSafeUptimeSeconds(value);
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   const parts = trimmed.split(":");
@@ -86,10 +96,15 @@ export function parseUptimeSeconds(value: unknown): number | null {
       seconds >= 60
     )
       throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
-    return hours * 3600 + minutes * 60 + seconds;
+    const total = hours * 3600 + minutes * 60 + seconds;
+    if (!Number.isSafeInteger(total))
+      throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
+    return total;
   }
   const asNumber = Number(trimmed);
-  if (Number.isFinite(asNumber) && asNumber >= 0) return Math.floor(asNumber);
+  if (Number.isFinite(asNumber)) return requireSafeUptimeSeconds(asNumber);
+  if (/^[+-]?(?:Infinity|NaN)$/iu.test(trimmed))
+    throw new IntegrationError("INVALID_RESPONSE", "DSM uptime is invalid");
   return null;
 }
 
@@ -152,8 +167,38 @@ export function redactAccountText(value: string | null, account: string): string
   return output;
 }
 
-function projectStorageId(id: string, account: string): string {
-  const redacted = redactAccountText(id, account) ?? id;
+export function redactCredentialText(
+  value: string | null,
+  secretValues: readonly string[],
+): string | null {
+  if (value === null) return null;
+  const redacted = redactKnownSecretValues(value, secretValues);
+  return typeof redacted === "string" ? redacted : value;
+}
+
+export function redactCredentialNumber(
+  value: number | null,
+  secretValues: readonly string[],
+): number | null {
+  if (value !== null && secretValues.includes(String(value))) return null;
+  return value;
+}
+
+function redactIdentityText(
+  value: string | null,
+  account: string,
+  secretValues: readonly string[],
+): string | null {
+  return redactAccountText(redactCredentialText(value, secretValues), account);
+}
+
+function projectStorageId(
+  id: string,
+  account: string,
+  secretValues: readonly string[] = [],
+): string {
+  const afterSecrets = redactCredentialText(id, secretValues) ?? id;
+  const redacted = redactAccountText(afterSecrets, account) ?? afterSecrets;
   const withPlaceholder = redacted.split(ACCOUNT_REDACTION).join(ACCOUNT_ID_PLACEHOLDER);
   return sanitizeId(withPlaceholder, ACCOUNT_ID_PLACEHOLDER);
 }
@@ -170,28 +215,39 @@ export function requireUniqueStorageId(
 export function projectAccountSafeSystem(
   dto: SynologySystemDto,
   account: string,
+  secretValues: readonly string[] = [],
 ): SynologySystemDto {
   return {
     ...dto,
-    model: redactAccountText(dto.model, account),
-    dsmVersion: redactAccountText(dto.dsmVersion, account),
-    cpuFamily: redactAccountText(dto.cpuFamily, account),
-    cpuSeries: redactAccountText(dto.cpuSeries, account),
+    model: redactIdentityText(dto.model, account, secretValues),
+    dsmVersion: redactIdentityText(dto.dsmVersion, account, secretValues),
+    cpuFamily: redactIdentityText(dto.cpuFamily, account, secretValues),
+    cpuSeries: redactIdentityText(dto.cpuSeries, account, secretValues),
+    uptimeSeconds: redactCredentialNumber(dto.uptimeSeconds, secretValues),
+    systemTemperatureC: redactCredentialNumber(dto.systemTemperatureC, secretValues),
+    ramTotalBytes: redactCredentialNumber(dto.ramTotalBytes, secretValues),
+    cpuCores: redactCredentialNumber(dto.cpuCores, secretValues),
   };
 }
 
 export function projectAccountSafeVolumes(
   volumes: readonly SynologyVolumeDto[],
   account: string,
+  secretValues: readonly string[] = [],
 ): readonly SynologyVolumeDto[] {
   const seenIds = new Set<string>();
   return volumes.map((volume) => {
-    const id = projectStorageId(volume.id, account);
+    const id = projectStorageId(volume.id, account, secretValues);
     requireUniqueStorageId(seenIds, id, "volume");
     return {
       ...volume,
       id,
-      name: redactAccountText(volume.name, account) ?? id,
+      name: redactIdentityText(volume.name, account, secretValues) ?? id,
+      totalBytes: redactCredentialNumber(volume.totalBytes, secretValues),
+      usedBytes: redactCredentialNumber(volume.usedBytes, secretValues),
+      freeBytes: redactCredentialNumber(volume.freeBytes, secretValues),
+      usedPercent: redactCredentialNumber(volume.usedPercent, secretValues),
+      temperatureC: redactCredentialNumber(volume.temperatureC, secretValues),
     };
   });
 }
@@ -199,19 +255,40 @@ export function projectAccountSafeVolumes(
 export function projectAccountSafeDisks(
   disks: readonly SynologyDiskDto[],
   account: string,
+  secretValues: readonly string[] = [],
 ): readonly SynologyDiskDto[] {
   const seenIds = new Set<string>();
   return disks.map((disk) => {
-    const id = projectStorageId(disk.id, account);
+    const id = projectStorageId(disk.id, account, secretValues);
     requireUniqueStorageId(seenIds, id, "disk");
     return {
       ...disk,
       id,
-      displayName: redactAccountText(disk.displayName, account) ?? id,
-      vendor: redactAccountText(disk.vendor, account),
-      model: redactAccountText(disk.model, account),
+      displayName: redactIdentityText(disk.displayName, account, secretValues) ?? id,
+      vendor: redactIdentityText(disk.vendor, account, secretValues),
+      model: redactIdentityText(disk.model, account, secretValues),
+      temperatureC: redactCredentialNumber(disk.temperatureC, secretValues),
+      sizeBytes: redactCredentialNumber(disk.sizeBytes, secretValues),
     };
   });
+}
+
+export function projectSafeResources(
+  dto: SynologyResourcesDto,
+  secretValues: readonly string[],
+): SynologyResourcesDto {
+  return {
+    cpuTotalPercent: redactCredentialNumber(dto.cpuTotalPercent, secretValues),
+    cpuUserPercent: redactCredentialNumber(dto.cpuUserPercent, secretValues),
+    cpuSystemPercent: redactCredentialNumber(dto.cpuSystemPercent, secretValues),
+    cpuOtherPercent: redactCredentialNumber(dto.cpuOtherPercent, secretValues),
+    memoryTotalBytes: redactCredentialNumber(dto.memoryTotalBytes, secretValues),
+    memoryAvailableBytes: redactCredentialNumber(dto.memoryAvailableBytes, secretValues),
+    memoryUsedBytes: redactCredentialNumber(dto.memoryUsedBytes, secretValues),
+    memoryPercentUsed: redactCredentialNumber(dto.memoryPercentUsed, secretValues),
+    swapTotalBytes: redactCredentialNumber(dto.swapTotalBytes, secretValues),
+    swapUsedPercent: redactCredentialNumber(dto.swapUsedPercent, secretValues),
+  };
 }
 
 export function normalizeStatus(value: unknown): string {

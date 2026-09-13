@@ -1,7 +1,6 @@
 import {
   collectSecretStringValues,
   IntegrationError,
-  redactKnownSecretValues,
   type IntegrationClientContext,
 } from "@dashboard/integrations";
 import { parseDiscoveredApis, requireOkEnvelope, type DiscoveredApis } from "./api-discovery";
@@ -20,6 +19,7 @@ import {
   projectAccountSafeDisks,
   projectAccountSafeSystem,
   projectAccountSafeVolumes,
+  projectSafeResources,
   storageLooksDegraded,
   systemSectionStatus,
 } from "./dto";
@@ -152,8 +152,7 @@ async function dsmGet(
     headers: sessionHeaders(session),
     maxBodyBytes,
   });
-  const raw = requireOkEnvelope(result, "DSM request failed");
-  return redactKnownSecretValues(raw, dsmResponseSecretValues(ctx, session));
+  return requireOkEnvelope(result, "DSM request failed");
 }
 
 function sectionReasonFromError(error: unknown): SynologySectionReason {
@@ -206,6 +205,7 @@ async function loadSystem(
       reason: discovered.dsmInfo.reason ?? "api-unavailable",
     };
   try {
+    const secrets = dsmResponseSecretValues(ctx, session);
     const dsmInfo = parseDsmInfoPayload(
       await dsmGet(ctx, session, buildDsmInfoRequest(discovered.dsmInfo.version)),
     );
@@ -213,7 +213,7 @@ async function loadSystem(
     assertUsefulSystemInfo(base);
     if (!discovered.system.available || discovered.system.version === null) {
       const status = systemSectionStatus(base);
-      return { status, data: projectAccountSafeSystem(base, ctx.account) };
+      return { status, data: projectAccountSafeSystem(base, ctx.account, secrets) };
     }
     try {
       const core = parseCoreSystemPayload(
@@ -221,12 +221,12 @@ async function loadSystem(
       );
       const data = mapSystemInfo(dsmInfo, core);
       const status = systemSectionStatus(data);
-      return { status, data: projectAccountSafeSystem(data, ctx.account) };
+      return { status, data: projectAccountSafeSystem(data, ctx.account, secrets) };
     } catch (error) {
       if (isRetryableSessionError(error)) throw error;
       return {
         status: "degraded",
-        data: projectAccountSafeSystem(base, ctx.account),
+        data: projectAccountSafeSystem(base, ctx.account, secrets),
         reason: sectionReasonFromError(error),
       };
     }
@@ -251,7 +251,10 @@ async function loadResources(
     const raw = await dsmGet(ctx, session, buildUtilizationRequest());
     const data = mapResources(parseUtilizationPayload(raw));
     assertUsefulResources(data);
-    return { status: "available", data };
+    return {
+      status: "available",
+      data: projectSafeResources(data, dsmResponseSecretValues(ctx, session)),
+    };
   } catch (error) {
     if (isRetryableSessionError(error)) throw error;
     return unavailable(error);
@@ -275,11 +278,12 @@ async function loadStorage(
     const volumes = mapVolumes(payload.volumes);
     const disks = mapDisks(payload.disks);
     const status = storageLooksDegraded(volumes, disks) ? "degraded" : "available";
+    const secrets = dsmResponseSecretValues(ctx, session);
     return {
       status,
       data: {
-        volumes: projectAccountSafeVolumes(volumes, ctx.account),
-        disks: projectAccountSafeDisks(disks, ctx.account),
+        volumes: projectAccountSafeVolumes(volumes, ctx.account, secrets),
+        disks: projectAccountSafeDisks(disks, ctx.account, secrets),
       },
     };
   } catch (error) {
