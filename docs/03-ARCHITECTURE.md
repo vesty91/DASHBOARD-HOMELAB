@@ -332,3 +332,9 @@ React. `packages/boards` reçoit une `BoardWidgetPolicy` injectée ; aucun cycle
 registry, client HTTP SSRF, cache mémoire borné, rate limiter et `IntegrationService`.
 `packages/db` implémente `integration-runtime` sans connaître le plaintext. Le registry de production
 est vide. Voir ADR 0007.
+
+# État Phase 13
+
+`@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets SSE et
+`runtime.status` (PING Redis). `apps/worker/src/main.ts` et `apps/realtime/src/main.ts` lisent
+`REDIS_URL` et les binds `WORKER_*` / `REALTIME_*`. Redis reste optionnel. Voir ADR 0015.

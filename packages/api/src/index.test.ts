@@ -16,6 +16,7 @@ import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
 import type { ServiceStatusService } from "@dashboard/monitoring";
+import { createRuntimeStatusService, issueRealtimeTicket } from "@dashboard/events";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -40,7 +41,15 @@ const serviceStatus = {
 function createCaller(
   context: Omit<
     ApiContext,
-    "synology" | "jellyfin" | "immich" | "beszel" | "prometheus" | "uptimeKuma" | "serviceStatus"
+    | "synology"
+    | "jellyfin"
+    | "immich"
+    | "beszel"
+    | "prometheus"
+    | "uptimeKuma"
+    | "serviceStatus"
+    | "runtime"
+    | "realtimeTickets"
   > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
@@ -49,6 +58,8 @@ function createCaller(
     prometheus?: PrometheusService;
     uptimeKuma?: UptimeKumaService;
     serviceStatus?: ServiceStatusService;
+    runtime?: ApiContext["runtime"];
+    realtimeTickets?: ApiContext["realtimeTickets"];
   },
 ) {
   return createAppCaller({
@@ -59,6 +70,15 @@ function createCaller(
     prometheus,
     uptimeKuma,
     serviceStatus,
+    runtime: createRuntimeStatusService(
+      {},
+      { pingRedis: async () => false, probeHttp: async () => false },
+    ),
+    realtimeTickets: {
+      issue(userId: string) {
+        return issueRealtimeTicket("a".repeat(32), userId);
+      },
+    },
     ...context,
   });
 }
@@ -1074,6 +1094,51 @@ describe("serviceStatus tRPC router", () => {
         docker,
         serviceStatus: serviceStatusService,
       }).serviceStatus.list({}),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+});
+
+describe("runtime and realtime tRPC", () => {
+  it("hides runtime status without settings.read and issues tickets after auth", async () => {
+    const caller = createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["settings.read"],
+        },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+    });
+    await expect(caller.runtime.status()).resolves.toEqual({
+      redis: "disabled",
+      worker: "disabled",
+      realtime: "disabled",
+    });
+    const ticket = await caller.realtime.ticket();
+    expect(ticket.token.length).toBeGreaterThan(10);
+    expect(JSON.stringify(ticket)).not.toMatch(/redis:\/\/|password|AUTH_SECRET/u);
+    await expect(
+      createCaller({
+        actor,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+      }).runtime.status(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      createCaller({
+        actor: { userId: null, subject: null },
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+      }).realtime.ticket(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

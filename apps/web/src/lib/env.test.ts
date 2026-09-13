@@ -21,6 +21,8 @@ describe("server environment", () => {
         DB_DRIVER: "sqlite",
         DATABASE_URL: "./appdata/dashboard.sqlite",
         REDIS_URL: "redis://localhost:6379",
+        WORKER_URL: "http://127.0.0.1:3001",
+        REALTIME_URL: "http://127.0.0.1:3002",
         LOG_LEVEL: "debug",
         INTEGRATION_DEFAULT_TIMEOUT_MS: "8000",
       }),
@@ -28,6 +30,8 @@ describe("server environment", () => {
       DB_DRIVER: "sqlite",
       INTEGRATION_DEFAULT_TIMEOUT_MS: 8000,
       REDIS_URL: "redis://localhost:6379",
+      WORKER_URL: "http://127.0.0.1:3001",
+      REALTIME_URL: "http://127.0.0.1:3002",
     });
   });
 
@@ -37,6 +41,7 @@ describe("server environment", () => {
         AUTH_SECRET: "too-short",
         SECRET_ENCRYPTION_KEY: "not-hex",
         REDIS_URL: "https://localhost:6379",
+        WORKER_URL: "ftp://127.0.0.1:3001",
         INTEGRATION_DEFAULT_TIMEOUT_MS: "0",
       }),
     ).toThrow();

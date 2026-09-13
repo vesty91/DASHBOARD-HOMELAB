@@ -2,11 +2,17 @@
   "name": "@dashboard/worker",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/main.ts",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dashboard/events": "workspace:*",
+    "tsx": "4.23.13"
   },
   "devDependencies": {
     "@types/node": "26.2.0",

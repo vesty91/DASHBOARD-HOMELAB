@@ -207,3 +207,10 @@ coordinateur autosave/item/métadonnées, et validation Bookmarks sans faux conf
 couvrent AES-256-GCM, IV unique, auth tag, AAD, keyVersion, redaction, registry, cache borné,
 SSRF, DNS pinning, retries/timeout/body, RBAC, sentinel secret, stale `config_revision`, et
 upgrade Phase 6→7 SQLite/PostgreSQL. L'E2E vérifie l'empty state du catalogue de production.
+
+## 15. Couverture Phase 13 fondations
+
+`@dashboard/events`, `@dashboard/worker` et `@dashboard/realtime` ont de vrais tests. Ils couvrent
+le bus mémoire, le drop des payloads Redis invalides, les tickets HMAC expirés, `runtime.status`
+sans fuite d'URL, le heartbeat worker (y compris `/health/ready` 503 si publish échoue), le bind
+configurable, le refus SSE sans ticket, le retry d'abonnement Redis, et le RBAC `settings.read`.
