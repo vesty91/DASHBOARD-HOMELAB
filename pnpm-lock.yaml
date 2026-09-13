@@ -59,6 +59,9 @@ importers:
       '@dashboard/docker':
         specifier: workspace:*
         version: link:../../packages/docker
+      '@dashboard/immich':
+        specifier: workspace:*
+        version: link:../../packages/immich
       '@dashboard/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -150,6 +153,9 @@ importers:
       '@dashboard/docker':
         specifier: workspace:*
         version: link:../docker
+      '@dashboard/immich':
+        specifier: workspace:*
+        version: link:../immich
       '@dashboard/integrations':
         specifier: workspace:*
         version: link:../integrations
@@ -280,6 +286,28 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/immich:
+    dependencies:
+      '@dashboard/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@dashboard/secrets':
+        specifier: workspace:*
+        version: link:../secrets
       '@types/node':
         specifier: 26.2.0
         version: 26.2.0

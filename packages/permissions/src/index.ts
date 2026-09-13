@@ -28,6 +28,7 @@ export const PERMISSIONS = [
   "docker.manage",
   "synology.read",
   "jellyfin.read",
+  "immich.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

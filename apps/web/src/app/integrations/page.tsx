@@ -43,6 +43,7 @@ export default async function IntegrationsPage({
       dockerPermissions,
       synologyPermissions,
       jellyfinPermissions,
+      immichPermissions,
     ] = await Promise.all([
       caller.integration.list({ limit: 50, cursor }),
       caller.integration.canManage(),
@@ -51,6 +52,7 @@ export default async function IntegrationsPage({
       caller.docker.permissions(),
       caller.synology.permissions(),
       caller.jellyfin.permissions(),
+      caller.immich.permissions(),
     ]);
     const canAdd = canCreate && catalog.length > 0;
     return (
@@ -75,7 +77,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker, Synology DSM ou Jellyfin."
+                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin ou Immich."
             }
           />
         ) : (
@@ -107,7 +109,8 @@ export default async function IntegrationsPage({
                 <CardFooter>
                   {(integration.type === "docker" && dockerPermissions.canRead) ||
                   (integration.type === "synology" && synologyPermissions.canRead) ||
-                  (integration.type === "jellyfin" && jellyfinPermissions.canRead) ? (
+                  (integration.type === "jellyfin" && jellyfinPermissions.canRead) ||
+                  (integration.type === "immich" && immichPermissions.canRead) ? (
                     <Link
                       className="ui-btn ui-btn-primary"
                       href={`/integrations/${integration.id}`}

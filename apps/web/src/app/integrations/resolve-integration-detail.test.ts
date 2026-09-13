@@ -45,6 +45,15 @@ const jellyfinDenied = {
   },
 };
 
+const immichDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("immich unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -57,6 +66,7 @@ describe("resolveIntegrationDetail", () => {
       },
       synology: synologyDenied,
       jellyfin: jellyfinDenied,
+      immich: immichDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -84,6 +94,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       jellyfin: jellyfinDenied,
+      immich: immichDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -119,6 +130,14 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      immich: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Définition Immich introuvable" });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -137,6 +156,7 @@ describe("resolveIntegrationDetail", () => {
         },
         synology: synologyDenied,
         jellyfin: jellyfinDenied,
+        immich: immichDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -162,6 +182,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      immich: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -182,6 +206,7 @@ describe("resolveIntegrationDetail", () => {
         },
         synology: synologyDenied,
         jellyfin: jellyfinDenied,
+        immich: immichDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

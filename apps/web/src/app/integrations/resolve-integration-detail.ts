@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
+import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
 import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
 
@@ -16,6 +17,7 @@ export type IntegrationDetailResolution =
   | { kind: "docker"; metadata: DockerIntegrationMetadata }
   | { kind: "synology"; metadata: SynologyIntegrationMetadata }
   | { kind: "jellyfin"; metadata: JellyfinIntegrationMetadata }
+  | { kind: "immich"; metadata: ImmichIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -35,6 +37,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<JellyfinPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<JellyfinIntegrationMetadata>;
+    };
+  };
+  immich: {
+    permissions: () => Promise<Pick<ImmichPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<ImmichIntegrationMetadata>;
     };
   };
   integration: {
@@ -69,6 +77,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.jellyfin.integration.get({ integrationId: id });
       return { kind: "jellyfin", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const immichPermissions = await caller.immich.permissions();
+  if (immichPermissions.canRead) {
+    try {
+      const metadata = await caller.immich.integration.get({ integrationId: id });
+      return { kind: "immich", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

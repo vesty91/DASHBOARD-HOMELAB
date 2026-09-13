@@ -20,6 +20,7 @@
     "@dashboard/db": "workspace:*",
     "@dashboard/docker": "workspace:*",
     "@dashboard/synology": "workspace:*",
+    "@dashboard/immich": "workspace:*",
     "@dashboard/jellyfin": "workspace:*",
     "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",

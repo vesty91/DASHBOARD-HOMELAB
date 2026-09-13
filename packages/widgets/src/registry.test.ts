@@ -62,6 +62,7 @@ describe("widget registry", () => {
       "app-tile",
       "bookmarks",
       "clock",
+      "immich-stats",
       "jellyfin-sessions",
     ]);
     expect(registry.get("clock")).toMatchObject({ version: 1, publicSafe: true });
