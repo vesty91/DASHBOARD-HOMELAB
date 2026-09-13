@@ -137,3 +137,13 @@ export async function listImmichIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listBeszelIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).beszel.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

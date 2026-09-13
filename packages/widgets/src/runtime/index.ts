@@ -10,6 +10,8 @@ export { WidgetFrame } from "./widget-frame";
 export { WidgetRenderer, type WidgetItemView } from "./widget-renderer";
 export { WidgetStateView } from "./widget-state-view";
 export { WidgetConfigForm } from "./widget-config-form";
+export { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
+export { BeszelHostsWidget } from "./beszel-hosts-widget";
 export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 export { ImmichStatsWidget } from "./immich-stats-widget";
 export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";

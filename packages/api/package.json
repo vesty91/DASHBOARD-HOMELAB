@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@dashboard/app-library": "workspace:*",
+    "@dashboard/beszel": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/boards": "workspace:*",
     "@dashboard/docker": "workspace:*",

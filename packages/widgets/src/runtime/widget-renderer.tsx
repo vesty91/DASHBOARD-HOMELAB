@@ -2,6 +2,7 @@
 import type { AppTileConfig, AppTileView } from "../app-tile";
 import type { BookmarksConfig } from "../bookmarks";
 import type { ClockConfig } from "../clock";
+import type { BeszelHostsView } from "../beszel-hosts";
 import type { ImmichStatsView } from "../immich-stats";
 import type { JellyfinSessionsView } from "../jellyfin-sessions";
 import { builtInWidgetRegistry } from "../built-in";
@@ -10,6 +11,7 @@ import type { WidgetItemStatus } from "../types";
 import { AppTileWidget } from "./app-tile-widget";
 import { BookmarksWidget } from "./bookmarks-widget";
 import { ClockWidget } from "./clock-widget";
+import { BeszelHostsWidget } from "./beszel-hosts-widget";
 import { ImmichStatsWidget } from "./immich-stats-widget";
 import { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
 import { WidgetBoundary } from "./widget-boundary";
@@ -53,11 +55,13 @@ function ReadyWidget({
   appView,
   jellyfinView,
   immichView,
+  beszelView,
 }: {
   item: WidgetItemView;
   appView: AppTileView | undefined;
   jellyfinView: JellyfinSessionsView | undefined;
   immichView: ImmichStatsView | undefined;
+  beszelView: BeszelHostsView | undefined;
 }) {
   switch (item.widgetType) {
     case "clock":
@@ -70,6 +74,8 @@ function ReadyWidget({
       return <JellyfinSessionsWidget view={jellyfinView} />;
     case "immich-stats":
       return <ImmichStatsWidget view={immichView} />;
+    case "beszel-hosts":
+      return <BeszelHostsWidget view={beszelView} />;
     default:
       return null;
   }
@@ -80,11 +86,13 @@ export function WidgetRenderer({
   appView,
   jellyfinView,
   immichView,
+  beszelView,
 }: {
   item: WidgetItemView;
   appView?: AppTileView;
   jellyfinView?: JellyfinSessionsView;
   immichView?: ImmichStatsView;
+  beszelView?: BeszelHostsView;
 }) {
   const blocked = frameForStatus(item);
   if (blocked) return blocked;
@@ -98,6 +106,7 @@ export function WidgetRenderer({
           appView={appView}
           jellyfinView={jellyfinView}
           immichView={immichView}
+          beszelView={beszelView}
         />
       </WidgetFrame>
     </WidgetBoundary>

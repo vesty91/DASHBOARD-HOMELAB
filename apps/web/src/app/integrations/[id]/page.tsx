@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import type {
+  BeszelHostStatus,
+  BeszelIntegrationMetadata,
+  BeszelOverview,
+  BeszelSectionReason,
+} from "@dashboard/beszel";
 import type { DockerIntegrationMetadata } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type {
@@ -24,6 +30,8 @@ import { AppIcon } from "../../apps/app-icon";
 import { getBoardCaller } from "../../../lib/server/board-api";
 import { dockerUserError } from "../docker-error";
 import { resolveIntegrationDetail } from "../resolve-integration-detail";
+import { beszelUserError } from "../beszel-error";
+import { BeszelRefreshButton } from "../beszel-refresh-button";
 import { immichUserError } from "../immich-error";
 import { ImmichRefreshButton } from "../immich-refresh-button";
 import { jellyfinUserError } from "../jellyfin-error";
@@ -47,7 +55,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "docker" ||
     integration.type === "synology" ||
     integration.type === "jellyfin" ||
-    integration.type === "immich"
+    integration.type === "immich" ||
+    integration.type === "beszel"
   )
     redirect("/forbidden");
   return (
@@ -768,6 +777,151 @@ async function SynologyIntegrationDetail({
   );
 }
 
+function beszelReasonLabel(reason: BeszelSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Beszel indisponible.";
+    case "permission-denied":
+      return "Accès Beszel refusé.";
+    case "timeout":
+      return "Délai dépassé pour cette section Beszel.";
+    case "invalid-response":
+      return "Réponse Beszel invalide.";
+    case "unauthorized":
+      return "Identifiant ou mot de passe Beszel invalide.";
+    case "rate-limited":
+      return "Beszel a limité les requêtes.";
+    case "dns":
+      return "Le serveur Beszel est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Beszel.";
+    case "unreachable":
+      return "Le serveur Beszel est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Beszel indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function beszelStatusLabel(status: BeszelHostStatus): string {
+  switch (status) {
+    case "up":
+      return "En ligne";
+    case "down":
+      return "Hors ligne";
+    case "paused":
+      return "En pause";
+    case "pending":
+      return "En attente";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+async function BeszelOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: BeszelOverview | null = null;
+  try {
+    overview = await caller.beszel.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = beszelUserError(caught);
+  }
+  const hosts = overview?.hosts.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue Beszel partielle : certains hôtes sont hors ligne ou en attente.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <section className="beszel-summary">
+            <h2>État</h2>
+            {overview.hosts.status === "unavailable" ? (
+              <Alert tone="warning">{beszelReasonLabel(overview.hosts.reason)}</Alert>
+            ) : null}
+            <p>
+              {hosts?.upCount ?? 0} / {hosts?.hostCount ?? 0} en ligne
+              {hosts?.truncated ? " · liste tronquée" : ""}
+            </p>
+            <p>{hosts?.downCount ?? 0} hors ligne</p>
+            <p>{hosts?.pausedCount ?? 0} en pause</p>
+            <p>{hosts?.pendingCount ?? 0} en attente</p>
+          </section>
+          <section className="beszel-hosts">
+            <h2>Hôtes</h2>
+            {hosts?.hosts.length ? (
+              <ul className="beszel-host-list">
+                {hosts.hosts.map((host) => (
+                  <li key={host.id} className="beszel-host-card">
+                    <p>
+                      <strong>{host.name}</strong>
+                    </p>
+                    <p>{beszelStatusLabel(host.status)}</p>
+                    {host.host ? <p className="ui-muted">{host.host}</p> : null}
+                    <p>CPU {formatPercent(host.cpuPercent)}</p>
+                    <p>RAM {formatPercent(host.memoryPercent)}</p>
+                    <p>Disque {formatPercent(host.diskPercent)}</p>
+                    {host.networkBytes !== null ? (
+                      <p>Réseau {formatBytes(host.networkBytes)}</p>
+                    ) : null}
+                    {host.updatedAt ? <p className="ui-muted">MAJ {host.updatedAt}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ui-muted">Aucun hôte Beszel.</p>
+            )}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function BeszelIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: BeszelIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Beszel" />
+        <Alert tone="warning">Cette intégration Beszel est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Beszel" />
+      <BeszelRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement des hôtes Beszel…</p>}>
+        <BeszelOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 export default async function IntegrationDetailPage({
   params,
 }: {
@@ -786,6 +940,8 @@ export default async function IntegrationDetailPage({
         return <JellyfinIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "immich":
         return <ImmichIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "beszel":
+        return <BeszelIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

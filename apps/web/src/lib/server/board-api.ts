@@ -4,6 +4,12 @@ import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
+  createBeszelService,
+  MemoryBeszelOverviewCoalescer,
+  MemoryBeszelRefreshFence,
+  MemoryBeszelRefreshRateLimiter,
+} from "@dashboard/beszel";
+import {
   createImmichService,
   MemoryImmichOverviewCoalescer,
   MemoryImmichRefreshFence,
@@ -51,6 +57,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     immichRefreshRateLimiter: MemoryImmichRefreshRateLimiter;
     immichRefreshFence: MemoryImmichRefreshFence;
     immichOverviewCoalescer: MemoryImmichOverviewCoalescer;
+    beszelRefreshRateLimiter: MemoryBeszelRefreshRateLimiter;
+    beszelRefreshFence: MemoryBeszelRefreshFence;
+    beszelOverviewCoalescer: MemoryBeszelOverviewCoalescer;
   };
 };
 
@@ -70,6 +79,9 @@ function integrationRuntime() {
     immichRefreshRateLimiter: new MemoryImmichRefreshRateLimiter(),
     immichRefreshFence: new MemoryImmichRefreshFence(),
     immichOverviewCoalescer: new MemoryImmichOverviewCoalescer(),
+    beszelRefreshRateLimiter: new MemoryBeszelRefreshRateLimiter(),
+    beszelRefreshFence: new MemoryBeszelRefreshFence(),
+    beszelOverviewCoalescer: new MemoryBeszelOverviewCoalescer(),
   });
 }
 
@@ -129,6 +141,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       refreshRateLimiter: runtime.immichRefreshRateLimiter,
       refreshFence: runtime.immichRefreshFence,
       overviewCoalescer: runtime.immichOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
+    }),
+    beszel: createBeszelService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.beszelRefreshRateLimiter,
+      refreshFence: runtime.beszelRefreshFence,
+      overviewCoalescer: runtime.beszelOverviewCoalescer,
       ...(keyring ? { keyring } : {}),
     }),
   };

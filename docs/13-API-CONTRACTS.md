@@ -342,6 +342,24 @@ DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `serv
 Jamais exposés : clé API, EXIF, chemins filesystem, thumbnails, `usageByUser`, URLs
 about, `baseUrl`, config.
 
+# Beszel API — Phase 12
+
+Routeur tRPC `beszel` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                     | Permission               | Capability   | Notes                                                 |
+| ------------------------- | ------------------------ | ------------ | ----------------------------------------------------- |
+| `beszel.permissions`      | auth active              | —            | `canRead`, `canManage`                                |
+| `beszel.integration.list` | use/manage + beszel.read | —            | `{ id, name, enabled }[]`                             |
+| `beszel.integration.get`  | use/manage + beszel.read | —            | `{ id, name, enabled }`                               |
+| `beszel.overview.get`     | use/manage + beszel.read | `hosts.read` | Cache 15 s (8 s si partiel) ; coalescer ; clé SHA-256 |
+| `beszel.overview.refresh` | use/manage + beszel.read | `hosts.read` | 10 requêtes / min / acteur / intégration              |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, section `hosts`.
+Auth : header `Authorization` (token éphémère). Jamais persisté.
+
+Jamais exposés : mot de passe, token PocketBase, metadata PocketBase brute,
+`collectionId`, `baseUrl`, config.
+
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage

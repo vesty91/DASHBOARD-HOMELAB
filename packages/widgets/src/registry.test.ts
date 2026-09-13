@@ -60,6 +60,7 @@ describe("widget registry", () => {
     const registry = createBuiltInWidgetRegistry();
     expect(registry.list().map((entry) => entry.id)).toEqual([
       "app-tile",
+      "beszel-hosts",
       "bookmarks",
       "clock",
       "immich-stats",
@@ -83,7 +84,11 @@ describe("widget registry", () => {
     }).toThrow();
     expect(registry.get("clock")?.publicSafe).toBe(true);
     expect(registry.get("clock")?.defaultSize).toEqual({ w: 4, h: 2 });
-    expect(createWidgetPolicy(registry).catalog()[2]?.publicSafe).toBe(true);
+    expect(
+      createWidgetPolicy(registry)
+        .catalog()
+        .find((entry) => entry.id === "clock")?.publicSafe,
+    ).toBe(true);
   });
 
   it("exposes built-in contracts at version 1", () => {

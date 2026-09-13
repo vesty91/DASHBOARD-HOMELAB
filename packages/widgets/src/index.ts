@@ -38,6 +38,14 @@ export type {
   WidgetSizing,
 } from "./types";
 export { parseHttpUrl } from "./urls";
+export type { BeszelHostsConfig, BeszelHostsDraftConfig, BeszelHostsView } from "./beszel-hosts";
+export {
+  BESZEL_HOSTS_UNSET_INTEGRATION_ID,
+  beszelHostsConfigSchema,
+  beszelHostsContract,
+  beszelHostsDefaultConfig,
+  beszelHostsDraftConfig,
+} from "./beszel-hosts";
 export type { ImmichStatsConfig, ImmichStatsDraftConfig, ImmichStatsView } from "./immich-stats";
 export {
   IMMICH_STATS_UNSET_INTEGRATION_ID,

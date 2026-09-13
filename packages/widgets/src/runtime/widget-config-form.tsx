@@ -1,9 +1,11 @@
 "use client";
 import type { AppTileDraftConfig } from "../app-tile";
 import type { ClockConfig } from "../clock";
+import type { BeszelHostsDraftConfig } from "../beszel-hosts";
 import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
 import { AppTileForm, type AppOption } from "./app-tile-form";
+import { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
 import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
 import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
@@ -17,6 +19,7 @@ export function WidgetConfigForm({
   loadApps,
   jellyfinIntegrations,
   immichIntegrations,
+  beszelIntegrations,
 }: {
   widgetType: string;
   config: unknown;
@@ -25,6 +28,7 @@ export function WidgetConfigForm({
   loadApps?: (cursor?: string) => Promise<{ items: AppOption[]; nextCursor: string | null }>;
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   immichIntegrations?: readonly ImmichIntegrationOption[];
+  beszelIntegrations?: readonly BeszelIntegrationOption[];
 }) {
   switch (widgetType) {
     case "clock":
@@ -56,6 +60,15 @@ export function WidgetConfigForm({
           config={config as ImmichStatsDraftConfig}
           onChange={onChange}
           integrations={immichIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "beszel-hosts":
+      return (
+        <BeszelHostsForm
+          config={config as BeszelHostsDraftConfig}
+          onChange={onChange}
+          integrations={beszelIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

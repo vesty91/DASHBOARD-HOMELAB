@@ -188,8 +188,13 @@ Phase 11 : lecture Immich exige (`integration.use` ou `integration.manage`) **et
 `/integrations/[id]` Immich : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `immich.read`.
 
+Phase 12 : lecture Beszel exige (`integration.use` ou `integration.manage`) **et**
+`beszel.read`. Cette conjonction suffit pour `beszel.integration.get` et
+`/integrations/[id]` Beszel : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `beszel.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`immich.read`, `docker.*` ni `settings.manage`.
+`immich.read`, `beszel.read`, `docker.*` ni `settings.manage`.
 
 ## 10. Audit
 

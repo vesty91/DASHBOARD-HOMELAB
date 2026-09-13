@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Badge, PageContainer, PageHeader } from "@dashboard/ui";
 import { getBoardCaller } from "../../../lib/server/board-api";
 import { resolveAppTileViews } from "../resolve-app-tiles";
+import { resolveBeszelHostsViews } from "../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
@@ -28,11 +29,12 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     if (error instanceof TRPCError && error.code === "FORBIDDEN") redirect("/forbidden");
     throw error;
   }
-  const [canEdit, appViews, jellyfinViews, immichViews] = await Promise.all([
+  const [canEdit, appViews, jellyfinViews, immichViews, beszelViews] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
     resolveAppTileViews(snapshot, caller),
     resolveJellyfinSessionViews(snapshot, caller),
     resolveImmichStatsViews(snapshot, caller),
+    resolveBeszelHostsViews(snapshot, caller),
   ]);
   return (
     <PageContainer wide>
@@ -55,6 +57,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         appViews={appViews}
         jellyfinViews={jellyfinViews}
         immichViews={immichViews}
+        beszelViews={beszelViews}
       />
     </PageContainer>
   );

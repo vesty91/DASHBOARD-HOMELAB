@@ -5,6 +5,7 @@ import { BoardEditWorkspace } from "../../board-edit-workspace";
 import { deleteBoardAction } from "../../actions";
 import { DeleteBoardControl } from "../../delete-board-control";
 import { resolveAppTileViews } from "../../resolve-app-tiles";
+import { resolveBeszelHostsViews } from "../../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
 import { TRPCError } from "@trpc/server";
@@ -24,10 +25,11 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     throw error;
   }
   const catalog = await caller.widget.catalog();
-  const [appViews, jellyfinViews, immichViews] = await Promise.all([
+  const [appViews, jellyfinViews, immichViews, beszelViews] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
     resolveJellyfinSessionViews(snapshot, caller),
     resolveImmichStatsViews(snapshot, caller),
+    resolveBeszelHostsViews(snapshot, caller),
   ]);
   let canReadApps = true;
   try {
@@ -57,6 +59,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let beszelIntegrations: Awaited<ReturnType<typeof caller.beszel.integration.list>> = [];
+  try {
+    beszelIntegrations = await caller.beszel.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   return (
     <PageContainer wide>
       <header className="board-edit-chrome">
@@ -76,6 +88,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         jellyfinIntegrations={jellyfinIntegrations}
         immichViews={immichViews}
         immichIntegrations={immichIntegrations}
+        beszelViews={beszelViews}
+        beszelIntegrations={beszelIntegrations}
         canReadApps={canReadApps}
       />
     </PageContainer>

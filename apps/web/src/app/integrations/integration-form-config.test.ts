@@ -17,6 +17,18 @@ describe("configFromForm", () => {
     );
   });
 
+  it("includes a trimmed Beszel identity without treating it as a secret", () => {
+    const form = new FormData();
+    form.set("verifyTls", "on");
+    form.set("timeoutMs", "8000");
+    form.set("identity", " ops@lab.example ");
+    expect(configFromForm(form)).toEqual({
+      verifyTls: true,
+      timeoutMs: 8000,
+      identity: "ops@lab.example",
+    });
+  });
+
   it("includes a trimmed Synology account without treating it as a secret", () => {
     const form = new FormData();
     form.set("verifyTls", "on");

@@ -19,12 +19,16 @@ export function IntegrationForm({
   const showSynologyHelp = selectedType === "synology";
   const showJellyfinHelp = selectedType === "jellyfin";
   const showImmichHelp = selectedType === "immich";
-  const showTrustedCa = showDockerHelp || showSynologyHelp || showJellyfinHelp || showImmichHelp;
+  const showBeszelHelp = selectedType === "beszel";
+  const showTrustedCa =
+    showDockerHelp || showSynologyHelp || showJellyfinHelp || showImmichHelp || showBeszelHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
     typeof integration?.config.trustedCaPem === "string" ? integration.config.trustedCaPem : "";
   const account = typeof integration?.config.account === "string" ? integration.config.account : "";
+  const identity =
+    typeof integration?.config.identity === "string" ? integration.config.identity : "";
   return (
     <form action={action} className="ui-form ui-form-wide ui-form-grid">
       <Field label="Type">
@@ -61,7 +65,9 @@ export function IntegrationForm({
                   ? "https://jellyfin.example:8096"
                   : showImmichHelp
                     ? "https://immich.example:2283"
-                    : undefined
+                    : showBeszelHelp
+                      ? "https://beszel.example:8090"
+                      : undefined
           }
         />
       </Field>
@@ -84,6 +90,13 @@ export function IntegrationForm({
         <Alert>
           Utilisez l&apos;URL HTTP(S) du serveur Immich (origine uniquement, sans /api). La clé API
           se configure ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur.
+        </Alert>
+      ) : null}
+      {showBeszelHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Beszel (origine uniquement). L&apos;identifiant est
+          stocké en configuration ; le mot de passe se configure ensuite comme secret serveur et
+          n&apos;est jamais envoyé au navigateur.
         </Alert>
       ) : null}
       {showSynologyHelp ? (
@@ -123,6 +136,18 @@ export function IntegrationForm({
       <Field label="Timeout ms">
         <Input name="timeoutMs" type="number" min={500} max={30000} defaultValue={timeoutMs} />
       </Field>
+      {showBeszelHelp ? (
+        <Field label="Identifiant Beszel">
+          <Input
+            name="identity"
+            type="email"
+            autoComplete="off"
+            required
+            maxLength={254}
+            defaultValue={identity}
+          />
+        </Field>
+      ) : null}
       {showSynologyHelp ? (
         <Field label="Compte DSM">
           <Input
@@ -144,7 +169,9 @@ export function IntegrationForm({
                 ? "Utilisez ce champ pour un Jellyfin HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                 : showImmichHelp
                   ? "Utilisez ce champ pour un Immich HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                  : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                  : showBeszelHelp
+                    ? "Utilisez ce champ pour un Beszel HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                    : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

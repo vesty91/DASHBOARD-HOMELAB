@@ -1113,6 +1113,21 @@ a.ui-btn-ghost:hover {
   grid-template-columns: 1fr;
 }
 
+.beszel-host-list {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.beszel-host-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+}
+
 .entity-card .ui-muted {
   margin-top: 0.35rem;
 }
@@ -1553,6 +1568,7 @@ button[aria-pressed="true"] {
 @media (min-width: 720px) {
   .home-grid,
   .card-grid,
+  .beszel-host-list,
   .ui-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

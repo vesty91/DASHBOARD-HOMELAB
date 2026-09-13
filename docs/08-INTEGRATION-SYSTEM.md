@@ -291,7 +291,23 @@ l'état des secrets d'un record `immich` sans `integration.manage`.
 Widget `immich-stats` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 15 s
 (8 s si partiel). Aucune fake data. Pas d'EXIF, chemins, thumbnails ni `usageByUser`.
 
-## 16. Prometheus
+## 16. Beszel
+
+Statut sur la branche `phase-12-beszel` : IMPLEMENTED / REVIEW.
+
+Adapter `beszel` composé dans `apps/web`. Transport HTTP(S) vers l'origine Beszel.
+Auth PocketBase `POST /api/collections/users/auth-with-password`. Lecture paginée
+`GET /api/collections/systems/records`. Voir ADR 0012.
+
+`beszel.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Beszel
+(`integration.use|manage` + `beszel.read`). `integration.read` n'est pas requis.
+`integration.list` / `integration.get` omettent `baseUrl`, `config`, `capabilities` et
+l'état des secrets d'un record `beszel` sans `integration.manage`.
+
+Widget `beszel-hosts` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 15 s
+(8 s si partiel). Token jamais persisté. Aucune mutation. Aucune fake data.
+
+## 17. Prometheus
 
 Autoriser un sous-ensemble de requêtes par widget ou permission.
 
@@ -302,7 +318,7 @@ Limiter :
 - volume de séries ;
 - timeout.
 
-## 17. Tests intégrations
+## 18. Tests intégrations
 
 Pour chaque adapter :
 
