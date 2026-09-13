@@ -197,5 +197,8 @@ Aucune migration DB.
 ## AC-034 Worker realtime foundations
 
 Redis est optionnel. `runtime.status` exige `settings.read` et n'expose pas `REDIS_URL`.
+La sonde Redis est un `PING` authentifié (y compris `rediss:`), pas un connect TCP.
 `realtime.ticket` exige une session. Le worker heartbeat ne fabrique pas d'état métier
-inventé. Redis down n'arrête pas `apps/web`.
+inventé. Redis down n'arrête pas `apps/web`. Worker et realtime lisent `REDIS_URL`
+et se bindent sur `WORKER_*` / `REALTIME_*`. Un publish heartbeat en échec rend
+`/health/ready` en 503.

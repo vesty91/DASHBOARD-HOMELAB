@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
-  MemoryEventBus,
+  createConfiguredEventBus,
   verifyRealtimeTicket,
   type DomainEvent,
   type EventBus,
@@ -11,7 +11,10 @@ export const REALTIME_HEARTBEAT_MS = 15_000;
 
 export interface RealtimeOptions {
   bus?: EventBus;
+  redisUrl?: string;
   secret: string;
+  host?: string;
+  port?: number;
   heartbeatMs?: number;
 }
 
@@ -43,12 +46,14 @@ function writeSse(response: ServerResponse, event: DomainEvent): void {
 }
 
 export async function startRealtime(options: RealtimeOptions): Promise<RealtimeHandle> {
-  const bus = options.bus ?? new MemoryEventBus();
+  const bus = options.bus ?? (await createConfiguredEventBus(options.redisUrl));
   const connections = new Set<ServerResponse>();
   const heartbeatMs = Math.min(
     30_000,
     Math.max(5_000, options.heartbeatMs ?? REALTIME_HEARTBEAT_MS),
   );
+  const host = options.host ?? "127.0.0.1";
+  const port = options.port ?? 0;
 
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method !== "GET") {
@@ -100,8 +105,9 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
     response.on("close", cleanup);
   });
 
-  await new Promise<void>((resolve) => {
-    server.listen(0, "127.0.0.1", () => resolve());
+  await new Promise<void>((resolve, reject) => {
+    server.listen(port, host, () => resolve());
+    server.once("error", reject);
   });
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("REALTIME_BIND_FAILED");

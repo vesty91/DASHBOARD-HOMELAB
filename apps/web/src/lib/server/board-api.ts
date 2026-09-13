@@ -29,8 +29,8 @@ import { MemoryServiceStatusCoalescer } from "@dashboard/monitoring";
 import {
   createRuntimeStatusService,
   issueRealtimeTicket,
+  pingRedisUrl,
   probeHttpReady,
-  probeRedisUrl,
 } from "@dashboard/events";
 import {
   createImmichService,
@@ -238,7 +238,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       },
       {
         pingRedis: () =>
-          serverEnv.REDIS_URL ? probeRedisUrl(serverEnv.REDIS_URL) : Promise.resolve(false),
+          serverEnv.REDIS_URL ? pingRedisUrl(serverEnv.REDIS_URL) : Promise.resolve(false),
         probeHttp: probeHttpReady,
       },
     ),

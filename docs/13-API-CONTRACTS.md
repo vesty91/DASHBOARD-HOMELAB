@@ -445,7 +445,8 @@ Fondations. Redis n'est pas source de vérité. Aucun appel navigateur vers Redi
 | `runtime.status`  | `settings.read` | `{ redis, worker, realtime }` chacun `disabled` \| `up` \| `down` |
 | `realtime.ticket` | session active  | Ticket HMAC 60 s pour `GET /events?ticket=`                       |
 
-Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SECRET`, payload brut Redis.
+La santé Redis de `runtime.status` est un `PING` protocole (AUTH / TLS / `rediss:`), jamais un
+simple connect TCP. Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SECRET`, payload brut Redis.
 
 SSE n'émet pour l'instant que `job.heartbeat` / `job.failed`. Pas de `board.updated` tant que le
 filtrage RBAC n'est pas branché.

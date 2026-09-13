@@ -17,7 +17,8 @@ doivent pouvoir fan-out sans exposer de secret.
 
 `REDIS_URL` (`redis:` / `rediss:`) active le pub/sub distribué. Absent : bus
 mémoire in-process. Un Redis indisponible ne fait pas tomber `apps/web` ;
-worker et realtime restent ready et signalent `down`.
+`runtime.status` signale `redis: down`. Worker et realtime lisent `REDIS_URL`
+dans `src/main.ts` et construisent `RedisEventBus` via `createConfiguredEventBus`.
 
 ### 2. SSE comme premier transport realtime
 
@@ -30,6 +31,7 @@ l'API après session, jamais par le navigateur vers Redis.
 `apps/worker` exécute un job `heartbeat` borné et publie `job.heartbeat`.
 Pas de fake data. La table `jobs` persistée arrivera dans une tranche suivante
 de la Phase 13 ; le heartbeat in-process est observable via le bus et `/health`.
+Un échec de publish rend `/health/ready` en 503 (`lastErrorCode`).
 
 ### 4. Filtrage serveur
 
@@ -41,4 +43,8 @@ permission.
 ### 5. Package `@dashboard/events`
 
 Types Zod, bus mémoire, adaptateur Redis injectable, tickets, sondes de
-runtime. Ni Next, ni DB, ni widgets.
+runtime. Ni Next, ni DB, ni widgets. La santé Redis utilise un `PING` protocole
+(AUTH/TLS), pas un simple connect TCP. Worker et realtime écoutent
+`WORKER_HOST`/`WORKER_PORT` (défaut `0.0.0.0:3001`) et
+`REALTIME_HOST`/`REALTIME_PORT` (défaut `0.0.0.0:3002`) via `src/main.ts`.
+Les tests conservent `127.0.0.1` et un port éphémère.

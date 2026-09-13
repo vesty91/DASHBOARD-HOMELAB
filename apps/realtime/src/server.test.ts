@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { issueRealtimeTicket, MemoryEventBus } from "@dashboard/events";
+import { realtimeOptionsFromEnv } from "./env";
 import { startRealtime } from "./server";
 
 const secret = "a".repeat(32);
@@ -44,5 +45,22 @@ describe("realtime SSE", () => {
     } finally {
       await realtime.close();
     }
+  });
+
+  it("reads REDIS_URL, AUTH_SECRET and listen address from process env", () => {
+    expect(
+      realtimeOptionsFromEnv({
+        AUTH_SECRET: secret,
+        REDIS_URL: "rediss://redis:6380/0",
+        REALTIME_HOST: "0.0.0.0",
+        REALTIME_PORT: "3002",
+      }),
+    ).toEqual({
+      secret,
+      redisUrl: "rediss://redis:6380/0",
+      host: "0.0.0.0",
+      port: 3002,
+    });
+    expect(() => realtimeOptionsFromEnv({ AUTH_SECRET: "short" })).toThrow("AUTH_SECRET_TOO_SHORT");
   });
 });

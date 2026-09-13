@@ -335,6 +335,6 @@ est vide. Voir ADR 0007.
 
 # État Phase 13
 
-`@dashboard/events` fournit le bus mémoire, l'adaptateur Redis injectable, les tickets SSE et
-`runtime.status`. `apps/worker` publie `job.heartbeat`. `apps/realtime` sert SSE authentifié.
-Redis reste optionnel. Voir ADR 0015.
+`@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets SSE et
+`runtime.status` (PING Redis). `apps/worker/src/main.ts` et `apps/realtime/src/main.ts` lisent
+`REDIS_URL` et les binds `WORKER_*` / `REALTIME_*`. Redis reste optionnel. Voir ADR 0015.

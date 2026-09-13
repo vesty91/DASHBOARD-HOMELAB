@@ -14,14 +14,22 @@ export interface RedisPubSubPort {
   close(): Promise<void>;
 }
 
+export interface RedisEventBusOptions {
+  subscribeRetryMs?: number;
+}
+
 export class RedisEventBus implements EventBus {
   readonly #port: RedisPubSubPort;
+  readonly #retryMs: number;
   readonly #listeners = new Set<(event: DomainEvent) => void>();
   #unsubscribe: (() => Promise<void>) | null = null;
   #connecting: Promise<void> | null = null;
+  #retryTimer: ReturnType<typeof setTimeout> | null = null;
+  #closed = false;
 
-  constructor(port: RedisPubSubPort) {
+  constructor(port: RedisPubSubPort, options: RedisEventBusOptions = {}) {
     this.#port = port;
+    this.#retryMs = Math.min(30_000, Math.max(50, options.subscribeRetryMs ?? 2_000));
   }
 
   async publish(event: DomainEvent): Promise<void> {
@@ -44,7 +52,10 @@ export class RedisEventBus implements EventBus {
   }
 
   async close(): Promise<void> {
+    this.#closed = true;
+    this.#clearRetry();
     this.#listeners.clear();
+    if (this.#connecting) await this.#connecting;
     const unsubscribe = this.#unsubscribe;
     this.#unsubscribe = null;
     if (unsubscribe) await unsubscribe();
@@ -56,7 +67,7 @@ export class RedisEventBus implements EventBus {
   }
 
   async #ensureSubscribed(): Promise<void> {
-    if (this.#unsubscribe) return;
+    if (this.#closed || this.#unsubscribe) return;
     if (this.#connecting) {
       await this.#connecting;
       return;
@@ -75,11 +86,34 @@ export class RedisEventBus implements EventBus {
         for (const listener of this.#listeners) listener(event);
       })
       .then((unsubscribe) => {
+        if (this.#closed) {
+          void unsubscribe();
+          return;
+        }
         this.#unsubscribe = unsubscribe;
+      })
+      .catch(() => {
+        this.#unsubscribe = null;
+        this.#scheduleRetry();
       })
       .finally(() => {
         this.#connecting = null;
       });
     await this.#connecting;
+  }
+
+  #clearRetry(): void {
+    if (!this.#retryTimer) return;
+    clearTimeout(this.#retryTimer);
+    this.#retryTimer = null;
+  }
+
+  #scheduleRetry(): void {
+    if (this.#closed || this.#listeners.size === 0 || this.#retryTimer) return;
+    this.#retryTimer = setTimeout(() => {
+      this.#retryTimer = null;
+      void this.#ensureSubscribed();
+    }, this.#retryMs);
+    this.#retryTimer.unref();
   }
 }

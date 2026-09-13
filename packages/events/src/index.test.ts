@@ -5,6 +5,7 @@ import {
   createRuntimeStatusService,
   issueRealtimeTicket,
   parseDomainEvent,
+  parseListenAddress,
   redactRedisUrl,
   verifyRealtimeTicket,
   type DomainEvent,
@@ -82,6 +83,49 @@ describe("events package", () => {
       verifyRealtimeTicket(secret, ticket.token, new Date("2026-09-13T00:02:00.000Z")),
     ).toBeNull();
     expect(verifyRealtimeTicket("b".repeat(32), ticket.token)).toBeNull();
+  });
+
+  it("does not reject the process when redis subscribe fails", async () => {
+    const redis: RedisPubSubPort = {
+      publish: async () => undefined,
+      subscribe: async () => {
+        throw new Error("REDIS_DOWN");
+      },
+      ping: async () => false,
+      close: async () => undefined,
+    };
+    const bus = new RedisEventBus(redis, { subscribeRetryMs: 50 });
+    const unsubscribe = bus.subscribe(() => undefined);
+    await Promise.resolve();
+    await Promise.resolve();
+    unsubscribe();
+    await expect(bus.close()).resolves.toBeUndefined();
+  });
+
+  it("retries redis subscribe after a transient failure", async () => {
+    let attempts = 0;
+    const redis: RedisPubSubPort = {
+      publish: async () => undefined,
+      subscribe: async () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("REDIS_DOWN");
+        return async () => undefined;
+      },
+      ping: async () => true,
+      close: async () => undefined,
+    };
+    const bus = new RedisEventBus(redis, { subscribeRetryMs: 50 });
+    bus.subscribe(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(attempts).toBeGreaterThanOrEqual(2);
+    await bus.close();
+  });
+
+  it("parses deployment listen addresses", () => {
+    expect(parseListenAddress({}, "WORKER")).toEqual({ host: "0.0.0.0", port: 3001 });
+    expect(
+      parseListenAddress({ REALTIME_HOST: "10.0.0.8", REALTIME_PORT: "4000" }, "REALTIME"),
+    ).toEqual({ host: "10.0.0.8", port: 4000 });
   });
 
   it("reports runtime status without leaking redis credentials", async () => {

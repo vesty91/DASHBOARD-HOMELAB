@@ -212,4 +212,5 @@ upgrade Phase 6→7 SQLite/PostgreSQL. L'E2E vérifie l'empty state du catalogue
 
 `@dashboard/events`, `@dashboard/worker` et `@dashboard/realtime` ont de vrais tests. Ils couvrent
 le bus mémoire, le drop des payloads Redis invalides, les tickets HMAC expirés, `runtime.status`
-sans fuite d'URL, le heartbeat worker, le refus SSE sans ticket, et le RBAC `settings.read`.
+sans fuite d'URL, le heartbeat worker (y compris `/health/ready` 503 si publish échoue), le bind
+configurable, le refus SSE sans ticket, le retry d'abonnement Redis, et le RBAC `settings.read`.

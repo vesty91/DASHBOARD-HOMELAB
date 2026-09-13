@@ -15,6 +15,7 @@
     "vitest": "4.1.11"
   },
   "dependencies": {
+    "redis": "6.2.1",
     "zod": "4.4.3"
   }
 }

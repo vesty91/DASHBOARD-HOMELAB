@@ -1,8 +1,11 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { MemoryEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
+import { createConfiguredEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
 
 export interface WorkerOptions {
   bus?: EventBus;
+  redisUrl?: string;
+  host?: string;
+  port?: number;
   intervalMs?: number;
   now?: () => Date;
 }
@@ -30,10 +33,13 @@ function heartbeat(now: Date): DomainEvent {
 
 export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHandle> {
   const intervalMs = Math.min(60_000, Math.max(5_000, options.intervalMs ?? DEFAULT_INTERVAL_MS));
-  const bus = options.bus ?? new MemoryEventBus();
+  const bus = options.bus ?? (await createConfiguredEventBus(options.redisUrl));
   const now = options.now ?? (() => new Date());
   let lastHeartbeatAt: string | null = null;
+  let lastErrorCode: "INTERNAL_ERROR" | null = null;
   let running = true;
+  const host = options.host ?? "127.0.0.1";
+  const port = options.port ?? 0;
 
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method !== "GET") {
@@ -45,17 +51,20 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       return;
     }
     if (request.url === "/health/ready") {
-      sendJson(response, running ? 200 : 503, {
-        status: running ? "ready" : "not-ready",
+      const ready = running && lastErrorCode === null;
+      sendJson(response, ready ? 200 : 503, {
+        status: ready ? "ready" : "not-ready",
         lastHeartbeatAt,
+        lastErrorCode,
       });
       return;
     }
     sendJson(response, 404, { status: "not-found" });
   });
 
-  await new Promise<void>((resolve) => {
-    server.listen(0, "127.0.0.1", () => resolve());
+  await new Promise<void>((resolve, reject) => {
+    server.listen(port, host, () => resolve());
+    server.once("error", reject);
   });
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("WORKER_BIND_FAILED");
@@ -65,7 +74,9 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       const event = heartbeat(now());
       await bus.publish(event);
       lastHeartbeatAt = event.occurredAt;
+      lastErrorCode = null;
     } catch {
+      lastErrorCode = "INTERNAL_ERROR";
       const failed: DomainEvent = {
         type: "job.failed",
         jobType: "heartbeat",
