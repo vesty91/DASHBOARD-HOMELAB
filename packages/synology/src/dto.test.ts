@@ -20,6 +20,8 @@ import {
   projectAccountSafeSystem,
   projectAccountSafeVolumes,
   projectSafeResources,
+  normalizeOptionalStatus,
+  normalizeStatus,
   redactAccountText,
   redactCredentialNumber,
   redactCredentialText,
@@ -732,5 +734,133 @@ describe("Synology DTO mapping", () => {
     );
     expect(degradedSmart[0]?.smartStatus).toBe("degraded");
     expect(storageLooksDegraded([], degradedSmart)).toBe(true);
+  });
+
+  it("maps health statuses onto a closed set", () => {
+    expect(normalizeStatus("normal")).toBe("normal");
+    expect(normalizeStatus("ok")).toBe("normal");
+    expect(normalizeStatus("good")).toBe("normal");
+    expect(normalizeStatus("healthy")).toBe("normal");
+    expect(normalizeStatus("warning")).toBe("warning");
+    expect(normalizeStatus("degraded")).toBe("degraded");
+    expect(normalizeStatus("attention")).toBe("degraded");
+    expect(normalizeStatus("failing")).toBe("degraded");
+    expect(normalizeStatus("unhealthy")).toBe("degraded");
+    expect(normalizeStatus("bad")).toBe("degraded");
+    expect(normalizeStatus("abnormal")).toBe("degraded");
+    expect(normalizeStatus("critical")).toBe("critical");
+    expect(normalizeStatus("crashed")).toBe("critical");
+    expect(normalizeStatus("error")).toBe("critical");
+    expect(normalizeStatus("failed")).toBe("critical");
+    expect(normalizeStatus("unknown")).toBe("unknown");
+    expect(normalizeStatus("PASSWORD-SUPER-SECRET")).toBe("unknown");
+    expect(normalizeStatus("hunter2")).toBe("unknown");
+    expect(normalizeOptionalStatus(undefined)).toBeNull();
+    expect(normalizeOptionalStatus(null)).toBeNull();
+    expect(normalizeOptionalStatus("")).toBeNull();
+    expect(normalizeOptionalStatus("TOKEN-SUPER-SECRET")).toBe("unknown");
+    expect(normalizeOptionalStatus("normal")).toBe("normal");
+  });
+
+  it("canonicalizes unrecognized volume status before projection", () => {
+    const volumes = mapVolumes([
+      {
+        id: "volume_1",
+        status: "PASSWORD-SUPER-SECRET",
+        size: { total: 1000, used: 100 },
+      },
+    ]);
+    expect(volumes[0]?.status).toBe("unknown");
+    const projected = projectAccountSafeVolumes(volumes, "monitor", ["PASSWORD-SUPER-SECRET"]);
+    expect(projected[0]?.status).toBe("unknown");
+    expect(JSON.stringify(projected)).not.toContain("PASSWORD-SUPER-SECRET");
+  });
+
+  it("canonicalizes unrecognized SMART status before projection", () => {
+    const disks = mapDisks([
+      {
+        id: "sata1",
+        smart_status: "TOKEN-SUPER-SECRET",
+        size_total: 1000,
+      },
+    ]);
+    expect(disks[0]?.smartStatus).toBe("unknown");
+    const projected = projectAccountSafeDisks(disks, "monitor", ["TOKEN-SUPER-SECRET"]);
+    expect(projected[0]?.smartStatus).toBe("unknown");
+    expect(JSON.stringify(projected)).not.toContain("TOKEN-SUPER-SECRET");
+  });
+
+  it("redacts classification credentials without account rewriting", () => {
+    const volumes = projectAccountSafeVolumes(
+      mapVolumes([
+        {
+          id: "volume_1",
+          filesystem: "PASSWORD-SUPER-SECRET",
+          raid_type: "SID-SUPER-SECRET",
+          status: "normal",
+          size: { total: 1000, used: 100 },
+        },
+      ]),
+      "monitor",
+      ["PASSWORD-SUPER-SECRET", "SID-SUPER-SECRET"],
+    );
+    expect(volumes[0]?.filesystem).toBe("[REDACTED]");
+    expect(volumes[0]?.raidType).toBe("[REDACTED]");
+    expect(JSON.stringify(volumes)).not.toMatch(/PASSWORD-SUPER-SECRET|SID-SUPER-SECRET/u);
+
+    const disks = projectAccountSafeDisks(
+      mapDisks([
+        {
+          id: "sata1",
+          type: "TOKEN-SUPER-SECRET",
+          status: "normal",
+          size_total: 1000,
+        },
+      ]),
+      "monitor",
+      ["TOKEN-SUPER-SECRET"],
+    );
+    expect(disks[0]?.type).toBe("[REDACTED]");
+    expect(JSON.stringify(disks)).not.toContain("TOKEN-SUPER-SECRET");
+  });
+
+  it("never exposes an arbitrary secret through any storage string", () => {
+    const secret = "VERY-UNLIKELY-SECRET-XYZ";
+    const secrets = [secret];
+    const account = "monitor";
+    const volumeBase = { status: "normal", size: { total: 1000, used: 100 } };
+    const volumeCases = [
+      { id: secret, ...volumeBase },
+      { id: "volume_1", vol_desc: secret, ...volumeBase },
+      { id: "volume_1", filesystem: secret, ...volumeBase },
+      { id: "volume_1", raid_type: secret, ...volumeBase },
+      { id: "volume_1", status: secret, size: { total: 1000, used: 100 } },
+    ];
+    for (const input of volumeCases) {
+      const mapped = mapVolumes([input]);
+      const projected = projectAccountSafeVolumes(mapped, account, secrets);
+      expect(JSON.stringify(projected)).not.toContain(secret);
+      if (input.status === secret) {
+        expect(mapped[0]?.status).toBe("unknown");
+        expect(projected[0]?.status).toBe("unknown");
+      }
+    }
+
+    const diskCases = [
+      { id: secret, size_total: 1000 },
+      { id: "sata1", name: secret, size_total: 1000 },
+      { id: "sata1", vendor: secret, size_total: 1000 },
+      { id: "sata1", model: secret, size_total: 1000 },
+      { id: "sata1", type: secret, size_total: 1000 },
+      { id: "sata1", status: secret, size_total: 1000 },
+      { id: "sata1", smart_status: secret, size_total: 1000 },
+    ];
+    for (const input of diskCases) {
+      const mapped = mapDisks([input]);
+      const projected = projectAccountSafeDisks(mapped, account, secrets);
+      expect(JSON.stringify(projected)).not.toContain(secret);
+      if ("status" in input && input.status === secret) expect(mapped[0]?.status).toBe("unknown");
+      if ("smart_status" in input) expect(mapped[0]?.smartStatus).toBe("unknown");
+    }
   });
 });

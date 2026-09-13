@@ -243,6 +243,8 @@ export function projectAccountSafeVolumes(
       ...volume,
       id,
       name: redactIdentityText(volume.name, account, secretValues) ?? id,
+      filesystem: redactCredentialText(volume.filesystem, secretValues),
+      raidType: redactCredentialText(volume.raidType, secretValues),
       totalBytes: redactCredentialNumber(volume.totalBytes, secretValues),
       usedBytes: redactCredentialNumber(volume.usedBytes, secretValues),
       freeBytes: redactCredentialNumber(volume.freeBytes, secretValues),
@@ -267,6 +269,7 @@ export function projectAccountSafeDisks(
       displayName: redactIdentityText(disk.displayName, account, secretValues) ?? id,
       vendor: redactIdentityText(disk.vendor, account, secretValues),
       model: redactIdentityText(disk.model, account, secretValues),
+      type: redactCredentialText(disk.type, secretValues),
       temperatureC: redactCredentialNumber(disk.temperatureC, secretValues),
       sizeBytes: redactCredentialNumber(disk.sizeBytes, secretValues),
     };
@@ -291,25 +294,32 @@ export function projectSafeResources(
   };
 }
 
-export function normalizeStatus(value: unknown): string {
+export type SynologyHealthStatus = "normal" | "warning" | "degraded" | "critical" | "unknown";
+
+const NORMAL_STATUS_ALIASES = new Set(["normal", "ok", "good", "healthy"]);
+const WARNING_STATUS_ALIASES = new Set(["warning"]);
+const DEGRADED_STATUS_ALIASES = new Set([
+  "degraded",
+  "attention",
+  "failing",
+  "unhealthy",
+  "bad",
+  "abnormal",
+]);
+const CRITICAL_STATUS_ALIASES = new Set(["critical", "crashed", "error", "failed"]);
+
+export function normalizeStatus(value: unknown): SynologyHealthStatus {
   const raw = boundText(value, MAX_STATUS);
   if (!raw) return "unknown";
   const normalized = raw.toLocaleLowerCase("und").replaceAll(" ", "_");
-  if (normalized === "ok" || normalized === "good" || normalized === "healthy") return "normal";
-  if (
-    normalized === "attention" ||
-    normalized === "failing" ||
-    normalized === "unhealthy" ||
-    normalized === "bad" ||
-    normalized === "abnormal"
-  )
-    return "degraded";
-  if (normalized === "crashed" || normalized === "error" || normalized === "failed")
-    return "critical";
-  return raw.length > MAX_STATUS ? raw.slice(0, MAX_STATUS) : raw;
+  if (NORMAL_STATUS_ALIASES.has(normalized)) return "normal";
+  if (WARNING_STATUS_ALIASES.has(normalized)) return "warning";
+  if (DEGRADED_STATUS_ALIASES.has(normalized)) return "degraded";
+  if (CRITICAL_STATUS_ALIASES.has(normalized)) return "critical";
+  return "unknown";
 }
 
-export function normalizeOptionalStatus(value: unknown): string | null {
+export function normalizeOptionalStatus(value: unknown): SynologyHealthStatus | null {
   const raw = boundText(value, MAX_STATUS);
   return raw === null ? null : normalizeStatus(raw);
 }

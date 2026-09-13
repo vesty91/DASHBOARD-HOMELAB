@@ -634,6 +634,57 @@ describe("SynologyService", () => {
     expect(overview.storage.data?.disks[0]?.status).toBe("normal");
   });
 
+  it("redacts classification secrets and canonicalizes unrecognized storage status", async () => {
+    const secret = "VERY-UNLIKELY-SECRET-XYZ";
+    const created = createService(
+      async (options) => {
+        const api = new URL(String(options.url)).searchParams.get("api");
+        if (api === "SYNO.API.Info") return json(infoPayload());
+        if (options.method === "POST") {
+          if (options.body?.includes("method=login"))
+            return json({ success: true, data: { sid: "SIDTOKEN", synotoken: "TOK" } });
+          return json({ success: true, data: {} });
+        }
+        if (api === "SYNO.Storage.CGI.Storage")
+          return json({
+            success: true,
+            data: {
+              volumes: [
+                {
+                  id: "volume_1",
+                  filesystem: secret,
+                  raid_type: secret,
+                  status: secret,
+                  size: { total: 2000, used: 400 },
+                },
+              ],
+              disks: [
+                {
+                  id: "sata1",
+                  type: secret,
+                  status: secret,
+                  smart_status: secret,
+                  size_total: 8000,
+                },
+              ],
+            },
+          });
+        return semanticPasswordRequest({ password: secret })(options);
+      },
+      undefined,
+      undefined,
+      { password: secret },
+    );
+    const overview = await created.synology.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(JSON.stringify(overview)).not.toContain(secret);
+    expect(overview.storage.data?.volumes[0]?.filesystem).toBe("[REDACTED]");
+    expect(overview.storage.data?.volumes[0]?.raidType).toBe("[REDACTED]");
+    expect(overview.storage.data?.volumes[0]?.status).toBe("unknown");
+    expect(overview.storage.data?.disks[0]?.type).toBe("[REDACTED]");
+    expect(overview.storage.data?.disks[0]?.status).toBe("unknown");
+    expect(overview.storage.data?.disks[0]?.smartStatus).toBe("unknown");
+  });
+
   it("does not treat a unique credential SMART string as a disk health failure", async () => {
     const created = createService(maliciousDsmRequest("health"), undefined, undefined, {
       password: MALICIOUS_PASSWORD,
