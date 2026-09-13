@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { assertWidgetContract } from "./definition";
 import {
+  pruneServiceStatusSelectedIds,
   SERVICE_STATUS_DEFAULT_MAX_ITEMS,
   serviceStatusConfigSchema,
   serviceStatusContract,
+  sourceTypeFromServiceStatusId,
 } from "./service-status";
 
 describe("service-status widget", () => {
@@ -38,5 +40,18 @@ describe("service-status widget", () => {
     expect(() => serviceStatusConfigSchema.parse({ selectedIds: ["synology"] })).toThrow();
     expect(() => serviceStatusConfigSchema.parse({ maxItems: 25 })).toThrow();
     expect(() => serviceStatusConfigSchema.parse({ selectedSources: ["generic"] })).toThrow();
+  });
+
+  it("prunes selected ids that no longer match selected sources", () => {
+    const dockerId = "docker:11111111-1111-4111-8111-111111111111";
+    const jellyfinId = "jellyfin:22222222-2222-4222-8222-222222222222";
+    expect(sourceTypeFromServiceStatusId(dockerId)).toBe("docker");
+    expect(pruneServiceStatusSelectedIds([dockerId, jellyfinId], ["jellyfin"])).toEqual([
+      jellyfinId,
+    ]);
+    expect(pruneServiceStatusSelectedIds([dockerId, jellyfinId], [])).toEqual([
+      dockerId,
+      jellyfinId,
+    ]);
   });
 });

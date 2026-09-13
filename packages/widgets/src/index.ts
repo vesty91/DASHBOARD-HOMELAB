@@ -95,10 +95,12 @@ export {
   SERVICE_STATUS_ID_PATTERN,
   SERVICE_STATUS_MAX_ITEMS,
   SERVICE_STATUS_SOURCE_TYPES,
+  pruneServiceStatusSelectedIds,
   serviceStatusConfigSchema,
   serviceStatusContract,
   serviceStatusDefaultConfig,
   serviceStatusDraftConfig,
+  sourceTypeFromServiceStatusId,
 } from "./service-status";
 export type {
   UptimeKumaStatusConfig,

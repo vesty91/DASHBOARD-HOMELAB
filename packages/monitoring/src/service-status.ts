@@ -88,7 +88,25 @@ function freezeCatalogItem(item: ServiceStatusCatalogItem): ServiceStatusCatalog
   return Object.freeze({ ...item });
 }
 
+function subjectFingerprint(subject: unknown): string {
+  if (!subject || typeof subject !== "object") return "";
+  const record = subject as Record<string, unknown>;
+  const direct = Array.isArray(record.directPermissions)
+    ? [...record.directPermissions].map(String).sort()
+    : [];
+  const group = Array.isArray(record.groupPermissions)
+    ? [...record.groupPermissions].map(String).sort()
+    : [];
+  return JSON.stringify({
+    status: typeof record.status === "string" ? record.status : "",
+    isSystemAdmin: record.isSystemAdmin === true,
+    directPermissions: direct,
+    groupPermissions: group,
+  });
+}
+
 function queryKey(
+  collectors: readonly ServiceStatusCollector[],
   actor: ServiceStatusActor,
   query: ServiceStatusQuery,
   kind: "list" | "catalog",
@@ -96,6 +114,10 @@ function queryKey(
   return JSON.stringify({
     kind,
     userId: actor.userId,
+    authorization: subjectFingerprint(actor.subject),
+    readableSources: collectors
+      .filter((collector) => collector.canRead(actor))
+      .map((collector) => collector.sourceType),
     selectedSources: query.selectedSources,
     selectedIds: query.selectedIds,
     maxItems: query.maxItems,
@@ -133,7 +155,7 @@ export function createServiceStatusService(deps: ServiceStatusServiceDeps) {
     const settled = await Promise.all(
       collectors.map(async (collector) => {
         try {
-          return { ok: true as const, items: await collector.collect(actor) };
+          return { ok: true as const, items: await collector.collect(actor, query) };
         } catch (error: unknown) {
           void error;
           return { ok: false as const, items: [] as const };
@@ -165,7 +187,7 @@ export function createServiceStatusService(deps: ServiceStatusServiceDeps) {
     const settled = await Promise.all(
       collectors.map(async (collector) => {
         try {
-          return await collector.listIdentities(actor);
+          return await collector.listIdentities(actor, query);
         } catch (error: unknown) {
           void error;
           return [];
@@ -193,12 +215,16 @@ export function createServiceStatusService(deps: ServiceStatusServiceDeps) {
     async list(input: unknown, actor: ServiceStatusActor): Promise<ServiceStatusListResult> {
       const query = parseQuery(input);
       const run = () => collectList(actor, query);
-      return deps.coalescer ? deps.coalescer.run(queryKey(actor, query, "list"), run) : run();
+      return deps.coalescer
+        ? deps.coalescer.run(queryKey(deps.collectors, actor, query, "list"), run)
+        : run();
     },
     async catalog(input: unknown, actor: ServiceStatusActor): Promise<ServiceStatusCatalogResult> {
       const query = parseQuery(input);
       const run = () => collectCatalog(actor, query);
-      return deps.coalescer ? deps.coalescer.run(queryKey(actor, query, "catalog"), run) : run();
+      return deps.coalescer
+        ? deps.coalescer.run(queryKey(deps.collectors, actor, query, "catalog"), run)
+        : run();
     },
   };
 }

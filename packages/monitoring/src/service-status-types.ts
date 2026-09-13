@@ -71,8 +71,14 @@ export interface ServiceStatusActor {
 export interface ServiceStatusCollector {
   readonly sourceType: ServiceSourceType;
   canRead(actor: ServiceStatusActor): boolean;
-  listIdentities(actor: ServiceStatusActor): Promise<readonly ServiceStatusCatalogItem[]>;
-  collect(actor: ServiceStatusActor): Promise<readonly ServiceStatusItem[]>;
+  listIdentities(
+    actor: ServiceStatusActor,
+    query: ServiceStatusQuery,
+  ): Promise<readonly ServiceStatusCatalogItem[]>;
+  collect(
+    actor: ServiceStatusActor,
+    query: ServiceStatusQuery,
+  ): Promise<readonly ServiceStatusItem[]>;
 }
 
 export interface ServiceStatusCoalescer {

@@ -29,16 +29,20 @@ function item(
 function collector(
   sourceType: ServiceStatusCollector["sourceType"],
   options: {
-    canRead?: boolean;
+    canRead?: boolean | ((actor: ServiceStatusActor) => boolean);
     items?: readonly ServiceStatusItem[];
     identities?: readonly ServiceStatusCatalogItem[];
     fail?: boolean;
     collectCalls?: { count: number };
+    hold?: Promise<void>;
   } = {},
 ): ServiceStatusCollector {
   return {
     sourceType,
-    canRead: () => options.canRead !== false,
+    canRead(actor) {
+      if (typeof options.canRead === "function") return options.canRead(actor);
+      return options.canRead !== false;
+    },
     async listIdentities() {
       if (options.fail) throw new Error("identity failed");
       return (
@@ -48,11 +52,18 @@ function collector(
       );
     },
     async collect() {
+      if (options.hold) await options.hold;
       if (options.collectCalls) options.collectCalls.count += 1;
       if (options.fail) throw new Error("collect failed");
       return options.items ?? [];
     },
   };
+}
+
+function hasDirectPermission(actor: ServiceStatusActor, permission: string): boolean {
+  if (!actor.subject || typeof actor.subject !== "object") return false;
+  const direct = (actor.subject as { directPermissions?: unknown }).directPermissions;
+  return Array.isArray(direct) && direct.includes(permission);
 }
 
 describe("service status aggregator", () => {
@@ -285,6 +296,67 @@ describe("service status aggregator", () => {
     expect(first.items.map((entry) => entry.name)).toEqual(["Alpha", "Beta"]);
     expect(first.truncated).toBe(true);
     expect(second.items.map((entry) => entry.name)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("does not coalesce in-flight lists across different authorizations", async () => {
+    let release: () => void = () => undefined;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const coalescer = new MemoryServiceStatusCoalescer();
+    const service = createServiceStatusService({
+      collectors: [
+        collector("synology", {
+          hold,
+          canRead: (current) => hasDirectPermission(current, "synology.read"),
+          items: [
+            item({
+              id: "synology:11111111-1111-4111-8111-111111111111",
+              name: "NAS",
+              sourceType: "synology",
+            }),
+          ],
+        }),
+        collector("jellyfin", {
+          hold,
+          canRead: (current) => hasDirectPermission(current, "jellyfin.read"),
+          items: [
+            item({
+              id: "jellyfin:22222222-2222-4222-8222-222222222222",
+              name: "Media",
+              sourceType: "jellyfin",
+            }),
+          ],
+        }),
+      ],
+      coalescer,
+    });
+    const privileged: ServiceStatusActor = {
+      userId: "user-1",
+      subject: {
+        status: "active",
+        isSystemAdmin: false,
+        directPermissions: ["synology.read", "jellyfin.read"],
+      },
+    };
+    const reduced: ServiceStatusActor = {
+      userId: "user-1",
+      subject: {
+        status: "active",
+        isSystemAdmin: false,
+        directPermissions: ["jellyfin.read"],
+      },
+    };
+    const first = service.list({}, privileged);
+    const second = service.list({}, reduced);
+    release();
+    const [privilegedResult, reducedResult] = await Promise.all([first, second]);
+    expect(privilegedResult.items.map((entry) => entry.sourceType)).toEqual([
+      "synology",
+      "jellyfin",
+    ]);
+    expect(reducedResult.items.map((entry) => entry.sourceType)).toEqual(["jellyfin"]);
+    expect(JSON.stringify(reducedResult)).not.toMatch(/NAS|synology/u);
   });
 
   it("never invents placeholder services", async () => {

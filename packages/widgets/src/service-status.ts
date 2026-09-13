@@ -81,6 +81,25 @@ export type ServiceStatusDraftConfig = {
   maxItems: number;
 };
 
+export function sourceTypeFromServiceStatusId(id: string): ServiceStatusSourceType | null {
+  const prefix = id.split(":")[0];
+  return SERVICE_STATUS_SOURCE_TYPES.includes(prefix as ServiceStatusSourceType)
+    ? (prefix as ServiceStatusSourceType)
+    : null;
+}
+
+export function pruneServiceStatusSelectedIds(
+  selectedIds: readonly string[],
+  selectedSources: readonly ServiceStatusSourceType[],
+): string[] {
+  if (selectedSources.length === 0) return [...selectedIds];
+  const allowed = new Set<ServiceStatusSourceType>(selectedSources);
+  return selectedIds.filter((id) => {
+    const source = sourceTypeFromServiceStatusId(id);
+    return source !== null && allowed.has(source);
+  });
+}
+
 export const serviceStatusDraftConfig: ServiceStatusDraftConfig = {
   selectedSources: [],
   selectedIds: [],

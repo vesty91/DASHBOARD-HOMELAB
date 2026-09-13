@@ -1,5 +1,6 @@
 "use client";
 import {
+  pruneServiceStatusSelectedIds,
   SERVICE_STATUS_SOURCE_TYPES,
   type ServiceStatusDraftConfig,
   type ServiceStatusSourceType,
@@ -59,16 +60,18 @@ export function ServiceStatusForm({
               <input
                 type="checkbox"
                 checked={config.selectedSources.includes(source)}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const selectedSources = toggleValue(
+                    config.selectedSources,
+                    source,
+                    event.target.checked,
+                  );
                   onChange({
                     ...config,
-                    selectedSources: toggleValue(
-                      config.selectedSources,
-                      source,
-                      event.target.checked,
-                    ),
-                  })
-                }
+                    selectedSources,
+                    selectedIds: pruneServiceStatusSelectedIds(config.selectedIds, selectedSources),
+                  });
+                }}
               />{" "}
               {SOURCE_LABELS[source]}
             </label>

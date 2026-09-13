@@ -27,7 +27,20 @@ import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 
 const APP_PAGE_SIZE = 100;
-const APP_MAX_PAGES = 2;
+const APP_MAX_PAGES = 20;
+
+function selectedAppRecordIds(selectedIds: readonly string[]): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  for (const selected of selectedIds) {
+    if (!selected.startsWith("app:")) continue;
+    const recordId = selected.slice("app:".length);
+    if (!recordId || seen.has(recordId)) continue;
+    seen.add(recordId);
+    found.push(recordId);
+  }
+  return found;
+}
 
 function asIntegrationActor(actor: ServiceStatusActor): IntegrationActor {
   return actor as IntegrationActor;
@@ -66,8 +79,26 @@ async function listReadableApps(apps: AppService, actor: AppActor): Promise<AppD
   for (let page = 0; page < APP_MAX_PAGES; page += 1) {
     const listed = await apps.list(actor, { limit: APP_PAGE_SIZE, ...(cursor ? { cursor } : {}) });
     found.push(...listed.items);
-    if (!listed.nextCursor || listed.items.length < APP_PAGE_SIZE) return found;
+    if (!listed.nextCursor) return found;
     cursor = listed.nextCursor;
+  }
+  return found;
+}
+
+async function resolveReadableApps(
+  apps: AppService,
+  actor: AppActor,
+  selectedIds: readonly string[],
+): Promise<AppDto[]> {
+  const wanted = selectedAppRecordIds(selectedIds);
+  if (wanted.length === 0) return listReadableApps(apps, actor);
+  const found: AppDto[] = [];
+  for (const id of wanted) {
+    try {
+      found.push(await apps.get(id, actor));
+    } catch (error: unknown) {
+      void error;
+    }
   }
   return found;
 }
@@ -84,14 +115,14 @@ function appCollector(apps: AppService): ServiceStatusCollector {
         hasPermission(appActor.subject, "app.read"),
       );
     },
-    async listIdentities(actor) {
-      const records = await listReadableApps(apps, asAppActor(actor));
+    async listIdentities(actor, query) {
+      const records = await resolveReadableApps(apps, asAppActor(actor), query.selectedIds);
       return records.map((record) =>
         freezeCatalog({ id: `app:${record.id}`, name: record.name, sourceType: "app" }),
       );
     },
-    async collect(actor) {
-      const records = await listReadableApps(apps, asAppActor(actor));
+    async collect(actor, query) {
+      const records = await resolveReadableApps(apps, asAppActor(actor), query.selectedIds);
       return records.map((record) =>
         freezeItem({
           id: `app:${record.id}`,
