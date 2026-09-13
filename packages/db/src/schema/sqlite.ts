@@ -348,3 +348,24 @@ export const boardGroupPermissions = sqliteTable(
     ),
   ],
 );
+export const jobs = sqliteTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: ["heartbeat"] }).notNull(),
+    status: text("status", { enum: ["queued", "running", "succeeded", "failed"] }).notNull(),
+    scheduledAt: integer("scheduled_at", { mode: "timestamp_ms" }).notNull(),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }),
+    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+    attempt: integer("attempt").notNull().default(1),
+    errorCode: text("error_code"),
+    errorMessageSafe: text("error_message_safe"),
+    metadataJson: text("metadata_json").notNull().default("{}"),
+  },
+  (t) => [
+    index("jobs_status_scheduled_at_idx").on(t.status, t.scheduledAt),
+    check("jobs_type_valid", sql`${t.type} IN ('heartbeat')`),
+    check("jobs_status_valid", sql`${t.status} IN ('queued','running','succeeded','failed')`),
+    check("jobs_attempt_positive", sql`${t.attempt} > 0`),
+  ],
+);

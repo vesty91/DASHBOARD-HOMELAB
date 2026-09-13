@@ -1,2 +1,2 @@
 export { workerOptionsFromEnv } from "./env";
-export { startWorker, type WorkerHandle, type WorkerOptions } from "./server";
+export { startWorker, type JobRecorder, type WorkerHandle, type WorkerOptions } from "./server";

@@ -50,6 +50,7 @@ function createCaller(
     | "serviceStatus"
     | "runtime"
     | "realtimeTickets"
+    | "jobs"
   > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
@@ -60,6 +61,7 @@ function createCaller(
     serviceStatus?: ServiceStatusService;
     runtime?: ApiContext["runtime"];
     realtimeTickets?: ApiContext["realtimeTickets"];
+    jobs?: ApiContext["jobs"];
   },
 ) {
   return createAppCaller({
@@ -78,6 +80,9 @@ function createCaller(
       issue(userId: string) {
         return issueRealtimeTicket("a".repeat(32), userId);
       },
+    },
+    jobs: {
+      listRecent: async () => [],
     },
     ...context,
   });
@@ -1140,5 +1145,63 @@ describe("runtime and realtime tRPC", () => {
         docker,
       }).realtime.ticket(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("lists persisted jobs for settings.read without leaking secrets", async () => {
+    const caller = createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["settings.read"],
+        },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      jobs: {
+        async listRecent() {
+          return [
+            {
+              id: "job-1",
+              type: "heartbeat",
+              status: "succeeded",
+              scheduledAt: "2026-09-13T00:00:00.000Z",
+              startedAt: "2026-09-13T00:00:00.000Z",
+              finishedAt: "2026-09-13T00:00:00.000Z",
+              attempt: 1,
+              errorCode: null,
+              errorMessageSafe: null,
+            },
+          ];
+        },
+      },
+    });
+    await expect(caller.jobs.list()).resolves.toEqual({
+      items: [
+        {
+          id: "job-1",
+          type: "heartbeat",
+          status: "succeeded",
+          scheduledAt: "2026-09-13T00:00:00.000Z",
+          startedAt: "2026-09-13T00:00:00.000Z",
+          finishedAt: "2026-09-13T00:00:00.000Z",
+          attempt: 1,
+          errorCode: null,
+          errorMessageSafe: null,
+        },
+      ],
+    });
+    await expect(
+      createCaller({
+        actor,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+      }).jobs.list(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

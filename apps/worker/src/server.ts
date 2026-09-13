@@ -1,6 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createConfiguredEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
 
+export interface JobRecorder {
+  recordHeartbeat(input: {
+    occurredAt: Date;
+    status: "succeeded" | "failed";
+    errorCode?: "INTERNAL_ERROR" | "REDIS_DOWN";
+  }): Promise<void>;
+}
+
 export interface WorkerOptions {
   bus?: EventBus;
   redisUrl?: string;
@@ -8,6 +16,7 @@ export interface WorkerOptions {
   port?: number;
   intervalMs?: number;
   now?: () => Date;
+  jobs?: JobRecorder;
 }
 
 export interface WorkerHandle {
@@ -70,9 +79,13 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
   if (!address || typeof address === "string") throw new Error("WORKER_BIND_FAILED");
 
   const tick = async () => {
+    const occurredAt = now();
     try {
-      const event = heartbeat(now());
+      const event = heartbeat(occurredAt);
       await bus.publish(event);
+      if (options.jobs) {
+        await options.jobs.recordHeartbeat({ occurredAt, status: "succeeded" });
+      }
       lastHeartbeatAt = event.occurredAt;
       lastErrorCode = null;
     } catch {
@@ -81,12 +94,23 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
         type: "job.failed",
         jobType: "heartbeat",
         errorCode: "INTERNAL_ERROR",
-        occurredAt: now().toISOString(),
+        occurredAt: occurredAt.toISOString(),
       };
       try {
         await bus.publish(failed);
       } catch {
         void failed;
+      }
+      if (options.jobs) {
+        try {
+          await options.jobs.recordHeartbeat({
+            occurredAt,
+            status: "failed",
+            errorCode: "INTERNAL_ERROR",
+          });
+        } catch {
+          void occurredAt;
+        }
       }
     }
   };

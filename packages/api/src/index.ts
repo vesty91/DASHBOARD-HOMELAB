@@ -56,6 +56,24 @@ import type { RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 import { requireServiceStatusActor } from "./service-status";
 
+export const JOB_LIST_MAX = 50;
+
+export const jobListInputSchema = z.object({
+  limit: z.number().int().min(1).max(JOB_LIST_MAX).default(20),
+});
+
+export interface JobListItem {
+  id: string;
+  type: "heartbeat";
+  status: "queued" | "running" | "succeeded" | "failed";
+  scheduledAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  attempt: number;
+  errorCode: string | null;
+  errorMessageSafe: string | null;
+}
+
 export interface ApiContext {
   actor: BoardActor & AppActor & IntegrationActor;
   boards: BoardService;
@@ -72,6 +90,9 @@ export interface ApiContext {
   runtime: RuntimeStatusService;
   realtimeTickets: {
     issue(userId: string): RealtimeTicket;
+  };
+  jobs: {
+    listRecent(limit: number): Promise<JobListItem[]>;
   };
 }
 export type BoardApiContext = ApiContext;
@@ -543,6 +564,16 @@ export const realtimeRouter = t.router({
   ),
 });
 
+export const jobsRouter = t.router({
+  list: t.procedure.input(jobListInputSchema.optional()).query(({ ctx, input }) =>
+    procedure(async () => {
+      requireSettingsRead(ctx);
+      const items = await ctx.jobs.listRecent(input?.limit ?? 20);
+      return { items };
+    }),
+  ),
+});
+
 export const serviceStatusRouter = t.router({
   list: t.procedure.input(serviceStatusQuerySchema.optional()).query(({ ctx, input }) =>
     procedure(async () => {
@@ -572,6 +603,7 @@ export const dashboardRouter = t.router({
   serviceStatus: serviceStatusRouter,
   runtime: runtimeRouter,
   realtime: realtimeRouter,
+  jobs: jobsRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

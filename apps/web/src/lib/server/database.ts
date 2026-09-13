@@ -5,6 +5,7 @@ import {
   createSqliteAuthStore,
   createSqliteClient,
 } from "@dashboard/db/auth-runtime";
+import { createPostgresqlJobStore, createSqliteJobStore } from "@dashboard/db/job-runtime";
 import { createPostgresqlBoardStore, createSqliteBoardStore } from "@dashboard/db/board-runtime";
 import { createPostgresqlAppStore, createSqliteAppStore } from "@dashboard/db/app-runtime";
 import {
@@ -26,6 +27,7 @@ async function createDatabase() {
       boardStore: createPostgresqlBoardStore(client.pool),
       appStore: createPostgresqlAppStore(client.pool),
       integrationStore: createPostgresqlIntegrationStore(client.pool),
+      jobStore: createPostgresqlJobStore(client),
     };
   }
   const client = createSqliteClient(process.env.DATABASE_URL ?? "./appdata/dashboard.sqlite");
@@ -36,6 +38,7 @@ async function createDatabase() {
     boardStore: createSqliteBoardStore(client.sqlite),
     appStore: createSqliteAppStore(client.sqlite),
     integrationStore: createSqliteIntegrationStore(client.sqlite),
+    jobStore: createSqliteJobStore(client),
   };
 }
 export function getDatabase() {

@@ -450,3 +450,9 @@ simple connect TCP. Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SEC
 
 SSE n'émet pour l'instant que `job.heartbeat` / `job.failed`. Pas de `board.updated` tant que le
 filtrage RBAC n'est pas branché.
+
+| Route       | Permission      | Notes                                                                                             |
+| ----------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| `jobs.list` | `settings.read` | `{ items }` borné (≤ 50). DTO : id, type, status, dates ISO, attempt, errorCode, errorMessageSafe |
+
+Jamais exposés : `metadataJson`, secrets, stack traces, `REDIS_URL`.

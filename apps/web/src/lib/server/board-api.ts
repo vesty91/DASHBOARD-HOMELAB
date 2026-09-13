@@ -249,6 +249,22 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
         return issueRealtimeTicket(secret, userId);
       },
     },
+    jobs: {
+      async listRecent(limit: number) {
+        const rows = await database.jobStore.listRecent(limit);
+        return rows.map((row) => ({
+          id: row.id,
+          type: row.type,
+          status: row.status,
+          scheduledAt: row.scheduledAt.toISOString(),
+          startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+          finishedAt: row.finishedAt ? row.finishedAt.toISOString() : null,
+          attempt: row.attempt,
+          errorCode: row.errorCode,
+          errorMessageSafe: row.errorMessageSafe,
+        }));
+      },
+    },
   };
 }
 
