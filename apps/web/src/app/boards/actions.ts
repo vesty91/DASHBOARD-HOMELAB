@@ -117,3 +117,13 @@ export async function listAppsForWidgetAction(cursor?: string) {
     throw error;
   }
 }
+
+export async function listJellyfinIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).jellyfin.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

@@ -4,6 +4,11 @@ import { Suspense } from "react";
 import type { DockerIntegrationMetadata } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type {
+  JellyfinIntegrationMetadata,
+  JellyfinOverview,
+  JellyfinSectionReason,
+} from "@dashboard/jellyfin";
+import type {
   SynologyIntegrationMetadata,
   SynologyOverview,
   SynologySection,
@@ -14,6 +19,8 @@ import { AppIcon } from "../../apps/app-icon";
 import { getBoardCaller } from "../../../lib/server/board-api";
 import { dockerUserError } from "../docker-error";
 import { resolveIntegrationDetail } from "../resolve-integration-detail";
+import { jellyfinUserError } from "../jellyfin-error";
+import { JellyfinRefreshButton } from "../jellyfin-refresh-button";
 import { synologyUserError } from "../synology-error";
 import { SynologyRefreshButton } from "../synology-refresh-button";
 
@@ -29,7 +36,12 @@ const STATE_LABELS = {
 } as const;
 
 function GenericIntegrationDetail({ integration }: { integration: IntegrationDto }) {
-  if (integration.type === "docker" || integration.type === "synology") redirect("/forbidden");
+  if (
+    integration.type === "docker" ||
+    integration.type === "synology" ||
+    integration.type === "jellyfin"
+  )
+    redirect("/forbidden");
   return (
     <PageContainer>
       <PageHeader title={integration.name} description={integration.type} />
@@ -433,6 +445,157 @@ async function SynologyOverviewPanel({
   );
 }
 
+function jellyfinReasonLabel(reason: JellyfinSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Jellyfin indisponible.";
+    case "permission-denied":
+      return "Accès Jellyfin refusé.";
+    case "timeout":
+      return "Délai dépassé pour cette section Jellyfin.";
+    case "invalid-response":
+      return "Réponse Jellyfin invalide.";
+    case "unauthorized":
+      return "Clé API Jellyfin invalide.";
+    case "rate-limited":
+      return "Jellyfin a limité les requêtes.";
+    case "dns":
+      return "Le serveur Jellyfin est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Jellyfin.";
+    case "unreachable":
+      return "Le serveur Jellyfin est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Jellyfin indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function playbackModeLabel(mode: "direct-play" | "direct-stream" | "transcode" | null): string {
+  switch (mode) {
+    case "direct-play":
+      return "Direct play";
+    case "direct-stream":
+      return "Direct stream";
+    case "transcode":
+      return "Transcode";
+    case null:
+      return "Indisponible";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+async function JellyfinOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: JellyfinOverview | null = null;
+  try {
+    overview = await caller.jellyfin.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = jellyfinUserError(caught);
+  }
+  const server = overview?.server.data;
+  const sessions = overview?.sessions.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue Jellyfin partielle : certaines sections sont indisponibles.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <section className="jellyfin-summary">
+            <h2>Serveur</h2>
+            {overview.server.status === "unavailable" ? (
+              <Alert tone="warning">{jellyfinReasonLabel(overview.server.reason)}</Alert>
+            ) : null}
+            <p>{server?.serverName ?? "Indisponible"}</p>
+            <p>Version {server?.version ?? "Indisponible"}</p>
+            <p>{server?.productName ?? "Indisponible"}</p>
+            <p>OS {server?.operatingSystem ?? "Indisponible"}</p>
+          </section>
+          <section>
+            <h2>Sessions</h2>
+            {overview.sessions.status === "unavailable" ? (
+              <Alert tone="warning">{jellyfinReasonLabel(overview.sessions.reason)}</Alert>
+            ) : null}
+            <p>{sessions?.activeCount ?? 0} session(s) active(s)</p>
+            {sessions?.sessions.length ? (
+              <div className="ui-table-wrap">
+                <table className="jellyfin-table">
+                  <thead>
+                    <tr>
+                      <th>Utilisateur</th>
+                      <th>Lecture</th>
+                      <th>Client</th>
+                      <th>Mode</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.sessions.map((session) => (
+                      <tr key={session.id}>
+                        <td>{session.userLabel}</td>
+                        <td>{session.nowPlaying?.name ?? "Aucune lecture"}</td>
+                        <td>{session.deviceName ?? session.client ?? "Indisponible"}</td>
+                        <td>{playbackModeLabel(session.playbackMode)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : overview.sessions.status !== "unavailable" ? (
+              <p className="ui-muted">Aucune session active.</p>
+            ) : null}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function JellyfinIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: JellyfinIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Jellyfin" />
+        <Alert tone="warning">Cette intégration Jellyfin est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Jellyfin" />
+      <JellyfinRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement des informations Jellyfin…</p>}>
+        <JellyfinOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 async function SynologyIntegrationDetail({
   id,
   metadata,
@@ -475,6 +638,8 @@ export default async function IntegrationDetailPage({
         return <DockerIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "synology":
         return <SynologyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "jellyfin":
+        return <JellyfinIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

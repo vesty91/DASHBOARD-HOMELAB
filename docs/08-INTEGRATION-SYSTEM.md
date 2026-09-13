@@ -144,9 +144,9 @@ containers.restart
 ### Jellyfin
 
 ```text
-server.info
+server.read
 sessions.read
-transcodes.read
+streams.read
 ```
 
 ### Synology
@@ -222,7 +222,7 @@ Pas d'inventaire `GET /images/json`. Pas de generic invoke. Pas de widget Docker
 
 ## 13. Synology
 
-Statut sur la branche `phase-9-synology` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE / merged (PR #11), tag `phase-9-complete`.
 
 Adapter `synology` composé dans `apps/web`. Transport HTTP(S) vers l'origine DSM.
 Login POST hors URL. Allowlist CGI `entry.cgi` uniquement. Voir ADR 0009.
@@ -246,7 +246,26 @@ Synology. Refresh manuel 10/min. Cache overview 15 s (5 s si partiel).
 
 ## 14. Jellyfin
 
-Utiliser SDK officiel/maintenu si compatible.
+Statut sur la branche `phase-10-jellyfin` : IMPLEMENTED / REVIEW.
+
+Adapter `jellyfin` composé dans `apps/web`. Transport HTTP(S) vers l'origine Jellyfin.
+Auth `X-Emby-Token` uniquement. Allowlist `GET /System/Info` et `GET /Sessions`. Voir ADR 0010.
+
+Capabilities :
+
+```text
+server.read
+sessions.read
+streams.read
+```
+
+`jellyfin.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Jellyfin
+(`integration.use|manage` + `jellyfin.read`). `integration.read` n'est pas requis.
+`integration.list` / `integration.get` omettent `baseUrl`, `config`, `capabilities` et
+l'état des secrets d'un record `jellyfin` sans `integration.manage`.
+
+Widget `jellyfin-sessions` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 8 s
+(5 s si partiel). Aucune fake data. Pas de SDK officiel.
 
 ## 15. Prometheus
 

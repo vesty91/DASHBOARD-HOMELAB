@@ -178,8 +178,13 @@ exigent `integration.manage`.
 La délégation persistante passe par des **permissions supplémentaires de groupe**, gérées
 uniquement par `SYSTEM_ADMIN` sur `/admin/groups`. Un rôle interne `GROUP_GRANTS_<groupId>`
 est lié au groupe via `group_roles` sans modifier `VIEWER` / `USER` / `EDITOR` / `ADMIN`.
-`group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `docker.*`
-ni `settings.manage`.
+Phase 10 : lecture Jellyfin exige (`integration.use` ou `integration.manage`) **et**
+`jellyfin.read`. Cette conjonction suffit pour `jellyfin.integration.get` et
+`/integrations/[id]` Jellyfin : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `jellyfin.read`.
+
+`group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
+`docker.*` ni `settings.manage`.
 
 ## 10. Audit
 

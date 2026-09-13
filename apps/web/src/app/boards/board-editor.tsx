@@ -8,14 +8,19 @@ import {
   type SetStateAction,
 } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
-import type { AppTileView, WidgetCatalogEntry } from "@dashboard/widgets";
+import type { AppTileView, JellyfinSessionsView, WidgetCatalogEntry } from "@dashboard/widgets";
 import {
   APP_TILE_UNSET_APP_ID,
   appTileDraftConfig,
   bookmarksDefaultConfig,
   clockDefaultConfig,
+  jellyfinSessionsDraftConfig,
 } from "@dashboard/widgets";
-import { WidgetConfigForm, WidgetRenderer } from "@dashboard/widgets/runtime";
+import {
+  WidgetConfigForm,
+  WidgetRenderer,
+  type JellyfinIntegrationOption,
+} from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
 import { useRouter } from "next/navigation";
 import {
@@ -34,6 +39,8 @@ function defaultConfig(widgetType: string): unknown {
       return bookmarksDefaultConfig;
     case "app-tile":
       return appTileDraftConfig;
+    case "jellyfin-sessions":
+      return jellyfinSessionsDraftConfig;
     default:
       return {};
   }
@@ -45,6 +52,8 @@ export function BoardEditor({
   snapshot,
   catalog,
   appViews,
+  jellyfinViews = {},
+  jellyfinIntegrations = [],
   canReadApps,
   conflict,
   conflictRef,
@@ -56,6 +65,8 @@ export function BoardEditor({
   snapshot: BoardSnapshot;
   catalog: readonly WidgetCatalogEntry[];
   appViews: Record<string, AppTileView>;
+  jellyfinViews?: Record<string, JellyfinSessionsView>;
+  jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   canReadApps: boolean;
   conflict: boolean;
   conflictRef: MutableRefObject<boolean>;
@@ -71,6 +82,7 @@ export function BoardEditor({
   const [draftTitle, setDraftTitle] = useState("");
   const [draftConfig, setDraftConfig] = useState<unknown>(null);
   const [pendingAppTile, setPendingAppTile] = useState(false);
+  const [pendingJellyfin, setPendingJellyfin] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -139,6 +151,7 @@ export function BoardEditor({
     setStatus("Sauvegardé");
     setCatalogOpen(false);
     setPendingAppTile(false);
+    setPendingJellyfin(false);
     router.refresh();
   };
 
@@ -224,33 +237,56 @@ export function BoardEditor({
       </div>
       {catalogOpen && (
         <section aria-label="Catalogue de widgets">
-          {pendingAppTile ? (
+          {pendingAppTile || pendingJellyfin ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void addWidget("app-tile", draftConfig ?? appTileDraftConfig);
+                void addWidget(
+                  pendingJellyfin ? "jellyfin-sessions" : "app-tile",
+                  draftConfig ??
+                    (pendingJellyfin ? jellyfinSessionsDraftConfig : appTileDraftConfig),
+                );
               }}
             >
               <WidgetConfigForm
-                widgetType="app-tile"
-                config={draftConfig ?? appTileDraftConfig}
+                widgetType={pendingJellyfin ? "jellyfin-sessions" : "app-tile"}
+                config={
+                  draftConfig ??
+                  (pendingJellyfin ? jellyfinSessionsDraftConfig : appTileDraftConfig)
+                }
                 onChange={setDraftConfig}
-                permissionDenied={!canReadApps}
+                permissionDenied={
+                  pendingJellyfin ? jellyfinIntegrations.length === 0 : !canReadApps
+                }
                 loadApps={listAppsForWidgetAction}
+                jellyfinIntegrations={jellyfinIntegrations}
               />
               <button
                 type="submit"
                 disabled={
-                  !canReadApps ||
-                  selectedAppId === APP_TILE_UNSET_APP_ID ||
-                  !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-                    selectedAppId,
-                  )
+                  pendingJellyfin
+                    ? !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        typeof (draftConfig as { integrationId?: unknown })?.integrationId ===
+                          "string"
+                          ? (draftConfig as { integrationId: string }).integrationId
+                          : "",
+                      )
+                    : !canReadApps ||
+                      selectedAppId === APP_TILE_UNSET_APP_ID ||
+                      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        selectedAppId,
+                      )
                 }
               >
-                Ajouter la tuile
+                {pendingJellyfin ? "Ajouter le widget" : "Ajouter la tuile"}
               </button>
-              <button type="button" onClick={() => setPendingAppTile(false)}>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingAppTile(false);
+                  setPendingJellyfin(false);
+                }}
+              >
                 Annuler
               </button>
             </form>
@@ -279,6 +315,11 @@ export function BoardEditor({
                         if (entry.id === "app-tile") {
                           setDraftConfig(appTileDraftConfig);
                           setPendingAppTile(true);
+                          return;
+                        }
+                        if (entry.id === "jellyfin-sessions") {
+                          setDraftConfig(jellyfinSessionsDraftConfig);
+                          setPendingJellyfin(true);
                           return;
                         }
                         void addWidget(entry.id, defaultConfig(entry.id));
@@ -322,6 +363,7 @@ export function BoardEditor({
                   <WidgetRenderer
                     item={entry}
                     {...(appViews[entry.id] ? { appView: appViews[entry.id] } : {})}
+                    {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -366,8 +408,9 @@ export function BoardEditor({
             widgetType={editing.widgetType}
             config={draftConfig}
             onChange={setDraftConfig}
-            permissionDenied={!canReadApps}
+            permissionDenied={!canReadApps && editing.widgetType === "app-tile"}
             loadApps={listAppsForWidgetAction}
+            jellyfinIntegrations={jellyfinIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

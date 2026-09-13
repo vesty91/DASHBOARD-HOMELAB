@@ -9,6 +9,7 @@ import { createCaller as createAppCaller, type ApiContext } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
+import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
@@ -16,8 +17,14 @@ const actor = {
   subject: { status: "active" as const, isSystemAdmin: false },
 };
 const synology = {} as SynologyService;
-function createCaller(context: Omit<ApiContext, "synology"> & { synology?: SynologyService }) {
-  return createAppCaller({ synology, ...context });
+const jellyfin = {} as JellyfinService;
+function createCaller(
+  context: Omit<ApiContext, "synology" | "jellyfin"> & {
+    synology?: SynologyService;
+    jellyfin?: JellyfinService;
+  },
+) {
+  return createAppCaller({ synology, jellyfin, ...context });
 }
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({

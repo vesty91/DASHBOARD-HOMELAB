@@ -31,9 +31,10 @@ describe("permission resolver", () => {
       ),
     ).toBe(false);
   });
-  it("does not grant Docker or Synology permissions to the default ADMIN role", () => {
+  it("does not grant Docker, Synology or Jellyfin permissions to the default ADMIN role", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("docker.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("synology.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("jellyfin.read");
   });
   it("grants active system admins the catalog", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "backup.manage")).toBe(true);

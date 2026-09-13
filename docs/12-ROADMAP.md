@@ -184,7 +184,7 @@ Hors scope : widgets Docker, realtime, inventaire `/images/json`, socket Unix di
 
 ## Phase 9 — Synology
 
-Statut sur la branche `phase-9-synology` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE / merged (PR #11), tag `phase-9-complete`.
 
 Livrables :
 
@@ -201,12 +201,19 @@ Hors scope : widgets Synology, FileStation, reboot, polling, Phase 10.
 
 ## Phase 10 — Jellyfin
 
+Statut sur la branche `phase-10-jellyfin` : IMPLEMENTED / REVIEW.
+
 Livrables :
 
-- info server ;
-- sessions ;
-- streams ;
-- transcode.
+- adapter `jellyfin` via l'API officielle (`/System/Info`, `/Sessions`) ;
+- info serveur (nom, version, produit, OS) ;
+- sessions actives et lecture en cours ;
+- mode direct play / direct stream / transcode sans invention ;
+- widget `jellyfin-sessions` (`publicSafe=false`) ;
+- permissions `jellyfin.read` ;
+- cache 8 s / 5 s, coalescer, refresh 10/min.
+
+Hors scope : contrôle de lecture, users admin, transcode jobs, Phase 11.
 
 ## Phase 11 — Immich
 

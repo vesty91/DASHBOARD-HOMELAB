@@ -4,6 +4,12 @@ import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
+  createJellyfinService,
+  MemoryJellyfinOverviewCoalescer,
+  MemoryJellyfinRefreshFence,
+  MemoryJellyfinRefreshRateLimiter,
+} from "@dashboard/jellyfin";
+import {
   createSynologyService,
   MemorySynologyEnrollmentRateLimiter,
   MemorySynologyOverviewCoalescer,
@@ -33,6 +39,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     synologyEnrollmentRateLimiter: MemorySynologyEnrollmentRateLimiter;
     synologyRefreshFence: MemorySynologyRefreshFence;
     synologyOverviewCoalescer: MemorySynologyOverviewCoalescer;
+    jellyfinRefreshRateLimiter: MemoryJellyfinRefreshRateLimiter;
+    jellyfinRefreshFence: MemoryJellyfinRefreshFence;
+    jellyfinOverviewCoalescer: MemoryJellyfinOverviewCoalescer;
   };
 };
 
@@ -46,6 +55,9 @@ function integrationRuntime() {
     synologyEnrollmentRateLimiter: new MemorySynologyEnrollmentRateLimiter(),
     synologyRefreshFence: new MemorySynologyRefreshFence(),
     synologyOverviewCoalescer: new MemorySynologyOverviewCoalescer(),
+    jellyfinRefreshRateLimiter: new MemoryJellyfinRefreshRateLimiter(),
+    jellyfinRefreshFence: new MemoryJellyfinRefreshFence(),
+    jellyfinOverviewCoalescer: new MemoryJellyfinOverviewCoalescer(),
   });
 }
 
@@ -85,6 +97,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       enrollmentRateLimiter: runtime.synologyEnrollmentRateLimiter,
       refreshFence: runtime.synologyRefreshFence,
       overviewCoalescer: runtime.synologyOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
+    }),
+    jellyfin: createJellyfinService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.jellyfinRefreshRateLimiter,
+      refreshFence: runtime.jellyfinRefreshFence,
+      overviewCoalescer: runtime.jellyfinOverviewCoalescer,
       ...(keyring ? { keyring } : {}),
     }),
   };

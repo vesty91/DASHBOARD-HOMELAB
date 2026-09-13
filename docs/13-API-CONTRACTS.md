@@ -46,6 +46,12 @@ synology.overview.refresh
 synology.auth.enrollDevice
 synology.auth.clearDevice
 
+jellyfin.permissions
+jellyfin.integration.list
+jellyfin.integration.get
+jellyfin.overview.get
+jellyfin.overview.refresh
+
 widget.catalog
 widget.data
 
@@ -302,6 +308,21 @@ System : `model`, `dsmVersion`, `uptimeSeconds`, `systemTemperatureC`, `ramTotal
 Resources : CPU `user+system+other` (somme dans `[0, 100]`), RAM en octets (`avail <= total`,
 total `> 0`) ; sinon section `invalid-response`.
 Volumes / disks : capacité, utilisé, état, température, SMART si présent.
+
+# Jellyfin API — Phase 10
+
+Routeur tRPC `jellyfin` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                       | Permission                 | Capability                                       | Notes                                                |
+| --------------------------- | -------------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| `jellyfin.permissions`      | auth active                | —                                                | `canRead`, `canManage`                               |
+| `jellyfin.integration.list` | use/manage + jellyfin.read | —                                                | `{ id, name, enabled }[]`                            |
+| `jellyfin.integration.get`  | use/manage + jellyfin.read | —                                                | `{ id, name, enabled }`                              |
+| `jellyfin.overview.get`     | use/manage + jellyfin.read | `server.read` + `sessions.read` + `streams.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `jellyfin.overview.refresh` | use/manage + jellyfin.read | idem                                             | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `server` /
+`sessions`. Auth : header `X-Emby-Token` uniquement.
 
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 

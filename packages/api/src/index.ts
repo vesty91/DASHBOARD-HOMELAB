@@ -36,6 +36,7 @@ import {
   dockerLogsInputSchema,
   type DockerService,
 } from "@dashboard/docker";
+import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
   synologyEnrollDeviceSchema,
   synologyIntegrationInputSchema,
@@ -50,6 +51,7 @@ export interface ApiContext {
   integrations: IntegrationService;
   docker: DockerService;
   synology: SynologyService;
+  jellyfin: JellyfinService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -350,6 +352,29 @@ export const synologyRouter = t.router({
       ),
   }),
 });
+export const jellyfinRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.jellyfin.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.jellyfin.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(jellyfinIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.jellyfin.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(jellyfinIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.jellyfin.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(jellyfinIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.jellyfin.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -357,6 +382,7 @@ export const dashboardRouter = t.router({
   integration: integrationsRouter,
   docker: dockerRouter,
   synology: synologyRouter,
+  jellyfin: jellyfinRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

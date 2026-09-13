@@ -36,6 +36,15 @@ const synologyDenied = {
   },
 };
 
+const jellyfinDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("jellyfin unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -47,6 +56,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       synology: synologyDenied,
+      jellyfin: jellyfinDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -73,6 +83,7 @@ describe("resolveIntegrationDetail", () => {
           get: async () => ({ id: SYNOLOGY_ID, name: "NAS Lab", enabled: true }),
         },
       },
+      jellyfin: jellyfinDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -100,6 +111,14 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      jellyfin: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Définition Jellyfin introuvable" });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -117,6 +136,7 @@ describe("resolveIntegrationDetail", () => {
           },
         },
         synology: synologyDenied,
+        jellyfin: jellyfinDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -138,6 +158,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: synologyGet },
       },
+      jellyfin: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -157,6 +181,7 @@ describe("resolveIntegrationDetail", () => {
           },
         },
         synology: synologyDenied,
+        jellyfin: jellyfinDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

@@ -7,9 +7,9 @@ describe("application integration registry", () => {
     expect(createProductionIntegrationRegistry().list()).toEqual([]);
   });
 
-  it("registers Docker and Synology in the application composition", () => {
+  it("registers Docker, Synology and Jellyfin in the application composition", () => {
     const registry = createApplicationIntegrationRegistry();
-    expect(registry.list().map((item) => item.id)).toEqual(["docker", "synology"]);
+    expect(registry.list().map((item) => item.id)).toEqual(["docker", "jellyfin", "synology"]);
     expect(registry.get("docker")?.secretFields).toEqual([]);
     expect(registry.get("synology")?.secretFields.map((field) => field.key)).toEqual([
       "password",
@@ -18,7 +18,7 @@ describe("application integration registry", () => {
     expect(
       registry.get("synology")?.secretFields.find((field) => field.key === "deviceId"),
     ).toMatchObject({ serverManaged: true });
-    expect(registry.has("jellyfin")).toBe(false);
+    expect(registry.get("jellyfin")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.has("immich")).toBe(false);
     expect(() => registry.register(registry.get("docker")!)).toThrow(/frozen/);
   });

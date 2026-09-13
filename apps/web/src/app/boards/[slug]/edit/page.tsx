@@ -5,6 +5,7 @@ import { BoardEditWorkspace } from "../../board-edit-workspace";
 import { deleteBoardAction } from "../../actions";
 import { DeleteBoardControl } from "../../delete-board-control";
 import { resolveAppTileViews } from "../../resolve-app-tiles";
+import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 
@@ -22,7 +23,10 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     throw error;
   }
   const catalog = await caller.widget.catalog();
-  const appViews = await resolveAppTileViews(snapshot, caller);
+  const [appViews, jellyfinViews] = await Promise.all([
+    resolveAppTileViews(snapshot, caller),
+    resolveJellyfinSessionViews(snapshot, caller),
+  ]);
   let canReadApps = true;
   try {
     await caller.app.list({ limit: 1 });
@@ -30,6 +34,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
       canReadApps = false;
     else throw error;
+  }
+  let jellyfinIntegrations: Awaited<ReturnType<typeof caller.jellyfin.integration.list>> = [];
+  try {
+    jellyfinIntegrations = await caller.jellyfin.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
   }
   return (
     <PageContainer wide>
@@ -46,6 +60,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         snapshot={snapshot}
         catalog={catalog}
         appViews={appViews}
+        jellyfinViews={jellyfinViews}
+        jellyfinIntegrations={jellyfinIntegrations}
         canReadApps={canReadApps}
       />
     </PageContainer>

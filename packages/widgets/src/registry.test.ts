@@ -58,7 +58,12 @@ describe("widget registry", () => {
 
   it("freezes the built-in registry", () => {
     const registry = createBuiltInWidgetRegistry();
-    expect(registry.list().map((entry) => entry.id)).toEqual(["app-tile", "bookmarks", "clock"]);
+    expect(registry.list().map((entry) => entry.id)).toEqual([
+      "app-tile",
+      "bookmarks",
+      "clock",
+      "jellyfin-sessions",
+    ]);
     expect(registry.get("clock")).toMatchObject({ version: 1, publicSafe: true });
     expect(registry.get("bookmarks")?.publicSafe).toBe(false);
     expect(registry.get("app-tile")?.publicSafe).toBe(false);

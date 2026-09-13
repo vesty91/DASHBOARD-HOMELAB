@@ -38,6 +38,20 @@ export type {
   WidgetSizing,
 } from "./types";
 export { parseHttpUrl } from "./urls";
+export type {
+  JellyfinPlaybackMode,
+  JellyfinSessionViewItem,
+  JellyfinSessionsConfig,
+  JellyfinSessionsDraftConfig,
+  JellyfinSessionsView,
+} from "./jellyfin-sessions";
+export {
+  JELLYFIN_SESSIONS_UNSET_INTEGRATION_ID,
+  jellyfinSessionsConfigSchema,
+  jellyfinSessionsContract,
+  jellyfinSessionsDefaultConfig,
+  jellyfinSessionsDraftConfig,
+} from "./jellyfin-sessions";
 
 import { builtInWidgetRegistry } from "./built-in";
 import { createWidgetPolicy } from "./policy";

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
+import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
 import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
 
 export function isNotFoundError(error: unknown): boolean {
@@ -14,6 +15,7 @@ export function isNotFoundError(error: unknown): boolean {
 export type IntegrationDetailResolution =
   | { kind: "docker"; metadata: DockerIntegrationMetadata }
   | { kind: "synology"; metadata: SynologyIntegrationMetadata }
+  | { kind: "jellyfin"; metadata: JellyfinIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -27,6 +29,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<SynologyPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<SynologyIntegrationMetadata>;
+    };
+  };
+  jellyfin: {
+    permissions: () => Promise<Pick<JellyfinPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<JellyfinIntegrationMetadata>;
     };
   };
   integration: {
@@ -52,6 +60,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.synology.integration.get({ integrationId: id });
       return { kind: "synology", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const jellyfinPermissions = await caller.jellyfin.permissions();
+  if (jellyfinPermissions.canRead) {
+    try {
+      const metadata = await caller.jellyfin.integration.get({ integrationId: id });
+      return { kind: "jellyfin", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

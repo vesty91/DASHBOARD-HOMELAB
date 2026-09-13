@@ -191,7 +191,9 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.goto("/integrations");
   await expect(page.getByRole("heading", { name: "Intégrations" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ajouter une intégration" })).toBeVisible();
-  await expect(page.getByText("Ajoutez une intégration Docker ou Synology DSM.")).toBeVisible();
+  await expect(
+    page.getByText("Ajoutez une intégration Docker, Synology DSM ou Jellyfin."),
+  ).toBeVisible();
 
   await page.goto("/admin/users");
   await page.getByPlaceholder("Identifiant").fill("viewer");
