@@ -12,7 +12,10 @@ import {
 import { createEnvKeyring, encryptSecret, type SecretKeyring } from "@dashboard/secrets";
 import { prometheusIntegrationDefinition } from "./definition";
 import { MemoryPrometheusOverviewCoalescer } from "./overview-coalescer";
-import { MemoryPrometheusRefreshRateLimiter } from "./rate-limiter";
+import {
+  MemoryPrometheusQueryRateLimiter,
+  MemoryPrometheusRefreshRateLimiter,
+} from "./rate-limiter";
 import { MemoryPrometheusRefreshFence } from "./refresh-fence";
 import { createPrometheusService } from "./service";
 
@@ -142,6 +145,7 @@ function serviceWith(
     fence?: MemoryPrometheusRefreshFence;
     coalescer?: MemoryPrometheusOverviewCoalescer;
     limiter?: MemoryPrometheusRefreshRateLimiter;
+    queryLimiter?: MemoryPrometheusQueryRateLimiter;
   } = {},
 ) {
   return createPrometheusService({
@@ -150,6 +154,7 @@ function serviceWith(
     cache: extras.cache ?? new MemoryIntegrationCache(),
     request,
     refreshRateLimiter: extras.limiter ?? new MemoryPrometheusRefreshRateLimiter(),
+    queryRateLimiter: extras.queryLimiter ?? new MemoryPrometheusQueryRateLimiter(),
     refreshFence: extras.fence ?? new MemoryPrometheusRefreshFence(),
     overviewCoalescer: extras.coalescer ?? new MemoryPrometheusOverviewCoalescer(),
     keyring: store.keyring,
@@ -295,6 +300,18 @@ describe("createPrometheusService", () => {
     expect(fence.current(INTEGRATION_ID)).toBe(1);
   });
 
+  it("rate limits distinct PromQL queries independently of refresh", async () => {
+    const queryLimiter = new MemoryPrometheusQueryRateLimiter(1, 60_000, () => 1_000);
+    const service = serviceWith(async () => official(), createMemoryStore(), { queryLimiter });
+    await service.queryInstant({ integrationId: INTEGRATION_ID, query: "up" }, systemAdmin);
+    await expect(
+      service.queryInstant({ integrationId: INTEGRATION_ID, query: "up == 1" }, systemAdmin),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    await expect(service.getOverview(INTEGRATION_ID, systemAdmin)).resolves.toMatchObject({
+      status: "available",
+    });
+  });
+
   it("rate limits refresh", async () => {
     const limiter = new MemoryPrometheusRefreshRateLimiter(1, 60_000, () => 1_000);
     const store = createMemoryStore();
@@ -304,6 +321,7 @@ describe("createPrometheusService", () => {
       cache: new MemoryIntegrationCache(),
       request: async () => official(),
       refreshRateLimiter: limiter,
+      queryRateLimiter: new MemoryPrometheusQueryRateLimiter(),
       refreshFence: new MemoryPrometheusRefreshFence(),
       overviewCoalescer: new MemoryPrometheusOverviewCoalescer(),
       keyring: store.keyring,

@@ -60,6 +60,7 @@ export interface PrometheusServiceDeps {
   cache: IntegrationCache;
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>;
   refreshRateLimiter: IntegrationRateLimiter;
+  queryRateLimiter: IntegrationRateLimiter;
   refreshFence: PrometheusRefreshFence;
   overviewCoalescer: PrometheusOverviewCoalescer;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
@@ -316,6 +317,8 @@ export function createPrometheusService(deps: PrometheusServiceDeps) {
       assertPrometheusAccess(actor, "read");
       const query = parsePrometheusInstantQuery(input);
       const record = await requirePrometheusRecord(input.integrationId);
+      if (!deps.queryRateLimiter.tryConsume(actor.userId ?? "anonymous", record.id))
+        throw new IntegrationError("RATE_LIMITED", "Too many Prometheus queries");
       return queryFor(record.id, query, deps.refreshFence.current(record.id));
     },
     async queryRange(
@@ -325,6 +328,8 @@ export function createPrometheusService(deps: PrometheusServiceDeps) {
       assertPrometheusAccess(actor, "read");
       const query = parsePrometheusRangeQuery(input);
       const record = await requirePrometheusRecord(input.integrationId);
+      if (!deps.queryRateLimiter.tryConsume(actor.userId ?? "anonymous", record.id))
+        throw new IntegrationError("RATE_LIMITED", "Too many Prometheus queries");
       return queryFor(record.id, query, deps.refreshFence.current(record.id));
     },
   };

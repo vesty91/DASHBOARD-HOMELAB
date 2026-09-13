@@ -2,6 +2,8 @@ import type { IntegrationRateLimiter } from "@dashboard/integrations";
 
 export const PROMETHEUS_REFRESH_RATE_LIMIT = 10;
 export const PROMETHEUS_REFRESH_RATE_WINDOW_MS = 60_000;
+export const PROMETHEUS_QUERY_RATE_LIMIT = 30;
+export const PROMETHEUS_QUERY_RATE_WINDOW_MS = 60_000;
 export const PROMETHEUS_REFRESH_MAX_TRACKED_KEYS = 10_000;
 
 class MemoryPrometheusRateLimiter implements IntegrationRateLimiter {
@@ -51,6 +53,17 @@ export class MemoryPrometheusRefreshRateLimiter extends MemoryPrometheusRateLimi
   constructor(
     limit = PROMETHEUS_REFRESH_RATE_LIMIT,
     windowMs = PROMETHEUS_REFRESH_RATE_WINDOW_MS,
+    now: () => number = () => Date.now(),
+    maxTrackedKeys = PROMETHEUS_REFRESH_MAX_TRACKED_KEYS,
+  ) {
+    super(limit, windowMs, now, maxTrackedKeys);
+  }
+}
+
+export class MemoryPrometheusQueryRateLimiter extends MemoryPrometheusRateLimiter {
+  constructor(
+    limit = PROMETHEUS_QUERY_RATE_LIMIT,
+    windowMs = PROMETHEUS_QUERY_RATE_WINDOW_MS,
     now: () => number = () => Date.now(),
     maxTrackedKeys = PROMETHEUS_REFRESH_MAX_TRACKED_KEYS,
   ) {
