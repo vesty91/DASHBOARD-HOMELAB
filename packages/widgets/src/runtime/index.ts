@@ -16,5 +16,7 @@ export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-fo
 export { ImmichStatsWidget } from "./immich-stats-widget";
 export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 export { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
+export { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
+export { PrometheusMetricWidget } from "./prometheus-metric-widget";
 export { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 export { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";

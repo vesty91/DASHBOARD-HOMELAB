@@ -30,6 +30,7 @@ export const PERMISSIONS = [
   "jellyfin.read",
   "immich.read",
   "beszel.read",
+  "prometheus.read",
   "uptime-kuma.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];

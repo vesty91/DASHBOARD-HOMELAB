@@ -69,6 +69,18 @@ export {
   jellyfinSessionsDraftConfig,
 } from "./jellyfin-sessions";
 export type {
+  PrometheusMetricConfig,
+  PrometheusMetricDraftConfig,
+  PrometheusMetricView,
+} from "./prometheus-metric";
+export {
+  PROMETHEUS_METRIC_UNSET_INTEGRATION_ID,
+  prometheusMetricConfigSchema,
+  prometheusMetricContract,
+  prometheusMetricDefaultConfig,
+  prometheusMetricDraftConfig,
+} from "./prometheus-metric";
+export type {
   UptimeKumaStatusConfig,
   UptimeKumaStatusDraftConfig,
   UptimeKumaStatusView,

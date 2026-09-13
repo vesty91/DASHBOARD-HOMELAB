@@ -37,6 +37,12 @@ import {
   type DockerService,
 } from "@dashboard/docker";
 import { beszelIntegrationInputSchema, type BeszelService } from "@dashboard/beszel";
+import {
+  prometheusInstantQueryInputSchema,
+  prometheusIntegrationInputSchema,
+  prometheusRangeQueryInputSchema,
+  type PrometheusService,
+} from "@dashboard/prometheus";
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
@@ -57,6 +63,7 @@ export interface ApiContext {
   jellyfin: JellyfinService;
   immich: ImmichService;
   beszel: BeszelService;
+  prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
 }
 export type BoardApiContext = ApiContext;
@@ -427,6 +434,39 @@ export const beszelRouter = t.router({
       ),
   }),
 });
+export const prometheusRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.prometheus.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) =>
+      procedure(() => ctx.prometheus.listIntegrations(ctx.actor)),
+    ),
+    get: t.procedure
+      .input(prometheusIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.prometheus.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(prometheusIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.prometheus.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(prometheusIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.prometheus.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+  query: t.router({
+    instant: t.procedure
+      .input(prometheusInstantQueryInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.prometheus.queryInstant(input, ctx.actor))),
+    range: t.procedure
+      .input(prometheusRangeQueryInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.prometheus.queryRange(input, ctx.actor))),
+  }),
+});
 export const uptimeKumaRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.uptimeKuma.permissions(ctx.actor)),
   integration: t.router({
@@ -462,6 +502,7 @@ export const dashboardRouter = t.router({
   jellyfin: jellyfinRouter,
   immich: immichRouter,
   beszel: beszelRouter,
+  prometheus: prometheusRouter,
   uptimeKuma: uptimeKumaRouter,
 });
 export const appRouter = dashboardRouter;

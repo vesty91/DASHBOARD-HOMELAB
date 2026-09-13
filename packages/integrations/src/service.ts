@@ -111,6 +111,7 @@ async function toDto(
       record.type === "jellyfin" ||
       record.type === "immich" ||
       record.type === "beszel" ||
+      record.type === "prometheus" ||
       record.type === "uptime-kuma") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {

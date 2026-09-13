@@ -10,6 +10,12 @@ import {
   MemoryBeszelRefreshRateLimiter,
 } from "@dashboard/beszel";
 import {
+  createPrometheusService,
+  MemoryPrometheusOverviewCoalescer,
+  MemoryPrometheusRefreshFence,
+  MemoryPrometheusRefreshRateLimiter,
+} from "@dashboard/prometheus";
+import {
   createUptimeKumaService,
   MemoryUptimeKumaOverviewCoalescer,
   MemoryUptimeKumaRefreshFence,
@@ -66,6 +72,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     beszelRefreshRateLimiter: MemoryBeszelRefreshRateLimiter;
     beszelRefreshFence: MemoryBeszelRefreshFence;
     beszelOverviewCoalescer: MemoryBeszelOverviewCoalescer;
+    prometheusRefreshRateLimiter: MemoryPrometheusRefreshRateLimiter;
+    prometheusRefreshFence: MemoryPrometheusRefreshFence;
+    prometheusOverviewCoalescer: MemoryPrometheusOverviewCoalescer;
     uptimeKumaRefreshRateLimiter: MemoryUptimeKumaRefreshRateLimiter;
     uptimeKumaRefreshFence: MemoryUptimeKumaRefreshFence;
     uptimeKumaOverviewCoalescer: MemoryUptimeKumaOverviewCoalescer;
@@ -91,6 +100,9 @@ function integrationRuntime() {
     beszelRefreshRateLimiter: new MemoryBeszelRefreshRateLimiter(),
     beszelRefreshFence: new MemoryBeszelRefreshFence(),
     beszelOverviewCoalescer: new MemoryBeszelOverviewCoalescer(),
+    prometheusRefreshRateLimiter: new MemoryPrometheusRefreshRateLimiter(),
+    prometheusRefreshFence: new MemoryPrometheusRefreshFence(),
+    prometheusOverviewCoalescer: new MemoryPrometheusOverviewCoalescer(),
     uptimeKumaRefreshRateLimiter: new MemoryUptimeKumaRefreshRateLimiter(),
     uptimeKumaRefreshFence: new MemoryUptimeKumaRefreshFence(),
     uptimeKumaOverviewCoalescer: new MemoryUptimeKumaOverviewCoalescer(),
@@ -163,6 +175,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       refreshRateLimiter: runtime.beszelRefreshRateLimiter,
       refreshFence: runtime.beszelRefreshFence,
       overviewCoalescer: runtime.beszelOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
+    }),
+    prometheus: createPrometheusService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.prometheusRefreshRateLimiter,
+      refreshFence: runtime.prometheusRefreshFence,
+      overviewCoalescer: runtime.prometheusOverviewCoalescer,
       ...(keyring ? { keyring } : {}),
     }),
     uptimeKuma: createUptimeKumaService({

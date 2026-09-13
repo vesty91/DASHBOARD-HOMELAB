@@ -5,6 +5,7 @@ import type { ClockConfig } from "../clock";
 import type { BeszelHostsView } from "../beszel-hosts";
 import type { ImmichStatsView } from "../immich-stats";
 import type { JellyfinSessionsView } from "../jellyfin-sessions";
+import type { PrometheusMetricView } from "../prometheus-metric";
 import type { UptimeKumaStatusView } from "../uptime-kuma-status";
 import { builtInWidgetRegistry } from "../built-in";
 import { serializeWidgetConfig } from "../config";
@@ -15,6 +16,7 @@ import { ClockWidget } from "./clock-widget";
 import { BeszelHostsWidget } from "./beszel-hosts-widget";
 import { ImmichStatsWidget } from "./immich-stats-widget";
 import { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
+import { PrometheusMetricWidget } from "./prometheus-metric-widget";
 import { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";
 import { WidgetBoundary } from "./widget-boundary";
 import { WidgetFrame } from "./widget-frame";
@@ -58,6 +60,7 @@ function ReadyWidget({
   jellyfinView,
   immichView,
   beszelView,
+  prometheusView,
   uptimeKumaView,
 }: {
   item: WidgetItemView;
@@ -65,6 +68,7 @@ function ReadyWidget({
   jellyfinView: JellyfinSessionsView | undefined;
   immichView: ImmichStatsView | undefined;
   beszelView: BeszelHostsView | undefined;
+  prometheusView: PrometheusMetricView | undefined;
   uptimeKumaView: UptimeKumaStatusView | undefined;
 }) {
   switch (item.widgetType) {
@@ -80,6 +84,8 @@ function ReadyWidget({
       return <ImmichStatsWidget view={immichView} />;
     case "beszel-hosts":
       return <BeszelHostsWidget view={beszelView} />;
+    case "prometheus-metric":
+      return <PrometheusMetricWidget view={prometheusView} />;
     case "uptime-kuma-status":
       return <UptimeKumaStatusWidget view={uptimeKumaView} />;
     default:
@@ -93,6 +99,7 @@ export function WidgetRenderer({
   jellyfinView,
   immichView,
   beszelView,
+  prometheusView,
   uptimeKumaView,
 }: {
   item: WidgetItemView;
@@ -100,6 +107,7 @@ export function WidgetRenderer({
   jellyfinView?: JellyfinSessionsView;
   immichView?: ImmichStatsView;
   beszelView?: BeszelHostsView;
+  prometheusView?: PrometheusMetricView;
   uptimeKumaView?: UptimeKumaStatusView;
 }) {
   const blocked = frameForStatus(item);
@@ -115,6 +123,7 @@ export function WidgetRenderer({
           jellyfinView={jellyfinView}
           immichView={immichView}
           beszelView={beszelView}
+          prometheusView={prometheusView}
           uptimeKumaView={uptimeKumaView}
         />
       </WidgetFrame>

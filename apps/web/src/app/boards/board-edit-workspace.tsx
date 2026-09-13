@@ -7,6 +7,7 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  PrometheusMetricView,
   UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -14,6 +15,7 @@ import type {
   BeszelIntegrationOption,
   ImmichIntegrationOption,
   JellyfinIntegrationOption,
+  PrometheusIntegrationOption,
   UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
@@ -32,6 +34,8 @@ export function BoardEditWorkspace({
   immichIntegrations = [],
   beszelViews = {},
   beszelIntegrations = [],
+  prometheusViews = {},
+  prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
   canReadApps,
@@ -45,6 +49,8 @@ export function BoardEditWorkspace({
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelViews?: Record<string, BeszelHostsView>;
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  prometheusViews?: Record<string, PrometheusMetricView>;
+  prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
   canReadApps: boolean;
@@ -146,6 +152,8 @@ export function BoardEditWorkspace({
         immichIntegrations={immichIntegrations}
         beszelViews={beszelViews}
         beszelIntegrations={beszelIntegrations}
+        prometheusViews={prometheusViews}
+        prometheusIntegrations={prometheusIntegrations}
         uptimeKumaViews={uptimeKumaViews}
         uptimeKumaIntegrations={uptimeKumaIntegrations}
         canReadApps={canReadApps}

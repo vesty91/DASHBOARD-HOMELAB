@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getBoardCaller } from "../../lib/server/board-api";
+import { createApplicationIntegrationRegistry } from "../../lib/server/integration-registry";
 import { configFromForm } from "./integration-form-config";
 
 export async function createIntegrationAction(formData: FormData) {
@@ -14,10 +15,9 @@ export async function createIntegrationAction(formData: FormData) {
     enabled: formData.get("enabled") === "on",
     config: configFromForm(formData),
   });
-  const catalog = await caller.integration.catalog();
-  const entry = catalog.find((item) => item.id === type);
+  const definition = createApplicationIntegrationRegistry().get(created.type);
   const needsSecretSetup = Boolean(
-    entry?.secretFields.some((field) => field.required && field.serverManaged !== true),
+    definition?.secretFields.some((field) => field.serverManaged !== true),
   );
   if (needsSecretSetup) redirect(`/integrations/${created.id}/edit`);
   redirect("/integrations");

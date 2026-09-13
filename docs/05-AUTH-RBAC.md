@@ -198,8 +198,14 @@ Phase 12 : lecture Uptime Kuma exige (`integration.use` ou `integration.manage`)
 `/integrations/[id]` Uptime Kuma : `integration.read` n'est pas requis. Le rôle `ADMIN`
 par défaut **n'obtient pas** `uptime-kuma.read`.
 
+Phase 12 : lecture Prometheus exige (`integration.use` ou `integration.manage`) **et**
+`prometheus.read`. Cette conjonction suffit pour `prometheus.integration.get` et
+`/integrations/[id]` Prometheus : `integration.read` n'est pas requis. Le rôle `ADMIN`
+par défaut **n'obtient pas** `prometheus.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`immich.read`, `beszel.read`, `uptime-kuma.read`, `docker.*` ni `settings.manage`.
+`immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `docker.*` ni
+`settings.manage`.
 
 ## 10. Audit
 

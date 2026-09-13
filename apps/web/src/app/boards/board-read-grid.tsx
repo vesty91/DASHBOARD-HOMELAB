@@ -3,6 +3,7 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  PrometheusMetricView,
   UptimeKumaStatusView,
 } from "@dashboard/widgets";
 import type { ItemRecord, LayoutRecord, PlacementRecord } from "@dashboard/boards";
@@ -16,6 +17,7 @@ export function BoardReadGrid({
   jellyfinViews = {},
   immichViews = {},
   beszelViews = {},
+  prometheusViews = {},
   uptimeKumaViews = {},
 }: {
   layout: LayoutRecord;
@@ -25,6 +27,7 @@ export function BoardReadGrid({
   jellyfinViews?: Record<string, JellyfinSessionsView>;
   immichViews?: Record<string, ImmichStatsView>;
   beszelViews?: Record<string, BeszelHostsView>;
+  prometheusViews?: Record<string, PrometheusMetricView>;
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
 }) {
   return (
@@ -54,6 +57,9 @@ export function BoardReadGrid({
                 {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
                 {...(immichViews[entry.id] ? { immichView: immichViews[entry.id] } : {})}
                 {...(beszelViews[entry.id] ? { beszelView: beszelViews[entry.id] } : {})}
+                {...(prometheusViews[entry.id]
+                  ? { prometheusView: prometheusViews[entry.id] }
+                  : {})}
                 {...(uptimeKumaViews[entry.id]
                   ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                   : {})}

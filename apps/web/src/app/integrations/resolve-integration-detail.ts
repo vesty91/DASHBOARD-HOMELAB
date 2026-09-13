@@ -3,6 +3,10 @@ import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboar
 import type { IntegrationDto } from "@dashboard/integrations";
 import type { BeszelIntegrationMetadata, BeszelPermissionsView } from "@dashboard/beszel";
 import type {
+  PrometheusIntegrationMetadata,
+  PrometheusPermissionsView,
+} from "@dashboard/prometheus";
+import type {
   UptimeKumaIntegrationMetadata,
   UptimeKumaPermissionsView,
 } from "@dashboard/uptime-kuma";
@@ -24,6 +28,7 @@ export type IntegrationDetailResolution =
   | { kind: "jellyfin"; metadata: JellyfinIntegrationMetadata }
   | { kind: "immich"; metadata: ImmichIntegrationMetadata }
   | { kind: "beszel"; metadata: BeszelIntegrationMetadata }
+  | { kind: "prometheus"; metadata: PrometheusIntegrationMetadata }
   | { kind: "uptime-kuma"; metadata: UptimeKumaIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
@@ -56,6 +61,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<BeszelPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<BeszelIntegrationMetadata>;
+    };
+  };
+  prometheus: {
+    permissions: () => Promise<Pick<PrometheusPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<PrometheusIntegrationMetadata>;
     };
   };
   uptimeKuma: {
@@ -114,6 +125,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.beszel.integration.get({ integrationId: id });
       return { kind: "beszel", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const prometheusPermissions = await caller.prometheus.permissions();
+  if (prometheusPermissions.canRead) {
+    try {
+      const metadata = await caller.prometheus.integration.get({ integrationId: id });
+      return { kind: "prometheus", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }
