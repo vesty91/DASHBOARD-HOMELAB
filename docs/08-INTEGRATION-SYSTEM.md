@@ -334,7 +334,7 @@ fake data. `monitor_url` / hostname / port jamais exposés au navigateur.
 
 ## 18. Prometheus
 
-Statut sur la branche `phase-12-prometheus` : IN PROGRESS.
+Statut : COMPLETE / merged (PR #16).
 
 Adapter `prometheus` composé dans `apps/web`. Transport HTTP(S) vers l'origine
 Prometheus. Auth Bearer optionnelle (`Authorization: Bearer <token>`). Lecture seule
@@ -353,7 +353,24 @@ pas, volume). Jeton jamais renvoyé. Aucune mutation. Aucune fake data. Labels h
 `__name__` / `job` / `instance` jamais exposés. La page détail n'accepte pas de
 requête depuis l'URL : requête serveur fixe `up`.
 
-## 19. Tests intégrations
+## 19. Service status
+
+Agrégateur interne read-only, pas une nouvelle intégration externe.
+
+`serviceStatus.list` / `serviceStatus.catalog` assemblent un DTO canonique
+(`up` / `degraded` / `down` / `unknown` / `paused` / `maintenance`) à partir des
+sources déjà disponibles : apps health, Docker, Synology, Jellyfin, Immich,
+Beszel, Uptime Kuma, Prometheus. Le filtrage est serveur-side via les permissions
+spécialisées (`app.read`, `docker.read`, `synology.read`, `jellyfin.read`,
+`immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`). Un DTO
+générique `integration.list` n'est jamais utilisé pour construire ce widget.
+
+Widget `service-status` : `publicSafe=false`. Config bornée (`selectedSources`,
+`selectedIds`, `displayMode`, `maxItems` ≤ 24). Une source en échec laisse les
+autres visibles (`degraded` / `partial`). Aucun secret, `baseUrl`, config, token
+ou réponse brute. Cache/coalescing côté serveur. Pas d'appel navigateur.
+
+## 20. Tests intégrations
 
 Pour chaque adapter :
 

@@ -9,6 +9,7 @@ import { resolveBeszelHostsViews } from "../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../resolve-prometheus-metric";
+import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
@@ -39,6 +40,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     beszelViews,
     prometheusViews,
     uptimeKumaViews,
+    serviceStatusViews,
   ] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
     resolveAppTileViews(snapshot, caller),
@@ -47,6 +49,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveBeszelHostsViews(snapshot, caller),
     resolvePrometheusMetricViews(snapshot, caller),
     resolveUptimeKumaStatusViews(snapshot, caller),
+    resolveServiceStatusViews(snapshot, caller),
   ]);
   return (
     <PageContainer wide>
@@ -72,6 +75,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         beszelViews={beszelViews}
         prometheusViews={prometheusViews}
         uptimeKumaViews={uptimeKumaViews}
+        serviceStatusViews={serviceStatusViews}
       />
     </PageContainer>
   );

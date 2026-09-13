@@ -6,6 +6,7 @@ import {
   requireCapability,
   type IntegrationCache,
   type IntegrationRateLimiter,
+  type IntegrationRecord,
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
@@ -58,6 +59,22 @@ const VERSION_OPERATION = "docker.version";
 const LIST_OPERATION = "docker.containers.list";
 const INSPECT_PREFIX = "docker.containers.inspect:";
 const STATS_PREFIX = "docker.containers.stats:";
+const LIST_PAGE_SIZE = 100;
+const LIST_MAX_PAGES = 100;
+
+async function listDockerRecords(store: IntegrationStore): Promise<IntegrationRecord[]> {
+  const found: IntegrationRecord[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
+    const records = await store.list(LIST_PAGE_SIZE, cursor);
+    for (const record of records) if (record.type === DOCKER_INTEGRATION_ID) found.push(record);
+    if (records.length < LIST_PAGE_SIZE) return found;
+    const nextCursor = records[records.length - 1]?.id;
+    if (!nextCursor || nextCursor === cursor) return found;
+    cursor = nextCursor;
+  }
+  return found;
+}
 
 interface CachedDockerInspect {
   readonly detail: DockerContainerDetail;
@@ -261,6 +278,17 @@ export function createDockerService(deps: DockerServiceDeps) {
   return {
     permissions(actor: DockerActor): DockerPermissionsView {
       return dockerPermissionsView(actor);
+    },
+    async listIntegrations(actor: DockerActor): Promise<readonly DockerIntegrationMetadata[]> {
+      assertDockerAccess(actor, "read");
+      const records = await listDockerRecords(deps.store);
+      return records.map((record) =>
+        Object.freeze({
+          id: record.id,
+          name: record.name,
+          enabled: record.enabled,
+        }),
+      );
     },
     async getIntegrationMetadata(
       integrationId: string,

@@ -71,6 +71,9 @@ importers:
       '@dashboard/jellyfin':
         specifier: workspace:*
         version: link:../../packages/jellyfin
+      '@dashboard/monitoring':
+        specifier: workspace:*
+        version: link:../../packages/monitoring
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
@@ -174,6 +177,9 @@ importers:
       '@dashboard/jellyfin':
         specifier: workspace:*
         version: link:../jellyfin
+      '@dashboard/monitoring':
+        specifier: workspace:*
+        version: link:../monitoring
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../permissions
@@ -400,6 +406,10 @@ importers:
         version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   packages/monitoring:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: 26.2.0

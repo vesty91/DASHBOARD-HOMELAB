@@ -14,6 +14,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ServiceStatusView,
   UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -26,6 +27,7 @@ import {
   immichStatsDraftConfig,
   jellyfinSessionsDraftConfig,
   prometheusMetricDraftConfig,
+  serviceStatusDefaultConfig,
   uptimeKumaStatusDraftConfig,
 } from "@dashboard/widgets";
 import {
@@ -35,6 +37,7 @@ import {
   type ImmichIntegrationOption,
   type JellyfinIntegrationOption,
   type PrometheusIntegrationOption,
+  type ServiceStatusCatalogOption,
   type UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
@@ -63,6 +66,8 @@ function defaultConfig(widgetType: string): unknown {
       return beszelHostsDraftConfig;
     case "prometheus-metric":
       return prometheusMetricDraftConfig;
+    case "service-status":
+      return serviceStatusDefaultConfig;
     case "uptime-kuma-status":
       return uptimeKumaStatusDraftConfig;
     default:
@@ -86,6 +91,8 @@ export function BoardEditor({
   prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
+  serviceStatusViews = {},
+  serviceStatusCatalog = [],
   canReadApps,
   conflict,
   conflictRef,
@@ -107,6 +114,8 @@ export function BoardEditor({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
+  serviceStatusViews?: Record<string, ServiceStatusView>;
+  serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
   conflict: boolean;
   conflictRef: MutableRefObject<boolean>;
@@ -337,6 +346,7 @@ export function BoardEditor({
                 immichIntegrations={immichIntegrations}
                 beszelIntegrations={beszelIntegrations}
                 prometheusIntegrations={prometheusIntegrations}
+                serviceStatusCatalog={serviceStatusCatalog}
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
               />
               <button
@@ -471,6 +481,9 @@ export function BoardEditor({
                     {...(prometheusViews[entry.id]
                       ? { prometheusView: prometheusViews[entry.id] }
                       : {})}
+                    {...(serviceStatusViews[entry.id]
+                      ? { serviceStatusView: serviceStatusViews[entry.id] }
+                      : {})}
                     {...(uptimeKumaViews[entry.id]
                       ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                       : {})}
@@ -524,6 +537,7 @@ export function BoardEditor({
             immichIntegrations={immichIntegrations}
             beszelIntegrations={beszelIntegrations}
             prometheusIntegrations={prometheusIntegrations}
+            serviceStatusCatalog={serviceStatusCatalog}
             uptimeKumaIntegrations={uptimeKumaIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>

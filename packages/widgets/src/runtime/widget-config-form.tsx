@@ -5,6 +5,7 @@ import type { BeszelHostsDraftConfig } from "../beszel-hosts";
 import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
 import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
+import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
 import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
@@ -13,6 +14,7 @@ import { ClockForm } from "./clock-form";
 import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
+import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 
 export function WidgetConfigForm({
@@ -25,6 +27,7 @@ export function WidgetConfigForm({
   immichIntegrations,
   beszelIntegrations,
   prometheusIntegrations,
+  serviceStatusCatalog,
   uptimeKumaIntegrations,
 }: {
   widgetType: string;
@@ -36,6 +39,7 @@ export function WidgetConfigForm({
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelIntegrations?: readonly BeszelIntegrationOption[];
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
+  serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
 }) {
   switch (widgetType) {
@@ -86,6 +90,15 @@ export function WidgetConfigForm({
           config={config as PrometheusMetricDraftConfig}
           onChange={onChange}
           integrations={prometheusIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "service-status":
+      return (
+        <ServiceStatusForm
+          config={config as ServiceStatusDraftConfig}
+          onChange={onChange}
+          catalog={serviceStatusCatalog ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

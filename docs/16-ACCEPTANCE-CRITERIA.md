@@ -185,3 +185,11 @@ Une section Storage en timeout laisse system/CPU visibles (`degraded`). 2FA : en
 transitoire et secret `deviceId` server-managed ; `clearDevice` n'efface que le jeton local.
 Refresh manuel 10/min. Aucune action destructive. Aucune migration DB. Pas de widget Synology.
 Pas de generic invoke. Le rôle `ADMIN` par défaut n'obtient pas `synology.read`.
+
+## AC-033 Service Status
+
+Le widget `service-status` est un agrégateur interne (`publicSafe=false`), pas une
+intégration externe. Le DTO est canonique et borné. Le filtrage RBAC est serveur-side :
+`jellyfin.read` sans `synology.read` n'expose jamais Synology. Une source en échec
+laisse les autres visibles. Aucune fake data. Aucun secret. `maxItems` ≤ 24.
+Aucune migration DB.

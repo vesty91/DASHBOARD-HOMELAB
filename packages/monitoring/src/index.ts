@@ -192,3 +192,43 @@ export async function probeHttp(options: ProbeOptions): Promise<ProbeResult> {
     request.end();
   });
 }
+
+export { MemoryServiceStatusCoalescer } from "./service-status-coalescer";
+export {
+  SERVICE_STATUS_ID_PATTERN,
+  compareServiceStatusItems,
+  createServiceStatusService,
+  matchesSelectedIds,
+  serviceStatusQuerySchema,
+  type ServiceStatusService,
+  type ServiceStatusServiceDeps,
+} from "./service-status";
+export {
+  appHealthDetail,
+  mapAppHealth,
+  mapBeszelHosts,
+  mapDockerContainer,
+  mapImmichHealth,
+  mapOverviewStatus,
+  mapPrometheusUpSeries,
+  mapUptimeKumaMonitors,
+} from "./service-status-mapping";
+export {
+  SERVICE_SOURCE_TYPES,
+  SERVICE_STATUS_DEFAULT_MAX_ITEMS,
+  SERVICE_STATUS_MAX_ITEMS,
+  SERVICE_STATUS_MAX_SELECTED_IDS,
+  SERVICE_STATUS_MAX_SELECTED_SOURCES,
+  SERVICE_STATUS_VALUES,
+  type ServiceSourceType,
+  type ServiceStatusActor,
+  type ServiceStatusCanonical,
+  type ServiceStatusCatalogItem,
+  type ServiceStatusCatalogResult,
+  type ServiceStatusCoalescer,
+  type ServiceStatusCollector,
+  type ServiceStatusItem,
+  type ServiceStatusListResult,
+  type ServiceStatusListStatus,
+  type ServiceStatusQuery,
+} from "./service-status-types";

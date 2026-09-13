@@ -513,6 +513,12 @@ describe("DockerService", () => {
       name: "Docker",
       enabled: true,
     });
+    await expect(docker.listIntegrations(reader)).resolves.toEqual([
+      { id: INTEGRATION_ID, name: "Docker", enabled: true },
+    ]);
+    await expect(docker.listIntegrations(actor(["docker.read"]))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
     const serialized = JSON.stringify(await docker.getIntegrationMetadata(INTEGRATION_ID, reader));
     expect(serialized).not.toMatch(/baseUrl|trustedCaPem|configRevision|secrets|PASSWORD/u);
     await expect(

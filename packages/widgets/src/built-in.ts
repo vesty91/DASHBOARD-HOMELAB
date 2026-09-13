@@ -5,6 +5,7 @@ import { beszelHostsContract } from "./beszel-hosts";
 import { immichStatsContract } from "./immich-stats";
 import { jellyfinSessionsContract } from "./jellyfin-sessions";
 import { prometheusMetricContract } from "./prometheus-metric";
+import { serviceStatusContract } from "./service-status";
 import { uptimeKumaStatusContract } from "./uptime-kuma-status";
 import { createWidgetRegistry, type WidgetRegistry } from "./registry";
 
@@ -17,6 +18,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(immichStatsContract)
     .register(jellyfinSessionsContract)
     .register(prometheusMetricContract)
+    .register(serviceStatusContract)
     .register(uptimeKumaStatusContract)
     .freeze();
 }

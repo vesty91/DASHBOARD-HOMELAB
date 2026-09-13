@@ -1492,6 +1492,66 @@ button[aria-pressed="true"] {
   font-size: 0.875rem;
 }
 
+.widget-service-status {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.widget-service-status-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.widget-service-status-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.15rem 0.6rem;
+  min-width: 0;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.widget-service-status[data-display-mode="compact"] .widget-service-status-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.widget-service-status-name,
+.widget-service-status-source,
+.widget-service-status-detail,
+.widget-service-status-updated {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-service-status-name {
+  font-weight: 650;
+}
+
+.widget-service-status-source,
+.widget-service-status-detail,
+.widget-service-status-updated {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.widget-service-status-state {
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .widget-service-status-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
   .shell-sidebar {
     transform: translateX(-100%);

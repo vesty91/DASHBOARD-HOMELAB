@@ -231,17 +231,18 @@ Hors scope : jobs, EXIF, thumbnails, `usageByUser`, Phase 12.
 
 ## Phase 12 — Monitoring
 
-Statut sur la branche `phase-12-prometheus` : IN PROGRESS (Prometheus).
+Statut sur la branche `phase-12-service-status` : IN PROGRESS (service status).
 
 Livrables :
 
-- Beszel (IMPLEMENTED) : adapter HTTP+Zod, `beszel.read`, widget
-  `beszel-hosts` (`publicSafe=false`) ;
-- Uptime Kuma (IMPLEMENTED) : adapter `GET /metrics` + Basic auth, `uptime-kuma.read`,
+- Beszel : adapter HTTP+Zod, `beszel.read`, widget `beszel-hosts`
+  (`publicSafe=false`) ;
+- Uptime Kuma : adapter `GET /metrics` + Basic auth, `uptime-kuma.read`,
   widget `uptime-kuma-status` (`publicSafe=false`) ;
-- Prometheus (IN PROGRESS) : adapter `POST /api/v1/query` + `query_range`,
-  `prometheus.read`, widget `prometheus-metric` (`publicSafe=false`) ;
-- service status.
+- Prometheus : adapter `POST /api/v1/query` + `query_range`, `prometheus.read`,
+  widget `prometheus-metric` (`publicSafe=false`) ;
+- service status : agrégateur interne `service-status` (`publicSafe=false`),
+  pas de nouvelle intégration externe.
 
 ## Phase 13 — Worker + realtime
 
