@@ -36,6 +36,7 @@ import {
   dockerLogsInputSchema,
   type DockerService,
 } from "@dashboard/docker";
+import { beszelIntegrationInputSchema, type BeszelService } from "@dashboard/beszel";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
@@ -54,6 +55,7 @@ export interface ApiContext {
   synology: SynologyService;
   jellyfin: JellyfinService;
   immich: ImmichService;
+  beszel: BeszelService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -400,6 +402,29 @@ export const immichRouter = t.router({
       ),
   }),
 });
+export const beszelRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.beszel.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.beszel.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(beszelIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.beszel.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(beszelIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.beszel.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(beszelIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.beszel.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -409,6 +434,7 @@ export const dashboardRouter = t.router({
   synology: synologyRouter,
   jellyfin: jellyfinRouter,
   immich: immichRouter,
+  beszel: beszelRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

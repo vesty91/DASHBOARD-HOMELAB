@@ -9,6 +9,7 @@ import { createCaller as createAppCaller, type ApiContext } from "./index";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
+import type { BeszelService } from "@dashboard/beszel";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
@@ -20,14 +21,16 @@ const actor = {
 const synology = {} as SynologyService;
 const jellyfin = {} as JellyfinService;
 const immich = {} as ImmichService;
+const beszel = {} as BeszelService;
 function createCaller(
-  context: Omit<ApiContext, "synology" | "jellyfin" | "immich"> & {
+  context: Omit<ApiContext, "synology" | "jellyfin" | "immich" | "beszel"> & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
     immich?: ImmichService;
+    beszel?: BeszelService;
   },
 ) {
-  return createAppCaller({ synology, jellyfin, immich, ...context });
+  return createAppCaller({ synology, jellyfin, immich, beszel, ...context });
 }
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({

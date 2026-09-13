@@ -10,6 +10,7 @@ import {
 import type { BoardSnapshot } from "@dashboard/boards";
 import type {
   AppTileView,
+  BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
   WidgetCatalogEntry,
@@ -17,6 +18,7 @@ import type {
 import {
   APP_TILE_UNSET_APP_ID,
   appTileDraftConfig,
+  beszelHostsDraftConfig,
   bookmarksDefaultConfig,
   clockDefaultConfig,
   immichStatsDraftConfig,
@@ -25,6 +27,7 @@ import {
 import {
   WidgetConfigForm,
   WidgetRenderer,
+  type BeszelIntegrationOption,
   type ImmichIntegrationOption,
   type JellyfinIntegrationOption,
 } from "@dashboard/widgets/runtime";
@@ -50,6 +53,8 @@ function defaultConfig(widgetType: string): unknown {
       return jellyfinSessionsDraftConfig;
     case "immich-stats":
       return immichStatsDraftConfig;
+    case "beszel-hosts":
+      return beszelHostsDraftConfig;
     default:
       return {};
   }
@@ -65,6 +70,8 @@ export function BoardEditor({
   jellyfinIntegrations = [],
   immichViews = {},
   immichIntegrations = [],
+  beszelViews = {},
+  beszelIntegrations = [],
   canReadApps,
   conflict,
   conflictRef,
@@ -80,6 +87,8 @@ export function BoardEditor({
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   immichViews?: Record<string, ImmichStatsView>;
   immichIntegrations?: readonly ImmichIntegrationOption[];
+  beszelViews?: Record<string, BeszelHostsView>;
+  beszelIntegrations?: readonly BeszelIntegrationOption[];
   canReadApps: boolean;
   conflict: boolean;
   conflictRef: MutableRefObject<boolean>;
@@ -97,6 +106,7 @@ export function BoardEditor({
   const [pendingAppTile, setPendingAppTile] = useState(false);
   const [pendingJellyfin, setPendingJellyfin] = useState(false);
   const [pendingImmich, setPendingImmich] = useState(false);
+  const [pendingBeszel, setPendingBeszel] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -251,7 +261,7 @@ export function BoardEditor({
       </div>
       {catalogOpen && (
         <section aria-label="Catalogue de widgets">
-          {pendingAppTile || pendingJellyfin || pendingImmich ? (
+          {pendingAppTile || pendingJellyfin || pendingImmich || pendingBeszel ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -260,13 +270,17 @@ export function BoardEditor({
                     ? "jellyfin-sessions"
                     : pendingImmich
                       ? "immich-stats"
-                      : "app-tile",
+                      : pendingBeszel
+                        ? "beszel-hosts"
+                        : "app-tile",
                   draftConfig ??
                     (pendingJellyfin
                       ? jellyfinSessionsDraftConfig
                       : pendingImmich
                         ? immichStatsDraftConfig
-                        : appTileDraftConfig),
+                        : pendingBeszel
+                          ? beszelHostsDraftConfig
+                          : appTileDraftConfig),
                 );
               }}
             >
@@ -276,7 +290,9 @@ export function BoardEditor({
                     ? "jellyfin-sessions"
                     : pendingImmich
                       ? "immich-stats"
-                      : "app-tile"
+                      : pendingBeszel
+                        ? "beszel-hosts"
+                        : "app-tile"
                 }
                 config={
                   draftConfig ??
@@ -284,7 +300,9 @@ export function BoardEditor({
                     ? jellyfinSessionsDraftConfig
                     : pendingImmich
                       ? immichStatsDraftConfig
-                      : appTileDraftConfig)
+                      : pendingBeszel
+                        ? beszelHostsDraftConfig
+                        : appTileDraftConfig)
                 }
                 onChange={setDraftConfig}
                 permissionDenied={
@@ -292,16 +310,19 @@ export function BoardEditor({
                     ? jellyfinIntegrations.length === 0
                     : pendingImmich
                       ? immichIntegrations.length === 0
-                      : !canReadApps
+                      : pendingBeszel
+                        ? beszelIntegrations.length === 0
+                        : !canReadApps
                 }
                 loadApps={listAppsForWidgetAction}
                 jellyfinIntegrations={jellyfinIntegrations}
                 immichIntegrations={immichIntegrations}
+                beszelIntegrations={beszelIntegrations}
               />
               <button
                 type="submit"
                 disabled={
-                  pendingJellyfin || pendingImmich
+                  pendingJellyfin || pendingImmich || pendingBeszel
                     ? !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
                         typeof (draftConfig as { integrationId?: unknown })?.integrationId ===
                           "string"
@@ -315,7 +336,9 @@ export function BoardEditor({
                       )
                 }
               >
-                {pendingJellyfin || pendingImmich ? "Ajouter le widget" : "Ajouter la tuile"}
+                {pendingJellyfin || pendingImmich || pendingBeszel
+                  ? "Ajouter le widget"
+                  : "Ajouter la tuile"}
               </button>
               <button
                 type="button"
@@ -323,6 +346,7 @@ export function BoardEditor({
                   setPendingAppTile(false);
                   setPendingJellyfin(false);
                   setPendingImmich(false);
+                  setPendingBeszel(false);
                 }}
               >
                 Annuler
@@ -363,6 +387,11 @@ export function BoardEditor({
                         if (entry.id === "immich-stats") {
                           setDraftConfig(immichStatsDraftConfig);
                           setPendingImmich(true);
+                          return;
+                        }
+                        if (entry.id === "beszel-hosts") {
+                          setDraftConfig(beszelHostsDraftConfig);
+                          setPendingBeszel(true);
                           return;
                         }
                         void addWidget(entry.id, defaultConfig(entry.id));
@@ -408,6 +437,7 @@ export function BoardEditor({
                     {...(appViews[entry.id] ? { appView: appViews[entry.id] } : {})}
                     {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
                     {...(immichViews[entry.id] ? { immichView: immichViews[entry.id] } : {})}
+                    {...(beszelViews[entry.id] ? { beszelView: beszelViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -456,6 +486,7 @@ export function BoardEditor({
             loadApps={listAppsForWidgetAction}
             jellyfinIntegrations={jellyfinIntegrations}
             immichIntegrations={immichIntegrations}
+            beszelIntegrations={beszelIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

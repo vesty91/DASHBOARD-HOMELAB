@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
+import type { BeszelIntegrationMetadata, BeszelPermissionsView } from "@dashboard/beszel";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
 import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
@@ -18,6 +19,7 @@ export type IntegrationDetailResolution =
   | { kind: "synology"; metadata: SynologyIntegrationMetadata }
   | { kind: "jellyfin"; metadata: JellyfinIntegrationMetadata }
   | { kind: "immich"; metadata: ImmichIntegrationMetadata }
+  | { kind: "beszel"; metadata: BeszelIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -43,6 +45,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<ImmichPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<ImmichIntegrationMetadata>;
+    };
+  };
+  beszel: {
+    permissions: () => Promise<Pick<BeszelPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<BeszelIntegrationMetadata>;
     };
   };
   integration: {
@@ -86,6 +94,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.immich.integration.get({ integrationId: id });
       return { kind: "immich", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const beszelPermissions = await caller.beszel.permissions();
+  if (beszelPermissions.canRead) {
+    try {
+      const metadata = await caller.beszel.integration.get({ integrationId: id });
+      return { kind: "beszel", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

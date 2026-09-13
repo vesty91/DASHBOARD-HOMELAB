@@ -31,6 +31,7 @@ test("creates a Docker integration without calling Docker and isolates proxy err
   await loginAdmin(page);
   await page.goto("/integrations/new");
   await expect(page.getByLabel("Type")).toContainText("Docker");
+  await page.getByLabel("Type").selectOption("docker");
   await expect(page.getByLabel("URL de base")).toHaveAttribute(
     "placeholder",
     "http://socket-proxy:2375",
@@ -44,7 +45,11 @@ test("creates a Docker integration without calling Docker and isolates proxy err
   await page.getByRole("button", { name: "Enregistrer" }).click();
   await expect(page).toHaveURL(/\/integrations$/);
   await expect(page.getByRole("heading", { name: "Docker Lab" })).toBeVisible();
-  await page.getByRole("link", { name: "Ouvrir" }).click();
+  await page
+    .locator("article.ui-card")
+    .filter({ has: page.getByRole("heading", { name: "Docker Lab" }) })
+    .getByRole("link", { name: "Ouvrir" })
+    .click();
   await expect(page.getByRole("heading", { name: "Docker Lab" })).toBeVisible();
   await expect(page.getByText("Docker", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/injoignable|indisponible|Délai|TLS|DNS/i).first()).toBeVisible();

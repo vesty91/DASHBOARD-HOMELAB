@@ -123,6 +123,9 @@ relance un `router.refresh()` toutes les 10 s pour reprendre le cache overview
 Phase 11 ajoute `immich-stats` (`publicSafe=false`) : santé, photos, vidéos et stockage.
 Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Immich.
 
+Phase 12 ajoute `beszel-hosts` (`publicSafe=false`) : hôtes up/total, down, CPU, RAM et
+disque. Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Beszel.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -131,7 +134,7 @@ Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Immich.
 - Synology Storage ;
 - Jellyfin Sessions (`jellyfin-sessions`, Phase 10) ;
 - Immich Stats (`immich-stats`, Phase 11) ;
-- Beszel Systems ;
+- Beszel Hosts (`beszel-hosts`, Phase 12) ;
 - Uptime Kuma ;
 - Prometheus Query.
 

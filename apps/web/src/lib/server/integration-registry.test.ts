@@ -7,9 +7,10 @@ describe("application integration registry", () => {
     expect(createProductionIntegrationRegistry().list()).toEqual([]);
   });
 
-  it("registers Docker, Immich, Jellyfin and Synology in the application composition", () => {
+  it("registers Beszel, Docker, Immich, Jellyfin and Synology in the application composition", () => {
     const registry = createApplicationIntegrationRegistry();
     expect(registry.list().map((item) => item.id)).toEqual([
+      "beszel",
       "docker",
       "immich",
       "jellyfin",
@@ -25,6 +26,7 @@ describe("application integration registry", () => {
     ).toMatchObject({ serverManaged: true });
     expect(registry.get("jellyfin")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("immich")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
+    expect(registry.get("beszel")?.secretFields.map((field) => field.key)).toEqual(["password"]);
     expect(() => registry.register(registry.get("docker")!)).toThrow(/frozen/);
   });
 });

@@ -29,6 +29,7 @@ export const PERMISSIONS = [
   "synology.read",
   "jellyfin.read",
   "immich.read",
+  "beszel.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

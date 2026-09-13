@@ -54,6 +54,15 @@ const immichDenied = {
   },
 };
 
+const beszelDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("beszel unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -67,11 +76,49 @@ describe("resolveIntegrationDetail", () => {
       synology: synologyDenied,
       jellyfin: jellyfinDenied,
       immich: immichDenied,
+      beszel: beszelDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
       kind: "docker",
       metadata: { id: DOCKER_ID, name: "Proxy maison", enabled: true },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Beszel reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("44444444-4444-4444-8444-444444444444", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "44444444-4444-4444-8444-444444444444",
+            name: "Hosts Lab",
+            enabled: true,
+          }),
+        },
+      },
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "beszel",
+      metadata: {
+        id: "44444444-4444-4444-8444-444444444444",
+        name: "Hosts Lab",
+        enabled: true,
+      },
     });
     expect(integrationGet).not.toHaveBeenCalled();
   });
@@ -95,6 +142,7 @@ describe("resolveIntegrationDetail", () => {
       },
       jellyfin: jellyfinDenied,
       immich: immichDenied,
+      beszel: beszelDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -138,6 +186,14 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      beszel: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Définition Beszel introuvable" });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -157,6 +213,7 @@ describe("resolveIntegrationDetail", () => {
         synology: synologyDenied,
         jellyfin: jellyfinDenied,
         immich: immichDenied,
+        beszel: beszelDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -186,6 +243,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      beszel: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -207,6 +268,7 @@ describe("resolveIntegrationDetail", () => {
         synology: synologyDenied,
         jellyfin: jellyfinDenied,
         immich: immichDenied,
+        beszel: beszelDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

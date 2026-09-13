@@ -2,7 +2,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
-import type { AppTileView, ImmichStatsView, JellyfinSessionsView } from "@dashboard/widgets";
+import type {
+  AppTileView,
+  BeszelHostsView,
+  ImmichStatsView,
+  JellyfinSessionsView,
+} from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 import { JELLYFIN_BOARD_REFRESH_MS, shouldPollJellyfinBoard } from "./jellyfin-board-refresh";
 
@@ -12,15 +17,20 @@ export function ResponsiveBoardReadGrid({
   appViews,
   jellyfinViews = {},
   immichViews = {},
+  beszelViews = {},
 }: {
   snapshot: BoardSnapshot;
   appViews: Record<string, AppTileView>;
   jellyfinViews?: Record<string, JellyfinSessionsView>;
   immichViews?: Record<string, ImmichStatsView>;
+  beszelViews?: Record<string, BeszelHostsView>;
 }) {
   const router = useRouter();
   const [requested, setRequested] = useState<"desktop" | "mobile">("desktop");
-  const pollBoard = shouldPollJellyfinBoard(jellyfinViews) || shouldPollJellyfinBoard(immichViews);
+  const pollBoard =
+    shouldPollJellyfinBoard(jellyfinViews) ||
+    shouldPollJellyfinBoard(immichViews) ||
+    shouldPollJellyfinBoard(beszelViews);
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
     const update = () => setRequested(media.matches ? "mobile" : "desktop");
@@ -48,6 +58,7 @@ export function ResponsiveBoardReadGrid({
       appViews={appViews}
       jellyfinViews={jellyfinViews}
       immichViews={immichViews}
+      beszelViews={beszelViews}
     />
   );
 }

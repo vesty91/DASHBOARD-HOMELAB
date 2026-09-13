@@ -4,11 +4,13 @@ import type { BoardSnapshot } from "@dashboard/boards";
 import { BOARD_AUTOSAVE_DEBOUNCE_MS } from "@dashboard/boards";
 import type {
   AppTileView,
+  BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
 import type {
+  BeszelIntegrationOption,
   ImmichIntegrationOption,
   JellyfinIntegrationOption,
 } from "@dashboard/widgets/runtime";
@@ -26,6 +28,8 @@ export function BoardEditWorkspace({
   jellyfinIntegrations = [],
   immichViews = {},
   immichIntegrations = [],
+  beszelViews = {},
+  beszelIntegrations = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
@@ -35,6 +39,8 @@ export function BoardEditWorkspace({
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   immichViews?: Record<string, ImmichStatsView>;
   immichIntegrations?: readonly ImmichIntegrationOption[];
+  beszelViews?: Record<string, BeszelHostsView>;
+  beszelIntegrations?: readonly BeszelIntegrationOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -132,6 +138,8 @@ export function BoardEditWorkspace({
         jellyfinIntegrations={jellyfinIntegrations}
         immichViews={immichViews}
         immichIntegrations={immichIntegrations}
+        beszelViews={beszelViews}
+        beszelIntegrations={beszelIntegrations}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

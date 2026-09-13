@@ -600,4 +600,38 @@ describe("integration service", () => {
     const updated = await service.update({ id: createdAgain.id, name: "NAS 2b" }, admin);
     expect(updated.configRevision).toBe(1);
   });
+
+  it("redacts Beszel generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "beszel",
+        displayName: "Beszel",
+      },
+    ]);
+    const beszel = await service.create(
+      {
+        type: "beszel",
+        name: "Hosts",
+        baseUrl: "https://beszel.example:8090",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(beszel.id, reader);
+    expect(restricted).toMatchObject({
+      id: beszel.id,
+      type: "beszel",
+      name: "Hosts",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("beszel.example");
+  });
 });
