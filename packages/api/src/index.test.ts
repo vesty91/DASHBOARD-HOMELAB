@@ -10,6 +10,7 @@ import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
 import type { BeszelService } from "@dashboard/beszel";
+import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
@@ -22,15 +23,17 @@ const synology = {} as SynologyService;
 const jellyfin = {} as JellyfinService;
 const immich = {} as ImmichService;
 const beszel = {} as BeszelService;
+const uptimeKuma = {} as UptimeKumaService;
 function createCaller(
-  context: Omit<ApiContext, "synology" | "jellyfin" | "immich" | "beszel"> & {
+  context: Omit<ApiContext, "synology" | "jellyfin" | "immich" | "beszel" | "uptimeKuma"> & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
     immich?: ImmichService;
     beszel?: BeszelService;
+    uptimeKuma?: UptimeKumaService;
   },
 ) {
-  return createAppCaller({ synology, jellyfin, immich, beszel, ...context });
+  return createAppCaller({ synology, jellyfin, immich, beszel, uptimeKuma, ...context });
 }
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({

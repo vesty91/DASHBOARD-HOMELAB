@@ -37,6 +37,7 @@ import {
   type DockerService,
 } from "@dashboard/docker";
 import { beszelIntegrationInputSchema, type BeszelService } from "@dashboard/beszel";
+import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
@@ -56,6 +57,7 @@ export interface ApiContext {
   jellyfin: JellyfinService;
   immich: ImmichService;
   beszel: BeszelService;
+  uptimeKuma: UptimeKumaService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -425,6 +427,31 @@ export const beszelRouter = t.router({
       ),
   }),
 });
+export const uptimeKumaRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.uptimeKuma.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) =>
+      procedure(() => ctx.uptimeKuma.listIntegrations(ctx.actor)),
+    ),
+    get: t.procedure
+      .input(uptimeKumaIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.uptimeKuma.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(uptimeKumaIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.uptimeKuma.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(uptimeKumaIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.uptimeKuma.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -435,6 +462,7 @@ export const dashboardRouter = t.router({
   jellyfin: jellyfinRouter,
   immich: immichRouter,
   beszel: beszelRouter,
+  uptimeKuma: uptimeKumaRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

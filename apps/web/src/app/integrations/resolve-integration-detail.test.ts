@@ -63,6 +63,15 @@ const beszelDenied = {
   },
 };
 
+const uptimeKumaDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("uptime-kuma unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -77,6 +86,7 @@ describe("resolveIntegrationDetail", () => {
       jellyfin: jellyfinDenied,
       immich: immichDenied,
       beszel: beszelDenied,
+      uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -110,6 +120,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -117,6 +128,44 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "44444444-4444-4444-8444-444444444444",
         name: "Hosts Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Uptime Kuma reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("55555555-5555-4555-8555-555555555555", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      uptimeKuma: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "55555555-5555-4555-8555-555555555555",
+            name: "Uptime Lab",
+            enabled: true,
+          }),
+        },
+      },
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "uptime-kuma",
+      metadata: {
+        id: "55555555-5555-4555-8555-555555555555",
+        name: "Uptime Lab",
         enabled: true,
       },
     });
@@ -143,6 +192,7 @@ describe("resolveIntegrationDetail", () => {
       jellyfin: jellyfinDenied,
       immich: immichDenied,
       beszel: beszelDenied,
+      uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -194,6 +244,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      uptimeKuma: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Uptime Kuma introuvable",
+            });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -214,6 +275,7 @@ describe("resolveIntegrationDetail", () => {
         jellyfin: jellyfinDenied,
         immich: immichDenied,
         beszel: beszelDenied,
+        uptimeKuma: uptimeKumaDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -247,6 +309,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      uptimeKuma: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -269,6 +335,7 @@ describe("resolveIntegrationDetail", () => {
         jellyfin: jellyfinDenied,
         immich: immichDenied,
         beszel: beszelDenied,
+        uptimeKuma: uptimeKumaDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

@@ -13,6 +13,7 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
 import {
@@ -23,6 +24,7 @@ import {
   clockDefaultConfig,
   immichStatsDraftConfig,
   jellyfinSessionsDraftConfig,
+  uptimeKumaStatusDraftConfig,
 } from "@dashboard/widgets";
 import {
   WidgetConfigForm,
@@ -30,6 +32,7 @@ import {
   type BeszelIntegrationOption,
   type ImmichIntegrationOption,
   type JellyfinIntegrationOption,
+  type UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
 import { useRouter } from "next/navigation";
@@ -55,6 +58,8 @@ function defaultConfig(widgetType: string): unknown {
       return immichStatsDraftConfig;
     case "beszel-hosts":
       return beszelHostsDraftConfig;
+    case "uptime-kuma-status":
+      return uptimeKumaStatusDraftConfig;
     default:
       return {};
   }
@@ -72,6 +77,8 @@ export function BoardEditor({
   immichIntegrations = [],
   beszelViews = {},
   beszelIntegrations = [],
+  uptimeKumaViews = {},
+  uptimeKumaIntegrations = [],
   canReadApps,
   conflict,
   conflictRef,
@@ -89,6 +96,8 @@ export function BoardEditor({
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelViews?: Record<string, BeszelHostsView>;
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
+  uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
   canReadApps: boolean;
   conflict: boolean;
   conflictRef: MutableRefObject<boolean>;
@@ -107,6 +116,7 @@ export function BoardEditor({
   const [pendingJellyfin, setPendingJellyfin] = useState(false);
   const [pendingImmich, setPendingImmich] = useState(false);
   const [pendingBeszel, setPendingBeszel] = useState(false);
+  const [pendingUptimeKuma, setPendingUptimeKuma] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -176,6 +186,9 @@ export function BoardEditor({
     setCatalogOpen(false);
     setPendingAppTile(false);
     setPendingJellyfin(false);
+    setPendingImmich(false);
+    setPendingBeszel(false);
+    setPendingUptimeKuma(false);
     router.refresh();
   };
 
@@ -235,6 +248,34 @@ export function BoardEditor({
     typeof (draftConfig as { appId?: string } | null)?.appId === "string"
       ? (draftConfig as { appId: string }).appId
       : "";
+  const pendingIntegration = pendingJellyfin || pendingImmich || pendingBeszel || pendingUptimeKuma;
+  const pendingWidgetType = pendingJellyfin
+    ? "jellyfin-sessions"
+    : pendingImmich
+      ? "immich-stats"
+      : pendingBeszel
+        ? "beszel-hosts"
+        : pendingUptimeKuma
+          ? "uptime-kuma-status"
+          : "app-tile";
+  const pendingDraftConfig = pendingJellyfin
+    ? jellyfinSessionsDraftConfig
+    : pendingImmich
+      ? immichStatsDraftConfig
+      : pendingBeszel
+        ? beszelHostsDraftConfig
+        : pendingUptimeKuma
+          ? uptimeKumaStatusDraftConfig
+          : appTileDraftConfig;
+  const pendingPermissionDenied = pendingJellyfin
+    ? jellyfinIntegrations.length === 0
+    : pendingImmich
+      ? immichIntegrations.length === 0
+      : pendingBeszel
+        ? beszelIntegrations.length === 0
+        : pendingUptimeKuma
+          ? uptimeKumaIntegrations.length === 0
+          : !canReadApps;
 
   return (
     <section>
@@ -261,68 +302,28 @@ export function BoardEditor({
       </div>
       {catalogOpen && (
         <section aria-label="Catalogue de widgets">
-          {pendingAppTile || pendingJellyfin || pendingImmich || pendingBeszel ? (
+          {pendingAppTile || pendingIntegration ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void addWidget(
-                  pendingJellyfin
-                    ? "jellyfin-sessions"
-                    : pendingImmich
-                      ? "immich-stats"
-                      : pendingBeszel
-                        ? "beszel-hosts"
-                        : "app-tile",
-                  draftConfig ??
-                    (pendingJellyfin
-                      ? jellyfinSessionsDraftConfig
-                      : pendingImmich
-                        ? immichStatsDraftConfig
-                        : pendingBeszel
-                          ? beszelHostsDraftConfig
-                          : appTileDraftConfig),
-                );
+                void addWidget(pendingWidgetType, draftConfig ?? pendingDraftConfig);
               }}
             >
               <WidgetConfigForm
-                widgetType={
-                  pendingJellyfin
-                    ? "jellyfin-sessions"
-                    : pendingImmich
-                      ? "immich-stats"
-                      : pendingBeszel
-                        ? "beszel-hosts"
-                        : "app-tile"
-                }
-                config={
-                  draftConfig ??
-                  (pendingJellyfin
-                    ? jellyfinSessionsDraftConfig
-                    : pendingImmich
-                      ? immichStatsDraftConfig
-                      : pendingBeszel
-                        ? beszelHostsDraftConfig
-                        : appTileDraftConfig)
-                }
+                widgetType={pendingWidgetType}
+                config={draftConfig ?? pendingDraftConfig}
                 onChange={setDraftConfig}
-                permissionDenied={
-                  pendingJellyfin
-                    ? jellyfinIntegrations.length === 0
-                    : pendingImmich
-                      ? immichIntegrations.length === 0
-                      : pendingBeszel
-                        ? beszelIntegrations.length === 0
-                        : !canReadApps
-                }
+                permissionDenied={pendingPermissionDenied}
                 loadApps={listAppsForWidgetAction}
                 jellyfinIntegrations={jellyfinIntegrations}
                 immichIntegrations={immichIntegrations}
                 beszelIntegrations={beszelIntegrations}
+                uptimeKumaIntegrations={uptimeKumaIntegrations}
               />
               <button
                 type="submit"
                 disabled={
-                  pendingJellyfin || pendingImmich || pendingBeszel
+                  pendingIntegration
                     ? !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
                         typeof (draftConfig as { integrationId?: unknown })?.integrationId ===
                           "string"
@@ -336,9 +337,7 @@ export function BoardEditor({
                       )
                 }
               >
-                {pendingJellyfin || pendingImmich || pendingBeszel
-                  ? "Ajouter le widget"
-                  : "Ajouter la tuile"}
+                {pendingIntegration ? "Ajouter le widget" : "Ajouter la tuile"}
               </button>
               <button
                 type="button"
@@ -347,6 +346,7 @@ export function BoardEditor({
                   setPendingJellyfin(false);
                   setPendingImmich(false);
                   setPendingBeszel(false);
+                  setPendingUptimeKuma(false);
                 }}
               >
                 Annuler
@@ -394,6 +394,11 @@ export function BoardEditor({
                           setPendingBeszel(true);
                           return;
                         }
+                        if (entry.id === "uptime-kuma-status") {
+                          setDraftConfig(uptimeKumaStatusDraftConfig);
+                          setPendingUptimeKuma(true);
+                          return;
+                        }
                         void addWidget(entry.id, defaultConfig(entry.id));
                       }}
                     >
@@ -438,6 +443,9 @@ export function BoardEditor({
                     {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
                     {...(immichViews[entry.id] ? { immichView: immichViews[entry.id] } : {})}
                     {...(beszelViews[entry.id] ? { beszelView: beszelViews[entry.id] } : {})}
+                    {...(uptimeKumaViews[entry.id]
+                      ? { uptimeKumaView: uptimeKumaViews[entry.id] }
+                      : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -487,6 +495,7 @@ export function BoardEditor({
             jellyfinIntegrations={jellyfinIntegrations}
             immichIntegrations={immichIntegrations}
             beszelIntegrations={beszelIntegrations}
+            uptimeKumaIntegrations={uptimeKumaIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

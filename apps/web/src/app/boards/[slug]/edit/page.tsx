@@ -8,6 +8,7 @@ import { resolveAppTileViews } from "../../resolve-app-tiles";
 import { resolveBeszelHostsViews } from "../../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
+import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 
@@ -25,11 +26,12 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     throw error;
   }
   const catalog = await caller.widget.catalog();
-  const [appViews, jellyfinViews, immichViews, beszelViews] = await Promise.all([
+  const [appViews, jellyfinViews, immichViews, beszelViews, uptimeKumaViews] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
     resolveJellyfinSessionViews(snapshot, caller),
     resolveImmichStatsViews(snapshot, caller),
     resolveBeszelHostsViews(snapshot, caller),
+    resolveUptimeKumaStatusViews(snapshot, caller),
   ]);
   let canReadApps = true;
   try {
@@ -69,6 +71,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let uptimeKumaIntegrations: Awaited<ReturnType<typeof caller.uptimeKuma.integration.list>> = [];
+  try {
+    uptimeKumaIntegrations = await caller.uptimeKuma.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   return (
     <PageContainer wide>
       <header className="board-edit-chrome">
@@ -90,6 +102,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         immichIntegrations={immichIntegrations}
         beszelViews={beszelViews}
         beszelIntegrations={beszelIntegrations}
+        uptimeKumaViews={uptimeKumaViews}
+        uptimeKumaIntegrations={uptimeKumaIntegrations}
         canReadApps={canReadApps}
       />
     </PageContainer>

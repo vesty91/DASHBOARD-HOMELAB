@@ -2,6 +2,10 @@ import { TRPCError } from "@trpc/server";
 import type { DockerIntegrationMetadata, DockerPermissionsView } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type { BeszelIntegrationMetadata, BeszelPermissionsView } from "@dashboard/beszel";
+import type {
+  UptimeKumaIntegrationMetadata,
+  UptimeKumaPermissionsView,
+} from "@dashboard/uptime-kuma";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
 import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
@@ -20,6 +24,7 @@ export type IntegrationDetailResolution =
   | { kind: "jellyfin"; metadata: JellyfinIntegrationMetadata }
   | { kind: "immich"; metadata: ImmichIntegrationMetadata }
   | { kind: "beszel"; metadata: BeszelIntegrationMetadata }
+  | { kind: "uptime-kuma"; metadata: UptimeKumaIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -51,6 +56,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<BeszelPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<BeszelIntegrationMetadata>;
+    };
+  };
+  uptimeKuma: {
+    permissions: () => Promise<Pick<UptimeKumaPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<UptimeKumaIntegrationMetadata>;
     };
   };
   integration: {
@@ -103,6 +114,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.beszel.integration.get({ integrationId: id });
       return { kind: "beszel", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const uptimeKumaPermissions = await caller.uptimeKuma.permissions();
+  if (uptimeKumaPermissions.canRead) {
+    try {
+      const metadata = await caller.uptimeKuma.integration.get({ integrationId: id });
+      return { kind: "uptime-kuma", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

@@ -20,8 +20,14 @@ export function IntegrationForm({
   const showJellyfinHelp = selectedType === "jellyfin";
   const showImmichHelp = selectedType === "immich";
   const showBeszelHelp = selectedType === "beszel";
+  const showUptimeKumaHelp = selectedType === "uptime-kuma";
   const showTrustedCa =
-    showDockerHelp || showSynologyHelp || showJellyfinHelp || showImmichHelp || showBeszelHelp;
+    showDockerHelp ||
+    showSynologyHelp ||
+    showJellyfinHelp ||
+    showImmichHelp ||
+    showBeszelHelp ||
+    showUptimeKumaHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
@@ -67,7 +73,9 @@ export function IntegrationForm({
                     ? "https://immich.example:2283"
                     : showBeszelHelp
                       ? "https://beszel.example:8090"
-                      : undefined
+                      : showUptimeKumaHelp
+                        ? "https://uptime.example:3001"
+                        : undefined
           }
         />
       </Field>
@@ -97,6 +105,13 @@ export function IntegrationForm({
           Utilisez l&apos;URL HTTP(S) du serveur Beszel (origine uniquement). L&apos;identifiant est
           stocké en configuration ; le mot de passe se configure ensuite comme secret serveur et
           n&apos;est jamais envoyé au navigateur.
+        </Alert>
+      ) : null}
+      {showUptimeKumaHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Uptime Kuma (origine uniquement). La clé API se
+          configure ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur. Seul
+          GET /metrics est utilisé ; Socket.IO n&apos;est pas supporté.
         </Alert>
       ) : null}
       {showSynologyHelp ? (
@@ -171,7 +186,9 @@ export function IntegrationForm({
                   ? "Utilisez ce champ pour un Immich HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                   : showBeszelHelp
                     ? "Utilisez ce champ pour un Beszel HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                    : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                    : showUptimeKumaHelp
+                      ? "Utilisez ce champ pour un Uptime Kuma HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                      : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

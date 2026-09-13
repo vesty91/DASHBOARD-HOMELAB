@@ -7,7 +7,7 @@ describe("application integration registry", () => {
     expect(createProductionIntegrationRegistry().list()).toEqual([]);
   });
 
-  it("registers Beszel, Docker, Immich, Jellyfin and Synology in the application composition", () => {
+  it("registers Beszel, Docker, Immich, Jellyfin, Synology and Uptime Kuma in the application composition", () => {
     const registry = createApplicationIntegrationRegistry();
     expect(registry.list().map((item) => item.id)).toEqual([
       "beszel",
@@ -15,6 +15,7 @@ describe("application integration registry", () => {
       "immich",
       "jellyfin",
       "synology",
+      "uptime-kuma",
     ]);
     expect(registry.get("docker")?.secretFields).toEqual([]);
     expect(registry.get("synology")?.secretFields.map((field) => field.key)).toEqual([
@@ -27,6 +28,7 @@ describe("application integration registry", () => {
     expect(registry.get("jellyfin")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("immich")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("beszel")?.secretFields.map((field) => field.key)).toEqual(["password"]);
+    expect(registry.get("uptime-kuma")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(() => registry.register(registry.get("docker")!)).toThrow(/frozen/);
   });
 });

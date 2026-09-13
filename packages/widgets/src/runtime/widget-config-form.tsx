@@ -4,12 +4,14 @@ import type { ClockConfig } from "../clock";
 import type { BeszelHostsDraftConfig } from "../beszel-hosts";
 import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
+import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
 import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
 import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
 import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
+import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 
 export function WidgetConfigForm({
   widgetType,
@@ -20,6 +22,7 @@ export function WidgetConfigForm({
   jellyfinIntegrations,
   immichIntegrations,
   beszelIntegrations,
+  uptimeKumaIntegrations,
 }: {
   widgetType: string;
   config: unknown;
@@ -29,6 +32,7 @@ export function WidgetConfigForm({
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
 }) {
   switch (widgetType) {
     case "clock":
@@ -69,6 +73,15 @@ export function WidgetConfigForm({
           config={config as BeszelHostsDraftConfig}
           onChange={onChange}
           integrations={beszelIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "uptime-kuma-status":
+      return (
+        <UptimeKumaStatusForm
+          config={config as UptimeKumaStatusDraftConfig}
+          onChange={onChange}
+          integrations={uptimeKumaIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

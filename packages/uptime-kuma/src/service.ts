@@ -1,0 +1,286 @@
+import {
+  DEFAULT_TIMEOUT_MS,
+  INTEGRATION_ERROR_CODES,
+  IntegrationError,
+  MAX_TIMEOUT_MS,
+  MIN_TIMEOUT_MS,
+  collectSecretStringValues,
+  loadIntegrationSecrets,
+  redactKnownSecretValues,
+  requireCapability,
+  type IntegrationCache,
+  type IntegrationDefinition,
+  type IntegrationErrorCode,
+  type IntegrationRateLimiter,
+  type IntegrationRecord,
+  type IntegrationRegistry,
+  type IntegrationStore,
+  type JsonObject,
+  type SecureHttpRequest,
+  type SecureHttpResult,
+} from "@dashboard/integrations";
+import { assertUptimeKumaAccess, uptimeKumaPermissionsView } from "./access";
+import { overviewFailureCacheOperation, uptimeKumaOverviewCacheOperation } from "./cache-key";
+import {
+  UPTIME_KUMA_OVERVIEW_FAILURE_TTL_MS,
+  fetchUptimeKumaOverview,
+  overviewCacheTtl,
+  uptimeKumaContextFromIntegration,
+  type UptimeKumaClientContext,
+} from "./client";
+import { UPTIME_KUMA_INTEGRATION_ID } from "./definition";
+import { UptimeKumaError, toIntegrationError } from "./errors";
+import type { UptimeKumaOverviewCoalescer } from "./overview-coalescer";
+import type { UptimeKumaRefreshFence } from "./refresh-fence";
+import type { UptimeKumaConfig, UptimeKumaSecrets } from "./schemas";
+import type {
+  UptimeKumaActor,
+  UptimeKumaIntegrationMetadata,
+  UptimeKumaOverview,
+  UptimeKumaPermissionsView,
+} from "./types";
+
+export interface UptimeKumaServiceDeps {
+  store: IntegrationStore;
+  registry: IntegrationRegistry;
+  cache: IntegrationCache;
+  request: (options: SecureHttpRequest) => Promise<SecureHttpResult>;
+  refreshRateLimiter: IntegrationRateLimiter;
+  refreshFence: UptimeKumaRefreshFence;
+  overviewCoalescer: UptimeKumaOverviewCoalescer;
+  keyring?: Parameters<typeof loadIntegrationSecrets>[3];
+}
+
+function timeoutFromConfig(config: JsonObject): number {
+  const raw = config.timeoutMs;
+  if (typeof raw !== "number" || !Number.isInteger(raw)) return DEFAULT_TIMEOUT_MS;
+  return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, raw));
+}
+
+function verifyTlsFromConfig(config: JsonObject): boolean {
+  return config.verifyTls !== false;
+}
+
+function trustedCaFromConfig(config: JsonObject): string | undefined {
+  return typeof config.trustedCaPem === "string" ? config.trustedCaPem : undefined;
+}
+
+type CachedUptimeKumaOverviewFailure = Readonly<{
+  code: IntegrationErrorCode;
+  message: string;
+}>;
+
+function normalizedRedactedError(error: unknown, secrets: unknown): IntegrationError {
+  const values = collectSecretStringValues(secrets);
+  if (error instanceof IntegrationError)
+    return new IntegrationError(error.code, String(redactKnownSecretValues(error.message, values)));
+  if (error instanceof UptimeKumaError)
+    return new IntegrationError(
+      toIntegrationError(error).code,
+      String(redactKnownSecretValues(error.message, values)),
+    );
+  throw error;
+}
+
+function asCachedOverview(value: unknown): UptimeKumaOverview | undefined {
+  if (!value || typeof value !== "object" || !("fetchedAt" in value)) return undefined;
+  return value as UptimeKumaOverview;
+}
+
+function asCachedOverviewFailure(value: unknown): CachedUptimeKumaOverviewFailure | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.code !== "string" || typeof record.message !== "string") return undefined;
+  if (!(INTEGRATION_ERROR_CODES as readonly string[]).includes(record.code)) return undefined;
+  return { code: record.code as IntegrationErrorCode, message: record.message };
+}
+
+function throwCachedFailure(failure: CachedUptimeKumaOverviewFailure): never {
+  throw new IntegrationError(failure.code, failure.message);
+}
+
+const LIST_PAGE_SIZE = 100;
+const LIST_MAX_PAGES = 100;
+
+async function listUptimeKumaRecords(store: IntegrationStore): Promise<IntegrationRecord[]> {
+  const found: IntegrationRecord[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
+    const records = await store.list(LIST_PAGE_SIZE, cursor);
+    for (const record of records)
+      if (record.type === UPTIME_KUMA_INTEGRATION_ID) found.push(record);
+    if (records.length < LIST_PAGE_SIZE) return found;
+    const nextCursor = records[records.length - 1]?.id;
+    if (!nextCursor || nextCursor === cursor) return found;
+    cursor = nextCursor;
+  }
+  return found;
+}
+
+export function createUptimeKumaService(deps: UptimeKumaServiceDeps) {
+  function definition(): IntegrationDefinition<UptimeKumaConfig, UptimeKumaSecrets> {
+    const registered = deps.registry.get(UPTIME_KUMA_INTEGRATION_ID);
+    if (!registered)
+      throw new IntegrationError("MISCONFIGURED", "Uptime Kuma definition is not registered");
+    return registered as IntegrationDefinition<UptimeKumaConfig, UptimeKumaSecrets>;
+  }
+
+  async function requireUptimeKumaRecord(integrationId: string): Promise<IntegrationRecord> {
+    const record = await deps.store.findById(integrationId);
+    if (!record || record.type !== UPTIME_KUMA_INTEGRATION_ID)
+      throw new IntegrationError("NOT_FOUND", "Définition Uptime Kuma introuvable");
+    return record;
+  }
+
+  async function loadContext(
+    integrationId: string,
+    capability: string,
+    refreshGeneration = 0,
+  ): Promise<{
+    ctx: UptimeKumaClientContext;
+    recordId: string;
+    secrets: UptimeKumaSecrets;
+    cacheOperation: string;
+  }> {
+    const record = await requireUptimeKumaRecord(integrationId);
+    if (!record.enabled)
+      throw new IntegrationError("MISCONFIGURED", "Uptime Kuma integration is disabled");
+    const uptimeKumaDefinition = definition();
+    const parsed = uptimeKumaDefinition.configSchema.safeParse(record.config);
+    if (!parsed.success)
+      throw new IntegrationError("MISCONFIGURED", "Invalid Uptime Kuma configuration");
+    requireCapability(uptimeKumaDefinition.capabilities, capability);
+    const config = parsed.data;
+    const secrets = (await loadIntegrationSecrets(
+      deps.store,
+      uptimeKumaDefinition,
+      record.id,
+      deps.keyring,
+    )) as UptimeKumaSecrets;
+    const encryptedSecrets = await deps.store.loadEncryptedSecrets(record.id);
+    const trustedCaPem = trustedCaFromConfig(config as JsonObject);
+    const secretValues = collectSecretStringValues(secrets);
+    return {
+      recordId: record.id,
+      secrets,
+      cacheOperation: uptimeKumaOverviewCacheOperation(
+        record.configRevision,
+        encryptedSecrets,
+        refreshGeneration,
+      ),
+      ctx: uptimeKumaContextFromIntegration({
+        integrationId: record.id,
+        baseUrl: record.baseUrl,
+        config,
+        secrets,
+        verifyTls: verifyTlsFromConfig(config as JsonObject),
+        timeoutMs: timeoutFromConfig(config as JsonObject),
+        secretValues,
+        request: (options) =>
+          deps.request({
+            ...options,
+            verifyTls: options.verifyTls ?? verifyTlsFromConfig(config as JsonObject),
+            timeoutMs: options.timeoutMs ?? timeoutFromConfig(config as JsonObject),
+            allowedSchemes: options.allowedSchemes ?? uptimeKumaDefinition.allowedSchemes,
+            maxRetries: 0,
+            maxRedirects: 0,
+            ...(trustedCaPem === undefined || options.trustedCaPem !== undefined
+              ? {}
+              : { trustedCaPem }),
+          }),
+      }),
+    };
+  }
+
+  async function overviewFor(
+    integrationId: string,
+    refreshGeneration: number,
+  ): Promise<UptimeKumaOverview> {
+    const loaded = await loadContext(integrationId, "monitors.read", refreshGeneration);
+    const cached = asCachedOverview(deps.cache.get(loaded.recordId, loaded.cacheOperation));
+    if (cached) return cached;
+    const cachedFailure = asCachedOverviewFailure(
+      deps.cache.get(loaded.recordId, overviewFailureCacheOperation(loaded.cacheOperation)),
+    );
+    if (cachedFailure) throwCachedFailure(cachedFailure);
+    return deps.overviewCoalescer.run(`${loaded.recordId}:${loaded.cacheOperation}`, async () => {
+      const rechecked = asCachedOverview(deps.cache.get(loaded.recordId, loaded.cacheOperation));
+      if (rechecked) return rechecked;
+      const recheckedFailure = asCachedOverviewFailure(
+        deps.cache.get(loaded.recordId, overviewFailureCacheOperation(loaded.cacheOperation)),
+      );
+      if (recheckedFailure) throwCachedFailure(recheckedFailure);
+      try {
+        const overview = await fetchUptimeKumaOverview(loaded.ctx);
+        const frozen = Object.freeze({
+          status: overview.status,
+          fetchedAt: overview.fetchedAt,
+          monitors: Object.freeze(overview.monitors),
+        });
+        if (deps.refreshFence.current(integrationId) === refreshGeneration)
+          deps.cache.set(loaded.recordId, loaded.cacheOperation, frozen, overviewCacheTtl(frozen));
+        return frozen;
+      } catch (error) {
+        const safe = normalizedRedactedError(error, loaded.secrets);
+        if (deps.refreshFence.current(integrationId) === refreshGeneration)
+          deps.cache.set(
+            loaded.recordId,
+            overviewFailureCacheOperation(loaded.cacheOperation),
+            { code: safe.code, message: safe.message },
+            UPTIME_KUMA_OVERVIEW_FAILURE_TTL_MS,
+          );
+        throw safe;
+      }
+    });
+  }
+
+  return {
+    permissions(actor: UptimeKumaActor): UptimeKumaPermissionsView {
+      return uptimeKumaPermissionsView(actor);
+    },
+    async listIntegrations(
+      actor: UptimeKumaActor,
+    ): Promise<readonly UptimeKumaIntegrationMetadata[]> {
+      assertUptimeKumaAccess(actor, "read");
+      const records = await listUptimeKumaRecords(deps.store);
+      return records.map((record) =>
+        Object.freeze({
+          id: record.id,
+          name: record.name,
+          enabled: record.enabled,
+        }),
+      );
+    },
+    async getIntegrationMetadata(
+      integrationId: string,
+      actor: UptimeKumaActor,
+    ): Promise<UptimeKumaIntegrationMetadata> {
+      assertUptimeKumaAccess(actor, "read");
+      const record = await requireUptimeKumaRecord(integrationId);
+      return Object.freeze({
+        id: record.id,
+        name: record.name,
+        enabled: record.enabled,
+      });
+    },
+    async getOverview(integrationId: string, actor: UptimeKumaActor): Promise<UptimeKumaOverview> {
+      assertUptimeKumaAccess(actor, "read");
+      const record = await requireUptimeKumaRecord(integrationId);
+      return overviewFor(record.id, deps.refreshFence.current(record.id));
+    },
+    async refreshOverview(
+      integrationId: string,
+      actor: UptimeKumaActor,
+    ): Promise<UptimeKumaOverview> {
+      assertUptimeKumaAccess(actor, "read");
+      const record = await requireUptimeKumaRecord(integrationId);
+      if (!deps.refreshRateLimiter.tryConsume(actor.userId ?? "anonymous", record.id))
+        throw new IntegrationError("RATE_LIMITED", "Too many Uptime Kuma refreshes");
+      const generation = deps.refreshFence.advance(record.id);
+      deps.cache.invalidate(record.id);
+      return overviewFor(record.id, generation);
+    },
+  };
+}
+
+export type UptimeKumaService = ReturnType<typeof createUptimeKumaService>;

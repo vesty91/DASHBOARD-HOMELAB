@@ -4,6 +4,7 @@ import { dockerIntegrationDefinition } from "@dashboard/docker";
 import { immichIntegrationDefinition } from "@dashboard/immich";
 import { jellyfinIntegrationDefinition } from "@dashboard/jellyfin";
 import { synologyIntegrationDefinition } from "@dashboard/synology";
+import { uptimeKumaIntegrationDefinition } from "@dashboard/uptime-kuma";
 
 export function createApplicationIntegrationRegistry() {
   return createIntegrationRegistry()
@@ -12,5 +13,6 @@ export function createApplicationIntegrationRegistry() {
     .register(immichIntegrationDefinition)
     .register(jellyfinIntegrationDefinition)
     .register(synologyIntegrationDefinition)
+    .register(uptimeKumaIntegrationDefinition)
     .freeze();
 }

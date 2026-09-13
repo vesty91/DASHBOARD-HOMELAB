@@ -360,6 +360,25 @@ Auth : header `Authorization` (token éphémère). Jamais persisté.
 Jamais exposés : mot de passe, token PocketBase, metadata PocketBase brute,
 `collectionId`, `baseUrl`, config.
 
+# Uptime Kuma API — Phase 12
+
+Routeur tRPC `uptimeKuma` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                         | Permission                    | Capability      | Notes                                                 |
+| ----------------------------- | ----------------------------- | --------------- | ----------------------------------------------------- |
+| `uptimeKuma.permissions`      | auth active                   | —               | `canRead`, `canManage`                                |
+| `uptimeKuma.integration.list` | use/manage + uptime-kuma.read | —               | `{ id, name, enabled }[]`                             |
+| `uptimeKuma.integration.get`  | use/manage + uptime-kuma.read | —               | `{ id, name, enabled }`                               |
+| `uptimeKuma.overview.get`     | use/manage + uptime-kuma.read | `monitors.read` | Cache 15 s (8 s si partiel) ; coalescer ; clé SHA-256 |
+| `uptimeKuma.overview.refresh` | use/manage + uptime-kuma.read | `monitors.read` | 10 requêtes / min / acteur / intégration              |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, section `monitors`.
+Auth : header `Authorization: Basic` (username vide, mot de passe = clé API). Jamais
+dans l'URL.
+
+Jamais exposés : clé API, `monitor_url`, `monitor_hostname`, `monitor_port`, labels
+bruts, incidents (non disponibles sur `/metrics`), `baseUrl`, config.
+
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage

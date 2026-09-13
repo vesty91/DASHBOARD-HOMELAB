@@ -45,4 +45,33 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.queryByText("Error")).toBeNull();
     expect(screen.queryByText(/stack/i)).toBeNull();
   });
+
+  it("renders an Uptime Kuma status widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "uptime-1",
+          widgetType: "uptime-kuma-status",
+          widgetVersion: 1,
+          title: "Uptime",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        uptimeKumaView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-13T00:00:00.000Z",
+          monitorCount: 2,
+          upCount: 2,
+          downCount: 0,
+          pendingCount: 0,
+          maintenanceCount: 0,
+          truncated: false,
+          latencyMs: 15,
+        }}
+      />,
+    );
+    expect(screen.getByText("2 / 2 en ligne")).toBeTruthy();
+    expect(screen.getByText("Latence 15 ms")).toBeTruthy();
+  });
 });
