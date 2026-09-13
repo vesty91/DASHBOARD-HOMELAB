@@ -435,3 +435,17 @@ malformé (null, scalaire, tableau, objet sans identité DSM reconnue) rend auss
 `invalid-response` ; `volumes: []` et `disks: []` restent valides. Core.System annoncé mais en
 échec : section système `degraded` avec DSM.Info conservé. Cache overview lié à une génération
 de connexion et à une génération de refresh manuel runtime, pas seulement à `synology.overview`.
+
+# Runtime / realtime — Phase 13
+
+Fondations. Redis n'est pas source de vérité. Aucun appel navigateur vers Redis.
+
+| Route             | Permission      | Notes                                                             |
+| ----------------- | --------------- | ----------------------------------------------------------------- |
+| `runtime.status`  | `settings.read` | `{ redis, worker, realtime }` chacun `disabled` \| `up` \| `down` |
+| `realtime.ticket` | session active  | Ticket HMAC 60 s pour `GET /events?ticket=`                       |
+
+Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SECRET`, payload brut Redis.
+
+SSE n'émet pour l'instant que `job.heartbeat` / `job.failed`. Pas de `board.updated` tant que le
+filtrage RBAC n'est pas branché.

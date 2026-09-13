@@ -52,6 +52,7 @@ import {
   type SynologyService,
 } from "@dashboard/synology";
 import { serviceStatusQuerySchema, type ServiceStatusService } from "@dashboard/monitoring";
+import type { RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 import { requireServiceStatusActor } from "./service-status";
 
@@ -68,6 +69,10 @@ export interface ApiContext {
   prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
   serviceStatus: ServiceStatusService;
+  runtime: RuntimeStatusService;
+  realtimeTickets: {
+    issue(userId: string): RealtimeTicket;
+  };
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -497,6 +502,47 @@ export const uptimeKumaRouter = t.router({
       ),
   }),
 });
+function requireAuthenticatedUser(ctx: ApiContext): string {
+  if (!ctx.actor.userId || !ctx.actor.subject || ctx.actor.subject.status !== "active")
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
+  return ctx.actor.userId;
+}
+
+function requireSettingsRead(ctx: ApiContext): void {
+  requireAuthenticatedUser(ctx);
+  const subject = ctx.actor.subject;
+  if (!subject || !hasPermission(subject, "settings.read"))
+    throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });
+}
+
+export const runtimeRouter = t.router({
+  status: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requireSettingsRead(ctx);
+      return ctx.runtime.getStatus();
+    }),
+  ),
+});
+
+export const realtimeRouter = t.router({
+  ticket: t.procedure.mutation(({ ctx }) =>
+    procedure(async () => {
+      const userId = requireAuthenticatedUser(ctx);
+      try {
+        return ctx.realtimeTickets.issue(userId);
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "AUTH_SECRET_TOO_SHORT") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "AUTH_SECRET is not configured",
+          });
+        }
+        throw error;
+      }
+    }),
+  ),
+});
+
 export const serviceStatusRouter = t.router({
   list: t.procedure.input(serviceStatusQuerySchema.optional()).query(({ ctx, input }) =>
     procedure(async () => {
@@ -524,6 +570,8 @@ export const dashboardRouter = t.router({
   prometheus: prometheusRouter,
   uptimeKuma: uptimeKumaRouter,
   serviceStatus: serviceStatusRouter,
+  runtime: runtimeRouter,
+  realtime: realtimeRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

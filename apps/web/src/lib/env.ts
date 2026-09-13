@@ -6,6 +6,11 @@ const redisUrlSchema = z.url().refine((value) => {
   return protocol === "redis:" || protocol === "rediss:";
 }, "REDIS_URL must use the redis or rediss protocol");
 
+const httpServiceUrlSchema = z.url().refine((value) => {
+  const protocol = new URL(value).protocol;
+  return protocol === "http:" || protocol === "https:";
+}, "WORKER_URL and REALTIME_URL must use http or https");
+
 export const serverEnvSchema = z.object({
   APP_URL: z.url().default("http://localhost:3000"),
   AUTH_SECRET: z.string().min(32).optional(),
@@ -27,6 +32,8 @@ export const serverEnvSchema = z.object({
   DB_DRIVER: z.enum(["sqlite", "postgres"]).optional(),
   DATABASE_URL: z.string().trim().min(1).optional(),
   REDIS_URL: redisUrlSchema.optional(),
+  WORKER_URL: httpServiceUrlSchema.optional(),
+  REALTIME_URL: httpServiceUrlSchema.optional(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   INTEGRATION_DEFAULT_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).optional(),
 });

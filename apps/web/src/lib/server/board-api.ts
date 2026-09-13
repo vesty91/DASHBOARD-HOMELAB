@@ -27,6 +27,12 @@ import {
 } from "@dashboard/uptime-kuma";
 import { MemoryServiceStatusCoalescer } from "@dashboard/monitoring";
 import {
+  createRuntimeStatusService,
+  issueRealtimeTicket,
+  probeHttpReady,
+  probeRedisUrl,
+} from "@dashboard/events";
+import {
   createImmichService,
   MemoryImmichOverviewCoalescer,
   MemoryImmichRefreshFence,
@@ -57,6 +63,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { getDatabase } from "./database";
 import { createApplicationIntegrationRegistry } from "./integration-registry";
+import { serverEnv } from "../env";
 
 const globalRuntime = globalThis as typeof globalThis & {
   dashboardIntegrationRuntime?: {
@@ -223,6 +230,25 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       uptimeKuma,
       coalescer: runtime.serviceStatusCoalescer,
     }),
+    runtime: createRuntimeStatusService(
+      {
+        ...(serverEnv.REDIS_URL ? { redisUrl: serverEnv.REDIS_URL } : {}),
+        ...(serverEnv.WORKER_URL ? { workerUrl: serverEnv.WORKER_URL } : {}),
+        ...(serverEnv.REALTIME_URL ? { realtimeUrl: serverEnv.REALTIME_URL } : {}),
+      },
+      {
+        pingRedis: () =>
+          serverEnv.REDIS_URL ? probeRedisUrl(serverEnv.REDIS_URL) : Promise.resolve(false),
+        probeHttp: probeHttpReady,
+      },
+    ),
+    realtimeTickets: {
+      issue(userId: string) {
+        const secret = serverEnv.AUTH_SECRET;
+        if (!secret) throw new Error("AUTH_SECRET_TOO_SHORT");
+        return issueRealtimeTicket(secret, userId);
+      },
+    },
   };
 }
 

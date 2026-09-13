@@ -26,6 +26,7 @@
     "@dashboard/immich": "workspace:*",
     "@dashboard/jellyfin": "workspace:*",
     "@dashboard/monitoring": "workspace:*",
+    "@dashboard/events": "workspace:*",
     "@dashboard/integrations": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/widgets": "workspace:*",

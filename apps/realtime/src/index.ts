@@ -1,4 +1,7 @@
-export const realtimeBootstrap = {
-  enabled: false,
-  reason: "Realtime implementation starts in the dedicated roadmap phase.",
-} as const;
+export {
+  REALTIME_HEARTBEAT_MS,
+  REALTIME_MAX_CONNECTIONS,
+  startRealtime,
+  type RealtimeHandle,
+  type RealtimeOptions,
+} from "./server";

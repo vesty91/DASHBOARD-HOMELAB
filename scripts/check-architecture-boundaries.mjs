@@ -46,6 +46,17 @@ const forbiddenDependencies = new Map([
   ["packages/monitoring/package.json", new Set(["@dashboard/web", "next"])],
   ["packages/shared/package.json", new Set(["@dashboard/db", "@dashboard/widgets", "next"])],
   [
+    "packages/events/package.json",
+    new Set([
+      "@dashboard/web",
+      "@dashboard/db",
+      "@dashboard/widgets",
+      "next",
+      "react",
+      "drizzle-orm",
+    ]),
+  ],
+  [
     "packages/widgets/package.json",
     new Set([
       "@dashboard/web",

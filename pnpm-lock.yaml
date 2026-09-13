@@ -28,6 +28,10 @@ importers:
         version: 8.67.0(eslint@10.8.1(jiti@2.7.0))(typescript@6.0.3)
 
   apps/realtime:
+    dependencies:
+      '@dashboard/events':
+        specifier: workspace:*
+        version: link:../../packages/events
     devDependencies:
       '@types/node':
         specifier: 26.2.0
@@ -62,6 +66,9 @@ importers:
       '@dashboard/docker':
         specifier: workspace:*
         version: link:../../packages/docker
+      '@dashboard/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@dashboard/immich':
         specifier: workspace:*
         version: link:../../packages/immich
@@ -143,6 +150,10 @@ importers:
         version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   apps/worker:
+    dependencies:
+      '@dashboard/events':
+        specifier: workspace:*
+        version: link:../../packages/events
     devDependencies:
       '@types/node':
         specifier: 26.2.0
@@ -168,6 +179,9 @@ importers:
       '@dashboard/docker':
         specifier: workspace:*
         version: link:../docker
+      '@dashboard/events':
+        specifier: workspace:*
+        version: link:../events
       '@dashboard/immich':
         specifier: workspace:*
         version: link:../immich
@@ -328,6 +342,19 @@ importers:
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/events:
+    dependencies:
       zod:
         specifier: 4.4.3
         version: 4.4.3

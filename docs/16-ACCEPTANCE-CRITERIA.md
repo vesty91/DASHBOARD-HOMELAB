@@ -193,3 +193,9 @@ intégration externe. Le DTO est canonique et borné. Le filtrage RBAC est serve
 `jellyfin.read` sans `synology.read` n'expose jamais Synology. Une source en échec
 laisse les autres visibles. Aucune fake data. Aucun secret. `maxItems` ≤ 24.
 Aucune migration DB.
+
+## AC-034 Worker realtime foundations
+
+Redis est optionnel. `runtime.status` exige `settings.read` et n'expose pas `REDIS_URL`.
+`realtime.ticket` exige une session. Le worker heartbeat ne fabrique pas d'état métier
+inventé. Redis down n'arrête pas `apps/web`.
