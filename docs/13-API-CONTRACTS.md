@@ -379,6 +379,29 @@ dans l'URL.
 Jamais exposés : clé API, `monitor_url`, `monitor_hostname`, `monitor_port`, labels
 bruts, incidents (non disponibles sur `/metrics`), `baseUrl`, config.
 
+# Prometheus API — Phase 12
+
+Routeur tRPC `prometheus` (aucun generic invoke, aucun GET PromQL).
+
+| Route                         | Permission                   | Capability   | Notes                                                               |
+| ----------------------------- | ---------------------------- | ------------ | ------------------------------------------------------------------- |
+| `prometheus.permissions`      | auth active                  | —            | `canRead`, `canManage`                                              |
+| `prometheus.integration.list` | use/manage + prometheus.read | —            | `{ id, name, enabled }[]`                                           |
+| `prometheus.integration.get`  | use/manage + prometheus.read | —            | `{ id, name, enabled }`                                             |
+| `prometheus.overview.get`     | use/manage + prometheus.read | `query.read` | Requête serveur fixe `up` ; cache 15 s (8 s si partiel) ; coalescer |
+| `prometheus.overview.refresh` | use/manage + prometheus.read | `query.read` | 10 requêtes / min / acteur / intégration                            |
+| `prometheus.query.instant`    | use/manage + prometheus.read | `query.read` | Input Zod `query` 1–512 ; POST form-urlencoded                      |
+| `prometheus.query.range`      | use/manage + prometheus.read | `query.read` | `start`/`end` dérivés serveur ; range 60–21600 ; step 15–3600       |
+
+DTO : `resultType` (`vector` \| `matrix`), `series` (labels allowlist + points
+`{ tMs, value }`), `truncated`, `seriesCount`, `sampleCount`, `fetchedAt`,
+`status` (`available` \| `degraded`).
+
+Auth : header `Authorization: Bearer` optionnel. Jamais dans l'URL.
+
+Jamais exposés : jeton Bearer, PromQL dans l'URL, JSON Prometheus brut, labels hors
+`__name__` / `job` / `instance`, `baseUrl`, config.
+
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage

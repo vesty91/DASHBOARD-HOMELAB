@@ -7,6 +7,7 @@ import type {
   BeszelOverview,
   BeszelSectionReason,
 } from "@dashboard/beszel";
+import type { PrometheusIntegrationMetadata, PrometheusQueryDto } from "@dashboard/prometheus";
 import type {
   UptimeKumaIntegrationMetadata,
   UptimeKumaMonitorStatus,
@@ -38,6 +39,8 @@ import { dockerUserError } from "../docker-error";
 import { resolveIntegrationDetail } from "../resolve-integration-detail";
 import { beszelUserError } from "../beszel-error";
 import { BeszelRefreshButton } from "../beszel-refresh-button";
+import { prometheusUserError } from "../prometheus-error";
+import { PrometheusRefreshButton } from "../prometheus-refresh-button";
 import { uptimeKumaUserError } from "../uptime-kuma-error";
 import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
 import { immichUserError } from "../immich-error";
@@ -64,7 +67,9 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "synology" ||
     integration.type === "jellyfin" ||
     integration.type === "immich" ||
-    integration.type === "beszel"
+    integration.type === "beszel" ||
+    integration.type === "prometheus" ||
+    integration.type === "uptime-kuma"
   )
     redirect("/forbidden");
   return (
@@ -1080,6 +1085,114 @@ async function UptimeKumaIntegrationDetail({
   );
 }
 
+function formatPrometheusValue(value: number | null): string {
+  if (value === null) return "Indisponible";
+  if (Number.isInteger(value)) return String(value);
+  return value.toPrecision(6);
+}
+
+function prometheusSeriesName(labels: Readonly<Record<string, string>>): string {
+  return labels.__name__ ?? labels.job ?? labels.instance ?? "metric";
+}
+
+async function PrometheusOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: PrometheusQueryDto | null = null;
+  try {
+    overview = await caller.prometheus.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = prometheusUserError(caught);
+  }
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Prometheus partielle : la liste de séries est tronquée.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Requête serveur fixe <code>up</code>. Le navigateur n&apos;envoie jamais de PromQL.
+          </p>
+          <section className="prometheus-summary">
+            <h2>État</h2>
+            <p>{overview.status === "available" ? "Disponible" : "Dégradé"}</p>
+            <p>
+              {overview.seriesCount} série{overview.seriesCount === 1 ? "" : "s"}
+              {overview.truncated ? " · liste tronquée" : ""}
+            </p>
+            <p>
+              {overview.sampleCount} échantillon{overview.sampleCount === 1 ? "" : "s"}
+            </p>
+          </section>
+          <section className="prometheus-series">
+            <h2>Séries</h2>
+            {overview.series.length ? (
+              <ul className="prometheus-series-list">
+                {overview.series.map((series, index) => {
+                  const last = [...series.points]
+                    .reverse()
+                    .find((point) => point.value !== null && Number.isFinite(point.value));
+                  return (
+                    <li
+                      key={`${prometheusSeriesName(series.labels)}-${index}`}
+                      className="prometheus-series-card"
+                    >
+                      <p>
+                        <strong>{prometheusSeriesName(series.labels)}</strong>
+                      </p>
+                      {series.labels.job ? <p>job {series.labels.job}</p> : null}
+                      {series.labels.instance ? <p>instance {series.labels.instance}</p> : null}
+                      <p>Valeur {formatPrometheusValue(last?.value ?? null)}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="ui-muted">Aucune série Prometheus.</p>
+            )}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function PrometheusIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: PrometheusIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Prometheus" />
+        <Alert tone="warning">Cette intégration Prometheus est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Prometheus" />
+      <PrometheusRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Prometheus…</p>}>
+        <PrometheusOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 export default async function IntegrationDetailPage({
   params,
 }: {
@@ -1100,6 +1213,8 @@ export default async function IntegrationDetailPage({
         return <ImmichIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "beszel":
         return <BeszelIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "prometheus":
+        return <PrometheusIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "uptime-kuma":
         return <UptimeKumaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":

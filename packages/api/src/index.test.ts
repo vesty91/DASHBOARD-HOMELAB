@@ -10,6 +10,7 @@ import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
 import type { BeszelService } from "@dashboard/beszel";
+import type { PrometheusService } from "@dashboard/prometheus";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
@@ -23,17 +24,30 @@ const synology = {} as SynologyService;
 const jellyfin = {} as JellyfinService;
 const immich = {} as ImmichService;
 const beszel = {} as BeszelService;
+const prometheus = {} as PrometheusService;
 const uptimeKuma = {} as UptimeKumaService;
 function createCaller(
-  context: Omit<ApiContext, "synology" | "jellyfin" | "immich" | "beszel" | "uptimeKuma"> & {
+  context: Omit<
+    ApiContext,
+    "synology" | "jellyfin" | "immich" | "beszel" | "prometheus" | "uptimeKuma"
+  > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
     immich?: ImmichService;
     beszel?: BeszelService;
+    prometheus?: PrometheusService;
     uptimeKuma?: UptimeKumaService;
   },
 ) {
-  return createAppCaller({ synology, jellyfin, immich, beszel, uptimeKuma, ...context });
+  return createAppCaller({
+    synology,
+    jellyfin,
+    immich,
+    beszel,
+    prometheus,
+    uptimeKuma,
+    ...context,
+  });
 }
 const service = (overrides: Partial<BoardService> = {}): BoardService =>
   ({
@@ -938,5 +952,64 @@ describe("synology tRPC router", () => {
       code: "TOO_MANY_REQUESTS",
       message: "Too many Synology device enrollment attempts",
     });
+  });
+});
+
+describe("prometheus tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000029";
+  const prometheusActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "prometheus.read"],
+    },
+  };
+  const queryDto = {
+    resultType: "vector" as const,
+    series: [
+      {
+        labels: { __name__: "up", job: "prometheus" },
+        points: [{ tMs: 1_700_000_000_000, value: 1 }],
+      },
+    ],
+    truncated: false,
+    seriesCount: 1,
+    sampleCount: 1,
+    fetchedAt: "2026-09-13T00:00:00.000Z",
+    status: "available" as const,
+  };
+
+  it("returns a bounded query DTO and rejects PromQL that is too long", async () => {
+    const prometheusService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Prom Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => queryDto),
+      refreshOverview: vi.fn(async () => queryDto),
+      queryInstant: vi.fn(async () => queryDto),
+      queryRange: vi.fn(async () => queryDto),
+    } as unknown as PrometheusService;
+    const caller = createCaller({
+      actor: prometheusActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      prometheus: prometheusService,
+    });
+    const metadata = await caller.prometheus.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "Prom Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.prometheus.query.instant({ integrationId, query: "up" })).resolves.toEqual(
+      queryDto,
+    );
+    await expect(
+      caller.prometheus.query.instant({ integrationId, query: "a".repeat(513) }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(prometheusService.queryInstant).toHaveBeenCalledTimes(1);
   });
 });

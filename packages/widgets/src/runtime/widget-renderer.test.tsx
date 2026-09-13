@@ -74,4 +74,39 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("2 / 2 en ligne")).toBeTruthy();
     expect(screen.getByText("Latence 15 ms")).toBeTruthy();
   });
+
+  it("renders a Prometheus metric widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "prom-1",
+          widgetType: "prometheus-metric",
+          widgetVersion: 1,
+          title: "Prom",
+          config: {
+            integrationId: "11111111-1111-4111-8111-111111111111",
+            query: "up",
+            mode: "instant",
+            rangeSeconds: 900,
+            stepSeconds: 60,
+          },
+          runtimeStatus: "ready",
+        }}
+        prometheusView={{
+          status: "ready",
+          resultType: "vector",
+          queryName: "up",
+          lastValue: 1,
+          seriesCount: 1,
+          truncated: false,
+          overviewStatus: "available",
+          fetchedAt: "2026-09-13T00:00:00.000Z",
+          sparkline: [],
+        }}
+      />,
+    );
+    expect(screen.getByText("up")).toBeTruthy();
+    expect(screen.getByText("1")).toBeTruthy();
+    expect(screen.getByText("1 série")).toBeTruthy();
+  });
 });

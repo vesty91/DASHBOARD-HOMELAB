@@ -8,6 +8,7 @@ import { resolveAppTileViews } from "../resolve-app-tiles";
 import { resolveBeszelHostsViews } from "../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
+import { resolvePrometheusMetricViews } from "../resolve-prometheus-metric";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
@@ -30,15 +31,23 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     if (error instanceof TRPCError && error.code === "FORBIDDEN") redirect("/forbidden");
     throw error;
   }
-  const [canEdit, appViews, jellyfinViews, immichViews, beszelViews, uptimeKumaViews] =
-    await Promise.all([
-      caller.board.canAccess({ slug, permission: "board.edit" }),
-      resolveAppTileViews(snapshot, caller),
-      resolveJellyfinSessionViews(snapshot, caller),
-      resolveImmichStatsViews(snapshot, caller),
-      resolveBeszelHostsViews(snapshot, caller),
-      resolveUptimeKumaStatusViews(snapshot, caller),
-    ]);
+  const [
+    canEdit,
+    appViews,
+    jellyfinViews,
+    immichViews,
+    beszelViews,
+    prometheusViews,
+    uptimeKumaViews,
+  ] = await Promise.all([
+    caller.board.canAccess({ slug, permission: "board.edit" }),
+    resolveAppTileViews(snapshot, caller),
+    resolveJellyfinSessionViews(snapshot, caller),
+    resolveImmichStatsViews(snapshot, caller),
+    resolveBeszelHostsViews(snapshot, caller),
+    resolvePrometheusMetricViews(snapshot, caller),
+    resolveUptimeKumaStatusViews(snapshot, caller),
+  ]);
   return (
     <PageContainer wide>
       <PageHeader
@@ -61,6 +70,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         jellyfinViews={jellyfinViews}
         immichViews={immichViews}
         beszelViews={beszelViews}
+        prometheusViews={prometheusViews}
         uptimeKumaViews={uptimeKumaViews}
       />
     </PageContainer>

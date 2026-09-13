@@ -63,6 +63,15 @@ const beszelDenied = {
   },
 };
 
+const prometheusDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("prometheus unused");
+    },
+  },
+};
+
 const uptimeKumaDenied = {
   permissions: async () => ({ canRead: false as const }),
   integration: {
@@ -86,6 +95,7 @@ describe("resolveIntegrationDetail", () => {
       jellyfin: jellyfinDenied,
       immich: immichDenied,
       beszel: beszelDenied,
+      prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
@@ -120,6 +130,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
@@ -149,6 +160,7 @@ describe("resolveIntegrationDetail", () => {
       jellyfin: jellyfinDenied,
       immich: immichDenied,
       beszel: beszelDenied,
+      prometheus: prometheusDenied,
       uptimeKuma: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -166,6 +178,45 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "55555555-5555-4555-8555-555555555555",
         name: "Uptime Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Prometheus reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("66666666-6666-4666-8666-666666666666", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "66666666-6666-4666-8666-666666666666",
+            name: "Prom Lab",
+            enabled: true,
+          }),
+        },
+      },
+      uptimeKuma: uptimeKumaDenied,
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "prometheus",
+      metadata: {
+        id: "66666666-6666-4666-8666-666666666666",
+        name: "Prom Lab",
         enabled: true,
       },
     });
@@ -192,6 +243,7 @@ describe("resolveIntegrationDetail", () => {
       jellyfin: jellyfinDenied,
       immich: immichDenied,
       beszel: beszelDenied,
+      prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       integration: { get: integrationGet },
     });
@@ -244,6 +296,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      prometheus: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Prometheus introuvable",
+            });
+          },
+        },
+      },
       uptimeKuma: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -275,6 +338,7 @@ describe("resolveIntegrationDetail", () => {
         jellyfin: jellyfinDenied,
         immich: immichDenied,
         beszel: beszelDenied,
+        prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
         integration: {
           get: async () => {
@@ -309,6 +373,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      prometheus: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       uptimeKuma: {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
@@ -335,6 +403,7 @@ describe("resolveIntegrationDetail", () => {
         jellyfin: jellyfinDenied,
         immich: immichDenied,
         beszel: beszelDenied,
+        prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
         integration: {
           get: async () => {

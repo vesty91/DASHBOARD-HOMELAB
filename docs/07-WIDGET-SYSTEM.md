@@ -130,6 +130,10 @@ Phase 12 ajoute `uptime-kuma-status` (`publicSafe=false`) : moniteurs up/total, 
 maintenance et latence utile. Même `router.refresh()` 10 s ; le navigateur ne contacte
 jamais Uptime Kuma. Les incidents ne sont pas disponibles via `/metrics`.
 
+Phase 12 ajoute `prometheus-metric` (`publicSafe=false`) : nom de série, dernière valeur
+finie et, en mode plage, une sparkline des derniers points. Même `router.refresh()` 10 s ;
+le navigateur n'envoie jamais de PromQL et ne contacte jamais Prometheus.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -140,7 +144,7 @@ jamais Uptime Kuma. Les incidents ne sont pas disponibles via `/metrics`.
 - Immich Stats (`immich-stats`, Phase 11) ;
 - Beszel Hosts (`beszel-hosts`, Phase 12) ;
 - Uptime Kuma Status (`uptime-kuma-status`, Phase 12) ;
-- Prometheus Query.
+- Prometheus Metric (`prometheus-metric`, Phase 12).
 
 ## 11. Custom API widget
 

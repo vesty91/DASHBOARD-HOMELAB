@@ -17,6 +17,7 @@
   "dependencies": {
     "@dashboard/app-library": "workspace:*",
     "@dashboard/beszel": "workspace:*",
+    "@dashboard/prometheus": "workspace:*",
     "@dashboard/uptime-kuma": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/boards": "workspace:*",

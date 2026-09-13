@@ -20,6 +20,7 @@ export function IntegrationForm({
   const showJellyfinHelp = selectedType === "jellyfin";
   const showImmichHelp = selectedType === "immich";
   const showBeszelHelp = selectedType === "beszel";
+  const showPrometheusHelp = selectedType === "prometheus";
   const showUptimeKumaHelp = selectedType === "uptime-kuma";
   const showTrustedCa =
     showDockerHelp ||
@@ -27,6 +28,7 @@ export function IntegrationForm({
     showJellyfinHelp ||
     showImmichHelp ||
     showBeszelHelp ||
+    showPrometheusHelp ||
     showUptimeKumaHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
@@ -41,7 +43,7 @@ export function IntegrationForm({
         <Select
           name="type"
           required
-          defaultValue={integration?.type ?? catalog[0]?.id ?? ""}
+          value={selectedType}
           disabled={Boolean(integration)}
           onChange={(event) => setSelectedType(event.target.value)}
         >
@@ -73,9 +75,11 @@ export function IntegrationForm({
                     ? "https://immich.example:2283"
                     : showBeszelHelp
                       ? "https://beszel.example:8090"
-                      : showUptimeKumaHelp
-                        ? "https://uptime.example:3001"
-                        : undefined
+                      : showPrometheusHelp
+                        ? "http://prometheus.example:9090"
+                        : showUptimeKumaHelp
+                          ? "https://uptime.example:3001"
+                          : undefined
           }
         />
       </Field>
@@ -105,6 +109,13 @@ export function IntegrationForm({
           Utilisez l&apos;URL HTTP(S) du serveur Beszel (origine uniquement). L&apos;identifiant est
           stocké en configuration ; le mot de passe se configure ensuite comme secret serveur et
           n&apos;est jamais envoyé au navigateur.
+        </Alert>
+      ) : null}
+      {showPrometheusHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Prometheus (origine uniquement). Le jeton Bearer
+          est optionnel et se configure ensuite comme secret serveur ; il n&apos;est jamais envoyé
+          au navigateur. Seuls POST /api/v1/query et /api/v1/query_range sont utilisés.
         </Alert>
       ) : null}
       {showUptimeKumaHelp ? (
@@ -186,9 +197,11 @@ export function IntegrationForm({
                   ? "Utilisez ce champ pour un Immich HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                   : showBeszelHelp
                     ? "Utilisez ce champ pour un Beszel HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                    : showUptimeKumaHelp
-                      ? "Utilisez ce champ pour un Uptime Kuma HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                      : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                    : showPrometheusHelp
+                      ? "Utilisez ce champ pour un Prometheus HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                      : showUptimeKumaHelp
+                        ? "Utilisez ce champ pour un Uptime Kuma HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                        : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

@@ -13,6 +13,7 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  PrometheusMetricView,
   UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -24,6 +25,7 @@ import {
   clockDefaultConfig,
   immichStatsDraftConfig,
   jellyfinSessionsDraftConfig,
+  prometheusMetricDraftConfig,
   uptimeKumaStatusDraftConfig,
 } from "@dashboard/widgets";
 import {
@@ -32,6 +34,7 @@ import {
   type BeszelIntegrationOption,
   type ImmichIntegrationOption,
   type JellyfinIntegrationOption,
+  type PrometheusIntegrationOption,
   type UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
@@ -58,6 +61,8 @@ function defaultConfig(widgetType: string): unknown {
       return immichStatsDraftConfig;
     case "beszel-hosts":
       return beszelHostsDraftConfig;
+    case "prometheus-metric":
+      return prometheusMetricDraftConfig;
     case "uptime-kuma-status":
       return uptimeKumaStatusDraftConfig;
     default:
@@ -77,6 +82,8 @@ export function BoardEditor({
   immichIntegrations = [],
   beszelViews = {},
   beszelIntegrations = [],
+  prometheusViews = {},
+  prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
   canReadApps,
@@ -96,6 +103,8 @@ export function BoardEditor({
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelViews?: Record<string, BeszelHostsView>;
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  prometheusViews?: Record<string, PrometheusMetricView>;
+  prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
   canReadApps: boolean;
@@ -116,6 +125,7 @@ export function BoardEditor({
   const [pendingJellyfin, setPendingJellyfin] = useState(false);
   const [pendingImmich, setPendingImmich] = useState(false);
   const [pendingBeszel, setPendingBeszel] = useState(false);
+  const [pendingPrometheus, setPendingPrometheus] = useState(false);
   const [pendingUptimeKuma, setPendingUptimeKuma] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
@@ -188,6 +198,7 @@ export function BoardEditor({
     setPendingJellyfin(false);
     setPendingImmich(false);
     setPendingBeszel(false);
+    setPendingPrometheus(false);
     setPendingUptimeKuma(false);
     router.refresh();
   };
@@ -248,34 +259,41 @@ export function BoardEditor({
     typeof (draftConfig as { appId?: string } | null)?.appId === "string"
       ? (draftConfig as { appId: string }).appId
       : "";
-  const pendingIntegration = pendingJellyfin || pendingImmich || pendingBeszel || pendingUptimeKuma;
+  const pendingIntegration =
+    pendingJellyfin || pendingImmich || pendingBeszel || pendingPrometheus || pendingUptimeKuma;
   const pendingWidgetType = pendingJellyfin
     ? "jellyfin-sessions"
     : pendingImmich
       ? "immich-stats"
       : pendingBeszel
         ? "beszel-hosts"
-        : pendingUptimeKuma
-          ? "uptime-kuma-status"
-          : "app-tile";
+        : pendingPrometheus
+          ? "prometheus-metric"
+          : pendingUptimeKuma
+            ? "uptime-kuma-status"
+            : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
       ? immichStatsDraftConfig
       : pendingBeszel
         ? beszelHostsDraftConfig
-        : pendingUptimeKuma
-          ? uptimeKumaStatusDraftConfig
-          : appTileDraftConfig;
+        : pendingPrometheus
+          ? prometheusMetricDraftConfig
+          : pendingUptimeKuma
+            ? uptimeKumaStatusDraftConfig
+            : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
       ? immichIntegrations.length === 0
       : pendingBeszel
         ? beszelIntegrations.length === 0
-        : pendingUptimeKuma
-          ? uptimeKumaIntegrations.length === 0
-          : !canReadApps;
+        : pendingPrometheus
+          ? prometheusIntegrations.length === 0
+          : pendingUptimeKuma
+            ? uptimeKumaIntegrations.length === 0
+            : !canReadApps;
 
   return (
     <section>
@@ -318,6 +336,7 @@ export function BoardEditor({
                 jellyfinIntegrations={jellyfinIntegrations}
                 immichIntegrations={immichIntegrations}
                 beszelIntegrations={beszelIntegrations}
+                prometheusIntegrations={prometheusIntegrations}
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
               />
               <button
@@ -346,6 +365,7 @@ export function BoardEditor({
                   setPendingJellyfin(false);
                   setPendingImmich(false);
                   setPendingBeszel(false);
+                  setPendingPrometheus(false);
                   setPendingUptimeKuma(false);
                 }}
               >
@@ -392,6 +412,11 @@ export function BoardEditor({
                         if (entry.id === "beszel-hosts") {
                           setDraftConfig(beszelHostsDraftConfig);
                           setPendingBeszel(true);
+                          return;
+                        }
+                        if (entry.id === "prometheus-metric") {
+                          setDraftConfig(prometheusMetricDraftConfig);
+                          setPendingPrometheus(true);
                           return;
                         }
                         if (entry.id === "uptime-kuma-status") {
@@ -443,6 +468,9 @@ export function BoardEditor({
                     {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
                     {...(immichViews[entry.id] ? { immichView: immichViews[entry.id] } : {})}
                     {...(beszelViews[entry.id] ? { beszelView: beszelViews[entry.id] } : {})}
+                    {...(prometheusViews[entry.id]
+                      ? { prometheusView: prometheusViews[entry.id] }
+                      : {})}
                     {...(uptimeKumaViews[entry.id]
                       ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                       : {})}
@@ -495,6 +523,7 @@ export function BoardEditor({
             jellyfinIntegrations={jellyfinIntegrations}
             immichIntegrations={immichIntegrations}
             beszelIntegrations={beszelIntegrations}
+            prometheusIntegrations={prometheusIntegrations}
             uptimeKumaIntegrations={uptimeKumaIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>

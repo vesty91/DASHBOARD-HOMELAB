@@ -668,4 +668,38 @@ describe("integration service", () => {
     expect(restricted).not.toHaveProperty("configRevision");
     expect(JSON.stringify(restricted)).not.toContain("uptime.example");
   });
+
+  it("redacts Prometheus generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "prometheus",
+        displayName: "Prometheus",
+      },
+    ]);
+    const prometheus = await service.create(
+      {
+        type: "prometheus",
+        name: "Prom",
+        baseUrl: "http://prometheus.example:9090",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(prometheus.id, reader);
+    expect(restricted).toMatchObject({
+      id: prometheus.id,
+      type: "prometheus",
+      name: "Prom",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("prometheus.example");
+  });
 });

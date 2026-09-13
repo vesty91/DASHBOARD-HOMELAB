@@ -4,6 +4,7 @@ import type { ClockConfig } from "../clock";
 import type { BeszelHostsDraftConfig } from "../beszel-hosts";
 import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
+import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
 import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
@@ -11,6 +12,7 @@ import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
 import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
+import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 
 export function WidgetConfigForm({
@@ -22,6 +24,7 @@ export function WidgetConfigForm({
   jellyfinIntegrations,
   immichIntegrations,
   beszelIntegrations,
+  prometheusIntegrations,
   uptimeKumaIntegrations,
 }: {
   widgetType: string;
@@ -32,6 +35,7 @@ export function WidgetConfigForm({
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
 }) {
   switch (widgetType) {
@@ -73,6 +77,15 @@ export function WidgetConfigForm({
           config={config as BeszelHostsDraftConfig}
           onChange={onChange}
           integrations={beszelIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "prometheus-metric":
+      return (
+        <PrometheusMetricForm
+          config={config as PrometheusMetricDraftConfig}
+          onChange={onChange}
+          integrations={prometheusIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

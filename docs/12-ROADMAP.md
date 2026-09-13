@@ -231,15 +231,16 @@ Hors scope : jobs, EXIF, thumbnails, `usageByUser`, Phase 12.
 
 ## Phase 12 — Monitoring
 
-Statut sur la branche `phase-12-uptime-kuma` : IN PROGRESS (Uptime Kuma).
+Statut sur la branche `phase-12-prometheus` : IN PROGRESS (Prometheus).
 
 Livrables :
 
 - Beszel (IMPLEMENTED) : adapter HTTP+Zod, `beszel.read`, widget
   `beszel-hosts` (`publicSafe=false`) ;
-- Uptime Kuma (IN PROGRESS) : adapter `GET /metrics` + Basic auth, `uptime-kuma.read`,
+- Uptime Kuma (IMPLEMENTED) : adapter `GET /metrics` + Basic auth, `uptime-kuma.read`,
   widget `uptime-kuma-status` (`publicSafe=false`) ;
-- Prometheus ;
+- Prometheus (IN PROGRESS) : adapter `POST /api/v1/query` + `query_range`,
+  `prometheus.read`, widget `prometheus-metric` (`publicSafe=false`) ;
 - service status.
 
 ## Phase 13 — Worker + realtime

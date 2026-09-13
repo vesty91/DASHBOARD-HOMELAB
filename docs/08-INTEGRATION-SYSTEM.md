@@ -165,6 +165,12 @@ storage.read
 disks.read
 ```
 
+### Prometheus
+
+```text
+query.read
+```
+
 ## 10. Permissions
 
 Le widget demande une capability.
@@ -309,7 +315,7 @@ Widget `beszel-hosts` : `publicSafe=false`. Refresh manuel 10/min. Cache overvie
 
 ## 17. Uptime Kuma
 
-Statut sur la branche `phase-12-uptime-kuma` : IN PROGRESS.
+Statut sur la branche `phase-12-uptime-kuma` : IMPLEMENTED / REVIEW.
 
 Adapter `uptime-kuma` composé dans `apps/web`. Transport HTTP(S) vers l'origine
 Uptime Kuma. Auth HTTP Basic officielle (`Authorization: Basic base64(":" + apiKey)`).
@@ -328,14 +334,24 @@ fake data. `monitor_url` / hostname / port jamais exposés au navigateur.
 
 ## 18. Prometheus
 
-Autoriser un sous-ensemble de requêtes par widget ou permission.
+Statut sur la branche `phase-12-prometheus` : IN PROGRESS.
 
-Limiter :
+Adapter `prometheus` composé dans `apps/web`. Transport HTTP(S) vers l'origine
+Prometheus. Auth Bearer optionnelle (`Authorization: Bearer <token>`). Lecture seule
+`POST /api/v1/query` et `POST /api/v1/query_range` (form-urlencoded). Voir ADR 0014.
+GET query, labels/series, admin, write et proxy générique sont hors scope.
 
-- range ;
-- step ;
-- volume de séries ;
-- timeout.
+`prometheus.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
+Prometheus (`integration.use|manage` + `prometheus.read`). `integration.read` n'est
+pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
+`capabilities` et l'état des secrets d'un record `prometheus` sans
+`integration.manage`.
+
+Widget `prometheus-metric` : `publicSafe=false`. Refresh manuel 10/min. Cache
+15 s (8 s si partiel). PromQL revalidé côté serveur (longueur, contrôles, plage,
+pas, volume). Jeton jamais renvoyé. Aucune mutation. Aucune fake data. Labels hors
+`__name__` / `job` / `instance` jamais exposés. La page détail n'accepte pas de
+requête depuis l'URL : requête serveur fixe `up`.
 
 ## 19. Tests intégrations
 
