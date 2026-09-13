@@ -7,6 +7,7 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  UptimeKumaStatusView,
 } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 import { JELLYFIN_BOARD_REFRESH_MS, shouldPollJellyfinBoard } from "./jellyfin-board-refresh";
@@ -18,19 +19,22 @@ export function ResponsiveBoardReadGrid({
   jellyfinViews = {},
   immichViews = {},
   beszelViews = {},
+  uptimeKumaViews = {},
 }: {
   snapshot: BoardSnapshot;
   appViews: Record<string, AppTileView>;
   jellyfinViews?: Record<string, JellyfinSessionsView>;
   immichViews?: Record<string, ImmichStatsView>;
   beszelViews?: Record<string, BeszelHostsView>;
+  uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
 }) {
   const router = useRouter();
   const [requested, setRequested] = useState<"desktop" | "mobile">("desktop");
   const pollBoard =
     shouldPollJellyfinBoard(jellyfinViews) ||
     shouldPollJellyfinBoard(immichViews) ||
-    shouldPollJellyfinBoard(beszelViews);
+    shouldPollJellyfinBoard(beszelViews) ||
+    shouldPollJellyfinBoard(uptimeKumaViews);
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
     const update = () => setRequested(media.matches ? "mobile" : "desktop");
@@ -59,6 +63,7 @@ export function ResponsiveBoardReadGrid({
       jellyfinViews={jellyfinViews}
       immichViews={immichViews}
       beszelViews={beszelViews}
+      uptimeKumaViews={uptimeKumaViews}
     />
   );
 }

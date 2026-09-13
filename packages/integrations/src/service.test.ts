@@ -634,4 +634,38 @@ describe("integration service", () => {
     expect(restricted).not.toHaveProperty("configRevision");
     expect(JSON.stringify(restricted)).not.toContain("beszel.example");
   });
+
+  it("redacts Uptime Kuma generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "uptime-kuma",
+        displayName: "Uptime Kuma",
+      },
+    ]);
+    const uptimeKuma = await service.create(
+      {
+        type: "uptime-kuma",
+        name: "Uptime",
+        baseUrl: "https://uptime.example:3001",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(uptimeKuma.id, reader);
+    expect(restricted).toMatchObject({
+      id: uptimeKuma.id,
+      type: "uptime-kuma",
+      name: "Uptime",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("uptime.example");
+  });
 });

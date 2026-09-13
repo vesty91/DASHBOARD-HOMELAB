@@ -15,6 +15,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/jellyfin",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -34,6 +35,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/jellyfin",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
       "next",
       "react",
       "drizzle-orm",
@@ -51,6 +53,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/jellyfin",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -65,6 +68,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/jellyfin",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -79,6 +83,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/jellyfin",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -93,6 +98,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/synology",
       "@dashboard/immich",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -107,6 +113,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/synology",
       "@dashboard/jellyfin",
       "@dashboard/beszel",
+      "@dashboard/uptime-kuma",
     ]),
   ],
   [
@@ -121,6 +128,22 @@ const forbiddenDependencies = new Map([
       "@dashboard/synology",
       "@dashboard/jellyfin",
       "@dashboard/immich",
+      "@dashboard/uptime-kuma",
+    ]),
+  ],
+  [
+    "packages/uptime-kuma/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
+      "@dashboard/jellyfin",
+      "@dashboard/immich",
+      "@dashboard/beszel",
     ]),
   ],
 ]);

@@ -126,6 +126,10 @@ Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Immich.
 Phase 12 ajoute `beszel-hosts` (`publicSafe=false`) : hôtes up/total, down, CPU, RAM et
 disque. Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Beszel.
 
+Phase 12 ajoute `uptime-kuma-status` (`publicSafe=false`) : moniteurs up/total, down,
+maintenance et latence utile. Même `router.refresh()` 10 s ; le navigateur ne contacte
+jamais Uptime Kuma. Les incidents ne sont pas disponibles via `/metrics`.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -135,7 +139,7 @@ disque. Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API B
 - Jellyfin Sessions (`jellyfin-sessions`, Phase 10) ;
 - Immich Stats (`immich-stats`, Phase 11) ;
 - Beszel Hosts (`beszel-hosts`, Phase 12) ;
-- Uptime Kuma ;
+- Uptime Kuma Status (`uptime-kuma-status`, Phase 12) ;
 - Prometheus Query.
 
 ## 11. Custom API widget

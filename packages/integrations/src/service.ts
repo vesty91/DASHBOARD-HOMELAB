@@ -110,7 +110,8 @@ async function toDto(
     (record.type === "synology" ||
       record.type === "jellyfin" ||
       record.type === "immich" ||
-      record.type === "beszel") &&
+      record.type === "beszel" ||
+      record.type === "uptime-kuma") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {
     const { configRevision: _configRevision, ...withoutRevision } = dto;

@@ -30,6 +30,7 @@ export const PERMISSIONS = [
   "jellyfin.read",
   "immich.read",
   "beszel.read",
+  "uptime-kuma.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

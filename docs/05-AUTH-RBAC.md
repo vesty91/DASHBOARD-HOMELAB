@@ -193,8 +193,13 @@ Phase 12 : lecture Beszel exige (`integration.use` ou `integration.manage`) **et
 `/integrations/[id]` Beszel : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `beszel.read`.
 
+Phase 12 : lecture Uptime Kuma exige (`integration.use` ou `integration.manage`) **et**
+`uptime-kuma.read`. Cette conjonction suffit pour `uptimeKuma.integration.get` et
+`/integrations/[id]` Uptime Kuma : `integration.read` n'est pas requis. Le rôle `ADMIN`
+par défaut **n'obtient pas** `uptime-kuma.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`immich.read`, `beszel.read`, `docker.*` ni `settings.manage`.
+`immich.read`, `beszel.read`, `uptime-kuma.read`, `docker.*` ni `settings.manage`.
 
 ## 10. Audit
 

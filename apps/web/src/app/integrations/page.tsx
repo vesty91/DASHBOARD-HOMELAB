@@ -45,6 +45,7 @@ export default async function IntegrationsPage({
       jellyfinPermissions,
       immichPermissions,
       beszelPermissions,
+      uptimeKumaPermissions,
     ] = await Promise.all([
       caller.integration.list({ limit: 50, cursor }),
       caller.integration.canManage(),
@@ -55,6 +56,7 @@ export default async function IntegrationsPage({
       caller.jellyfin.permissions(),
       caller.immich.permissions(),
       caller.beszel.permissions(),
+      caller.uptimeKuma.permissions(),
     ]);
     const canAdd = canCreate && catalog.length > 0;
     return (
@@ -79,7 +81,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich ou Beszel."
+                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel ou Uptime Kuma."
             }
           />
         ) : (
@@ -113,7 +115,8 @@ export default async function IntegrationsPage({
                   (integration.type === "synology" && synologyPermissions.canRead) ||
                   (integration.type === "jellyfin" && jellyfinPermissions.canRead) ||
                   (integration.type === "immich" && immichPermissions.canRead) ||
-                  (integration.type === "beszel" && beszelPermissions.canRead) ? (
+                  (integration.type === "beszel" && beszelPermissions.canRead) ||
+                  (integration.type === "uptime-kuma" && uptimeKumaPermissions.canRead) ? (
                     <Link
                       className="ui-btn ui-btn-primary"
                       href={`/integrations/${integration.id}`}

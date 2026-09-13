@@ -307,7 +307,26 @@ l'état des secrets d'un record `beszel` sans `integration.manage`.
 Widget `beszel-hosts` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 15 s
 (8 s si partiel). Token jamais persisté. Aucune mutation. Aucune fake data.
 
-## 17. Prometheus
+## 17. Uptime Kuma
+
+Statut sur la branche `phase-12-uptime-kuma` : IN PROGRESS.
+
+Adapter `uptime-kuma` composé dans `apps/web`. Transport HTTP(S) vers l'origine
+Uptime Kuma. Auth HTTP Basic officielle (`Authorization: Basic base64(":" + apiKey)`).
+Lecture seule `GET /metrics`. Voir ADR 0013. Socket.IO, `/api/push/*` et
+`/api/status-page/*` sont hors scope. Les incidents ne sont pas exposés par `/metrics`.
+
+`uptimeKuma.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
+Uptime Kuma (`integration.use|manage` + `uptime-kuma.read`). `integration.read` n'est
+pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
+`capabilities` et l'état des secrets d'un record `uptime-kuma` sans
+`integration.manage`.
+
+Widget `uptime-kuma-status` : `publicSafe=false`. Refresh manuel 10/min. Cache
+overview 15 s (8 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucune
+fake data. `monitor_url` / hostname / port jamais exposés au navigateur.
+
+## 18. Prometheus
 
 Autoriser un sous-ensemble de requêtes par widget ou permission.
 
@@ -318,7 +337,7 @@ Limiter :
 - volume de séries ;
 - timeout.
 
-## 18. Tests intégrations
+## 19. Tests intégrations
 
 Pour chaque adapter :
 

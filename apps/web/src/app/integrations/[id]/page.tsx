@@ -7,6 +7,12 @@ import type {
   BeszelOverview,
   BeszelSectionReason,
 } from "@dashboard/beszel";
+import type {
+  UptimeKumaIntegrationMetadata,
+  UptimeKumaMonitorStatus,
+  UptimeKumaOverview,
+  UptimeKumaSectionReason,
+} from "@dashboard/uptime-kuma";
 import type { DockerIntegrationMetadata } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type {
@@ -32,6 +38,8 @@ import { dockerUserError } from "../docker-error";
 import { resolveIntegrationDetail } from "../resolve-integration-detail";
 import { beszelUserError } from "../beszel-error";
 import { BeszelRefreshButton } from "../beszel-refresh-button";
+import { uptimeKumaUserError } from "../uptime-kuma-error";
+import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
 import { immichUserError } from "../immich-error";
 import { ImmichRefreshButton } from "../immich-refresh-button";
 import { jellyfinUserError } from "../jellyfin-error";
@@ -922,6 +930,156 @@ async function BeszelIntegrationDetail({
   );
 }
 
+function uptimeKumaReasonLabel(reason: UptimeKumaSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Uptime Kuma indisponible.";
+    case "permission-denied":
+      return "Accès Uptime Kuma refusé.";
+    case "timeout":
+      return "Délai dépassé pour cette section Uptime Kuma.";
+    case "invalid-response":
+      return "Réponse Uptime Kuma invalide.";
+    case "unauthorized":
+      return "Clé API Uptime Kuma invalide.";
+    case "rate-limited":
+      return "Uptime Kuma a limité les requêtes.";
+    case "dns":
+      return "Le serveur Uptime Kuma est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Uptime Kuma.";
+    case "unreachable":
+      return "Le serveur Uptime Kuma est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Uptime Kuma indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function uptimeKumaStatusLabel(status: UptimeKumaMonitorStatus): string {
+  switch (status) {
+    case "up":
+      return "En ligne";
+    case "down":
+      return "Hors ligne";
+    case "pending":
+      return "En attente";
+    case "maintenance":
+      return "Maintenance";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+function formatLatencyMs(value: number | null): string {
+  if (value === null) return "Indisponible";
+  return `${Math.round(value)} ms`;
+}
+
+async function UptimeKumaOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: UptimeKumaOverview | null = null;
+  try {
+    overview = await caller.uptimeKuma.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = uptimeKumaUserError(caught);
+  }
+  const monitors = overview?.monitors.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue Uptime Kuma partielle : certains moniteurs sont hors ligne, en attente ou la liste est
+          tronquée.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Les incidents ne sont pas exposés par GET /metrics ; cette vue ne les invente pas.
+          </p>
+          <section className="uptime-kuma-summary">
+            <h2>État</h2>
+            {overview.monitors.status === "unavailable" ? (
+              <Alert tone="warning">{uptimeKumaReasonLabel(overview.monitors.reason)}</Alert>
+            ) : null}
+            <p>
+              {monitors?.upCount ?? 0} / {monitors?.monitorCount ?? 0} en ligne
+              {monitors?.truncated ? " · liste tronquée" : ""}
+            </p>
+            <p>{monitors?.downCount ?? 0} hors ligne</p>
+            <p>{monitors?.pendingCount ?? 0} en attente</p>
+            <p>{monitors?.maintenanceCount ?? 0} en maintenance</p>
+          </section>
+          <section className="uptime-kuma-monitors">
+            <h2>Moniteurs</h2>
+            {monitors?.monitors.length ? (
+              <ul className="uptime-kuma-monitor-list">
+                {monitors.monitors.map((monitor) => (
+                  <li key={monitor.id} className="uptime-kuma-monitor-card">
+                    <p>
+                      <strong>{monitor.name}</strong>
+                    </p>
+                    <p>{uptimeKumaStatusLabel(monitor.status)}</p>
+                    <p>Latence {formatLatencyMs(monitor.latencyMs)}</p>
+                    {monitor.uptimePercent !== null ? (
+                      <p>Disponibilité {formatPercent(monitor.uptimePercent)}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ui-muted">Aucun moniteur Uptime Kuma.</p>
+            )}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function UptimeKumaIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: UptimeKumaIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Uptime Kuma" />
+        <Alert tone="warning">Cette intégration Uptime Kuma est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Uptime Kuma" />
+      <UptimeKumaRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement des moniteurs Uptime Kuma…</p>}>
+        <UptimeKumaOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 export default async function IntegrationDetailPage({
   params,
 }: {
@@ -942,6 +1100,8 @@ export default async function IntegrationDetailPage({
         return <ImmichIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "beszel":
         return <BeszelIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "uptime-kuma":
+        return <UptimeKumaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

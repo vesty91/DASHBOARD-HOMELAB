@@ -147,3 +147,13 @@ export async function listBeszelIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listUptimeKumaIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).uptimeKuma.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

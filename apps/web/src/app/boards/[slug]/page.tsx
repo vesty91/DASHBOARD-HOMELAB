@@ -8,6 +8,7 @@ import { resolveAppTileViews } from "../resolve-app-tiles";
 import { resolveBeszelHostsViews } from "../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
+import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
 const visibilityLabel = {
@@ -29,13 +30,15 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     if (error instanceof TRPCError && error.code === "FORBIDDEN") redirect("/forbidden");
     throw error;
   }
-  const [canEdit, appViews, jellyfinViews, immichViews, beszelViews] = await Promise.all([
-    caller.board.canAccess({ slug, permission: "board.edit" }),
-    resolveAppTileViews(snapshot, caller),
-    resolveJellyfinSessionViews(snapshot, caller),
-    resolveImmichStatsViews(snapshot, caller),
-    resolveBeszelHostsViews(snapshot, caller),
-  ]);
+  const [canEdit, appViews, jellyfinViews, immichViews, beszelViews, uptimeKumaViews] =
+    await Promise.all([
+      caller.board.canAccess({ slug, permission: "board.edit" }),
+      resolveAppTileViews(snapshot, caller),
+      resolveJellyfinSessionViews(snapshot, caller),
+      resolveImmichStatsViews(snapshot, caller),
+      resolveBeszelHostsViews(snapshot, caller),
+      resolveUptimeKumaStatusViews(snapshot, caller),
+    ]);
   return (
     <PageContainer wide>
       <PageHeader
@@ -58,6 +61,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         jellyfinViews={jellyfinViews}
         immichViews={immichViews}
         beszelViews={beszelViews}
+        uptimeKumaViews={uptimeKumaViews}
       />
     </PageContainer>
   );

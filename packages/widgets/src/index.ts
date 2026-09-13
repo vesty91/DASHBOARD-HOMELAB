@@ -68,6 +68,18 @@ export {
   jellyfinSessionsDefaultConfig,
   jellyfinSessionsDraftConfig,
 } from "./jellyfin-sessions";
+export type {
+  UptimeKumaStatusConfig,
+  UptimeKumaStatusDraftConfig,
+  UptimeKumaStatusView,
+} from "./uptime-kuma-status";
+export {
+  UPTIME_KUMA_STATUS_UNSET_INTEGRATION_ID,
+  uptimeKumaStatusConfigSchema,
+  uptimeKumaStatusContract,
+  uptimeKumaStatusDefaultConfig,
+  uptimeKumaStatusDraftConfig,
+} from "./uptime-kuma-status";
 
 import { builtInWidgetRegistry } from "./built-in";
 import { createWidgetPolicy } from "./policy";

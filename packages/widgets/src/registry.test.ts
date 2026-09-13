@@ -65,10 +65,12 @@ describe("widget registry", () => {
       "clock",
       "immich-stats",
       "jellyfin-sessions",
+      "uptime-kuma-status",
     ]);
     expect(registry.get("clock")).toMatchObject({ version: 1, publicSafe: true });
     expect(registry.get("bookmarks")?.publicSafe).toBe(false);
     expect(registry.get("app-tile")?.publicSafe).toBe(false);
+    expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);
     expect(() => registry.register(clockContract)).toThrow(/immutable/);
   });
 

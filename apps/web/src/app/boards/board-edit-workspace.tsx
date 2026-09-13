@@ -7,12 +7,14 @@ import type {
   BeszelHostsView,
   ImmichStatsView,
   JellyfinSessionsView,
+  UptimeKumaStatusView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
 import type {
   BeszelIntegrationOption,
   ImmichIntegrationOption,
   JellyfinIntegrationOption,
+  UptimeKumaIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
 import { BoardEditor } from "./board-editor";
@@ -30,6 +32,8 @@ export function BoardEditWorkspace({
   immichIntegrations = [],
   beszelViews = {},
   beszelIntegrations = [],
+  uptimeKumaViews = {},
+  uptimeKumaIntegrations = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
@@ -41,6 +45,8 @@ export function BoardEditWorkspace({
   immichIntegrations?: readonly ImmichIntegrationOption[];
   beszelViews?: Record<string, BeszelHostsView>;
   beszelIntegrations?: readonly BeszelIntegrationOption[];
+  uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
+  uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -140,6 +146,8 @@ export function BoardEditWorkspace({
         immichIntegrations={immichIntegrations}
         beszelViews={beszelViews}
         beszelIntegrations={beszelIntegrations}
+        uptimeKumaViews={uptimeKumaViews}
+        uptimeKumaIntegrations={uptimeKumaIntegrations}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

@@ -192,7 +192,9 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await expect(page.getByRole("heading", { name: "Intégrations" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ajouter une intégration" })).toBeVisible();
   await expect(
-    page.getByText("Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich ou Beszel."),
+    page.getByText(
+      "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel ou Uptime Kuma.",
+    ),
   ).toBeVisible();
 
   await page.goto("/admin/users");

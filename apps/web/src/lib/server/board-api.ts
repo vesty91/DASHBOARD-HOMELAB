@@ -10,6 +10,12 @@ import {
   MemoryBeszelRefreshRateLimiter,
 } from "@dashboard/beszel";
 import {
+  createUptimeKumaService,
+  MemoryUptimeKumaOverviewCoalescer,
+  MemoryUptimeKumaRefreshFence,
+  MemoryUptimeKumaRefreshRateLimiter,
+} from "@dashboard/uptime-kuma";
+import {
   createImmichService,
   MemoryImmichOverviewCoalescer,
   MemoryImmichRefreshFence,
@@ -60,6 +66,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     beszelRefreshRateLimiter: MemoryBeszelRefreshRateLimiter;
     beszelRefreshFence: MemoryBeszelRefreshFence;
     beszelOverviewCoalescer: MemoryBeszelOverviewCoalescer;
+    uptimeKumaRefreshRateLimiter: MemoryUptimeKumaRefreshRateLimiter;
+    uptimeKumaRefreshFence: MemoryUptimeKumaRefreshFence;
+    uptimeKumaOverviewCoalescer: MemoryUptimeKumaOverviewCoalescer;
   };
 };
 
@@ -82,6 +91,9 @@ function integrationRuntime() {
     beszelRefreshRateLimiter: new MemoryBeszelRefreshRateLimiter(),
     beszelRefreshFence: new MemoryBeszelRefreshFence(),
     beszelOverviewCoalescer: new MemoryBeszelOverviewCoalescer(),
+    uptimeKumaRefreshRateLimiter: new MemoryUptimeKumaRefreshRateLimiter(),
+    uptimeKumaRefreshFence: new MemoryUptimeKumaRefreshFence(),
+    uptimeKumaOverviewCoalescer: new MemoryUptimeKumaOverviewCoalescer(),
   });
 }
 
@@ -151,6 +163,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       refreshRateLimiter: runtime.beszelRefreshRateLimiter,
       refreshFence: runtime.beszelRefreshFence,
       overviewCoalescer: runtime.beszelOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
+    }),
+    uptimeKuma: createUptimeKumaService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.uptimeKumaRefreshRateLimiter,
+      refreshFence: runtime.uptimeKumaRefreshFence,
+      overviewCoalescer: runtime.uptimeKumaOverviewCoalescer,
       ...(keyring ? { keyring } : {}),
     }),
   };
