@@ -28,7 +28,11 @@ Bootstrap fixe : `GET /webapi/entry.cgi` `SYNO.API.Info` v1 `query` sur une allo
 `/webapi/entry.cgi` uniquement. `account` / `passwd` / OTP / `_sid` ne sont jamais des query
 params. Session nommée `DashboardHomelab`, `format=sid`. Auth v6 : `enable_syno_token=yes`.
 Le SID est transmis via `Cookie: id=<sid>` et le header `X-SYNO-TOKEN` si un synotoken DSM est
-présent (jamais le header legacy `SynoToken`). Logout dans un `finally`. Le SID n'est pas mis
+présent (jamais le header legacy `SynoToken`). Logout dans un `finally`. La session est refusée
+si un champ `synotoken` ou `SynoToken` présent n'est pas une chaîne de 1 à 256
+caractères ASCII visibles U+0021–U+007E. Les deux alias sont validés avant création de
+`DsmSession`, sans trim ni réécriture : whitespace, caractères de contrôle et non-ASCII
+produisent `INVALID_RESPONSE` avant toute requête authentifiée. Le SID n'est pas mis
 en cache. Au plus une réauthentification pour les codes session 106 / 107 / 119 ; jamais pour
 400 / 401 / 403 / 404. Les clés runtime (cache, fence, limiters, coalescer) utilisent toujours
 `record.id` canonique retourné par le store, jamais l'orthographe brute du caller.

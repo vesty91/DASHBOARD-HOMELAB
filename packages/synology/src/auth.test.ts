@@ -1,6 +1,63 @@
-import { describe, expect, it } from "vitest";
-import { buildLoginRequest, buildLogoutRequest, sessionHeaders } from "./auth";
+import { describe, expect, it, vi } from "vitest";
+import type { SynologyRequestFn } from "./transport";
+import { buildLoginRequest, buildLogoutRequest, login, sessionHeaders } from "./auth";
 import { SYNOLOGY_DEVICE_NAME, SYNOLOGY_SESSION_NAME } from "./policy";
+
+describe("DSM login response validation", () => {
+  const ctx = { baseUrl: "https://nas.example:5001/", verifyTls: true, timeoutMs: 8000 };
+  const input = { account: "monitor", password: "s3cret", authVersion: 6 };
+
+  function requestReturning(data: unknown) {
+    return vi.fn<SynologyRequestFn>().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: Buffer.from(JSON.stringify({ success: true, data })),
+      latencyMs: 1,
+    });
+  }
+
+  it.each(["synotoken", "SynoToken"])(
+    "preserves a valid %s in the session headers",
+    async (field) => {
+      const session = await login(
+        requestReturning({ sid: "SID-123", [field]: "!TOKEN~" }),
+        ctx,
+        input,
+      );
+      expect(session.synoToken).toBe("!TOKEN~");
+      expect(sessionHeaders(session)["X-SYNO-TOKEN"]).toBe("!TOKEN~");
+    },
+  );
+
+  it("still supports DSM responses without a token", async () => {
+    const session = await login(requestReturning({ sid: "SID-123" }), ctx, input);
+    expect(session.synoToken).toBeUndefined();
+    expect(sessionHeaders(session)).not.toHaveProperty("X-SYNO-TOKEN");
+  });
+
+  it.each(["synotoken", "SynoToken"])(
+    "rejects unsafe %s before creating a session",
+    async (field) => {
+      for (const token of [
+        "TOKEN\r",
+        "TOKEN\n",
+        "TOKEN\r\n",
+        "TO\0KEN",
+        "TO\tKEN",
+        "TO KEN",
+        "TOKEN\x7f",
+      ]) {
+        const request = requestReturning({ sid: "SID-123", [field]: token });
+        await expect(login(request, ctx, input)).rejects.toMatchObject({
+          kind: "INVALID_RESPONSE",
+          message: "DSM login payload is invalid",
+        });
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(request.mock.calls[0]?.[0].headers).not.toHaveProperty("X-SYNO-TOKEN");
+      }
+    },
+  );
+});
 
 describe("DSM auth request bodies", () => {
   it("sends credentials in the POST body with session DashboardHomelab", () => {

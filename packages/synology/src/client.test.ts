@@ -52,6 +52,32 @@ function sessionOk(options: SecureHttpRequest, href: string): SecureHttpResult |
 }
 
 describe("Synology client session headers", () => {
+  it.each(["synotoken", "SynoToken"])(
+    "never sends authenticated requests or retries after an unsafe %s login response",
+    async (field) => {
+      const observed: SecureHttpRequest[] = [];
+      const request: SynologyRequestFn = async (options) => {
+        observed.push(options);
+        if (new URL(String(options.url)).searchParams.get("api") === "SYNO.API.Info")
+          return json({ success: true, data: API_INFO });
+        if (options.method === "POST" && options.body?.includes("method=login"))
+          return json({
+            success: true,
+            data: { sid: "SID-123", [field]: "TOKEN\r\nX-Injected: value" },
+          });
+        throw new Error("No request may follow an invalid login response");
+      };
+      await expect(fetchSynologyOverview(baseCtx(request))).rejects.toMatchObject({
+        code: "INVALID_RESPONSE",
+      });
+      expect(observed).toHaveLength(2);
+      for (const options of observed) {
+        expect(options.headers ?? {}).not.toHaveProperty("X-SYNO-TOKEN");
+        expect(options.headers ?? {}).not.toHaveProperty("cookie");
+      }
+    },
+  );
+
   it("sends X-SYNO-TOKEN on DSM.Info and logout after Auth v6 login", async () => {
     const observed: Array<{ api: string | null; method: string; headers: Record<string, string> }> =
       [];

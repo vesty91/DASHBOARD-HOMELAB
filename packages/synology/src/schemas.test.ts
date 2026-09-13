@@ -1,6 +1,61 @@
 import { describe, expect, it } from "vitest";
 import { TEST_OTHER_CA_PEM, TEST_TRUSTED_CA_PEM } from "@dashboard/integrations/test-tls-fixtures";
-import { synologyConfigSchema, synologyEnrollDeviceSchema, synologySecretSchema } from "./schemas";
+import {
+  dsmAuthDataSchema,
+  synologyConfigSchema,
+  synologyEnrollDeviceSchema,
+  synologySecretSchema,
+} from "./schemas";
+
+describe.each(["synotoken", "SynoToken"])("DSM auth token field %s", (field) => {
+  it("preserves visible ASCII including punctuation and length boundaries", () => {
+    const visibleAscii = Array.from({ length: 94 }, (_, index) =>
+      String.fromCharCode(0x21 + index),
+    ).join("");
+    for (const token of ["!", "~", visibleAscii, "T".repeat(256)]) {
+      expect(dsmAuthDataSchema.parse({ sid: "SID-123", [field]: token })[field]).toBe(token);
+    }
+  });
+
+  it.each([
+    ...Array.from({ length: 33 }, (_, code) => code),
+    0x7f,
+    0x80,
+    0xa0,
+    0xe9,
+    0x200b,
+    0x2028,
+    0x1f600,
+  ])("rejects code point %i at every token boundary", (code) => {
+    const char = String.fromCodePoint(code);
+    for (const token of [char, `${char}TOKEN`, `TO${char}KEN`, `TOKEN${char}`]) {
+      expect(dsmAuthDataSchema.safeParse({ sid: "SID-123", [field]: token }).success).toBe(false);
+    }
+  });
+
+  it.each(["", "T".repeat(257), "TOKEN\r\n", "TOKEN\r\nX-Injected: value", null, 123])(
+    "rejects malformed or out-of-bounds tokens (%j)",
+    (token) => {
+      expect(dsmAuthDataSchema.safeParse({ sid: "SID-123", [field]: token }).success).toBe(false);
+    },
+  );
+});
+
+describe("DSM auth token aliases", () => {
+  it("accepts DSM auth without an optional token", () => {
+    expect(dsmAuthDataSchema.parse({ sid: "SID-123" })).toEqual({ sid: "SID-123" });
+  });
+
+  it("validates both aliases even when the preferred one is valid", () => {
+    expect(
+      dsmAuthDataSchema.safeParse({
+        sid: "SID-123",
+        synotoken: "VALID-TOKEN",
+        SynoToken: "UNSAFE\n",
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("synologyConfigSchema", () => {
   it("requires account in config and never accepts password there", () => {

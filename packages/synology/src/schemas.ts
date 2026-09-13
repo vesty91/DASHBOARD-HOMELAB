@@ -91,11 +91,19 @@ export const dsmApiInfoEntrySchema = z
 
 export const dsmApiInfoSchema = z.record(z.string(), dsmApiInfoEntrySchema);
 
+// DSM tokens are copied verbatim into X-SYNO-TOKEN. Reject unsafe values at ingress,
+// without trimming or rewriting credentials supplied by DSM.
+const dsmSynoTokenSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((value) => !/[^\u0021-\u007E]/u.test(value), "SynoToken must be visible ASCII");
+
 export const dsmAuthDataSchema = z
   .object({
     sid: z.string().min(1).max(256),
-    synotoken: z.string().min(1).max(256).optional(),
-    SynoToken: z.string().min(1).max(256).optional(),
+    synotoken: dsmSynoTokenSchema.optional(),
+    SynoToken: dsmSynoTokenSchema.optional(),
     did: z.string().min(1).max(256).optional(),
     device_id: z.string().min(1).max(256).optional(),
   })
