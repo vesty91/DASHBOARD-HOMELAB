@@ -106,7 +106,10 @@ async function toDto(
     capabilities: definition ? [...definition.capabilities] : [],
     secrets,
   };
-  if (record.type === "synology" && !canSeeRestrictedIntegrationDetails(actor)) {
+  if (
+    (record.type === "synology" || record.type === "jellyfin") &&
+    !canSeeRestrictedIntegrationDetails(actor)
+  ) {
     const { configRevision: _configRevision, ...withoutRevision } = dto;
     return {
       ...withoutRevision,

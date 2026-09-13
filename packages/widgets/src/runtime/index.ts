@@ -10,3 +10,5 @@ export { WidgetFrame } from "./widget-frame";
 export { WidgetRenderer, type WidgetItemView } from "./widget-renderer";
 export { WidgetStateView } from "./widget-state-view";
 export { WidgetConfigForm } from "./widget-config-form";
+export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
+export { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";

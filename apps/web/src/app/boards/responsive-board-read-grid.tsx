@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
-import type { AppTileView } from "@dashboard/widgets";
+import type { AppTileView, JellyfinSessionsView } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 export function ResponsiveBoardReadGrid({
   snapshot,
   appViews,
+  jellyfinViews = {},
 }: {
   snapshot: BoardSnapshot;
   appViews: Record<string, AppTileView>;
+  jellyfinViews?: Record<string, JellyfinSessionsView>;
 }) {
   const [requested, setRequested] = useState<"desktop" | "mobile">("desktop");
   useEffect(() => {
@@ -31,6 +33,7 @@ export function ResponsiveBoardReadGrid({
       items={snapshot.items}
       placements={snapshot.placements.filter((entry) => entry.layoutId === layout.id)}
       appViews={appViews}
+      jellyfinViews={jellyfinViews}
     />
   );
 }

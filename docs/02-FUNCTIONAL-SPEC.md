@@ -273,13 +273,16 @@ Actions destructives hors V1. Credentials côté serveur uniquement. Compte DSM 
 
 ### Jellyfin
 
+Phase 10 (IMPLEMENTED / REVIEW sur `phase-10-jellyfin`) : lecture via l'API officielle.
+
 Lecture :
 
-- serveur ;
-- utilisateurs actifs ;
-- sessions ;
-- playback ;
-- transcoding.
+- serveur (nom, version, produit, OS) ;
+- sessions actives (fenêtre 120 s) ;
+- playback et mode direct play / direct stream / transcode s'ils sont fournis ;
+- utilisateur anonymisé (`userLabel`), sans `UserId` ni IP.
+
+Widget `jellyfin-sessions` (`publicSafe=false`). Clé API côté serveur uniquement.
 
 ### Immich
 

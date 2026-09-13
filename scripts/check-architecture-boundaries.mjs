@@ -12,6 +12,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/db",
       "@dashboard/docker",
       "@dashboard/synology",
+      "@dashboard/jellyfin",
     ]),
   ],
   [
@@ -28,6 +29,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/integrations",
       "@dashboard/docker",
       "@dashboard/synology",
+      "@dashboard/jellyfin",
       "next",
       "react",
       "drizzle-orm",
@@ -37,7 +39,13 @@ const forbiddenDependencies = new Map([
   ["packages/shared/package.json", new Set(["@dashboard/db", "@dashboard/widgets", "next"])],
   [
     "packages/widgets/package.json",
-    new Set(["@dashboard/web", "next", "@dashboard/db", "@dashboard/boards"]),
+    new Set([
+      "@dashboard/web",
+      "next",
+      "@dashboard/db",
+      "@dashboard/boards",
+      "@dashboard/jellyfin",
+    ]),
   ],
   [
     "packages/docker/package.json",
@@ -48,6 +56,7 @@ const forbiddenDependencies = new Map([
       "drizzle-orm",
       "@dashboard/db",
       "@dashboard/synology",
+      "@dashboard/jellyfin",
     ]),
   ],
   [
@@ -59,6 +68,19 @@ const forbiddenDependencies = new Map([
       "drizzle-orm",
       "@dashboard/db",
       "@dashboard/docker",
+      "@dashboard/jellyfin",
+    ]),
+  ],
+  [
+    "packages/jellyfin/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
     ]),
   ],
 ]);

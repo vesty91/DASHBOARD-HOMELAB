@@ -1,9 +1,11 @@
 "use client";
 import type { AppTileDraftConfig } from "../app-tile";
 import type { ClockConfig } from "../clock";
+import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
 import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
+import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 
 export function WidgetConfigForm({
   widgetType,
@@ -11,12 +13,14 @@ export function WidgetConfigForm({
   onChange,
   permissionDenied,
   loadApps,
+  jellyfinIntegrations,
 }: {
   widgetType: string;
   config: unknown;
   onChange: (config: unknown) => void;
   permissionDenied?: boolean;
   loadApps?: (cursor?: string) => Promise<{ items: AppOption[]; nextCursor: string | null }>;
+  jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
 }) {
   switch (widgetType) {
     case "clock":
@@ -31,6 +35,15 @@ export function WidgetConfigForm({
           onChange={onChange}
           {...(permissionDenied ? { permissionDenied: true } : {})}
           loadApps={loadApps}
+        />
+      );
+    case "jellyfin-sessions":
+      return (
+        <JellyfinSessionsForm
+          config={config as JellyfinSessionsDraftConfig}
+          onChange={onChange}
+          integrations={jellyfinIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );
     default:

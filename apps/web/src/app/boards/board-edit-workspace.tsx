@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
 import { BOARD_AUTOSAVE_DEBOUNCE_MS } from "@dashboard/boards";
-import type { AppTileView, WidgetCatalogEntry } from "@dashboard/widgets";
+import type { AppTileView, JellyfinSessionsView, WidgetCatalogEntry } from "@dashboard/widgets";
+import type { JellyfinIntegrationOption } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
 import { BoardEditor } from "./board-editor";
 import { BoardMetaForm } from "./board-meta-form";
@@ -13,11 +14,15 @@ export function BoardEditWorkspace({
   snapshot,
   catalog,
   appViews,
+  jellyfinViews = {},
+  jellyfinIntegrations = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
   catalog: readonly WidgetCatalogEntry[];
   appViews: Record<string, AppTileView>;
+  jellyfinViews?: Record<string, JellyfinSessionsView>;
+  jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -111,6 +116,8 @@ export function BoardEditWorkspace({
         snapshot={current}
         catalog={catalog}
         appViews={appViews}
+        jellyfinViews={jellyfinViews}
+        jellyfinIntegrations={jellyfinIntegrations}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

@@ -115,13 +115,16 @@ Inclure :
 - App Tile ;
 - Static Text/Markdown éventuellement.
 
+Phase 10 ajoute `jellyfin-sessions` (`publicSafe=false`) : sessions actives et mode
+lecture/transcode, données résolues côté serveur.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
 - Docker Stats ;
 - Synology System ;
 - Synology Storage ;
-- Jellyfin Streams ;
+- Jellyfin Sessions (`jellyfin-sessions`, Phase 10) ;
 - Immich Stats ;
 - Beszel Systems ;
 - Uptime Kuma ;

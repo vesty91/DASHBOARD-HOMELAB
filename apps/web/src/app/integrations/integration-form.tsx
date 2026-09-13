@@ -17,7 +17,8 @@ export function IntegrationForm({
   const [verifyTls, setVerifyTls] = useState(integration?.config.verifyTls !== false);
   const showDockerHelp = selectedType === "docker";
   const showSynologyHelp = selectedType === "synology";
-  const showTrustedCa = showDockerHelp || showSynologyHelp;
+  const showJellyfinHelp = selectedType === "jellyfin";
+  const showTrustedCa = showDockerHelp || showSynologyHelp || showJellyfinHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
@@ -55,7 +56,9 @@ export function IntegrationForm({
               ? "http://socket-proxy:2375"
               : showSynologyHelp
                 ? "https://nas.example:5001"
-                : undefined
+                : showJellyfinHelp
+                  ? "https://jellyfin.example:8096"
+                  : undefined
           }
         />
       </Field>
@@ -67,6 +70,12 @@ export function IntegrationForm({
             restreint et ne publiez pas son port.
           </Alert>
         </>
+      ) : null}
+      {showJellyfinHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Jellyfin. La clé API se configure ensuite comme
+          secret serveur et n&apos;est jamais envoyée au navigateur.
+        </Alert>
       ) : null}
       {showSynologyHelp ? (
         <>
@@ -122,7 +131,9 @@ export function IntegrationForm({
           hint={
             showSynologyHelp
               ? "Utilisez ce champ pour un NAS HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-              : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+              : showJellyfinHelp
+                ? "Utilisez ce champ pour un Jellyfin HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

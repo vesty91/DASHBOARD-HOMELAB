@@ -1,4 +1,4 @@
-import type { AppTileView } from "@dashboard/widgets";
+import type { AppTileView, JellyfinSessionsView } from "@dashboard/widgets";
 import type { ItemRecord, LayoutRecord, PlacementRecord } from "@dashboard/boards";
 import { WidgetRenderer } from "@dashboard/widgets/runtime";
 
@@ -7,11 +7,13 @@ export function BoardReadGrid({
   items,
   placements,
   appViews,
+  jellyfinViews = {},
 }: {
   layout: LayoutRecord;
   items: ItemRecord[];
   placements: PlacementRecord[];
   appViews: Record<string, AppTileView>;
+  jellyfinViews?: Record<string, JellyfinSessionsView>;
 }) {
   return (
     <section
@@ -37,6 +39,7 @@ export function BoardReadGrid({
               <WidgetRenderer
                 item={entry}
                 {...(appViews[entry.id] ? { appView: appViews[entry.id] } : {})}
+                {...(jellyfinViews[entry.id] ? { jellyfinView: jellyfinViews[entry.id] } : {})}
               />
             ) : null}
           </div>

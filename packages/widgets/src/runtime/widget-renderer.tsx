@@ -2,12 +2,14 @@
 import type { AppTileConfig, AppTileView } from "../app-tile";
 import type { BookmarksConfig } from "../bookmarks";
 import type { ClockConfig } from "../clock";
+import type { JellyfinSessionsView } from "../jellyfin-sessions";
 import { builtInWidgetRegistry } from "../built-in";
 import { serializeWidgetConfig } from "../config";
 import type { WidgetItemStatus } from "../types";
 import { AppTileWidget } from "./app-tile-widget";
 import { BookmarksWidget } from "./bookmarks-widget";
 import { ClockWidget } from "./clock-widget";
+import { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
 import { WidgetBoundary } from "./widget-boundary";
 import { WidgetFrame } from "./widget-frame";
 
@@ -47,9 +49,11 @@ function frameForStatus(item: WidgetItemView) {
 function ReadyWidget({
   item,
   appView,
+  jellyfinView,
 }: {
   item: WidgetItemView;
   appView: AppTileView | undefined;
+  jellyfinView: JellyfinSessionsView | undefined;
 }) {
   switch (item.widgetType) {
     case "clock":
@@ -58,12 +62,22 @@ function ReadyWidget({
       return <BookmarksWidget config={item.config as BookmarksConfig} />;
     case "app-tile":
       return <AppTileWidget config={item.config as AppTileConfig} view={appView} />;
+    case "jellyfin-sessions":
+      return <JellyfinSessionsWidget view={jellyfinView} />;
     default:
       return null;
   }
 }
 
-export function WidgetRenderer({ item, appView }: { item: WidgetItemView; appView?: AppTileView }) {
+export function WidgetRenderer({
+  item,
+  appView,
+  jellyfinView,
+}: {
+  item: WidgetItemView;
+  appView?: AppTileView;
+  jellyfinView?: JellyfinSessionsView;
+}) {
   const blocked = frameForStatus(item);
   if (blocked) return blocked;
   return (
@@ -71,7 +85,7 @@ export function WidgetRenderer({ item, appView }: { item: WidgetItemView; appVie
       resetKey={`${item.id}:${item.widgetVersion}:${serializeWidgetConfig(item.config)}`}
     >
       <WidgetFrame title={titleOf(item)} state="ready">
-        <ReadyWidget item={item} appView={appView} />
+        <ReadyWidget item={item} appView={appView} jellyfinView={jellyfinView} />
       </WidgetFrame>
     </WidgetBoundary>
   );

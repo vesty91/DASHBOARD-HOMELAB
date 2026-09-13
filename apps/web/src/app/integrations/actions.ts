@@ -14,7 +14,12 @@ export async function createIntegrationAction(formData: FormData) {
     enabled: formData.get("enabled") === "on",
     config: configFromForm(formData),
   });
-  if (type === "synology") redirect(`/integrations/${created.id}/edit`);
+  const catalog = await caller.integration.catalog();
+  const entry = catalog.find((item) => item.id === type);
+  const needsSecretSetup = Boolean(
+    entry?.secretFields.some((field) => field.required && field.serverManaged !== true),
+  );
+  if (needsSecretSetup) redirect(`/integrations/${created.id}/edit`);
   redirect("/integrations");
 }
 
