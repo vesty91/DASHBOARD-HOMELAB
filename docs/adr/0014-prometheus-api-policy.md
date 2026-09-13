@@ -75,8 +75,10 @@ l'obtient pas. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
 ### 7. Cache
 
 15 s si complet, 8 s si partiel, failures 15 s. Coalescer + fence. Refresh 10/min.
-Les clés incluent un hash SHA-256 de la requête validée (query + mode + range +
-step) et l'ID d'intégration canonique.
+Les procédures `query.instant` / `query.range` ont un budget séparé de 30 appels
+par minute et par acteur+intégration, afin qu'une variation de PromQL ne puisse
+pas saturer Prometheus. Les clés incluent un hash SHA-256 de la requête validée
+(query + mode + range + step) et l'ID d'intégration canonique.
 
 ### 8. SSRF / TLS
 
