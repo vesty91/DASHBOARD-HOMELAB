@@ -120,6 +120,9 @@ lecture/transcode, données résolues côté serveur. Un board ouvert avec ce wi
 relance un `router.refresh()` toutes les 10 s pour reprendre le cache overview
 (8 s / 5 s) sans polling navigateur vers Jellyfin.
 
+Phase 11 ajoute `immich-stats` (`publicSafe=false`) : santé, photos, vidéos et stockage.
+Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Immich.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -127,7 +130,7 @@ relance un `router.refresh()` toutes les 10 s pour reprendre le cache overview
 - Synology System ;
 - Synology Storage ;
 - Jellyfin Sessions (`jellyfin-sessions`, Phase 10) ;
-- Immich Stats ;
+- Immich Stats (`immich-stats`, Phase 11) ;
 - Beszel Systems ;
 - Uptime Kuma ;
 - Prometheus Query.

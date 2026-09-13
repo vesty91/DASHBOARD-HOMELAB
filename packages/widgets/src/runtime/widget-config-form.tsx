@@ -1,10 +1,12 @@
 "use client";
 import type { AppTileDraftConfig } from "../app-tile";
 import type { ClockConfig } from "../clock";
+import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
 import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
+import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 
 export function WidgetConfigForm({
@@ -14,6 +16,7 @@ export function WidgetConfigForm({
   permissionDenied,
   loadApps,
   jellyfinIntegrations,
+  immichIntegrations,
 }: {
   widgetType: string;
   config: unknown;
@@ -21,6 +24,7 @@ export function WidgetConfigForm({
   permissionDenied?: boolean;
   loadApps?: (cursor?: string) => Promise<{ items: AppOption[]; nextCursor: string | null }>;
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
+  immichIntegrations?: readonly ImmichIntegrationOption[];
 }) {
   switch (widgetType) {
     case "clock":
@@ -43,6 +47,15 @@ export function WidgetConfigForm({
           config={config as JellyfinSessionsDraftConfig}
           onChange={onChange}
           integrations={jellyfinIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "immich-stats":
+      return (
+        <ImmichStatsForm
+          config={config as ImmichStatsDraftConfig}
+          onChange={onChange}
+          integrations={immichIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

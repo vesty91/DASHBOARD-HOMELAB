@@ -1,6 +1,7 @@
 import { appTileContract } from "./app-tile";
 import { bookmarksContract } from "./bookmarks";
 import { clockContract } from "./clock";
+import { immichStatsContract } from "./immich-stats";
 import { jellyfinSessionsContract } from "./jellyfin-sessions";
 import { createWidgetRegistry, type WidgetRegistry } from "./registry";
 
@@ -9,6 +10,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(clockContract)
     .register(bookmarksContract)
     .register(appTileContract)
+    .register(immichStatsContract)
     .register(jellyfinSessionsContract)
     .freeze();
 }

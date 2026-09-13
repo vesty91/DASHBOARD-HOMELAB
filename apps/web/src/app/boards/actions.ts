@@ -127,3 +127,13 @@ export async function listJellyfinIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listImmichIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).immich.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

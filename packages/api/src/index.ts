@@ -36,6 +36,7 @@ import {
   dockerLogsInputSchema,
   type DockerService,
 } from "@dashboard/docker";
+import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
   synologyEnrollDeviceSchema,
@@ -52,6 +53,7 @@ export interface ApiContext {
   docker: DockerService;
   synology: SynologyService;
   jellyfin: JellyfinService;
+  immich: ImmichService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -375,6 +377,29 @@ export const jellyfinRouter = t.router({
       ),
   }),
 });
+export const immichRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.immich.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.immich.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(immichIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.immich.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(immichIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.immich.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(immichIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.immich.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -383,6 +408,7 @@ export const dashboardRouter = t.router({
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,
+  immich: immichRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

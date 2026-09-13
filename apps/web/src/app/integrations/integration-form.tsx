@@ -18,7 +18,8 @@ export function IntegrationForm({
   const showDockerHelp = selectedType === "docker";
   const showSynologyHelp = selectedType === "synology";
   const showJellyfinHelp = selectedType === "jellyfin";
-  const showTrustedCa = showDockerHelp || showSynologyHelp || showJellyfinHelp;
+  const showImmichHelp = selectedType === "immich";
+  const showTrustedCa = showDockerHelp || showSynologyHelp || showJellyfinHelp || showImmichHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
@@ -58,7 +59,9 @@ export function IntegrationForm({
                 ? "https://nas.example:5001"
                 : showJellyfinHelp
                   ? "https://jellyfin.example:8096"
-                  : undefined
+                  : showImmichHelp
+                    ? "https://immich.example:2283"
+                    : undefined
           }
         />
       </Field>
@@ -75,6 +78,12 @@ export function IntegrationForm({
         <Alert>
           Utilisez l&apos;URL HTTP(S) du serveur Jellyfin. La clé API se configure ensuite comme
           secret serveur et n&apos;est jamais envoyée au navigateur.
+        </Alert>
+      ) : null}
+      {showImmichHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Immich (origine uniquement, sans /api). La clé API
+          se configure ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur.
         </Alert>
       ) : null}
       {showSynologyHelp ? (
@@ -133,7 +142,9 @@ export function IntegrationForm({
               ? "Utilisez ce champ pour un NAS HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
               : showJellyfinHelp
                 ? "Utilisez ce champ pour un Jellyfin HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                : showImmichHelp
+                  ? "Utilisez ce champ pour un Immich HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                  : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

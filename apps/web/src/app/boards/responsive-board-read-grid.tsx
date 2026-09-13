@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
-import type { AppTileView, JellyfinSessionsView } from "@dashboard/widgets";
+import type { AppTileView, ImmichStatsView, JellyfinSessionsView } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 import { JELLYFIN_BOARD_REFRESH_MS, shouldPollJellyfinBoard } from "./jellyfin-board-refresh";
 
@@ -11,14 +11,16 @@ export function ResponsiveBoardReadGrid({
   snapshot,
   appViews,
   jellyfinViews = {},
+  immichViews = {},
 }: {
   snapshot: BoardSnapshot;
   appViews: Record<string, AppTileView>;
   jellyfinViews?: Record<string, JellyfinSessionsView>;
+  immichViews?: Record<string, ImmichStatsView>;
 }) {
   const router = useRouter();
   const [requested, setRequested] = useState<"desktop" | "mobile">("desktop");
-  const pollJellyfin = shouldPollJellyfinBoard(jellyfinViews);
+  const pollBoard = shouldPollJellyfinBoard(jellyfinViews) || shouldPollJellyfinBoard(immichViews);
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
     const update = () => setRequested(media.matches ? "mobile" : "desktop");
@@ -27,12 +29,12 @@ export function ResponsiveBoardReadGrid({
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (!pollJellyfin) return;
+    if (!pollBoard) return;
     const timer = window.setInterval(() => {
       router.refresh();
     }, JELLYFIN_BOARD_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [pollJellyfin, router]);
+  }, [pollBoard, router]);
   const layout =
     snapshot.layouts.find((entry) => entry.breakpoint === requested) ??
     snapshot.layouts.find((entry) => entry.breakpoint !== requested) ??
@@ -45,6 +47,7 @@ export function ResponsiveBoardReadGrid({
       placements={snapshot.placements.filter((entry) => entry.layoutId === layout.id)}
       appViews={appViews}
       jellyfinViews={jellyfinViews}
+      immichViews={immichViews}
     />
   );
 }

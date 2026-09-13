@@ -201,7 +201,7 @@ Hors scope : widgets Synology, FileStation, reboot, polling, Phase 10.
 
 ## Phase 10 — Jellyfin
 
-Statut sur la branche `phase-10-jellyfin` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE (`phase-10-complete`).
 
 Livrables :
 
@@ -217,12 +217,17 @@ Hors scope : contrôle de lecture, users admin, transcode jobs, Phase 11.
 
 ## Phase 11 — Immich
 
+Statut sur la branche `phase-11-immich` : IMPLEMENTED / REVIEW.
+
 Livrables :
 
-- server stats ;
-- storage ;
-- media counts ;
-- widget.
+- adapter `immich` via l'OpenAPI officielle (`/api/server/*`) ;
+- version / santé / stockage / comptes photos-vidéos ;
+- widget `immich-stats` (`publicSafe=false`) ;
+- permission `immich.read` ;
+- cache 15 s / 8 s, coalescer, refresh 10/min.
+
+Hors scope : jobs, EXIF, thumbnails, `usageByUser`, Phase 12.
 
 ## Phase 12 — Monitoring
 

@@ -4,6 +4,12 @@ import { createCaller, type BoardApiContext } from "@dashboard/api";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
+  createImmichService,
+  MemoryImmichOverviewCoalescer,
+  MemoryImmichRefreshFence,
+  MemoryImmichRefreshRateLimiter,
+} from "@dashboard/immich";
+import {
   createJellyfinService,
   MemoryJellyfinOverviewCoalescer,
   MemoryJellyfinRefreshFence,
@@ -42,6 +48,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     jellyfinRefreshRateLimiter: MemoryJellyfinRefreshRateLimiter;
     jellyfinRefreshFence: MemoryJellyfinRefreshFence;
     jellyfinOverviewCoalescer: MemoryJellyfinOverviewCoalescer;
+    immichRefreshRateLimiter: MemoryImmichRefreshRateLimiter;
+    immichRefreshFence: MemoryImmichRefreshFence;
+    immichOverviewCoalescer: MemoryImmichOverviewCoalescer;
   };
 };
 
@@ -58,6 +67,9 @@ function integrationRuntime() {
     jellyfinRefreshRateLimiter: new MemoryJellyfinRefreshRateLimiter(),
     jellyfinRefreshFence: new MemoryJellyfinRefreshFence(),
     jellyfinOverviewCoalescer: new MemoryJellyfinOverviewCoalescer(),
+    immichRefreshRateLimiter: new MemoryImmichRefreshRateLimiter(),
+    immichRefreshFence: new MemoryImmichRefreshFence(),
+    immichOverviewCoalescer: new MemoryImmichOverviewCoalescer(),
   });
 }
 
@@ -107,6 +119,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       refreshRateLimiter: runtime.jellyfinRefreshRateLimiter,
       refreshFence: runtime.jellyfinRefreshFence,
       overviewCoalescer: runtime.jellyfinOverviewCoalescer,
+      ...(keyring ? { keyring } : {}),
+    }),
+    immich: createImmichService({
+      store: database.integrationStore,
+      registry: runtime.registry,
+      cache: runtime.cache,
+      request: secureRequest,
+      refreshRateLimiter: runtime.immichRefreshRateLimiter,
+      refreshFence: runtime.immichRefreshFence,
+      overviewCoalescer: runtime.immichOverviewCoalescer,
       ...(keyring ? { keyring } : {}),
     }),
   };

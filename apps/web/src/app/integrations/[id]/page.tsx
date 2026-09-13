@@ -4,6 +4,11 @@ import { Suspense } from "react";
 import type { DockerIntegrationMetadata } from "@dashboard/docker";
 import type { IntegrationDto } from "@dashboard/integrations";
 import type {
+  ImmichIntegrationMetadata,
+  ImmichOverview,
+  ImmichSectionReason,
+} from "@dashboard/immich";
+import type {
   JellyfinIntegrationMetadata,
   JellyfinOverview,
   JellyfinSectionReason,
@@ -19,6 +24,8 @@ import { AppIcon } from "../../apps/app-icon";
 import { getBoardCaller } from "../../../lib/server/board-api";
 import { dockerUserError } from "../docker-error";
 import { resolveIntegrationDetail } from "../resolve-integration-detail";
+import { immichUserError } from "../immich-error";
+import { ImmichRefreshButton } from "../immich-refresh-button";
 import { jellyfinUserError } from "../jellyfin-error";
 import { JellyfinRefreshButton } from "../jellyfin-refresh-button";
 import { synologyUserError } from "../synology-error";
@@ -39,7 +46,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
   if (
     integration.type === "docker" ||
     integration.type === "synology" ||
-    integration.type === "jellyfin"
+    integration.type === "jellyfin" ||
+    integration.type === "immich"
   )
     redirect("/forbidden");
   return (
@@ -568,6 +576,142 @@ async function JellyfinOverviewPanel({
   );
 }
 
+function immichReasonLabel(reason: ImmichSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Immich indisponible.";
+    case "permission-denied":
+      return "Accès Immich refusé.";
+    case "timeout":
+      return "Délai dépassé pour cette section Immich.";
+    case "invalid-response":
+      return "Réponse Immich invalide.";
+    case "unauthorized":
+      return "Clé API Immich invalide.";
+    case "rate-limited":
+      return "Immich a limité les requêtes.";
+    case "dns":
+      return "Le serveur Immich est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Immich.";
+    case "unreachable":
+      return "Le serveur Immich est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Immich indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function ImmichOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: ImmichOverview | null = null;
+  try {
+    overview = await caller.immich.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = immichUserError(caught);
+  }
+  const server = overview?.server.data;
+  const health = overview?.health.data;
+  const storage = overview?.storage.data;
+  const stats = overview?.stats.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Immich partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <section className="immich-summary">
+            <h2>Serveur</h2>
+            {overview.server.status === "unavailable" ? (
+              <Alert tone="warning">{immichReasonLabel(overview.server.reason)}</Alert>
+            ) : null}
+            <p>Version {server?.version ?? "Indisponible"}</p>
+            <p>
+              Licence{" "}
+              {server?.licensed === null ? "Indisponible" : server?.licensed ? "Oui" : "Non"}
+            </p>
+          </section>
+          <section className="immich-summary">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{immichReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>
+              {health?.ok === true
+                ? "En ligne"
+                : health?.ok === false
+                  ? "Hors ligne"
+                  : "Indisponible"}
+            </p>
+          </section>
+          <section className="immich-summary">
+            <h2>Médias</h2>
+            {overview.stats.status === "unavailable" ? (
+              <Alert tone="warning">{immichReasonLabel(overview.stats.reason)}</Alert>
+            ) : null}
+            <p>Photos {stats?.photos ?? "Indisponible"}</p>
+            <p>Vidéos {stats?.videos ?? "Indisponible"}</p>
+            <p>Usage {formatBytes(stats?.usageBytes ?? null)}</p>
+          </section>
+          <section className="immich-summary">
+            <h2>Stockage</h2>
+            {overview.storage.status === "unavailable" ? (
+              <Alert tone="warning">{immichReasonLabel(overview.storage.reason)}</Alert>
+            ) : null}
+            <p>
+              {formatBytes(storage?.diskUseBytes ?? null)} /{" "}
+              {formatBytes(storage?.diskSizeBytes ?? null)} (
+              {formatPercent(storage?.diskUsagePercent ?? null)})
+            </p>
+            <p>Libre {formatBytes(storage?.diskAvailableBytes ?? null)}</p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function ImmichIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: ImmichIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Immich" />
+        <Alert tone="warning">Cette intégration Immich est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Immich" />
+      <ImmichRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement des informations Immich…</p>}>
+        <ImmichOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 async function JellyfinIntegrationDetail({
   id,
   metadata,
@@ -640,6 +784,8 @@ export default async function IntegrationDetailPage({
         return <SynologyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "jellyfin":
         return <JellyfinIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "immich":
+        return <ImmichIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

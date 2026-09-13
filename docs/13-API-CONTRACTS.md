@@ -324,6 +324,24 @@ Routeur tRPC `jellyfin` (aucun generic invoke). Input : `integrationId` UUID.
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `server` /
 `sessions`. Auth : header `X-Emby-Token` uniquement.
 
+# Immich API — Phase 11
+
+Routeur tRPC `immich` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                     | Permission               | Capability                                    | Notes                                                 |
+| ------------------------- | ------------------------ | --------------------------------------------- | ----------------------------------------------------- |
+| `immich.permissions`      | auth active              | —                                             | `canRead`, `canManage`                                |
+| `immich.integration.list` | use/manage + immich.read | —                                             | `{ id, name, enabled }[]`                             |
+| `immich.integration.get`  | use/manage + immich.read | —                                             | `{ id, name, enabled }`                               |
+| `immich.overview.get`     | use/manage + immich.read | `server.read` + `stats.read` + `storage.read` | Cache 15 s (8 s si partiel) ; coalescer ; clé SHA-256 |
+| `immich.overview.refresh` | use/manage + immich.read | idem                                          | 10 requêtes / min / acteur / intégration              |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `server`,
+`health`, `storage`, `stats`. Auth : header `x-api-key` uniquement.
+
+Jamais exposés : clé API, EXIF, chemins filesystem, thumbnails, `usageByUser`, URLs
+about, `baseUrl`, config.
+
 Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
 
 `status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage

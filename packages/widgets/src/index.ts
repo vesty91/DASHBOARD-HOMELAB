@@ -38,6 +38,14 @@ export type {
   WidgetSizing,
 } from "./types";
 export { parseHttpUrl } from "./urls";
+export type { ImmichStatsConfig, ImmichStatsDraftConfig, ImmichStatsView } from "./immich-stats";
+export {
+  IMMICH_STATS_UNSET_INTEGRATION_ID,
+  immichStatsConfigSchema,
+  immichStatsContract,
+  immichStatsDefaultConfig,
+  immichStatsDraftConfig,
+} from "./immich-stats";
 export type {
   JellyfinPlaybackMode,
   JellyfinSessionViewItem,

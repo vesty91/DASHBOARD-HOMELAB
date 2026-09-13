@@ -107,7 +107,7 @@ async function toDto(
     secrets,
   };
   if (
-    (record.type === "synology" || record.type === "jellyfin") &&
+    (record.type === "synology" || record.type === "jellyfin" || record.type === "immich") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {
     const { configRevision: _configRevision, ...withoutRevision } = dto;

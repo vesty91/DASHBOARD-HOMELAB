@@ -183,8 +183,13 @@ Phase 10 : lecture Jellyfin exige (`integration.use` ou `integration.manage`) **
 `/integrations/[id]` Jellyfin : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `jellyfin.read`.
 
+Phase 11 : lecture Immich exige (`integration.use` ou `integration.manage`) **et**
+`immich.read`. Cette conjonction suffit pour `immich.integration.get` et
+`/integrations/[id]` Immich : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `immich.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`docker.*` ni `settings.manage`.
+`immich.read`, `docker.*` ni `settings.manage`.
 
 ## 10. Audit
 

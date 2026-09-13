@@ -149,6 +149,14 @@ sessions.read
 streams.read
 ```
 
+### Immich
+
+```text
+server.read
+stats.read
+storage.read
+```
+
 ### Synology
 
 ```text
@@ -267,7 +275,23 @@ l'état des secrets d'un record `jellyfin` sans `integration.manage`.
 Widget `jellyfin-sessions` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 8 s
 (5 s si partiel). Aucune fake data. Pas de SDK officiel.
 
-## 15. Prometheus
+## 15. Immich
+
+Statut sur la branche `phase-11-immich` : IMPLEMENTED / REVIEW.
+
+Adapter `immich` composé dans `apps/web`. Transport HTTP(S) vers l'origine Immich.
+Auth `x-api-key` uniquement. Allowlist GET `/api/server/ping`, `/api/server/version`,
+`/api/server/about`, `/api/server/storage`, `/api/server/statistics`. Voir ADR 0011.
+
+`immich.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs Immich
+(`integration.use|manage` + `immich.read`). `integration.read` n'est pas requis.
+`integration.list` / `integration.get` omettent `baseUrl`, `config`, `capabilities` et
+l'état des secrets d'un record `immich` sans `integration.manage`.
+
+Widget `immich-stats` : `publicSafe=false`. Refresh manuel 10/min. Cache overview 15 s
+(8 s si partiel). Aucune fake data. Pas d'EXIF, chemins, thumbnails ni `usageByUser`.
+
+## 16. Prometheus
 
 Autoriser un sous-ensemble de requêtes par widget ou permission.
 
@@ -278,7 +302,7 @@ Limiter :
 - volume de séries ;
 - timeout.
 
-## 16. Tests intégrations
+## 17. Tests intégrations
 
 Pour chaque adapter :
 

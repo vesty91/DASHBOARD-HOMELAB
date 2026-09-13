@@ -13,6 +13,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/docker",
       "@dashboard/synology",
       "@dashboard/jellyfin",
+      "@dashboard/immich",
     ]),
   ],
   [
@@ -30,6 +31,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/docker",
       "@dashboard/synology",
       "@dashboard/jellyfin",
+      "@dashboard/immich",
       "next",
       "react",
       "drizzle-orm",
@@ -45,6 +47,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/db",
       "@dashboard/boards",
       "@dashboard/jellyfin",
+      "@dashboard/immich",
     ]),
   ],
   [
@@ -57,6 +60,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/db",
       "@dashboard/synology",
       "@dashboard/jellyfin",
+      "@dashboard/immich",
     ]),
   ],
   [
@@ -69,6 +73,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/db",
       "@dashboard/docker",
       "@dashboard/jellyfin",
+      "@dashboard/immich",
     ]),
   ],
   [
@@ -81,6 +86,20 @@ const forbiddenDependencies = new Map([
       "@dashboard/db",
       "@dashboard/docker",
       "@dashboard/synology",
+      "@dashboard/immich",
+    ]),
+  ],
+  [
+    "packages/immich/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
+      "@dashboard/jellyfin",
     ]),
   ],
 ]);

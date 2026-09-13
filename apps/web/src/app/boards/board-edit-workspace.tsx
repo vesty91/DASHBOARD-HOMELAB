@@ -2,8 +2,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BoardSnapshot } from "@dashboard/boards";
 import { BOARD_AUTOSAVE_DEBOUNCE_MS } from "@dashboard/boards";
-import type { AppTileView, JellyfinSessionsView, WidgetCatalogEntry } from "@dashboard/widgets";
-import type { JellyfinIntegrationOption } from "@dashboard/widgets/runtime";
+import type {
+  AppTileView,
+  ImmichStatsView,
+  JellyfinSessionsView,
+  WidgetCatalogEntry,
+} from "@dashboard/widgets";
+import type {
+  ImmichIntegrationOption,
+  JellyfinIntegrationOption,
+} from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
 import { BoardEditor } from "./board-editor";
 import { BoardMetaForm } from "./board-meta-form";
@@ -16,6 +24,8 @@ export function BoardEditWorkspace({
   appViews,
   jellyfinViews = {},
   jellyfinIntegrations = [],
+  immichViews = {},
+  immichIntegrations = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
@@ -23,6 +33,8 @@ export function BoardEditWorkspace({
   appViews: Record<string, AppTileView>;
   jellyfinViews?: Record<string, JellyfinSessionsView>;
   jellyfinIntegrations?: readonly JellyfinIntegrationOption[];
+  immichViews?: Record<string, ImmichStatsView>;
+  immichIntegrations?: readonly ImmichIntegrationOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -118,6 +130,8 @@ export function BoardEditWorkspace({
         appViews={appViews}
         jellyfinViews={jellyfinViews}
         jellyfinIntegrations={jellyfinIntegrations}
+        immichViews={immichViews}
+        immichIntegrations={immichIntegrations}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

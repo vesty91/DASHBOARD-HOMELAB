@@ -5,6 +5,7 @@ import { BoardEditWorkspace } from "../../board-edit-workspace";
 import { deleteBoardAction } from "../../actions";
 import { DeleteBoardControl } from "../../delete-board-control";
 import { resolveAppTileViews } from "../../resolve-app-tiles";
+import { resolveImmichStatsViews } from "../../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
@@ -23,9 +24,10 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     throw error;
   }
   const catalog = await caller.widget.catalog();
-  const [appViews, jellyfinViews] = await Promise.all([
+  const [appViews, jellyfinViews, immichViews] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
     resolveJellyfinSessionViews(snapshot, caller),
+    resolveImmichStatsViews(snapshot, caller),
   ]);
   let canReadApps = true;
   try {
@@ -38,6 +40,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
   let jellyfinIntegrations: Awaited<ReturnType<typeof caller.jellyfin.integration.list>> = [];
   try {
     jellyfinIntegrations = await caller.jellyfin.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
+  let immichIntegrations: Awaited<ReturnType<typeof caller.immich.integration.list>> = [];
+  try {
+    immichIntegrations = await caller.immich.integration.list();
   } catch (error) {
     if (!(
       error instanceof TRPCError &&
@@ -62,6 +74,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         appViews={appViews}
         jellyfinViews={jellyfinViews}
         jellyfinIntegrations={jellyfinIntegrations}
+        immichViews={immichViews}
+        immichIntegrations={immichIntegrations}
         canReadApps={canReadApps}
       />
     </PageContainer>
