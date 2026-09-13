@@ -217,7 +217,7 @@ Hors scope : contrôle de lecture, users admin, transcode jobs, Phase 11.
 
 ## Phase 11 — Immich
 
-Statut sur la branche `phase-11-immich` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE (`phase-11-complete`).
 
 Livrables :
 
@@ -231,7 +231,7 @@ Hors scope : jobs, EXIF, thumbnails, `usageByUser`, Phase 12.
 
 ## Phase 12 — Monitoring
 
-Statut sur la branche `phase-12-service-status` : IN PROGRESS (service status).
+Statut : COMPLETE (`phase-12-complete`).
 
 Livrables :
 
