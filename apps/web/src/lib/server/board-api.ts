@@ -12,6 +12,7 @@ import {
 import {
   createPrometheusService,
   MemoryPrometheusOverviewCoalescer,
+  MemoryPrometheusQueryRateLimiter,
   MemoryPrometheusRefreshFence,
   MemoryPrometheusRefreshRateLimiter,
 } from "@dashboard/prometheus";
@@ -73,6 +74,7 @@ const globalRuntime = globalThis as typeof globalThis & {
     beszelRefreshFence: MemoryBeszelRefreshFence;
     beszelOverviewCoalescer: MemoryBeszelOverviewCoalescer;
     prometheusRefreshRateLimiter: MemoryPrometheusRefreshRateLimiter;
+    prometheusQueryRateLimiter: MemoryPrometheusQueryRateLimiter;
     prometheusRefreshFence: MemoryPrometheusRefreshFence;
     prometheusOverviewCoalescer: MemoryPrometheusOverviewCoalescer;
     uptimeKumaRefreshRateLimiter: MemoryUptimeKumaRefreshRateLimiter;
@@ -101,6 +103,7 @@ function integrationRuntime() {
     beszelRefreshFence: new MemoryBeszelRefreshFence(),
     beszelOverviewCoalescer: new MemoryBeszelOverviewCoalescer(),
     prometheusRefreshRateLimiter: new MemoryPrometheusRefreshRateLimiter(),
+    prometheusQueryRateLimiter: new MemoryPrometheusQueryRateLimiter(),
     prometheusRefreshFence: new MemoryPrometheusRefreshFence(),
     prometheusOverviewCoalescer: new MemoryPrometheusOverviewCoalescer(),
     uptimeKumaRefreshRateLimiter: new MemoryUptimeKumaRefreshRateLimiter(),
@@ -183,6 +186,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       cache: runtime.cache,
       request: secureRequest,
       refreshRateLimiter: runtime.prometheusRefreshRateLimiter,
+      queryRateLimiter: runtime.prometheusQueryRateLimiter,
       refreshFence: runtime.prometheusRefreshFence,
       overviewCoalescer: runtime.prometheusOverviewCoalescer,
       ...(keyring ? { keyring } : {}),

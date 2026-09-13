@@ -41,7 +41,12 @@ export {
   PROMETHEUS_OVERVIEW_COALESCER_MAX_IN_FLIGHT,
   type PrometheusOverviewCoalescer,
 } from "./overview-coalescer";
-export { MemoryPrometheusRefreshRateLimiter, PROMETHEUS_REFRESH_RATE_LIMIT } from "./rate-limiter";
+export {
+  MemoryPrometheusQueryRateLimiter,
+  MemoryPrometheusRefreshRateLimiter,
+  PROMETHEUS_QUERY_RATE_LIMIT,
+  PROMETHEUS_REFRESH_RATE_LIMIT,
+} from "./rate-limiter";
 export {
   MemoryPrometheusRefreshFence,
   PROMETHEUS_REFRESH_FENCE_MAX_ENTRIES,
