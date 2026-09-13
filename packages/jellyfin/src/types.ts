@@ -13,6 +13,9 @@ export type JellyfinSectionReason =
   | "invalid-response"
   | "unauthorized"
   | "rate-limited"
+  | "dns"
+  | "tls"
+  | "unreachable"
   | "unknown";
 
 export type JellyfinOverviewStatus = "available" | "degraded";

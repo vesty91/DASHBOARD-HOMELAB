@@ -61,6 +61,17 @@ describe("jellyfin client", () => {
     expect(overview.sessions.reason).toBe("timeout");
   });
 
+  it("preserves DNS errors when both overview sections fail", async () => {
+    const request = vi.fn(async () => ({
+      ok: false as const,
+      code: "DNS_ERROR" as const,
+      latencyMs: 2,
+    }));
+    await expect(fetchJellyfinOverview(context(request))).rejects.toMatchObject({
+      code: "DNS_ERROR",
+    });
+  });
+
   it("rejects invalid JSON", async () => {
     const request = vi.fn(async () => ({
       ok: true as const,

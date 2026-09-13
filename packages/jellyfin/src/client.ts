@@ -22,6 +22,7 @@ import type {
   JellyfinOverview,
   JellyfinOverviewStatus,
   JellyfinSection,
+  JellyfinSectionReason,
   JellyfinServerDto,
   JellyfinSessionsDto,
 } from "./types";
@@ -114,18 +115,44 @@ export function overviewCacheTtl(overview: JellyfinOverview): number {
   return overview.status === "available" ? OVERVIEW_CACHE_TTL_MS : OVERVIEW_PARTIAL_CACHE_TTL_MS;
 }
 
+function throwFromSectionReason(reason: JellyfinSectionReason): never {
+  switch (reason) {
+    case "unauthorized":
+      throw toIntegrationError(new JellyfinError("UNAUTHORIZED", "Jellyfin API key is invalid"));
+    case "timeout":
+      throw new IntegrationError("TIMEOUT", "Jellyfin request timed out");
+    case "rate-limited":
+      throw new IntegrationError("RATE_LIMITED", "Jellyfin rate limit exceeded");
+    case "dns":
+      throw new IntegrationError("DNS_ERROR", "Jellyfin request failed");
+    case "tls":
+      throw new IntegrationError("TLS_ERROR", "Jellyfin request failed");
+    case "unreachable":
+      throw new IntegrationError("UNREACHABLE", "Jellyfin request failed");
+    case "permission-denied":
+      throw new IntegrationError("FORBIDDEN", "Jellyfin access is forbidden");
+    case "api-unavailable":
+      throw new IntegrationError("NOT_FOUND", "Jellyfin endpoint was not found");
+    case "invalid-response":
+    case "unknown":
+      throw new IntegrationError("INVALID_RESPONSE", "Jellyfin overview is unavailable");
+    default: {
+      const _exhaustive: never = reason;
+      throw new IntegrationError("INVALID_RESPONSE", String(_exhaustive));
+    }
+  }
+}
+
 export async function fetchJellyfinOverview(ctx: JellyfinClientContext): Promise<JellyfinOverview> {
   const [server, sessions] = await Promise.all([loadServer(ctx), loadSessions(ctx)]);
   const status: JellyfinOverviewStatus =
     server.status === "available" && sessions.status === "available" ? "available" : "degraded";
   if (server.status === "unavailable" && sessions.status === "unavailable") {
-    const reason = server.reason ?? sessions.reason ?? "unknown";
-    if (reason === "unauthorized")
-      throw toIntegrationError(new JellyfinError("UNAUTHORIZED", "Jellyfin API key is invalid"));
-    if (reason === "timeout") throw new IntegrationError("TIMEOUT", "Jellyfin request timed out");
-    if (reason === "rate-limited")
-      throw new IntegrationError("RATE_LIMITED", "Jellyfin rate limit exceeded");
-    throw new IntegrationError("INVALID_RESPONSE", "Jellyfin overview is unavailable");
+    const reason =
+      server.reason && sessions.reason && server.reason !== sessions.reason
+        ? server.reason
+        : (server.reason ?? sessions.reason ?? "unknown");
+    throwFromSectionReason(reason);
   }
   return {
     status,

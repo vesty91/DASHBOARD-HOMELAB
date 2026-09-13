@@ -40,7 +40,7 @@ function json(body: unknown, status = 200): SecureHttpResult {
   return { ok: true, status, body: Buffer.from(JSON.stringify(body)), latencyMs: 4 };
 }
 
-function createMemoryStore(): {
+function createMemoryStore(extra: readonly IntegrationRecord[] = []): {
   store: IntegrationStore;
   keyring: SecretKeyring;
 } {
@@ -60,7 +60,10 @@ function createMemoryStore(): {
     createdAt: new Date(0),
     updatedAt: new Date(0),
   };
-  const rows = new Map<string, IntegrationRecord>([[row.id, row]]);
+  const rows = new Map<string, IntegrationRecord>([
+    [row.id, row],
+    ...extra.map((entry) => [entry.id, entry] as const),
+  ]);
   const secrets: EncryptedSecretRow[] = [
     {
       key: "apiKey",
@@ -70,8 +73,10 @@ function createMemoryStore(): {
   return {
     keyring,
     store: {
-      async list() {
-        return [...rows.values()];
+      async list(limit, cursor) {
+        const all = [...rows.values()].sort((left, right) => left.id.localeCompare(right.id));
+        const filtered = cursor ? all.filter((row) => row.id > cursor) : all;
+        return filtered.slice(0, limit);
       },
       async findById(id) {
         return rows.get(id);
@@ -220,6 +225,30 @@ describe("createJellyfinService", () => {
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("lists Jellyfin integrations beyond the first store page", async () => {
+    const extra = Array.from({ length: 201 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      type: "docker",
+      name: `Docker ${index}`,
+      baseUrl: "http://127.0.0.1:2375",
+      enabled: true,
+      config: {},
+      status: "unknown" as const,
+      lastCheckedAt: null,
+      configRevision: 1,
+      createdBy: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }));
+    const store = createMemoryStore(extra);
+    const firstPage = await store.store.list(200);
+    expect(firstPage.some((record) => record.type === "jellyfin")).toBe(false);
+    const service = serviceWith(async (options) => officialPayloads(options), store);
+    await expect(service.listIntegrations(systemAdmin)).resolves.toEqual([
+      { id: INTEGRATION_ID, name: "Media", enabled: true },
+    ]);
   });
 
   it("hides metadata from generic readers via restricted projection fields only", async () => {

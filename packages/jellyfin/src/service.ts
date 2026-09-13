@@ -99,6 +99,23 @@ function throwCachedFailure(failure: CachedJellyfinOverviewFailure): never {
   throw new IntegrationError(failure.code, failure.message);
 }
 
+const LIST_PAGE_SIZE = 100;
+const LIST_MAX_PAGES = 100;
+
+async function listJellyfinRecords(store: IntegrationStore): Promise<IntegrationRecord[]> {
+  const found: IntegrationRecord[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
+    const records = await store.list(LIST_PAGE_SIZE, cursor);
+    for (const record of records) if (record.type === JELLYFIN_INTEGRATION_ID) found.push(record);
+    if (records.length < LIST_PAGE_SIZE) return found;
+    const nextCursor = records[records.length - 1]?.id;
+    if (!nextCursor || nextCursor === cursor) return found;
+    cursor = nextCursor;
+  }
+  return found;
+}
+
 export function createJellyfinService(deps: JellyfinServiceDeps) {
   function definition(): IntegrationDefinition<JellyfinConfig, JellyfinSecrets> {
     const registered = deps.registry.get(JELLYFIN_INTEGRATION_ID);
@@ -225,16 +242,14 @@ export function createJellyfinService(deps: JellyfinServiceDeps) {
     },
     async listIntegrations(actor: JellyfinActor): Promise<readonly JellyfinIntegrationMetadata[]> {
       assertJellyfinAccess(actor, "read");
-      const records = await deps.store.list(200);
-      return records
-        .filter((record) => record.type === JELLYFIN_INTEGRATION_ID)
-        .map((record) =>
-          Object.freeze({
-            id: record.id,
-            name: record.name,
-            enabled: record.enabled,
-          }),
-        );
+      const records = await listJellyfinRecords(deps.store);
+      return records.map((record) =>
+        Object.freeze({
+          id: record.id,
+          name: record.name,
+          enabled: record.enabled,
+        }),
+      );
     },
     async getIntegrationMetadata(
       integrationId: string,

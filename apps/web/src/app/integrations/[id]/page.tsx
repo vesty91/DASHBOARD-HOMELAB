@@ -459,6 +459,12 @@ function jellyfinReasonLabel(reason: JellyfinSectionReason | undefined): string 
       return "Clé API Jellyfin invalide.";
     case "rate-limited":
       return "Jellyfin a limité les requêtes.";
+    case "dns":
+      return "Le serveur Jellyfin est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Jellyfin.";
+    case "unreachable":
+      return "Le serveur Jellyfin est injoignable.";
     case "unknown":
     case undefined:
       return "Section Jellyfin indisponible.";

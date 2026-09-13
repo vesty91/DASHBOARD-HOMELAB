@@ -48,3 +48,6 @@ Widget `jellyfin-sessions` : `publicSafe=false`.
 ## Conséquences
 
 AC-013 est satisfait par le widget board, pas par un polling navigateur vers Jellyfin.
+Un board ouvert relance `router.refresh()` toutes les 10 s ; le navigateur ne contacte
+jamais l'API Jellyfin. Les erreurs `DNS_ERROR` / `TLS_ERROR` / `UNREACHABLE` restent
+typées jusqu'à l'UI. `jellyfin.integration.list` pagine le store au-delà de 200 lignes.

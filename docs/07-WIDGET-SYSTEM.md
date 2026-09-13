@@ -116,7 +116,9 @@ Inclure :
 - Static Text/Markdown éventuellement.
 
 Phase 10 ajoute `jellyfin-sessions` (`publicSafe=false`) : sessions actives et mode
-lecture/transcode, données résolues côté serveur.
+lecture/transcode, données résolues côté serveur. Un board ouvert avec ce widget
+relance un `router.refresh()` toutes les 10 s pour reprendre le cache overview
+(8 s / 5 s) sans polling navigateur vers Jellyfin.
 
 ## 10. Widgets avec intégration
 

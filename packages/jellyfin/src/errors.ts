@@ -86,6 +86,12 @@ export function sectionReasonFromError(error: unknown): JellyfinSectionReason {
         return "timeout";
       case "INVALID_RESPONSE":
         return "invalid-response";
+      case "DNS_ERROR":
+        return "dns";
+      case "TLS_ERROR":
+        return "tls";
+      case "UNREACHABLE":
+        return "unreachable";
       default:
         return "unknown";
     }
