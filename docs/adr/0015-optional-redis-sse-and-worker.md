@@ -31,7 +31,8 @@ l'API après session, jamais par le navigateur vers Redis.
 `apps/worker` exécute un job `heartbeat` borné et publie `job.heartbeat`.
 Pas de fake data. La table `jobs` persistée arrivera dans une tranche suivante
 de la Phase 13 ; le heartbeat in-process est observable via le bus et `/health`.
-Un échec de publish rend `/health/ready` en 503 (`lastErrorCode`).
+Un échec de publish rend `/health/ready` en 503 (`lastErrorCode`). La table `jobs`
+persiste les heartbeats (SQLite + PostgreSQL, migration `0005`).
 
 ### 4. Filtrage serveur
 

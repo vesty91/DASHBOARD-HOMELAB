@@ -246,7 +246,7 @@ Livrables :
 
 ## Phase 13 — Worker + realtime
 
-Statut sur la branche `phase-13-realtime` : IN PROGRESS (fondations bus / SSE / heartbeat).
+Statut sur la branche `phase-13-jobs` : IN PROGRESS (jobs persistés + fondations bus / SSE).
 
 Livrables :
 

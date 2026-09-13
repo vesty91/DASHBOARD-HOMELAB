@@ -59,6 +59,27 @@ describe("worker heartbeat", () => {
     }
   });
 
+  it("records a succeeded heartbeat through the job store", async () => {
+    const recorded: Array<{ status: string; errorCode?: string }> = [];
+    const worker = await startWorker({
+      intervalMs: 5_000,
+      now: () => new Date("2026-09-13T00:00:00.000Z"),
+      jobs: {
+        async recordHeartbeat(input) {
+          recorded.push({
+            status: input.status,
+            ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+          });
+        },
+      },
+    });
+    try {
+      expect(recorded).toEqual([{ status: "succeeded" }]);
+    } finally {
+      await worker.close();
+    }
+  });
+
   it("reads REDIS_URL and listen address from process env", () => {
     expect(
       workerOptionsFromEnv({

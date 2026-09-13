@@ -8,6 +8,10 @@ const phase3Migration = new URL("../drizzle/sqlite/0001_sharp_doomsday.sql", imp
 const phase4Migration = new URL("../drizzle/sqlite/0002_wooden_callisto.sql", import.meta.url);
 const phase5Migration = new URL("../drizzle/sqlite/0003_loud_titanium_man.sql", import.meta.url);
 const phase6Migration = new URL("../drizzle/sqlite/0004_green_tenebrous.sql", import.meta.url);
+const phase13JobsMigration = new URL(
+  "../drizzle/sqlite/0005_wandering_mac_gargan.sql",
+  import.meta.url,
+);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -234,6 +238,38 @@ describe("Phase 6 to Phase 7 migration", () => {
           )
           .run(),
       ).toThrow();
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 13 jobs migration", () => {
+  it("adds the jobs table without dropping integrations", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      database
+        .prepare(
+          "INSERT INTO integrations(id,type,name,base_url,enabled,config_json,status,config_revision,created_at,updated_at) VALUES('11111111-1111-4111-8111-111111111111','legacy','NAS','https://192.168.1.5:5001',1,'{}','available',1,1,1)",
+        )
+        .run();
+      executeSqliteMigration(database, await readFile(phase13JobsMigration, "utf8"));
+      expect(
+        database
+          .prepare("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='jobs'")
+          .get()?.count,
+      ).toBe(1);
+      expect(
+        database
+          .prepare("SELECT name FROM integrations WHERE id='11111111-1111-4111-8111-111111111111'")
+          .get(),
+      ).toMatchObject({ name: "NAS" });
     } finally {
       database.close();
     }

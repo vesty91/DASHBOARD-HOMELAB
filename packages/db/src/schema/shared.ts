@@ -18,12 +18,15 @@ export const TABLE_NAMES = [
   "group_roles",
   "board_user_permissions",
   "board_group_permissions",
+  "jobs",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
 export const USER_STATUSES = ["active", "disabled"] as const;
 export const INTEGRATION_STATUSES = ["unknown", "available", "unavailable"] as const;
 export const APP_HEALTH_STATUSES = ["unknown", "up", "down", "timeout", "error"] as const;
+export const JOB_TYPES = ["heartbeat"] as const;
+export const JOB_STATUSES = ["queued", "running", "succeeded", "failed"] as const;
 
 export type DatabaseDialect = "sqlite" | "postgres";
 export type BoardVisibility = (typeof BOARD_VISIBILITIES)[number];
@@ -57,4 +60,16 @@ export const SCHEMA_CONTRACT = {
   group_roles: ["groupId", "roleId"],
   board_user_permissions: ["boardId", "userId", "permission"],
   board_group_permissions: ["boardId", "groupId", "permission"],
+  jobs: [
+    "id",
+    "type",
+    "status",
+    "scheduledAt",
+    "startedAt",
+    "finishedAt",
+    "attempt",
+    "errorCode",
+    "errorMessageSafe",
+    "metadataJson",
+  ],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;

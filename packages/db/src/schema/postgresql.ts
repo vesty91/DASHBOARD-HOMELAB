@@ -334,3 +334,24 @@ export const boardGroupPermissions = pgTable(
     ),
   ],
 );
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: uuid("id").primaryKey(),
+    type: text("type").notNull(),
+    status: text("status").notNull(),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    attempt: integer("attempt").notNull().default(1),
+    errorCode: text("error_code"),
+    errorMessageSafe: text("error_message_safe"),
+    metadataJson: jsonb("metadata_json").notNull().default({}),
+  },
+  (t) => [
+    index("jobs_status_scheduled_at_idx").on(t.status, t.scheduledAt),
+    check("jobs_type_valid", sql`${t.type} IN ('heartbeat')`),
+    check("jobs_status_valid", sql`${t.status} IN ('queued','running','succeeded','failed')`),
+    check("jobs_attempt_positive", sql`${t.attempt} > 0`),
+  ],
+);
