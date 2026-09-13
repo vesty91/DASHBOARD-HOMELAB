@@ -35,13 +35,15 @@ export default async function IntegrationsPage({
   try {
     const caller = await getBoardCaller();
     const { cursor } = await searchParams;
-    const [page, canManage, canCreate, catalog, dockerPermissions] = await Promise.all([
-      caller.integration.list({ limit: 50, cursor }),
-      caller.integration.canManage(),
-      caller.integration.canCreate(),
-      caller.integration.catalog(),
-      caller.docker.permissions(),
-    ]);
+    const [page, canManage, canCreate, catalog, dockerPermissions, synologyPermissions] =
+      await Promise.all([
+        caller.integration.list({ limit: 50, cursor }),
+        caller.integration.canManage(),
+        caller.integration.canCreate(),
+        caller.integration.catalog(),
+        caller.docker.permissions(),
+        caller.synology.permissions(),
+      ]);
     const canAdd = canCreate && catalog.length > 0;
     return (
       <PageContainer>
@@ -65,7 +67,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker via un socket proxy HTTP(S) restreint."
+                : "Ajoutez une intégration Docker ou Synology DSM."
             }
           />
         ) : (
@@ -95,7 +97,8 @@ export default async function IntegrationsPage({
                   ) : null}
                 </CardBody>
                 <CardFooter>
-                  {integration.type === "docker" && dockerPermissions.canRead ? (
+                  {(integration.type === "docker" && dockerPermissions.canRead) ||
+                  (integration.type === "synology" && synologyPermissions.canRead) ? (
                     <Link
                       className="ui-btn ui-btn-primary"
                       href={`/integrations/${integration.id}`}

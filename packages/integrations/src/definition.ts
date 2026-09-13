@@ -55,6 +55,7 @@ export function sealIntegrationDefinition<TConfig, TSecrets>(
           label: field.label,
           required: field.required,
           valueSchema: field.valueSchema,
+          ...(field.serverManaged ? { serverManaged: true as const } : {}),
         }),
       ),
     ),
@@ -85,7 +86,12 @@ export function catalogEntryFromDefinition(definition: IntegrationDefinition) {
       Object.freeze({ key: field.key, label: field.label, required: field.required }),
     ),
     secretFields: definition.secretFields.map((field) =>
-      Object.freeze({ key: field.key, label: field.label, required: field.required }),
+      Object.freeze({
+        key: field.key,
+        label: field.label,
+        required: field.required,
+        ...(field.serverManaged ? { serverManaged: true as const } : {}),
+      }),
     ),
   });
 }

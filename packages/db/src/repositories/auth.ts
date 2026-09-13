@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { Pool } from "pg";
+import { isPermission } from "@dashboard/permissions";
 
 export interface AuthUserRow {
   id: string;
@@ -24,10 +25,25 @@ export interface GroupWithRoleInput {
 }
 export class AuthRepositoryError extends Error {
   constructor(
-    readonly code: "ONBOARDING_ALREADY_COMPLETED" | "LAST_SYSTEM_ADMIN" | "ROLE_NOT_FOUND",
+    readonly code:
+      | "ONBOARDING_ALREADY_COMPLETED"
+      | "LAST_SYSTEM_ADMIN"
+      | "ROLE_NOT_FOUND"
+      | "GROUP_NOT_FOUND"
+      | "INVALID_PERMISSION",
   ) {
     super(code);
   }
+}
+export const GROUP_GRANTS_ROLE_PREFIX = "GROUP_GRANTS_";
+export function groupGrantsRoleName(groupId: string): string {
+  return `${GROUP_GRANTS_ROLE_PREFIX}${groupId}`;
+}
+function uniqueGrantPermissions(permissions: readonly string[]): string[] {
+  const unique = [...new Set(permissions)];
+  for (const permission of unique)
+    if (!isPermission(permission)) throw new AuthRepositoryError("INVALID_PERMISSION");
+  return unique;
 }
 const mapSqliteUser = (row: Record<string, unknown>): AuthUserRow => ({
   id: String(row.id),
@@ -271,6 +287,45 @@ export function createSqliteAuthStore(database: DatabaseSync) {
         throw error;
       }
     },
+    async listGroupPermissionGrants(groupId: string) {
+      return database
+        .prepare(
+          "SELECT rp.permission FROM roles r JOIN group_roles gr ON gr.role_id=r.id AND gr.group_id=? JOIN role_permissions rp ON rp.role_id=r.id WHERE r.name=? ORDER BY rp.permission",
+        )
+        .all(groupId, groupGrantsRoleName(groupId))
+        .map((row) => String(row.permission));
+    },
+    async setGroupPermissionGrants(groupId: string, permissions: readonly string[]) {
+      const unique = uniqueGrantPermissions(permissions);
+      const roleName = groupGrantsRoleName(groupId);
+      const now = Date.now();
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const group = database.prepare("SELECT id FROM groups WHERE id=?").get(groupId);
+        if (!group) throw new AuthRepositoryError("GROUP_NOT_FOUND");
+        let roleId = database.prepare("SELECT id FROM roles WHERE name=?").get(roleName)?.id;
+        if (typeof roleId !== "string") {
+          roleId = randomUUID();
+          database
+            .prepare(
+              "INSERT INTO roles(id,name,description,created_at,updated_at) VALUES(?,?,?,?,?)",
+            )
+            .run(roleId, roleName, "Additional permission grants for a group", now, now);
+        }
+        database
+          .prepare("INSERT OR IGNORE INTO group_roles(group_id,role_id) VALUES(?,?)")
+          .run(groupId, roleId);
+        database.prepare("DELETE FROM role_permissions WHERE role_id=?").run(roleId);
+        const insert = database.prepare(
+          "INSERT INTO role_permissions(role_id,permission) VALUES(?,?)",
+        );
+        for (const permission of unique) insert.run(roleId, permission);
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async resolvePermissionSubject(id: string) {
       const user = findUser(id);
       if (!user) return undefined;
@@ -483,6 +538,48 @@ export function createPostgresqlAuthStore(pool: Pool) {
           "UPDATE users SET status=$2,auth_version=auth_version+1,updated_at=now() WHERE id=$1",
           [id, status],
         );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async listGroupPermissionGrants(groupId: string) {
+      const result = await pool.query(
+        "SELECT rp.permission FROM roles r JOIN group_roles gr ON gr.role_id=r.id AND gr.group_id=$1 JOIN role_permissions rp ON rp.role_id=r.id WHERE r.name=$2 ORDER BY rp.permission",
+        [groupId, groupGrantsRoleName(groupId)],
+      );
+      return result.rows.map((row) => String(row.permission));
+    },
+    async setGroupPermissionGrants(groupId: string, permissions: readonly string[]) {
+      const unique = uniqueGrantPermissions(permissions);
+      const roleName = groupGrantsRoleName(groupId);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const group = await client.query("SELECT id FROM groups WHERE id=$1 FOR UPDATE", [groupId]);
+        if (!group.rows[0]) throw new AuthRepositoryError("GROUP_NOT_FOUND");
+        const existing = await client.query("SELECT id FROM roles WHERE name=$1", [roleName]);
+        let roleId = existing.rows[0]?.id as string | undefined;
+        if (!roleId) {
+          roleId = randomUUID();
+          await client.query(
+            "INSERT INTO roles(id,name,description,created_at,updated_at) VALUES($1,$2,$3,now(),now())",
+            [roleId, roleName, "Additional permission grants for a group"],
+          );
+        }
+        await client.query(
+          "INSERT INTO group_roles(group_id,role_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+          [groupId, roleId],
+        );
+        await client.query("DELETE FROM role_permissions WHERE role_id=$1", [roleId]);
+        for (const permission of unique)
+          await client.query("INSERT INTO role_permissions(role_id,permission) VALUES($1,$2)", [
+            roleId,
+            permission,
+          ]);
         await client.query("COMMIT");
       } catch (error) {
         await client.query("ROLLBACK");

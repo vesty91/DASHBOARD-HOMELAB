@@ -1,8 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireServerPermission } from "@/lib/server/auth";
+import { canAssignGroupPermissionGrants } from "@dashboard/permissions";
+import { requireServerPermission, requireSession } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
+import { groupPermissionGrantsInputSchema } from "./group-permission-grants";
 
 const createGroupInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -25,5 +28,18 @@ export async function createGroupAction(formData: FormData) {
   });
   const { authStore } = await getDatabase();
   await authStore.createGroupWithRoleAndOptionalMember(input);
+  revalidatePath("/admin/groups");
+}
+
+export async function setGroupPermissionGrantsAction(groupId: string, formData: FormData) {
+  const session = await requireSession();
+  const { authStore } = await getDatabase();
+  const subject = await authStore.resolvePermissionSubject(session.user.id);
+  if (!subject || !canAssignGroupPermissionGrants(subject)) redirect("/forbidden");
+  const input = groupPermissionGrantsInputSchema.parse({
+    groupId,
+    permissions: formData.getAll("permission").map(String),
+  });
+  await authStore.setGroupPermissionGrants(input.groupId, input.permissions);
   revalidatePath("/admin/groups");
 }

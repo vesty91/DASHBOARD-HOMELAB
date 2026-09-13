@@ -193,6 +193,11 @@ son allowlist reste autoritaire. Activer `ALLOW_LOGS` seulement si l'opérateur 
 Docker. URL saisie par l'utilisateur, placeholder documentaire uniquement :
 `http://socket-proxy:2375`.
 
+Synology DSM : URL d'origine HTTPS (port 5001 par défaut), compte DSM en configuration,
+mot de passe dans `integration_secrets`, CA privée optionnelle via `trustedCaPem`. Ne pas
+exposer DSM sur Internet sans reverse proxy et compte de service dédié. Un NAS en 2FA
+s'enrôle comme appareil de confiance depuis la page d'édition.
+
 ## 11. Resource limits
 
 Documenter :

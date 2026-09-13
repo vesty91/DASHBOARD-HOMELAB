@@ -39,6 +39,13 @@ docker.containers.start
 docker.containers.stop
 docker.containers.restart
 
+synology.permissions
+synology.integration.get
+synology.overview.get
+synology.overview.refresh
+synology.auth.enrollDevice
+synology.auth.clearDevice
+
 widget.catalog
 widget.data
 
@@ -236,6 +243,9 @@ capabilities, config/secret field labels). Aucun schéma Zod interne ni secret n
 catalogue générique vide reste valide. La composition application Phase 8 enregistre Docker.
 `integration.call` / `integration.invoke` / `docker.request` n'existent pas.
 
+Pour un record `type=synology`, `integration.list` et `integration.get` n'exposent `baseUrl`,
+`config`, `capabilities` ni l'état des secrets qu'aux acteurs avec `integration.manage`.
+
 # Docker API — Phase 8
 
 Routeur tRPC `docker` (aucun generic invoke, aucun `method`/`path` client).
@@ -270,3 +280,35 @@ Stats : `cpuPercent`, `memoryUsageBytes`, `memoryLimitBytes`, `memoryPercent`, `
 Erreurs : `UNAUTHORIZED`, `FORBIDDEN` (RBAC ou 403 proxy), `NOT_FOUND`, `CONFLICT` (409),
 `TOO_MANY_REQUESTS`, `TIMEOUT`, `BAD_REQUEST` (validation / DNS / TLS / réponse invalide).
 ID invalide : `BAD_REQUEST` sans requête Docker.
+
+# Synology API — Phase 9
+
+Routeur tRPC `synology` (aucun generic invoke, aucun `method`/`path` client).
+Input : `integrationId` UUID.
+
+| Route                        | Permission                 | Capability                                        | Notes                                                                                   |
+| ---------------------------- | -------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `synology.permissions`       | auth active                | —                                                 | Helper UI : `canRead`, `canManageAuth`                                                  |
+| `synology.integration.get`   | use/manage + synology.read | —                                                 | `{ id, name, enabled }` ; pas de réseau DSM ; pas de `config`/`trustedCaPem`/secrets    |
+| `synology.overview.get`      | use/manage + synology.read | `system.read` + `resources.read` + `storage.read` | Vue unique ; cache 15 s (5 s si partiel) ; cache-miss single-flight ; SID jamais caché  |
+| `synology.overview.refresh`  | use/manage + synology.read | idem                                              | Invalide le cache ; 10 requêtes / min / acteur / intégration                            |
+| `synology.auth.enrollDevice` | integration.manage         | —                                                 | OTP 4–8 digits transitoire ; persiste `deviceId` server-managed ; ne renvoie pas le DID |
+| `synology.auth.clearDevice`  | integration.manage         | —                                                 | Efface uniquement le jeton local                                                        |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `system` /
+`resources` / `storage` chacune `{ status, data, reason? }`.
+System : `model`, `dsmVersion`, `uptimeSeconds`, `systemTemperatureC`, `ramTotalBytes`,
+`cpuCores`, `cpuFamily`, `cpuSeries` (null si absent).
+Resources : CPU `user+system+other` (somme dans `[0, 100]`), RAM en octets (`avail <= total`,
+total `> 0`) ; sinon section `invalid-response`.
+Volumes / disks : capacité, utilisé, état, température, SMART si présent.
+
+Jamais exposés : mot de passe, SID, synotoken, DID, OTP, numéros de série, `baseUrl`, config.
+
+`status` section : `available` \| `degraded` \| `unavailable`. Une section Utilization/Storage
+en échec n'invente pas 0 % et n'échoue pas toute la page. Un payload DSM.Info, Storage ou
+Utilization structurellement invalide est `invalid-response`. Un élément volume/disque
+malformé (null, scalaire, tableau, objet sans identité DSM reconnue) rend aussi Storage
+`invalid-response` ; `volumes: []` et `disks: []` restent valides. Core.System annoncé mais en
+échec : section système `degraded` avec DSM.Info conservé. Cache overview lié à une génération
+de connexion et à une génération de refresh manuel runtime, pas seulement à `synology.overview`.

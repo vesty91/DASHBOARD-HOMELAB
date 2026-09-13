@@ -36,6 +36,11 @@ import {
   dockerLogsInputSchema,
   type DockerService,
 } from "@dashboard/docker";
+import {
+  synologyEnrollDeviceSchema,
+  synologyIntegrationInputSchema,
+  type SynologyService,
+} from "@dashboard/synology";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 
 export interface ApiContext {
@@ -44,6 +49,7 @@ export interface ApiContext {
   apps: AppService;
   integrations: IntegrationService;
   docker: DockerService;
+  synology: SynologyService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -310,12 +316,47 @@ export const dockerRouter = t.router({
       .mutation(({ ctx, input }) => procedure(() => ctx.docker.restartContainer(input, ctx.actor))),
   }),
 });
+export const synologyRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.synology.permissions(ctx.actor)),
+  integration: t.router({
+    get: t.procedure
+      .input(synologyIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.synology.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(synologyIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.synology.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(synologyIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.synology.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+  auth: t.router({
+    enrollDevice: t.procedure
+      .input(synologyEnrollDeviceSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.synology.enrollDevice(input.integrationId, input.otpCode, ctx.actor)),
+      ),
+    clearDevice: t.procedure
+      .input(synologyIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.synology.clearDevice(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
   widget: widgetRouter,
   integration: integrationsRouter,
   docker: dockerRouter,
+  synology: synologyRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

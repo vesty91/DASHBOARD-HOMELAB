@@ -16,10 +16,13 @@ export function IntegrationForm({
   const [selectedType, setSelectedType] = useState(integration?.type ?? catalog[0]?.id ?? "");
   const [verifyTls, setVerifyTls] = useState(integration?.config.verifyTls !== false);
   const showDockerHelp = selectedType === "docker";
+  const showSynologyHelp = selectedType === "synology";
+  const showTrustedCa = showDockerHelp || showSynologyHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
     typeof integration?.config.trustedCaPem === "string" ? integration.config.trustedCaPem : "";
+  const account = typeof integration?.config.account === "string" ? integration.config.account : "";
   return (
     <form action={action} className="ui-form ui-form-wide ui-form-grid">
       <Field label="Type">
@@ -47,7 +50,13 @@ export function IntegrationForm({
           required
           maxLength={2048}
           defaultValue={integration?.baseUrl ?? ""}
-          placeholder={showDockerHelp ? "http://socket-proxy:2375" : undefined}
+          placeholder={
+            showDockerHelp
+              ? "http://socket-proxy:2375"
+              : showSynologyHelp
+                ? "https://nas.example:5001"
+                : undefined
+          }
         />
       </Field>
       {showDockerHelp ? (
@@ -56,6 +65,18 @@ export function IntegrationForm({
           <Alert tone="warning">
             L&apos;accès au daemon Docker est hautement privilégié. Utilisez un socket proxy
             restreint et ne publiez pas son port.
+          </Alert>
+        </>
+      ) : null}
+      {showSynologyHelp ? (
+        <>
+          <Alert>
+            Utilisez l&apos;URL HTTPS de DSM (port 5001 par défaut). Le compte est stocké en
+            configuration ; le mot de passe se configure ensuite comme secret serveur.
+          </Alert>
+          <Alert>
+            Si DSM exige un OTP, enregistrez un appareil de confiance depuis la page de
+            modification. Le jeton d&apos;appareil n&apos;est jamais affiché.
           </Alert>
         </>
       ) : null}
@@ -84,10 +105,25 @@ export function IntegrationForm({
       <Field label="Timeout ms">
         <Input name="timeoutMs" type="number" min={500} max={30000} defaultValue={timeoutMs} />
       </Field>
-      {showDockerHelp ? (
+      {showSynologyHelp ? (
+        <Field label="Compte DSM">
+          <Input
+            name="account"
+            autoComplete="off"
+            required
+            maxLength={128}
+            defaultValue={account}
+          />
+        </Field>
+      ) : null}
+      {showTrustedCa ? (
         <Field
           label="CA de confiance (PEM, optionnel)"
-          hint="Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+          hint={
+            showSynologyHelp
+              ? "Utilisez ce champ pour un NAS HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+              : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+          }
         >
           <Textarea
             name="trustedCaPem"

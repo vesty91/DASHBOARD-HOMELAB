@@ -16,6 +16,7 @@ export default defineConfig({
       DB_DRIVER: "sqlite",
       DATABASE_URL: "./.e2e-auth.sqlite",
       AUTH_SECRET: "phase-3-e2e-secret-value-at-least-32-characters",
+      SECRET_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       APP_URL: "http://localhost:3000",
     },
   },

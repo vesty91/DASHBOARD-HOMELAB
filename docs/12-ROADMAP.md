@@ -168,7 +168,7 @@ Aucune connexion Docker. Aucune migration DB.
 
 ## Phase 8 — Docker
 
-Statut sur la branche `phase-8-docker` : IMPLEMENTED / REVIEW.
+Statut : COMPLETE / merged (PR #10), tag `phase-8-complete`.
 
 Livrables :
 
@@ -180,21 +180,24 @@ Livrables :
 - reconnaissance via App Library ;
 - pages `/integrations/[id]` et `/integrations/[id]/containers/[containerId]`.
 
-Hors scope : widgets Docker, realtime, inventaire `/images/json`, socket Unix direct, Phase 9.
-
-Ne pas écrire COMPLETE avant merge/post-merge.
+Hors scope : widgets Docker, realtime, inventaire `/images/json`, socket Unix direct.
 
 ## Phase 9 — Synology
 
+Statut sur la branche `phase-9-synology` : IMPLEMENTED / REVIEW.
+
 Livrables :
 
-- system ;
-- CPU/RAM ;
-- volumes ;
-- storage ;
-- disks ;
-- temperatures selon API ;
-- états dégradés explicites.
+- adapter `synology` via l'API DSM officielle (Info, Auth, DSM.Info, Core.System, Utilization, Storage) ;
+- informations système (modèle, version DSM, uptime, RAM, température si disponibles) ;
+- CPU et RAM réels lorsque l'API Utilization répond ;
+- volumes et disques (capacité, utilisé / libre, état, SMART si exposé) ;
+- vue partielle `available` / `degraded` / `unavailable` ;
+- 2FA via appareil de confiance (`deviceId` server-managed) ;
+- credentials côté serveur, TLS / CA privée, timeout, SSRF, DTO assainis ;
+- refresh manuel rate-limité (10/min), cache 15 s / 5 s.
+
+Hors scope : widgets Synology, FileStation, reboot, polling, Phase 10.
 
 ## Phase 10 — Jellyfin
 
