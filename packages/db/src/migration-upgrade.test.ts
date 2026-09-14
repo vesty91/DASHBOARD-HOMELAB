@@ -312,4 +312,63 @@ describe("Phase 15 security migration", () => {
       database.close();
     }
   });
+
+  it("AC-024 preserves an existing board, layout and widget across schema 5 to 6", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase13JobsMigration, "utf8"));
+      database
+        .prepare(
+          "INSERT INTO users(id,username,username_canonical,created_at,updated_at) VALUES('u1','Admin','admin',1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO boards(id,slug,name,visibility,owner_user_id,theme_json,settings_json,revision,created_at,updated_at) VALUES('b1','kept','Kept Board','private','u1','{}','{}',4,1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO layouts(id,board_id,name,breakpoint,columns,row_height,sort_order,created_at,updated_at) VALUES('ld','b1','Desktop','desktop',12,72,0,1,1),('lm','b1','Mobile','mobile',4,72,1,1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO items(id,board_id,widget_type,widget_version,config_json,created_at,updated_at) VALUES('i1','b1','clock',1,'{}',1,1)",
+        )
+        .run();
+      database
+        .prepare(
+          "INSERT INTO item_layouts(id,item_id,layout_id,x,y,w,h) VALUES('p1','i1','ld',2,3,4,2),('p2','i1','lm',0,1,4,2)",
+        )
+        .run();
+      executeSqliteMigration(database, await readFile(phase15SecurityMigration, "utf8"));
+      expect(
+        database.prepare("SELECT slug,name,revision FROM boards WHERE id='b1'").get(),
+      ).toMatchObject({ slug: "kept", name: "Kept Board", revision: 4 });
+      expect(
+        database
+          .prepare("SELECT breakpoint FROM layouts WHERE board_id='b1' ORDER BY breakpoint")
+          .all(),
+      ).toEqual([{ breakpoint: "desktop" }, { breakpoint: "mobile" }]);
+      expect(database.prepare("SELECT widget_type FROM items WHERE id='i1'").get()).toMatchObject({
+        widget_type: "clock",
+      });
+      expect(database.prepare("SELECT x,y,w,h FROM item_layouts ORDER BY id").all()).toEqual([
+        { x: 2, y: 3, w: 4, h: 2 },
+        { x: 0, y: 1, w: 4, h: 2 },
+      ]);
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 6 });
+    } finally {
+      database.close();
+    }
+  });
 });

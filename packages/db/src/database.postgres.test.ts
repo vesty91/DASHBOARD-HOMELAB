@@ -558,4 +558,79 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       await client.close();
     }
   });
+
+  it("AC-024 upgrades schema 5 to 6 without losing board widgets", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      const files = [
+        "0000_kind_pride.sql",
+        "0001_slim_kabuki.sql",
+        "0002_brief_captain_america.sql",
+        "0003_known_doctor_spectrum.sql",
+        "0004_classy_rocket_raccoon.sql",
+        "0005_curved_stephen_strange.sql",
+      ];
+      for (const file of files) {
+        await executePostgresqlMigration(
+          client.pool,
+          await readFile(new URL(`../drizzle/postgresql/${file}`, import.meta.url), "utf8"),
+        );
+      }
+      const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+      const boardId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
+      const layoutDesktop = "cccccccc-cccc-4ccc-8ccc-ccccccccccc1";
+      const layoutMobile = "cccccccc-cccc-4ccc-8ccc-ccccccccccc2";
+      const itemId = "dddddddd-dddd-4ddd-8ddd-ddddddddddd1";
+      await client.pool.query(
+        "insert into users(id,username,username_canonical,status,is_system_admin,created_at,updated_at) values($1,'UpgradeAdmin','upgradeadmin','active',true,now(),now())",
+        [userId],
+      );
+      await client.pool.query(
+        "insert into boards(id,slug,name,visibility,owner_user_id,theme_json,settings_json,revision,created_at,updated_at) values($1,'kept','Kept Board','private',$2,'{}','{}',4,now(),now())",
+        [boardId, userId],
+      );
+      await client.pool.query(
+        "insert into layouts(id,board_id,name,breakpoint,columns,row_height,sort_order,created_at,updated_at) values($1,$3,'Desktop','desktop',12,72,0,now(),now()),($2,$3,'Mobile','mobile',4,72,1,now(),now())",
+        [layoutDesktop, layoutMobile, boardId],
+      );
+      await client.pool.query(
+        "insert into items(id,board_id,widget_type,widget_version,config_json,created_at,updated_at) values($1,$2,'clock',1,'{}',now(),now())",
+        [itemId, boardId],
+      );
+      await client.pool.query(
+        "insert into item_layouts(id,item_id,layout_id,x,y,w,h) values($1,$3,$4,2,3,4,2),($2,$3,$5,0,1,4,2)",
+        [
+          "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1",
+          "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2",
+          itemId,
+          layoutDesktop,
+          layoutMobile,
+        ],
+      );
+      await executePostgresqlMigration(
+        client.pool,
+        await readFile(
+          new URL("../drizzle/postgresql/0006_natural_boomer.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(
+        await client.pool.query("select slug,name,revision from boards where id=$1", [boardId]),
+      ).toMatchObject({ rows: [{ slug: "kept", name: "Kept Board", revision: 4 }] });
+      expect(
+        await client.pool.query("select widget_type from items where id=$1", [itemId]),
+      ).toMatchObject({ rows: [{ widget_type: "clock" }] });
+      expect(
+        await client.pool.query("select schema_version from server_settings where id='global'"),
+      ).toMatchObject({ rows: [{ schema_version: 6 }] });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from information_schema.tables where table_schema='public' and table_name in ('oidc_identities','audit_logs','auth_sessions')",
+        ),
+      ).toMatchObject({ rows: [{ count: 3 }] });
+    } finally {
+      await client.close();
+    }
+  });
 });
