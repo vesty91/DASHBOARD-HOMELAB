@@ -59,6 +59,7 @@ import {
   MemoryIntegrationCache,
   MemoryTestRateLimiter,
   secureRequest,
+  type IntegrationActor,
 } from "@dashboard/integrations";
 import { createEnvKeyring } from "@dashboard/secrets";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
@@ -67,6 +68,7 @@ import { authOptions } from "./auth";
 import { getDatabase } from "./database";
 import { createApplicationIntegrationRegistry } from "./integration-registry";
 import { serverEnv } from "../env";
+import { publishAfterSuccess } from "./publish-after-success";
 
 const globalRuntime = globalThis as typeof globalThis & {
   dashboardEventBus?: Promise<EventBus>;
@@ -118,6 +120,26 @@ function occurredAt(): string {
 async function publish(event: Parameters<EventBus["publish"]>[0]): Promise<void> {
   const bus = await eventBus();
   await bus.publish(event);
+}
+
+function attachDataChangedEvents(
+  service: {
+    refreshOverview: (integrationId: string, actor: IntegrationActor) => Promise<unknown>;
+  },
+  integrationType: string,
+): void {
+  const refreshOverview = service.refreshOverview.bind(service);
+  service.refreshOverview = (integrationId, actor) =>
+    publishAfterSuccess(
+      () => refreshOverview(integrationId, actor),
+      () =>
+        publish({
+          type: "integration.data.changed",
+          integrationId,
+          integrationType,
+          occurredAt: occurredAt(),
+        }),
+    );
 }
 
 function boardMutationEvents() {
@@ -281,6 +303,12 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.uptimeKumaOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  attachDataChangedEvents(synology, "synology");
+  attachDataChangedEvents(jellyfin, "jellyfin");
+  attachDataChangedEvents(immich, "immich");
+  attachDataChangedEvents(beszel, "beszel");
+  attachDataChangedEvents(prometheus, "prometheus");
+  attachDataChangedEvents(uptimeKuma, "uptime-kuma");
   return {
     actor: { userId, subject },
     boards: createBoardService(

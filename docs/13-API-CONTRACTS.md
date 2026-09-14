@@ -452,6 +452,12 @@ simple connect TCP. Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SEC
 correspondant (`board:<id>`, `integration:<id>`, `runtime`). Default deny. Redis n'est jamais
 source de vérité RBAC. Payloads minimaux : pas de layout, ACL, config, secrets, URLs privées.
 
+`integration.data.changed` est un signal d'invalidation (id + type + occurredAt). Le client
+autorisé refetch le DTO existant, avec debounce. Le polling 10 s reste le producteur autonome
+des vues board (aucun second client d'intégration dans le worker). SSE accélère le refetch
+après un refresh manuel ou une mutation. Le proxy same-origin `GET /api/realtime/events`
+relais SSE sans exposer `REALTIME_URL` au navigateur.
+
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
 uptime-kuma `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types

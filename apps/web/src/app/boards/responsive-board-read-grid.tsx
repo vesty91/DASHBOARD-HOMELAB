@@ -13,6 +13,8 @@ import type {
 } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 import { JELLYFIN_BOARD_REFRESH_MS, shouldPollJellyfinBoard } from "./jellyfin-board-refresh";
+import { collectLiveIntegrationIds } from "./live-integration-ids";
+import { useBoardLiveRefresh } from "./use-board-live-refresh";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 export function ResponsiveBoardReadGrid({
@@ -43,6 +45,13 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(prometheusViews) ||
     shouldPollJellyfinBoard(uptimeKumaViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
+  useBoardLiveRefresh({
+    boardId: snapshot.board.id,
+    integrationIds: collectLiveIntegrationIds(snapshot.items, serviceStatusViews),
+    onRefresh: () => {
+      router.refresh();
+    },
+  });
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
     const update = () => setRequested(media.matches ? "mobile" : "desktop");

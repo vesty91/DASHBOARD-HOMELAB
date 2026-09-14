@@ -190,6 +190,21 @@ describe("events package", () => {
       integrationType: "jellyfin",
       occurredAt: "2026-09-13T00:00:00.000Z",
     });
+    expect(
+      parseDomainEvent({
+        type: "integration.data.changed",
+        integrationId: "int-1",
+        integrationType: "prometheus",
+        occurredAt: "2026-09-13T00:00:00.000Z",
+        matrix: [[1, 2, 3]],
+        apiKey: "secret",
+      }),
+    ).toEqual({
+      type: "integration.data.changed",
+      integrationId: "int-1",
+      integrationType: "prometheus",
+      occurredAt: "2026-09-13T00:00:00.000Z",
+    });
     expect(parseDomainEvent({ type: "unknown" })).toBeNull();
     expect(Buffer.byteLength(JSON.stringify({ type: "job.heartbeat" }), "utf8")).toBeLessThan(
       DOMAIN_EVENT_MAX_BYTES,
