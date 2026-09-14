@@ -1,7 +1,10 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  DOMAIN_EVENT_MAX_BYTES,
   MemoryEventBus,
   RedisEventBus,
+  canReceiveEvent,
   createRuntimeStatusService,
   issueRealtimeTicket,
   parseDomainEvent,
@@ -74,15 +77,130 @@ describe("events package", () => {
 
   it("issues and verifies short-lived tickets without embedding secrets", () => {
     const secret = "a".repeat(32);
-    const ticket = issueRealtimeTicket(secret, "user-1", new Date("2026-09-13T00:00:00.000Z"));
+    const ticket = issueRealtimeTicket(
+      secret,
+      { userId: "user-1", subscriptions: [{ kind: "runtime" }] },
+      new Date("2026-09-13T00:00:00.000Z"),
+    );
     expect(ticket.token).not.toMatch(/password|redis:\/\//iu);
     expect(
       verifyRealtimeTicket(secret, ticket.token, new Date("2026-09-13T00:00:30.000Z")),
-    ).toEqual({ userId: "user-1" });
+    ).toEqual({ userId: "user-1", subscriptions: [{ kind: "runtime" }] });
     expect(
       verifyRealtimeTicket(secret, ticket.token, new Date("2026-09-13T00:02:00.000Z")),
     ).toBeNull();
     expect(verifyRealtimeTicket("b".repeat(32), ticket.token)).toBeNull();
+  });
+
+  it("rejects forged, malformed, oversized, and unknown ticket scopes", () => {
+    const secret = "a".repeat(32);
+    const now = new Date("2026-09-13T00:00:00.000Z");
+    const ticket = issueRealtimeTicket(
+      secret,
+      { userId: "user-1", subscriptions: [{ kind: "board", id: "board-a" }] },
+      now,
+    );
+    const [encoded] = ticket.token.split(".");
+    const payload = JSON.parse(Buffer.from(encoded!, "base64url").toString("utf8")) as {
+      userId: string;
+      expiresAt: number;
+      subscriptions: unknown[];
+    };
+    const forgedPayload = JSON.stringify({
+      ...payload,
+      subscriptions: [...payload.subscriptions, { kind: "board", id: "board-b" }],
+    });
+    const forged = `${Buffer.from(forgedPayload).toString("base64url")}.${ticket.token.split(".")[1]}`;
+    expect(verifyRealtimeTicket(secret, forged, now)).toBeNull();
+    const mutatedId = JSON.stringify({
+      ...payload,
+      subscriptions: [{ kind: "board", id: "board-b" }],
+    });
+    expect(
+      verifyRealtimeTicket(
+        secret,
+        `${Buffer.from(mutatedId).toString("base64url")}.${ticket.token.split(".")[1]}`,
+        now,
+      ),
+    ).toBeNull();
+    const unknownKind = JSON.stringify({
+      ...payload,
+      subscriptions: [{ kind: "admin" }],
+    });
+    const unknownSig = createHmac("sha256", secret).update(unknownKind).digest("base64url");
+    expect(
+      verifyRealtimeTicket(
+        secret,
+        `${Buffer.from(unknownKind).toString("base64url")}.${unknownSig}`,
+        now,
+      ),
+    ).toBeNull();
+    expect(verifyRealtimeTicket(secret, "not-a-ticket", now)).toBeNull();
+    expect(verifyRealtimeTicket(secret, `${"a".repeat(9_000)}.sig`, now)).toBeNull();
+    expect(() =>
+      issueRealtimeTicket(secret, {
+        userId: "user-1",
+        subscriptions: Array.from({ length: 50 }, (_, index) => ({
+          kind: "board" as const,
+          id: `board-${String(index).padStart(58, "x")}`,
+        })),
+      }),
+    ).toThrow("TICKET_TOO_LARGE");
+    const duplicates = issueRealtimeTicket(secret, {
+      userId: "user-1",
+      subscriptions: [
+        { kind: "board", id: "board-a" },
+        { kind: "board", id: "board-a" },
+        { kind: "runtime" },
+        { kind: "runtime" },
+      ],
+    });
+    expect(verifyRealtimeTicket(secret, duplicates.token)).toEqual({
+      userId: "user-1",
+      subscriptions: [{ kind: "board", id: "board-a" }, { kind: "runtime" }],
+    });
+  });
+
+  it("parses closed domain events and drops unknown or secret-bearing extras", () => {
+    expect(
+      parseDomainEvent({
+        type: "board.updated",
+        boardId: "board-a",
+        revision: 3,
+        occurredAt: "2026-09-13T00:00:00.000Z",
+        layout: { widgets: [] },
+      }),
+    ).toEqual({
+      type: "board.updated",
+      boardId: "board-a",
+      revision: 3,
+      occurredAt: "2026-09-13T00:00:00.000Z",
+    });
+    expect(
+      parseDomainEvent({
+        type: "integration.updated",
+        integrationId: "int-1",
+        integrationType: "jellyfin",
+        occurredAt: "2026-09-13T00:00:00.000Z",
+        apiKey: "secret",
+      }),
+    ).toEqual({
+      type: "integration.updated",
+      integrationId: "int-1",
+      integrationType: "jellyfin",
+      occurredAt: "2026-09-13T00:00:00.000Z",
+    });
+    expect(parseDomainEvent({ type: "unknown" })).toBeNull();
+    expect(Buffer.byteLength(JSON.stringify({ type: "job.heartbeat" }), "utf8")).toBeLessThan(
+      DOMAIN_EVENT_MAX_BYTES,
+    );
+    expect(
+      canReceiveEvent([{ kind: "board", id: "board-a" }], {
+        type: "board.deleted",
+        boardId: "board-a",
+        occurredAt: "2026-09-13T00:00:00.000Z",
+      }),
+    ).toBe(true);
   });
 
   it("does not reject the process when redis subscribe fails", async () => {

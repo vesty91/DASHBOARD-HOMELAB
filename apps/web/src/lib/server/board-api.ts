@@ -27,10 +27,12 @@ import {
 } from "@dashboard/uptime-kuma";
 import { MemoryServiceStatusCoalescer } from "@dashboard/monitoring";
 import {
+  createConfiguredEventBus,
   createRuntimeStatusService,
   issueRealtimeTicket,
   pingRedisUrl,
   probeHttpReady,
+  type EventBus,
 } from "@dashboard/events";
 import {
   createImmichService,
@@ -66,6 +68,7 @@ import { createApplicationIntegrationRegistry } from "./integration-registry";
 import { serverEnv } from "../env";
 
 const globalRuntime = globalThis as typeof globalThis & {
+  dashboardEventBus?: Promise<EventBus>;
   dashboardIntegrationRuntime?: {
     registry: ReturnType<typeof createApplicationIntegrationRegistry>;
     cache: MemoryIntegrationCache;
@@ -93,6 +96,69 @@ const globalRuntime = globalThis as typeof globalThis & {
     serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
+
+function eventBus(): Promise<EventBus> {
+  globalRuntime.dashboardEventBus ??= createConfiguredEventBus(serverEnv.REDIS_URL);
+  return globalRuntime.dashboardEventBus;
+}
+
+function occurredAt(): string {
+  return new Date().toISOString();
+}
+
+function boardMutationEvents(bus: EventBus) {
+  return {
+    async publishBoardUpdated(boardId: string, revision: number) {
+      await bus.publish({
+        type: "board.updated",
+        boardId,
+        revision,
+        occurredAt: occurredAt(),
+      });
+    },
+    async publishBoardDeleted(boardId: string) {
+      await bus.publish({
+        type: "board.deleted",
+        boardId,
+        occurredAt: occurredAt(),
+      });
+    },
+  };
+}
+
+function integrationMutationEvents(bus: EventBus) {
+  return {
+    async publishUpdated(integrationId: string, integrationType: string) {
+      await bus.publish({
+        type: "integration.updated",
+        integrationId,
+        integrationType,
+        occurredAt: occurredAt(),
+      });
+    },
+    async publishDeleted(integrationId: string, integrationType: string) {
+      await bus.publish({
+        type: "integration.deleted",
+        integrationId,
+        integrationType,
+        occurredAt: occurredAt(),
+      });
+    },
+    async publishStatusChanged(
+      integrationId: string,
+      integrationType: string,
+      status: "unknown" | "available" | "unavailable",
+    ) {
+      await bus.publish({
+        type: "integration.status.changed",
+        integrationId,
+        integrationType,
+        status,
+        occurredAt: occurredAt(),
+      });
+    },
+  };
+}
 
 function integrationRuntime() {
   return (globalRuntime.dashboardIntegrationRuntime ??= {
@@ -131,6 +197,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     ? ((await database.authStore.resolvePermissionSubject(userId)) ?? null)
     : null;
   const runtime = integrationRuntime();
+  const bus = await eventBus();
   const keyring = createEnvKeyring(process.env.SECRET_ENCRYPTION_KEY);
   const apps = createAppService(database.appStore);
   const docker = createDockerService({
@@ -203,13 +270,18 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   });
   return {
     actor: { userId, subject },
-    boards: createBoardService(database.boardStore, createBuiltInWidgetPolicy()),
+    boards: createBoardService(
+      database.boardStore,
+      createBuiltInWidgetPolicy(),
+      boardMutationEvents(bus),
+    ),
     apps,
     integrations: createIntegrationService({
       store: database.integrationStore,
       registry: runtime.registry,
       cache: runtime.cache,
       rateLimiter: runtime.rateLimiter,
+      events: integrationMutationEvents(bus),
       ...(keyring ? { keyring } : {}),
     }),
     docker,
@@ -243,10 +315,10 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       },
     ),
     realtimeTickets: {
-      issue(userId: string) {
+      issue(input) {
         const secret = serverEnv.AUTH_SECRET;
         if (!secret) throw new Error("AUTH_SECRET_TOO_SHORT");
-        return issueRealtimeTicket(secret, userId);
+        return issueRealtimeTicket(secret, input);
       },
     },
     jobs: {

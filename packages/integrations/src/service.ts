@@ -26,6 +26,16 @@ import type {
   JsonObject,
 } from "./types";
 
+export interface IntegrationMutationEvents {
+  publishUpdated(integrationId: string, integrationType: string): Promise<void>;
+  publishDeleted(integrationId: string, integrationType: string): Promise<void>;
+  publishStatusChanged(
+    integrationId: string,
+    integrationType: string,
+    status: "unknown" | "available" | "unavailable",
+  ): Promise<void>;
+}
+
 export interface IntegrationServiceDeps {
   store: IntegrationStore;
   registry: IntegrationRegistry;
@@ -33,6 +43,15 @@ export interface IntegrationServiceDeps {
   rateLimiter: IntegrationRateLimiter;
   keyring?: SecretKeyring;
   request?: typeof secureRequest;
+  events?: IntegrationMutationEvents;
+}
+
+async function emitBestEffort(task: () => Promise<void> | void): Promise<void> {
+  try {
+    await task();
+  } catch (error) {
+    void error;
+  }
 }
 
 function requireAccess(
@@ -135,7 +154,7 @@ function requireKeyring(keyring: SecretKeyring | undefined): SecretKeyring {
 
 export function createIntegrationService(deps: IntegrationServiceDeps) {
   const request = deps.request ?? secureRequest;
-  const { store, registry, cache, rateLimiter, keyring } = deps;
+  const { store, registry, cache, rateLimiter, keyring, events } = deps;
 
   return {
     catalog(actor: IntegrationActor) {
@@ -173,6 +192,7 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
         config,
         createdBy: actor.userId,
       });
+      await emitBestEffort(() => events?.publishUpdated(created.id, created.type));
       return toDto(store, registry, created, actor);
     },
     async update(input: ReturnType<typeof integrationUpdateSchema.parse>, actor: IntegrationActor) {
@@ -205,6 +225,12 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       });
       if (!updated) throw new IntegrationError("NOT_FOUND", "Integration not found");
       if (bumpRevision) cache.invalidate(updated.id);
+      await emitBestEffort(() => events?.publishUpdated(updated.id, updated.type));
+      if (bumpRevision) {
+        await emitBestEffort(() =>
+          events?.publishStatusChanged(updated.id, updated.type, updated.status),
+        );
+      }
       return toDto(store, registry, updated, actor);
     },
     async setSecret(
@@ -230,13 +256,17 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
       });
       await store.upsertSecret(current.id, { key: parsed.key, ...encrypted });
       cache.invalidate(current.id);
+      await emitBestEffort(() => events?.publishUpdated(current.id, current.type));
       return { configured: true as const };
     },
     async delete(id: string, actor: IntegrationActor) {
       requireAccess(actor, "integration.manage");
+      const current = await store.findById(id);
+      if (!current) throw new IntegrationError("NOT_FOUND", "Integration not found");
       if (!(await store.delete(id)))
         throw new IntegrationError("NOT_FOUND", "Integration not found");
       cache.invalidate(id);
+      await emitBestEffort(() => events?.publishDeleted(current.id, current.type));
       return { deleted: true as const };
     },
     async test(id: string, actor: IntegrationActor) {
@@ -340,6 +370,13 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
             code: "STALE_RESULT" as const,
             message: "Configuration changed during test",
           };
+        await emitBestEffort(() =>
+          events?.publishStatusChanged(
+            current.id,
+            current.type,
+            normalized.ok ? "available" : "unavailable",
+          ),
+        );
       }
       return normalized;
     },

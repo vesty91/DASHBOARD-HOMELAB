@@ -5,7 +5,7 @@ import { createEnvKeyring } from "@dashboard/secrets";
 import { MemoryIntegrationCache } from "./cache";
 import { createIntegrationRegistry } from "./registry";
 import { MemoryTestRateLimiter } from "./rate-limiter";
-import { createIntegrationService } from "./service";
+import { createIntegrationService, type IntegrationMutationEvents } from "./service";
 import { createTestHttpIntegrationDefinition } from "./test-support";
 import type {
   EncryptedSecretRow,
@@ -181,6 +181,7 @@ function serviceFor(
   store: IntegrationStore,
   limiter = new MemoryTestRateLimiter(),
   extraDefinitions: IntegrationDefinition[] = [],
+  events?: IntegrationMutationEvents,
 ) {
   const registry = createIntegrationRegistry().register(createTestHttpIntegrationDefinition());
   for (const definition of extraDefinitions) registry.register(definition);
@@ -191,6 +192,7 @@ function serviceFor(
     cache: new MemoryIntegrationCache(),
     rateLimiter: limiter,
     keyring,
+    ...(events ? { events } : {}),
     request: async (options) => {
       const { secureRequest } = await import("./http-client");
       return secureRequest({ ...options, allowAddress: () => true });
@@ -701,5 +703,39 @@ describe("integration service", () => {
     });
     expect(restricted).not.toHaveProperty("configRevision");
     expect(JSON.stringify(restricted)).not.toContain("prometheus.example");
+  });
+
+  it("publishes minimal integration events after commit and never on forbidden mutations", async () => {
+    const store = createMemoryStore();
+    const published: unknown[] = [];
+    const events: IntegrationMutationEvents = {
+      publishUpdated: async (integrationId, integrationType) => {
+        published.push({ type: "updated", integrationId, integrationType });
+      },
+      publishDeleted: async (integrationId, integrationType) => {
+        published.push({ type: "deleted", integrationId, integrationType });
+      },
+      publishStatusChanged: async (integrationId, integrationType, status) => {
+        published.push({ type: "status", integrationId, integrationType, status });
+      },
+    };
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [], events);
+    const created = await service.create(
+      {
+        type: "test-http",
+        name: "Probe",
+        baseUrl: "http://192.168.1.5:3000",
+        enabled: true,
+        config: { path: "/health", verifyTls: true, timeoutMs: 2000 },
+      },
+      admin,
+    );
+    await expect(service.delete(created.id, reader)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await service.delete(created.id, admin);
+    expect(published).toEqual([
+      { type: "updated", integrationId: created.id, integrationType: "test-http" },
+      { type: "deleted", integrationId: created.id, integrationType: "test-http" },
+    ]);
+    expect(JSON.stringify(published)).not.toMatch(/apiKey|ciphertext|192\.168/u);
   });
 });

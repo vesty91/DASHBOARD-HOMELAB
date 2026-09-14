@@ -6,7 +6,7 @@ import {
   findFirstFitPlacement,
   validateLayoutPlacements,
 } from "./layout";
-import { canAccessBoard } from "./policy";
+import { canAccessBoard, canSubscribeBoardRealtime } from "./policy";
 import type {
   BoardActor,
   BoardListItem,
@@ -86,7 +86,24 @@ function assertPublicPublishable(items: readonly PersistedItemRecord[], policy: 
   }
 }
 
-export function createBoardService(repository: BoardRepository, policy: BoardWidgetPolicy) {
+export interface BoardMutationEvents {
+  publishBoardUpdated(boardId: string, revision: number): Promise<void>;
+  publishBoardDeleted(boardId: string): Promise<void>;
+}
+
+async function emitBestEffort(task: () => Promise<void> | void): Promise<void> {
+  try {
+    await task();
+  } catch (error) {
+    void error;
+  }
+}
+
+export function createBoardService(
+  repository: BoardRepository,
+  policy: BoardWidgetPolicy,
+  events?: BoardMutationEvents,
+) {
   async function mutation<T>(operation: () => Promise<T>) {
     try {
       return await operation();
@@ -166,6 +183,16 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
         permission,
       );
     },
+    async canSubscribeRealtime(boardId: string, actor: BoardActor): Promise<boolean> {
+      if (!actor.userId || !actor.subject || actor.subject.status !== "active") return false;
+      const snapshot = await repository.findSnapshotById(boardId);
+      if (!snapshot) return false;
+      return canSubscribeBoardRealtime({
+        board: snapshot.board,
+        actor,
+        resourcePermissions: await grants(snapshot, actor),
+      });
+    },
     async getBySlug(slug: string, actor: BoardActor) {
       return presented(
         await requireAccess(await repository.findSnapshotBySlug(slug), actor, "board.view"),
@@ -207,6 +234,9 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
           layouts: DEFAULT_BOARD_LAYOUTS,
         }),
       );
+      await emitBestEffort(() =>
+        events?.publishBoardUpdated(created.board.id, created.board.revision),
+      );
       return present(created, policy, false);
     },
     async update(
@@ -230,7 +260,9 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
       );
       if (visibilityChanged && input.visibility === "public")
         assertPublicPublishable(snapshot.items, policy);
-      return mutation(() => repository.updateBoard(input));
+      const revision = await mutation(() => repository.updateBoard(input));
+      await emitBestEffort(() => events?.publishBoardUpdated(input.boardId, revision));
+      return revision;
     },
     async updateLayoutBatch(
       input: {
@@ -259,11 +291,13 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
             },
           ]),
       );
-      return mutation(() =>
+      const revision = await mutation(() =>
         repository.updateLayoutBatch(input, (columns, placements) =>
           validateLayoutPlacements({ columns, placements, constraints }),
         ),
       );
+      await emitBestEffort(() => events?.publishBoardUpdated(input.boardId, revision));
+      return revision;
     },
     async createItem(input: CreateItemInput, actor: BoardActor) {
       const snapshot = await requireAccess(
@@ -325,6 +359,7 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
           placements,
         }),
       );
+      await emitBestEffort(() => events?.publishBoardUpdated(input.boardId, revision));
       const next = await repository.findSnapshotById(input.boardId);
       if (!next) throw new BoardError("NOT_FOUND", "Board not found");
       return { revision, snapshot: present(next, policy, false) };
@@ -353,7 +388,7 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
       if (snapshot.board.visibility === "public" && !resolved.publicSafe)
         throw new BoardError("VALIDATION_ERROR", "This widget cannot remain on a public board");
       const title = input.title === undefined ? current.title : input.title;
-      return mutation(() =>
+      const revision = await mutation(() =>
         repository.updateItem({
           boardId: input.boardId,
           itemId: input.itemId,
@@ -363,6 +398,8 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
           widgetVersion: resolved.version,
         }),
       );
+      await emitBestEffort(() => events?.publishBoardUpdated(input.boardId, revision));
+      return revision;
     },
     async deleteItem(input: DeleteItemInput, actor: BoardActor) {
       const snapshot = await requireAccess(
@@ -372,11 +409,14 @@ export function createBoardService(repository: BoardRepository, policy: BoardWid
       );
       if (!snapshot.items.some((item) => item.id === input.itemId))
         throw new BoardError("NOT_FOUND", "Item not found");
-      return mutation(() => repository.deleteItem(input));
+      const revision = await mutation(() => repository.deleteItem(input));
+      await emitBestEffort(() => events?.publishBoardUpdated(input.boardId, revision));
+      return revision;
     },
     async delete(boardId: string, actor: BoardActor) {
       await requireAccess(await repository.findSnapshotById(boardId), actor, "board.manage");
       await repository.deleteBoard(boardId);
+      await emitBestEffort(() => events?.publishBoardDeleted(boardId));
     },
     catalog() {
       return policy.catalog();

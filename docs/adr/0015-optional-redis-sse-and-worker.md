@@ -36,10 +36,11 @@ persiste les heartbeats (SQLite + PostgreSQL, migration `0005`).
 
 ### 4. Filtrage serveur
 
-Le bus n'émet pas encore `board.updated` / statuts d'intégration vers les
-clients. Seuls les événements d'infrastructure bornés (`job.heartbeat`,
-`job.failed`) transitent, pour éviter une fuite RBAC avant le filtrage par
-permission.
+Les événements `board.updated` / `board.deleted` / `integration.updated` /
+`integration.deleted` / `integration.status.changed` / `job.*` ne sont envoyés
+à une connexion que si le ticket HMAC contient le scope correspondant.
+`canReceiveEvent` est default-deny. Redis et le bus mémoire appliquent le même
+filtre. Un board public n'ouvre pas le stream. `runtime` exige `settings.read`.
 
 ### 5. Package `@dashboard/events`
 

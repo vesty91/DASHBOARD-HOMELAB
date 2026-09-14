@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BoardError } from "./errors";
-import { canAccessBoard } from "./policy";
+import { canAccessBoard, canSubscribeBoardRealtime } from "./policy";
 import { createBoardService } from "./service";
 import {
   clampWidgetSize,
@@ -108,6 +108,33 @@ describe("board domain", () => {
         "board.view",
       ),
     ).toBe(true);
+    expect(
+      canSubscribeBoardRealtime(
+        ctx({ board: { ...board, visibility: "public" }, actor: { userId: null, subject: null } }),
+      ),
+    ).toBe(false);
+    expect(
+      canSubscribeBoardRealtime(
+        ctx({
+          board: { ...board, visibility: "public" },
+          actor: { userId: "stranger", subject: active },
+        }),
+      ),
+    ).toBe(false);
+    expect(canSubscribeBoardRealtime(ctx({ actor: { userId: "owner", subject: active } }))).toBe(
+      true,
+    );
+    expect(canSubscribeBoardRealtime(ctx({ resourcePermissions: ["board.view"] }))).toBe(true);
+    expect(
+      canSubscribeBoardRealtime(
+        ctx({
+          actor: {
+            userId: "admin",
+            subject: { status: "active", isSystemAdmin: true },
+          },
+        }),
+      ),
+    ).toBe(true);
   });
   it("lists canEdit from resolved direct ACL instead of empty resource grants", async () => {
     const editor = { userId: "editor", subject: active };
@@ -165,6 +192,68 @@ describe("board domain", () => {
       code: "BOARD_REVISION_CONFLICT",
       message: "Board revision conflict",
     });
+  });
+  it("publishes a board.updated after commit and skips failed or forbidden mutations", async () => {
+    const snapshot = { board, layouts: [], items: [], placements: [] };
+    const published: Array<{ boardId: string; revision: number } | { deleted: string }> = [];
+    const events = {
+      publishBoardUpdated: async (boardId: string, revision: number) => {
+        published.push({ boardId, revision });
+      },
+      publishBoardDeleted: async (boardId: string) => {
+        published.push({ deleted: boardId });
+      },
+    };
+    const successRepo = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => [],
+      updateBoard: async () => 4,
+      deleteBoard: async () => undefined,
+    } as unknown as BoardRepository;
+    expect(
+      await createBoardService(successRepo, policy, events).update(
+        { boardId: "b", expectedRevision: 1, name: "Home", description: null },
+        owner,
+      ),
+    ).toBe(4);
+    await createBoardService(successRepo, policy, events).delete("b", owner);
+    const conflictRepo = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => [],
+      updateBoard: async () => {
+        throw Object.assign(new Error("driver detail"), { code: "BOARD_REVISION_CONFLICT" });
+      },
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(conflictRepo, policy, events).update(
+        { boardId: "b", expectedRevision: 1, name: "Home", description: null },
+        owner,
+      ),
+    ).rejects.toMatchObject({ code: "BOARD_REVISION_CONFLICT" });
+    const editorRepo = {
+      findSnapshotById: async () => snapshot,
+      resolveResourcePermissions: async () => ["board.edit"],
+      deleteBoard: async () => {
+        throw new Error("should not delete");
+      },
+    } as unknown as BoardRepository;
+    await expect(
+      createBoardService(editorRepo, policy, events).delete("b", {
+        userId: "editor",
+        subject: active,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(published).toEqual([{ boardId: "b", revision: 4 }, { deleted: "b" }]);
+    const realtimeRepo = {
+      findSnapshotById: async (id: string) => (id === "b" ? snapshot : undefined),
+      resolveResourcePermissions: async () => ["board.view"],
+    } as unknown as BoardRepository;
+    const service = createBoardService(realtimeRepo, policy);
+    expect(await service.canSubscribeRealtime("b", { userId: "viewer", subject: active })).toBe(
+      true,
+    );
+    expect(await service.canSubscribeRealtime("missing", owner)).toBe(false);
+    expect(await service.canSubscribeRealtime("b", { userId: null, subject: null })).toBe(false);
   });
   it.each([
     ["name", { name: "Renamed", description: null }, "board.edit"],

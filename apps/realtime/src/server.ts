@@ -1,6 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
+  canReceiveEvent,
   createConfiguredEventBus,
+  parseDomainEvent,
   verifyRealtimeTicket,
   type DomainEvent,
   type EventBus,
@@ -84,7 +86,10 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
     }
     connections.add(response);
     const unsubscribe = bus.subscribe((event) => {
-      writeSse(response, event);
+      const safe = parseDomainEvent(event);
+      if (!safe) return;
+      if (!canReceiveEvent(verified.subscriptions, safe)) return;
+      writeSse(response, safe);
     });
     response.writeHead(200, {
       "content-type": "text/event-stream; charset=utf-8",

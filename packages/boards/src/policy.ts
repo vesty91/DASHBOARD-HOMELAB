@@ -21,3 +21,13 @@ export function canAccessBoard(
     return true;
   return resourcePermissions.some((permission) => rank[permission] >= rank[required]);
 }
+
+export function canSubscribeBoardRealtime(context: BoardAccessContext): boolean {
+  const { actor, board, resourcePermissions } = context;
+  if (!actor.userId || !actor.subject || actor.subject.status !== "active") return false;
+  if (actor.subject.isSystemAdmin || hasPermission(actor.subject, "board.manage.all")) return true;
+  if (actor.userId === board.ownerUserId) return true;
+  if (hasPermission(actor.subject, "board.read.all") || board.visibility === "authenticated")
+    return true;
+  return resourcePermissions.some((permission) => rank[permission] >= rank["board.view"]);
+}
