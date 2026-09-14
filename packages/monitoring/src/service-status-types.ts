@@ -18,6 +18,7 @@ export const SERVICE_SOURCE_TYPES = [
   "beszel",
   "uptime-kuma",
   "prometheus",
+  "proxmox",
 ] as const;
 
 export type ServiceSourceType = (typeof SERVICE_SOURCE_TYPES)[number];
@@ -25,7 +26,7 @@ export type ServiceSourceType = (typeof SERVICE_SOURCE_TYPES)[number];
 export const SERVICE_STATUS_MAX_ITEMS = 24;
 export const SERVICE_STATUS_DEFAULT_MAX_ITEMS = 12;
 export const SERVICE_STATUS_MAX_SELECTED_IDS = 24;
-export const SERVICE_STATUS_MAX_SELECTED_SOURCES = 8;
+export const SERVICE_STATUS_MAX_SELECTED_SOURCES = SERVICE_SOURCE_TYPES.length;
 
 export interface ServiceStatusItem {
   readonly id: string;

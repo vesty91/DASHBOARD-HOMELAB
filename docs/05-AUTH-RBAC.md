@@ -214,8 +214,13 @@ Phase 12 : lecture Prometheus exige (`integration.use` ou `integration.manage`) 
 `/integrations/[id]` Prometheus : `integration.read` n'est pas requis. Le rôle `ADMIN`
 par défaut **n'obtient pas** `prometheus.read`.
 
+Phase 18 : lecture Proxmox exige (`integration.use` ou `integration.manage`) **et**
+`proxmox.read`. Cette conjonction suffit pour `proxmox.integration.get` et
+`/integrations/[id]` Proxmox : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `proxmox.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `docker.*` ni
+`immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

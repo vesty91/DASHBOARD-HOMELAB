@@ -705,6 +705,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("prometheus.example");
   });
 
+  it("redacts Proxmox generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "proxmox",
+        displayName: "Proxmox VE",
+      },
+    ]);
+    const proxmox = await service.create(
+      {
+        type: "proxmox",
+        name: "PVE",
+        baseUrl: "https://pve.example:8006",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(proxmox.id, reader);
+    expect(restricted).toMatchObject({
+      id: proxmox.id,
+      type: "proxmox",
+      name: "PVE",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("pve.example");
+  });
+
   it("publishes minimal integration events after commit and never on forbidden mutations", async () => {
     const store = createMemoryStore();
     const published: unknown[] = [];

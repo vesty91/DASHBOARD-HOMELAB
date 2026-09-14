@@ -17,6 +17,12 @@ packages/
   integrations/
   docker/
   synology/
+  jellyfin/
+  immich/
+  beszel/
+  prometheus/
+  uptime-kuma/
+  proxmox/
   permissions/
   secrets/
   monitoring/

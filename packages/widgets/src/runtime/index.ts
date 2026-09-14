@@ -18,6 +18,8 @@ export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin
 export { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
 export { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
 export { PrometheusMetricWidget } from "./prometheus-metric-widget";
+export { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
+export { ProxmoxResourcesWidget } from "./proxmox-resources-widget";
 export { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 export { ServiceStatusWidget } from "./service-status-widget";
 export { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";

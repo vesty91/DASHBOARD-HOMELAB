@@ -404,6 +404,25 @@ Auth : header `Authorization: Bearer` optionnel. Jamais dans l'URL.
 Jamais exposés : jeton Bearer, PromQL dans l'URL, JSON Prometheus brut, labels hors
 `__name__` / `job` / `instance`, `baseUrl`, config.
 
+# Proxmox API — Phase 18
+
+Routeur tRPC `proxmox` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                      | Permission                | Capability     | Notes                                                |
+| -------------------------- | ------------------------- | -------------- | ---------------------------------------------------- |
+| `proxmox.permissions`      | auth active               | —              | `canRead`, `canManage`                               |
+| `proxmox.integration.list` | use/manage + proxmox.read | —              | `{ id, name, enabled }[]`                            |
+| `proxmox.integration.get`  | use/manage + proxmox.read | —              | `{ id, name, enabled }`                              |
+| `proxmox.overview.get`     | use/manage + proxmox.read | `cluster.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `proxmox.overview.refresh` | use/manage + proxmox.read | `cluster.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `version`,
+`cluster`, `nodes`, `guests`, `storage`. Auth : header `Authorization: PVEAPIToken=`.
+Jamais dans l'URL.
+
+Jamais exposés : jeton API, cookie `PVEAuthCookie`, noms de VM/CT, chemins storage,
+IP de nœuds, `baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -417,7 +436,7 @@ DTO item : `id`, `name`, `sourceType`, `integrationId` nullable, `status`
 (`up` \| `degraded` \| `down` \| `unknown` \| `paused` \| `maintenance`),
 `detail` nullable, `updatedAt` nullable.
 
-Input : `selectedSources` (≤ 8), `selectedIds` (≤ 24, pattern `source:uuid[:container]`),
+Input : `selectedSources` (≤ nombre de sources connues), `selectedIds` (≤ 24, pattern `source:uuid[:container]`),
 `maxItems` 1–24 (défaut 12). IDs dupliqués dédupliqués. IDs invalides refusés.
 
 Jamais exposés : `baseUrl`, config, secrets, apiKey, password, SID, token, headers,
@@ -463,7 +482,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

@@ -20,6 +20,7 @@
     "@dashboard/beszel": "workspace:*",
     "@dashboard/prometheus": "workspace:*",
     "@dashboard/uptime-kuma": "workspace:*",
+    "@dashboard/proxmox": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/boards": "workspace:*",

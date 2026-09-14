@@ -318,6 +318,19 @@ Lecture :
 
 V1 : pas de requête arbitraire accessible à tout utilisateur sans permission.
 
+### Proxmox VE
+
+Phase 18 : lecture via l'API officielle (jeton `PVEAPIToken`).
+
+Lecture :
+
+- version ;
+- cluster/status (quorum, nœuds en ligne) ;
+- cluster/resources (compteurs VM/CT, CPU/RAM nœuds, stockage résumé).
+
+Pas de start/stop/reboot/snapshot/migration. Les noms de VM/CT ne sont pas exposés
+dans le widget.
+
 ## 11. Recherche globale
 
 V1.5 :

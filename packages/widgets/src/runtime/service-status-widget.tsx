@@ -19,6 +19,7 @@ const SOURCE_LABELS = {
   beszel: "Beszel",
   "uptime-kuma": "Uptime Kuma",
   prometheus: "Prometheus",
+  proxmox: "Proxmox",
 } as const;
 
 function formatUpdatedAt(value: string | null): string | null {

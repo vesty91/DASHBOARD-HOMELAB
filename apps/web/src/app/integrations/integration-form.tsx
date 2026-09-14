@@ -22,6 +22,7 @@ export function IntegrationForm({
   const showBeszelHelp = selectedType === "beszel";
   const showPrometheusHelp = selectedType === "prometheus";
   const showUptimeKumaHelp = selectedType === "uptime-kuma";
+  const showProxmoxHelp = selectedType === "proxmox";
   const showTrustedCa =
     showDockerHelp ||
     showSynologyHelp ||
@@ -29,7 +30,8 @@ export function IntegrationForm({
     showImmichHelp ||
     showBeszelHelp ||
     showPrometheusHelp ||
-    showUptimeKumaHelp;
+    showUptimeKumaHelp ||
+    showProxmoxHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
@@ -79,7 +81,9 @@ export function IntegrationForm({
                         ? "http://prometheus.example:9090"
                         : showUptimeKumaHelp
                           ? "https://uptime.example:3001"
-                          : undefined
+                          : showProxmoxHelp
+                            ? "https://pve.example:8006"
+                            : undefined
           }
         />
       </Field>
@@ -123,6 +127,13 @@ export function IntegrationForm({
           Utilisez l&apos;URL HTTP(S) du serveur Uptime Kuma (origine uniquement). La clé API se
           configure ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur. Seul
           GET /metrics est utilisé ; Socket.IO n&apos;est pas supporté.
+        </Alert>
+      ) : null}
+      {showProxmoxHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Proxmox VE (origine uniquement, port 8006). Le
+          jeton API se configure ensuite comme secret serveur et n&apos;est jamais envoyé au
+          navigateur. Lecture seule : version, cluster/status et cluster/resources.
         </Alert>
       ) : null}
       {showSynologyHelp ? (

@@ -10,6 +10,7 @@ import type {
   UptimeKumaIntegrationMetadata,
   UptimeKumaPermissionsView,
 } from "@dashboard/uptime-kuma";
+import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
 import type { SynologyIntegrationMetadata, SynologyPermissionsView } from "@dashboard/synology";
@@ -30,6 +31,7 @@ export type IntegrationDetailResolution =
   | { kind: "beszel"; metadata: BeszelIntegrationMetadata }
   | { kind: "prometheus"; metadata: PrometheusIntegrationMetadata }
   | { kind: "uptime-kuma"; metadata: UptimeKumaIntegrationMetadata }
+  | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -73,6 +75,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<UptimeKumaPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<UptimeKumaIntegrationMetadata>;
+    };
+  };
+  proxmox: {
+    permissions: () => Promise<Pick<ProxmoxPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<ProxmoxIntegrationMetadata>;
     };
   };
   integration: {
@@ -143,6 +151,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.uptimeKuma.integration.get({ integrationId: id });
       return { kind: "uptime-kuma", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const proxmoxPermissions = await caller.proxmox.permissions();
+  if (proxmoxPermissions.canRead) {
+    try {
+      const metadata = await caller.proxmox.integration.get({ integrationId: id });
+      return { kind: "proxmox", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

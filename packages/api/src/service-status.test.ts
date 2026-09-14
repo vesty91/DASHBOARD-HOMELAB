@@ -64,6 +64,7 @@ describe("service status collectors", () => {
       beszel: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prometheus: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       uptimeKuma: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const result = await service.list(
       {
@@ -113,6 +114,7 @@ describe("service status collectors", () => {
       beszel: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prometheus: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       uptimeKuma: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const result = await service.list({}, actor(["integration.use", "docker.read", "app.read"]));
     expect(result.items[0]).toMatchObject({
@@ -163,6 +165,7 @@ describe("service status collectors", () => {
       beszel: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prometheus: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       uptimeKuma: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const listed = await service.list({}, actor(["app.read"]));
     expect(listed.items.map((item) => item.name)).toEqual(["One", "Three", "Two"]);

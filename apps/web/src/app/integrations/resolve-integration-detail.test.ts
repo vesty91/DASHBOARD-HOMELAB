@@ -81,6 +81,15 @@ const uptimeKumaDenied = {
   },
 };
 
+const proxmoxDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("proxmox unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -97,6 +106,7 @@ describe("resolveIntegrationDetail", () => {
       beszel: beszelDenied,
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -132,6 +142,7 @@ describe("resolveIntegrationDetail", () => {
       },
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -171,6 +182,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      proxmox: proxmoxDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -178,6 +190,46 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "55555555-5555-4555-8555-555555555555",
         name: "Uptime Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Proxmox reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("77777777-7777-4777-8777-777777777777", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "77777777-7777-4777-8777-777777777777",
+            name: "PVE Lab",
+            enabled: true,
+          }),
+        },
+      },
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "proxmox",
+      metadata: {
+        id: "77777777-7777-4777-8777-777777777777",
+        name: "PVE Lab",
         enabled: true,
       },
     });
@@ -210,6 +262,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -245,6 +298,7 @@ describe("resolveIntegrationDetail", () => {
       beszel: beszelDenied,
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -318,6 +372,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      proxmox: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Proxmox introuvable",
+            });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -340,6 +405,7 @@ describe("resolveIntegrationDetail", () => {
         beszel: beszelDenied,
         prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
+        proxmox: proxmoxDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -381,6 +447,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      proxmox: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -405,6 +475,7 @@ describe("resolveIntegrationDetail", () => {
         beszel: beszelDenied,
         prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
+        proxmox: proxmoxDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

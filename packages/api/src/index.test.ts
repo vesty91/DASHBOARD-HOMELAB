@@ -19,6 +19,7 @@ import type { DockerService } from "@dashboard/docker";
 import type { BeszelService } from "@dashboard/beszel";
 import type { PrometheusService } from "@dashboard/prometheus";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
+import type { ProxmoxService } from "@dashboard/proxmox";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
@@ -39,6 +40,7 @@ const immich = {} as ImmichService;
 const beszel = {} as BeszelService;
 const prometheus = {} as PrometheusService;
 const uptimeKuma = {} as UptimeKumaService;
+const proxmox = {} as ProxmoxService;
 const serviceStatus = {
   list: vi.fn(async () => ({
     status: "available" as const,
@@ -58,6 +60,7 @@ function createCaller(
     | "beszel"
     | "prometheus"
     | "uptimeKuma"
+    | "proxmox"
     | "serviceStatus"
     | "runtime"
     | "realtimeTickets"
@@ -73,6 +76,7 @@ function createCaller(
     beszel?: BeszelService;
     prometheus?: PrometheusService;
     uptimeKuma?: UptimeKumaService;
+    proxmox?: ProxmoxService;
     serviceStatus?: ServiceStatusService;
     runtime?: ApiContext["runtime"];
     realtimeTickets?: ApiContext["realtimeTickets"];
@@ -90,6 +94,7 @@ function createCaller(
     beszel,
     prometheus,
     uptimeKuma,
+    proxmox,
     serviceStatus,
     runtime: createRuntimeStatusService(
       {},
@@ -1107,6 +1112,63 @@ describe("prometheus tRPC router", () => {
   });
 });
 
+describe("proxmox tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000030";
+  const proxmoxActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "proxmox.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-14T00:00:00.000Z",
+    version: { status: "available" as const, data: { version: "8.2.4", release: "8.2" } },
+    cluster: {
+      status: "available" as const,
+      data: { name: "homelab", quorate: true, nodeCount: 1, onlineNodeCount: 1 },
+    },
+    nodes: { status: "available" as const, data: { nodes: [], truncated: false } },
+    guests: {
+      status: "available" as const,
+      data: { vmCount: 2, vmRunning: 1, lxcCount: 1, lxcRunning: 0 },
+    },
+    storage: {
+      status: "available" as const,
+      data: { storageCount: 1, usedBytes: 10, totalBytes: 100 },
+    },
+  };
+
+  it("returns a bounded overview DTO without secrets", async () => {
+    const proxmoxService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [{ id: integrationId, name: "PVE Lab", enabled: true }]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "PVE Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as ProxmoxService;
+    const caller = createCaller({
+      actor: proxmoxActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      proxmox: proxmoxService,
+    });
+    const metadata = await caller.proxmox.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "PVE Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.proxmox.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(/PVEAPIToken|apiToken|ticket/u);
+  });
+});
+
 describe("serviceStatus tRPC router", () => {
   it("requires authentication and does not leak secrets", async () => {
     const listed = {
@@ -1263,6 +1325,7 @@ describe("runtime and realtime tRPC", () => {
       beszel: closed as unknown as BeszelService,
       prometheus: closed as unknown as PrometheusService,
       uptimeKuma: closed as unknown as UptimeKumaService,
+      proxmox: closed as unknown as ProxmoxService,
     });
     const ticket = await caller.realtime.ticket({
       boardIds: [boardA, boardB],
@@ -1301,6 +1364,7 @@ describe("runtime and realtime tRPC", () => {
       beszel: closed as unknown as BeszelService,
       prometheus: closed as unknown as PrometheusService,
       uptimeKuma: closed as unknown as UptimeKumaService,
+      proxmox: closed as unknown as ProxmoxService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });
     expect(verifyRealtimeTicket(secret, withoutSettings.token)).toEqual({
       userId: "00000000-0000-4000-8000-000000000001",

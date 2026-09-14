@@ -18,6 +18,7 @@ export const SPECIALIZED_INTEGRATION_TYPES = [
   "beszel",
   "prometheus",
   "uptime-kuma",
+  "proxmox",
 ] as const;
 
 export type SpecializedIntegrationType = (typeof SPECIALIZED_INTEGRATION_TYPES)[number];
@@ -81,6 +82,10 @@ export async function canSubscribeIntegrationRealtime(
     {
       canRead: ctx.uptimeKuma.permissions(actor).canRead,
       load: () => ctx.uptimeKuma.getIntegrationMetadata(integrationId, actor),
+    },
+    {
+      canRead: ctx.proxmox.permissions(actor).canRead,
+      load: () => ctx.proxmox.getIntegrationMetadata(integrationId, actor),
     },
   ];
   for (const probe of probes) {

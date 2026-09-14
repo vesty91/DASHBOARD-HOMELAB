@@ -11,6 +11,7 @@ import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../resolve-prometheus-metric";
 import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
+import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
 const visibilityLabel = {
@@ -40,6 +41,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     beszelViews,
     prometheusViews,
     uptimeKumaViews,
+    proxmoxViews,
     serviceStatusViews,
   ] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
@@ -49,6 +51,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveBeszelHostsViews(snapshot, caller),
     resolvePrometheusMetricViews(snapshot, caller),
     resolveUptimeKumaStatusViews(snapshot, caller),
+    resolveProxmoxResourcesViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   return (
@@ -75,6 +78,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         beszelViews={beszelViews}
         prometheusViews={prometheusViews}
         uptimeKumaViews={uptimeKumaViews}
+        proxmoxViews={proxmoxViews}
         serviceStatusViews={serviceStatusViews}
       />
     </PageContainer>
