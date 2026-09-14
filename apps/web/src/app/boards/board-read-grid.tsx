@@ -6,6 +6,7 @@ import type {
   PrometheusMetricView,
   ServiceStatusView,
   UptimeKumaStatusView,
+  ProxmoxResourcesView,
 } from "@dashboard/widgets";
 import type { ItemRecord, LayoutRecord, PlacementRecord } from "@dashboard/boards";
 import { WidgetRenderer } from "@dashboard/widgets/runtime";
@@ -20,6 +21,7 @@ export function BoardReadGrid({
   beszelViews = {},
   prometheusViews = {},
   uptimeKumaViews = {},
+  proxmoxViews = {},
   serviceStatusViews = {},
 }: {
   layout: LayoutRecord;
@@ -31,6 +33,7 @@ export function BoardReadGrid({
   beszelViews?: Record<string, BeszelHostsView>;
   prometheusViews?: Record<string, PrometheusMetricView>;
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
+  proxmoxViews?: Record<string, ProxmoxResourcesView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
 }) {
   return (
@@ -69,6 +72,7 @@ export function BoardReadGrid({
                 {...(uptimeKumaViews[entry.id]
                   ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                   : {})}
+                {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
               />
             ) : null}
           </div>

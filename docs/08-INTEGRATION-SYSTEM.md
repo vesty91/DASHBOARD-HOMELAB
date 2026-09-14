@@ -353,6 +353,27 @@ pas, volume). Jeton jamais renvoyé. Aucune mutation. Aucune fake data. Labels h
 `__name__` / `job` / `instance` jamais exposés. La page détail n'accepte pas de
 requête depuis l'URL : requête serveur fixe `up`.
 
+## 18.1. Proxmox VE
+
+Statut : IN PROGRESS (Phase 18.1).
+
+Adapter `proxmox` composé dans `apps/web`. Transport HTTP(S) vers l'origine Proxmox VE.
+Auth token officielle (`Authorization: PVEAPIToken=<USER@REALM!TOKENID=SECRET>`).
+Lecture seule `GET /api2/json/version`, `GET /api2/json/cluster/status`,
+`GET /api2/json/cluster/resources`. Voir ADR 0020. Mutations VM/CT, snapshots,
+migrations, login ticket et proxy générique sont hors scope.
+
+`proxmox.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
+Proxmox (`integration.use|manage` + `proxmox.read`). `integration.read` n'est
+pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
+`capabilities` et l'état des secrets d'un record `proxmox` sans
+`integration.manage`.
+
+Widget `proxmox-resources` : `publicSafe=false`. Refresh manuel 10/min. Cache
+overview 8 s (5 s si partiel). Jeton jamais renvoyé. Aucune mutation. Aucune
+fake data. Noms de VM/CT, chemins storage et IP de nœuds jamais exposés au
+widget.
+
 ## 19. Service status
 
 Agrégateur interne read-only, pas une nouvelle intégration externe.
@@ -360,9 +381,9 @@ Agrégateur interne read-only, pas une nouvelle intégration externe.
 `serviceStatus.list` / `serviceStatus.catalog` assemblent un DTO canonique
 (`up` / `degraded` / `down` / `unknown` / `paused` / `maintenance`) à partir des
 sources déjà disponibles : apps health, Docker, Synology, Jellyfin, Immich,
-Beszel, Uptime Kuma, Prometheus. Le filtrage est serveur-side via les permissions
+Beszel, Uptime Kuma, Prometheus, Proxmox. Le filtrage est serveur-side via les permissions
 spécialisées (`app.read`, `docker.read`, `synology.read`, `jellyfin.read`,
-`immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`). Un DTO
+`immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`, `proxmox.read`). Un DTO
 générique `integration.list` n'est jamais utilisé pour construire ce widget.
 
 Widget `service-status` : `publicSafe=false`. Config bornée (`selectedSources`,

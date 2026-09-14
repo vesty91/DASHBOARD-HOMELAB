@@ -16,6 +16,7 @@ import type {
   PrometheusMetricView,
   ServiceStatusView,
   UptimeKumaStatusView,
+  ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
 import {
@@ -29,6 +30,7 @@ import {
   prometheusMetricDraftConfig,
   serviceStatusDefaultConfig,
   uptimeKumaStatusDraftConfig,
+  proxmoxResourcesDraftConfig,
 } from "@dashboard/widgets";
 import {
   WidgetConfigForm,
@@ -39,6 +41,7 @@ import {
   type PrometheusIntegrationOption,
   type ServiceStatusCatalogOption,
   type UptimeKumaIntegrationOption,
+  type ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
 import { useRouter } from "next/navigation";
@@ -70,6 +73,8 @@ function defaultConfig(widgetType: string): unknown {
       return serviceStatusDefaultConfig;
     case "uptime-kuma-status":
       return uptimeKumaStatusDraftConfig;
+    case "proxmox-resources":
+      return proxmoxResourcesDraftConfig;
     default:
       return {};
   }
@@ -91,6 +96,8 @@ export function BoardEditor({
   prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
+  proxmoxViews = {},
+  proxmoxIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -114,6 +121,8 @@ export function BoardEditor({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
+  proxmoxViews?: Record<string, ProxmoxResourcesView>;
+  proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -136,6 +145,7 @@ export function BoardEditor({
   const [pendingBeszel, setPendingBeszel] = useState(false);
   const [pendingPrometheus, setPendingPrometheus] = useState(false);
   const [pendingUptimeKuma, setPendingUptimeKuma] = useState(false);
+  const [pendingProxmox, setPendingProxmox] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -209,6 +219,7 @@ export function BoardEditor({
     setPendingBeszel(false);
     setPendingPrometheus(false);
     setPendingUptimeKuma(false);
+    setPendingProxmox(false);
     router.refresh();
   };
 
@@ -269,7 +280,12 @@ export function BoardEditor({
       ? (draftConfig as { appId: string }).appId
       : "";
   const pendingIntegration =
-    pendingJellyfin || pendingImmich || pendingBeszel || pendingPrometheus || pendingUptimeKuma;
+    pendingJellyfin ||
+    pendingImmich ||
+    pendingBeszel ||
+    pendingPrometheus ||
+    pendingUptimeKuma ||
+    pendingProxmox;
   const pendingWidgetType = pendingJellyfin
     ? "jellyfin-sessions"
     : pendingImmich
@@ -280,7 +296,9 @@ export function BoardEditor({
           ? "prometheus-metric"
           : pendingUptimeKuma
             ? "uptime-kuma-status"
-            : "app-tile";
+            : pendingProxmox
+              ? "proxmox-resources"
+              : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -291,7 +309,9 @@ export function BoardEditor({
           ? prometheusMetricDraftConfig
           : pendingUptimeKuma
             ? uptimeKumaStatusDraftConfig
-            : appTileDraftConfig;
+            : pendingProxmox
+              ? proxmoxResourcesDraftConfig
+              : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -302,7 +322,9 @@ export function BoardEditor({
           ? prometheusIntegrations.length === 0
           : pendingUptimeKuma
             ? uptimeKumaIntegrations.length === 0
-            : !canReadApps;
+            : pendingProxmox
+              ? proxmoxIntegrations.length === 0
+              : !canReadApps;
 
   return (
     <section>
@@ -348,6 +370,7 @@ export function BoardEditor({
                 prometheusIntegrations={prometheusIntegrations}
                 serviceStatusCatalog={serviceStatusCatalog}
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
+                proxmoxIntegrations={proxmoxIntegrations}
               />
               <button
                 type="submit"
@@ -377,6 +400,7 @@ export function BoardEditor({
                   setPendingBeszel(false);
                   setPendingPrometheus(false);
                   setPendingUptimeKuma(false);
+                  setPendingProxmox(false);
                 }}
               >
                 Annuler
@@ -434,6 +458,11 @@ export function BoardEditor({
                           setPendingUptimeKuma(true);
                           return;
                         }
+                        if (entry.id === "proxmox-resources") {
+                          setDraftConfig(proxmoxResourcesDraftConfig);
+                          setPendingProxmox(true);
+                          return;
+                        }
                         void addWidget(entry.id, defaultConfig(entry.id));
                       }}
                     >
@@ -487,6 +516,7 @@ export function BoardEditor({
                     {...(uptimeKumaViews[entry.id]
                       ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                       : {})}
+                    {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -539,6 +569,7 @@ export function BoardEditor({
             prometheusIntegrations={prometheusIntegrations}
             serviceStatusCatalog={serviceStatusCatalog}
             uptimeKumaIntegrations={uptimeKumaIntegrations}
+            proxmoxIntegrations={proxmoxIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

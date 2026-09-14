@@ -157,3 +157,13 @@ export async function listUptimeKumaIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listProxmoxIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).proxmox.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

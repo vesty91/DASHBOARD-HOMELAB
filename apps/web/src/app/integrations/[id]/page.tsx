@@ -9,6 +9,12 @@ import type {
 } from "@dashboard/beszel";
 import type { PrometheusIntegrationMetadata, PrometheusQueryDto } from "@dashboard/prometheus";
 import type {
+  ProxmoxIntegrationMetadata,
+  ProxmoxNodeStatus,
+  ProxmoxOverview,
+  ProxmoxSectionReason,
+} from "@dashboard/proxmox";
+import type {
   UptimeKumaIntegrationMetadata,
   UptimeKumaMonitorStatus,
   UptimeKumaOverview,
@@ -43,6 +49,8 @@ import { prometheusUserError } from "../prometheus-error";
 import { PrometheusRefreshButton } from "../prometheus-refresh-button";
 import { uptimeKumaUserError } from "../uptime-kuma-error";
 import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
+import { proxmoxUserError } from "../proxmox-error";
+import { ProxmoxRefreshButton } from "../proxmox-refresh-button";
 import { immichUserError } from "../immich-error";
 import { ImmichRefreshButton } from "../immich-refresh-button";
 import { jellyfinUserError } from "../jellyfin-error";
@@ -69,7 +77,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "immich" ||
     integration.type === "beszel" ||
     integration.type === "prometheus" ||
-    integration.type === "uptime-kuma"
+    integration.type === "uptime-kuma" ||
+    integration.type === "proxmox"
   )
     redirect("/forbidden");
   return (
@@ -1085,6 +1094,203 @@ async function UptimeKumaIntegrationDetail({
   );
 }
 
+function proxmoxReasonLabel(reason: ProxmoxSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Proxmox indisponible.";
+    case "permission-denied":
+      return "Permission Proxmox insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Proxmox.";
+    case "invalid-response":
+      return "Réponse Proxmox invalide.";
+    case "unauthorized":
+      return "Jeton API Proxmox invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Proxmox.";
+    case "dns":
+      return "Le serveur Proxmox est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Proxmox.";
+    case "unreachable":
+      return "Le serveur Proxmox est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Proxmox indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function proxmoxNodeStatusLabel(status: ProxmoxNodeStatus): string {
+  switch (status) {
+    case "online":
+      return "En ligne";
+    case "offline":
+      return "Hors ligne";
+    case "unknown":
+      return "Inconnu";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+function formatProxmoxPercent(value: number | null): string {
+  if (value === null) return "Indisponible";
+  return `${Math.round(value * 100)} %`;
+}
+
+function formatProxmoxBytes(value: number | null): string {
+  if (value === null) return "Indisponible";
+  if (value >= 1_073_741_824) return `${(value / 1_073_741_824).toFixed(1)} Gio`;
+  if (value >= 1_048_576) return `${Math.round(value / 1_048_576)} Mio`;
+  return `${value} o`;
+}
+
+function formatProxmoxUptime(value: number | null): string {
+  if (value === null) return "Indisponible";
+  const days = Math.floor(value / 86_400);
+  const hours = Math.floor((value % 86_400) / 3_600);
+  if (days > 0) return `${days} j ${hours} h`;
+  const minutes = Math.floor((value % 3_600) / 60);
+  return `${hours} h ${minutes} min`;
+}
+
+async function ProxmoxOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: ProxmoxOverview | null = null;
+  try {
+    overview = await caller.proxmox.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = proxmoxUserError(caught);
+  }
+  const cluster = overview?.cluster.data;
+  const nodes = overview?.nodes.data;
+  const guests = overview?.guests.data;
+  const storage = overview?.storage.data;
+  const version = overview?.version.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Proxmox partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Les noms de VM et CT ne sont pas exposés. Lecture seule, sans mutation.
+          </p>
+          <section className="proxmox-summary">
+            <h2>Cluster</h2>
+            {overview.cluster.status === "unavailable" ? (
+              <Alert tone="warning">{proxmoxReasonLabel(overview.cluster.reason)}</Alert>
+            ) : null}
+            <p>Version {version?.version ?? "Indisponible"}</p>
+            <p>
+              Nœuds {cluster?.onlineNodeCount ?? 0} / {cluster?.nodeCount ?? 0} en ligne
+            </p>
+            <p>
+              Quorum{" "}
+              {cluster?.quorate === true
+                ? "OK"
+                : cluster?.quorate === false
+                  ? "Absent"
+                  : "Indisponible"}
+            </p>
+          </section>
+          <section className="proxmox-guests">
+            <h2>Invités</h2>
+            {overview.guests.status === "unavailable" ? (
+              <Alert tone="warning">{proxmoxReasonLabel(overview.guests.reason)}</Alert>
+            ) : null}
+            <p>
+              {guests?.vmRunning ?? 0} / {guests?.vmCount ?? 0} VM
+            </p>
+            <p>
+              {guests?.lxcRunning ?? 0} / {guests?.lxcCount ?? 0} CT
+            </p>
+          </section>
+          <section className="proxmox-storage">
+            <h2>Stockage</h2>
+            {overview.storage.status === "unavailable" ? (
+              <Alert tone="warning">{proxmoxReasonLabel(overview.storage.reason)}</Alert>
+            ) : null}
+            <p>{storage?.storageCount ?? 0} volumes</p>
+            <p>
+              {formatProxmoxBytes(storage?.usedBytes ?? null)} /{" "}
+              {formatProxmoxBytes(storage?.totalBytes ?? null)}
+            </p>
+          </section>
+          <section className="proxmox-nodes">
+            <h2>Nœuds</h2>
+            {overview.nodes.status === "unavailable" ? (
+              <Alert tone="warning">{proxmoxReasonLabel(overview.nodes.reason)}</Alert>
+            ) : null}
+            {nodes?.nodes.length ? (
+              <ul className="proxmox-node-list">
+                {nodes.nodes.map((node) => (
+                  <li key={node.id} className="proxmox-node-card">
+                    <p>{node.name}</p>
+                    <p>{proxmoxNodeStatusLabel(node.status)}</p>
+                    <p>CPU {formatProxmoxPercent(node.cpuRatio)}</p>
+                    <p>
+                      RAM {formatProxmoxBytes(node.memoryUsedBytes)} /{" "}
+                      {formatProxmoxBytes(node.memoryTotalBytes)}
+                    </p>
+                    <p>Uptime {formatProxmoxUptime(node.uptimeSeconds)}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ui-muted">Aucun nœud Proxmox.</p>
+            )}
+            {nodes?.truncated ? <p className="ui-muted">Liste de nœuds tronquée.</p> : null}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function ProxmoxIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: ProxmoxIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Proxmox VE" />
+        <Alert tone="warning">Cette intégration Proxmox est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Proxmox VE" />
+      <ProxmoxRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Proxmox…</p>}>
+        <ProxmoxOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function formatPrometheusValue(value: number | null): string {
   if (value === null) return "Indisponible";
   if (Number.isInteger(value)) return String(value);
@@ -1217,6 +1423,8 @@ export default async function IntegrationDetailPage({
         return <PrometheusIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "uptime-kuma":
         return <UptimeKumaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "proxmox":
+        return <ProxmoxIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

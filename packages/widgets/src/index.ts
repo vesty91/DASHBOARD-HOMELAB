@@ -73,6 +73,18 @@ export type {
   PrometheusMetricDraftConfig,
   PrometheusMetricView,
 } from "./prometheus-metric";
+export type {
+  ProxmoxResourcesConfig,
+  ProxmoxResourcesDraftConfig,
+  ProxmoxResourcesView,
+} from "./proxmox-resources";
+export {
+  PROXMOX_RESOURCES_UNSET_INTEGRATION_ID,
+  proxmoxResourcesConfigSchema,
+  proxmoxResourcesContract,
+  proxmoxResourcesDefaultConfig,
+  proxmoxResourcesDraftConfig,
+} from "./proxmox-resources";
 export {
   PROMETHEUS_METRIC_UNSET_INTEGRATION_ID,
   prometheusMetricConfigSchema,

@@ -31,7 +31,7 @@ describe("permission resolver", () => {
       ),
     ).toBe(false);
   });
-  it("does not grant Docker, Synology, Jellyfin, Immich, Beszel, Prometheus or Uptime Kuma permissions to the default ADMIN role", () => {
+  it("does not grant Docker, Synology, Jellyfin, Immich, Beszel, Prometheus, Uptime Kuma or Proxmox permissions to the default ADMIN role", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("docker.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("synology.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("jellyfin.read");
@@ -39,6 +39,7 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("beszel.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prometheus.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("uptime-kuma.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");

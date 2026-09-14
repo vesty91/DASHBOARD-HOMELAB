@@ -11,6 +11,7 @@ import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../../resolve-prometheus-metric";
 import { resolveServiceStatusViews } from "../../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
+import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
 
@@ -35,6 +36,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     beszelViews,
     prometheusViews,
     uptimeKumaViews,
+    proxmoxViews,
     serviceStatusViews,
   ] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
@@ -43,6 +45,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveBeszelHostsViews(snapshot, caller),
     resolvePrometheusMetricViews(snapshot, caller),
     resolveUptimeKumaStatusViews(snapshot, caller),
+    resolveProxmoxResourcesViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   let canReadApps = true;
@@ -103,6 +106,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let proxmoxIntegrations: Awaited<ReturnType<typeof caller.proxmox.integration.list>> = [];
+  try {
+    proxmoxIntegrations = await caller.proxmox.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let serviceStatusCatalog: Awaited<ReturnType<typeof caller.serviceStatus.catalog>>["items"] = [];
   try {
     serviceStatusCatalog = (await caller.serviceStatus.catalog({})).items;
@@ -138,6 +151,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         prometheusIntegrations={prometheusIntegrations}
         uptimeKumaViews={uptimeKumaViews}
         uptimeKumaIntegrations={uptimeKumaIntegrations}
+        proxmoxViews={proxmoxViews}
+        proxmoxIntegrations={proxmoxIntegrations}
         serviceStatusViews={serviceStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}

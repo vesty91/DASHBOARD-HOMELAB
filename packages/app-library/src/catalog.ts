@@ -359,6 +359,7 @@ export function createBuiltInAppLibrary() {
         documentation: "https://pve.proxmox.com/wiki",
         protocol: "https",
         port: 8006,
+        futureIntegrationType: "proxmox",
       }),
     )
     .register(

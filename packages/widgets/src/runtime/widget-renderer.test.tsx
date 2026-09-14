@@ -75,6 +75,39 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Latence 15 ms")).toBeTruthy();
   });
 
+  it("renders a Proxmox resources widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "pve-1",
+          widgetType: "proxmox-resources",
+          widgetVersion: 1,
+          title: "Proxmox",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        proxmoxView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-14T00:00:00.000Z",
+          nodeCount: 1,
+          onlineNodeCount: 1,
+          vmRunning: 2,
+          vmCount: 3,
+          lxcRunning: 1,
+          lxcCount: 1,
+          cpuRatio: 0.25,
+          memoryUsedBytes: 4_294_967_296,
+          memoryTotalBytes: 17_179_869_184,
+          truncated: false,
+        }}
+      />,
+    );
+    expect(screen.getByText("1 / 1 nœuds en ligne")).toBeTruthy();
+    expect(screen.getByText("2/3 VM · 1/1 CT")).toBeTruthy();
+    expect(screen.getByText("CPU 25 %")).toBeTruthy();
+  });
+
   it("renders a Prometheus metric widget from a ready view", () => {
     render(
       <WidgetRenderer

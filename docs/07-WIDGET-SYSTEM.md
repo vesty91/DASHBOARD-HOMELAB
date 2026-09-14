@@ -138,6 +138,10 @@ Phase 12 ajoute `service-status` (`publicSafe=false`) : agrégateur interne read
 l'état des apps et intégrations déjà connues. Filtrage RBAC serveur. Même
 `router.refresh()` 10 s ; le navigateur ne contacte jamais les APIs externes.
 
+Phase 18 ajoute `proxmox-resources` (`publicSafe=false`) : nœuds en ligne, VM/CT running,
+CPU et RAM agrégés. Même `router.refresh()` 10 s ; le navigateur ne contacte jamais
+l'API Proxmox. Les noms de VM/CT ne sont pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -149,7 +153,8 @@ l'état des apps et intégrations déjà connues. Filtrage RBAC serveur. Même
 - Beszel Hosts (`beszel-hosts`, Phase 12) ;
 - Uptime Kuma Status (`uptime-kuma-status`, Phase 12) ;
 - Prometheus Metric (`prometheus-metric`, Phase 12) ;
-- Service Status (`service-status`, Phase 12, agrégateur interne).
+- Service Status (`service-status`, Phase 12, agrégateur interne) ;
+- Proxmox Resources (`proxmox-resources`, Phase 18).
 
 ## 11. Custom API widget
 

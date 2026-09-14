@@ -25,6 +25,7 @@ import { hasPermission } from "@dashboard/permissions";
 import type { PrometheusService } from "@dashboard/prometheus";
 import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
+import type { ProxmoxService } from "@dashboard/proxmox";
 
 const APP_PAGE_SIZE = 100;
 const APP_MAX_PAGES = 20;
@@ -302,6 +303,7 @@ export interface ServiceStatusRuntimeDeps {
   beszel: BeszelService;
   prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
+  proxmox: ProxmoxService;
   coalescer?: ServiceStatusCoalescer;
 }
 
@@ -440,6 +442,26 @@ export function createDashboardServiceStatusService(
           integrationId,
           status: mapPrometheusUpSeries({ overviewStatus: overview.status, values }),
           detail: overview.seriesCount > 0 ? `${overview.seriesCount} séries` : "Aucune série",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "proxmox",
+      canRead: (actor) => deps.proxmox.permissions(actor).canRead,
+      list: (actor) => deps.proxmox.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.proxmox.getOverview(integrationId, actor);
+        const guests = overview.guests.data;
+        return freezeItem({
+          id: `proxmox:${integrationId}`,
+          name,
+          sourceType: "proxmox",
+          integrationId,
+          status: mapOverviewStatus(overview.status),
+          detail: guests
+            ? `${guests.vmRunning}/${guests.vmCount} VM · ${guests.lxcRunning}/${guests.lxcCount} CT`
+            : "Cluster indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

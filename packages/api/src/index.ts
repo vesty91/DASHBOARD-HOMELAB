@@ -44,6 +44,7 @@ import {
   type PrometheusService,
 } from "@dashboard/prometheus";
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
+import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
@@ -98,6 +99,7 @@ export interface ApiContext {
   beszel: BeszelService;
   prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
+  proxmox: ProxmoxService;
   serviceStatus: ServiceStatusService;
   runtime: RuntimeStatusService;
   realtimeTickets: {
@@ -706,6 +708,29 @@ export const uptimeKumaRouter = t.router({
       ),
   }),
 });
+export const proxmoxRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.proxmox.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.proxmox.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(proxmoxIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.proxmox.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(proxmoxIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.proxmox.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(proxmoxIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.proxmox.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 function requireAuthenticatedUser(ctx: ApiContext): string {
   if (!ctx.actor.userId || !ctx.actor.subject || ctx.actor.subject.status !== "active")
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
@@ -1012,6 +1037,7 @@ export const dashboardRouter = t.router({
   beszel: beszelRouter,
   prometheus: prometheusRouter,
   uptimeKuma: uptimeKumaRouter,
+  proxmox: proxmoxRouter,
   serviceStatus: serviceStatusRouter,
   runtime: runtimeRouter,
   realtime: realtimeRouter,

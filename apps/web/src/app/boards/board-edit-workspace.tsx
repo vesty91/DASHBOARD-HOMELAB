@@ -10,6 +10,7 @@ import type {
   PrometheusMetricView,
   ServiceStatusView,
   UptimeKumaStatusView,
+  ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
 import type {
@@ -19,6 +20,7 @@ import type {
   PrometheusIntegrationOption,
   ServiceStatusCatalogOption,
   UptimeKumaIntegrationOption,
+  ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
 import { BoardEditor } from "./board-editor";
@@ -40,6 +42,8 @@ export function BoardEditWorkspace({
   prometheusIntegrations = [],
   uptimeKumaViews = {},
   uptimeKumaIntegrations = [],
+  proxmoxViews = {},
+  proxmoxIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -57,6 +61,8 @@ export function BoardEditWorkspace({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   uptimeKumaViews?: Record<string, UptimeKumaStatusView>;
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
+  proxmoxViews?: Record<string, ProxmoxResourcesView>;
+  proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -162,6 +168,8 @@ export function BoardEditWorkspace({
         prometheusIntegrations={prometheusIntegrations}
         uptimeKumaViews={uptimeKumaViews}
         uptimeKumaIntegrations={uptimeKumaIntegrations}
+        proxmoxViews={proxmoxViews}
+        proxmoxIntegrations={proxmoxIntegrations}
         serviceStatusViews={serviceStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}

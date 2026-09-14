@@ -10,6 +10,7 @@ export const SERVICE_STATUS_SOURCE_TYPES = [
   "beszel",
   "uptime-kuma",
   "prometheus",
+  "proxmox",
 ] as const;
 
 export type ServiceStatusSourceType = (typeof SERVICE_STATUS_SOURCE_TYPES)[number];
@@ -35,12 +36,12 @@ function uniqueInOrder<T>(values: readonly T[]): T[] {
 }
 
 export const SERVICE_STATUS_ID_PATTERN =
-  /^(app|docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?::[a-f0-9]{64})?$/iu;
+  /^(app|docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus|proxmox):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?::[a-f0-9]{64})?$/iu;
 
 export const serviceStatusConfigSchema = z.object({
   selectedSources: z
     .array(sourceTypeSchema)
-    .max(8)
+    .max(SERVICE_STATUS_SOURCE_TYPES.length)
     .default([])
     .transform((values) => uniqueInOrder(values)),
   selectedIds: z
