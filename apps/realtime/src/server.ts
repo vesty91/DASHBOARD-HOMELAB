@@ -282,15 +282,15 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       return limiter.size;
     },
     async close() {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
       for (const connection of sseConnections) connection.end();
       sseConnections.clear();
       for (const socket of sockets) socket.terminate();
       sockets.clear();
       wss.close();
       await bus.close();
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      });
     },
   };
 }

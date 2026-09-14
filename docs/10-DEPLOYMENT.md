@@ -1,148 +1,273 @@
-# 10 — Déploiement
+# 10 — Déploiement production
 
-## 1. Cible principale
+## 1. Cible
 
-Docker Compose.
+Docker Compose. PostgreSQL est obligatoire en production. Redis est requis
+pour worker et realtime dans cette stack. Redis n'est pas une source de
+vérité métier et n'est pas persisté.
 
-## 2. Compose production cible
+Images : Dockerfile unique, targets `web`, `worker`, `realtime`, `migrate`.
+Utilisateur runtime `dashboard` (uid 10001). Node 24 bookworm-slim.
+pnpm 11.23.0.
 
-```text
-web
-worker
-realtime
-postgres
-redis
-docker-socket-proxy (optionnel)
+Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
+Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
+publient les images.
+
+La version applicative reste `0.1.0` tant qu'une release semver n'est pas
+coupée. Phase 17 ≠ v1.0.0.
+
+## 2. Prérequis
+
+1. Docker Engine + Compose v2.
+2. 2 Go RAM minimum pour la stack.
+3. Un reverse proxy HTTPS (Caddy recommandé) si exposition hors loopback.
+4. Secrets générés localement, jamais commités.
+
+## 3. Fichiers
+
+| Fichier                   | Rôle                                        |
+| ------------------------- | ------------------------------------------- |
+| `compose.yaml`            | Stack production                            |
+| `compose.proxy.yaml`      | Overlay Caddy optionnel (`--profile proxy`) |
+| `deploy/Caddyfile`        | Exemple HTTPS + WebSocket/SSE               |
+| `.env.production.example` | Variables Compose sans secrets réels        |
+| `Dockerfile`              | Images multi-stage                          |
+| `docker-bake.hcl`         | Build local / CI                            |
+
+## 4. Premier démarrage
+
+```bash
+cp .env.production.example .env
+# remplir APP_URL, AUTH_SECRET, SECRET_ENCRYPTION_KEY, POSTGRES_PASSWORD
+docker compose -f compose.yaml config
+docker compose -f compose.yaml up --build
 ```
 
-## 3. Volumes
+Ordre réel :
 
-```text
-/appdata
-postgres-data
-redis-data optionnel
+1. `postgres` healthy (`pg_isready`)
+2. `migrate` exécute Drizzle une seule fois puis exit 0 (`restart: "no"`)
+3. `web` / `worker` démarrent seulement après `service_completed_successfully`
+4. `redis` healthy puis `worker` / `realtime`
+
+Ne pas utiliser `docker compose up --wait` tant que `migrate` est un oneshot :
+Compose attendrait un service qui a déjà quitté.
+
+`APP_URL` doit être l'origine publique exacte (schéma + hôte + port). Elle
+contrôle Origin, `serverActions.allowedOrigins`, le callback OIDC et
+realtime. Une mauvaise valeur doit échouer clairement.
+
+Onboarding (AC-001 / AC-002) : instance vierge → `/setup` → premier admin →
+l'URL d'onboarding refuse une nouvelle création.
+
+## 5. Services et réseau
+
+| Service  | Ports publiés    | Notes                         |
+| -------- | ---------------- | ----------------------------- |
+| postgres | aucun            | Volume `postgres-data`        |
+| redis    | aucun            | `--save ""`, pas d'AOF        |
+| migrate  | aucun            | Oneshot, pas de restart-loop  |
+| web      | `127.0.0.1:3000` | Reverse proxy sur l'hôte      |
+| worker   | aucun            | Health interne `:3001`        |
+| realtime | aucun            | Atteint via rewrite/proxy web |
+
+Réseau Compose `internal`. Pas de `/var/run/docker.sock` dans le dashboard.
+L'intégration Docker continue d'utiliser un socket proxy HTTP(S) externe.
+
+## 6. Volumes et backup disque
+
+| Volume          | Chemin container      | Contenu                           |
+| --------------- | --------------------- | --------------------------------- |
+| `postgres-data` | `/var/lib/postgresql` | Source de vérité (PostgreSQL 18+) |
+| `appdata`       | `/appdata`            | `BACKUP_DIR=/appdata/backups`     |
+
+Le restore Phase 14 écrit un backup pré-restore **avant** mutation :
+
+- défaut code : `appdata/backups` relatif au cwd du process web
+- production Compose : `/appdata/backups` dans le volume `appdata`
+- override : variable `BACKUP_DIR`
+
+Fichiers : `pre-restore-<timestamp>-<id>.json`. Pas de rotation automatique
+dans cette phase. Ownership uid 10001. Ne pas changer le format backup.
+
+## 7. Variables
+
+Obligatoires en production runtime (`assertRuntimeProductionEnv`) :
+
+- `APP_URL`
+- `AUTH_SECRET` (≥ 32 caractères)
+- `DATABASE_URL` (`postgres://` ou `postgresql://`)
+- `DB_DRIVER=postgres`
+- `SECRET_ENCRYPTION_KEY` (base64 de 32 octets)
+
+Optionnelles :
+
+- `REDIS_URL` — fan-out ; **n'entre pas dans web `/health/ready`**
+- `WORKER_URL` / `REALTIME_URL`
+- `BACKUP_DIR`
+- `APP_VERSION` (identifiant sûr dans `/health/*`)
+- `LOG_LEVEL`
+- `AUTH_SESSION_MAX_AGE_SECONDS`
+- `INTEGRATION_DEFAULT_TIMEOUT_MS`
+
+OIDC se configure dans l'UI admin après onboarding. Aucun client secret OIDC
+n'est requis tant qu'OIDC est désactivé.
+
+Compose :
+
+- `POSTGRES_USER` / `POSTGRES_DB` / `POSTGRES_PASSWORD` (password obligatoire,
+  jamais hardcodé)
+- `WEB_PORT`
+- `DASHBOARD_IMAGE_PREFIX` (ex. `ghcr.io/vesty91/dashboard-homelab`)
+
+`DATABASE_URL` est interpolé. Un mot de passe contenant `@ : / #` doit être
+URL-encodé.
+
+`NEXTAUTH_URL` est aligné sur `APP_URL`.
+
+## 8. Health
+
+| Endpoint            | Contrat                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `GET /health/live`  | Process vivant. HTTP 200 même si Jellyfin/Immich/Synology/Docker/Prometheus/Beszel/Kuma sont down (AC-021). |
+| `GET /health/ready` | Web : `SELECT 1` borné sur PostgreSQL. Redis et intégrations **exclus**. DB down → 503.                     |
+
+DTO : `{ status, version }`. Jamais `DATABASE_URL`, `REDIS_URL`, credentials,
+hostname interne, stack, config OIDC.
+
+Worker : `/health/live` process ; `/health/ready` échoue si le heartbeat Redis
+ne peut pas publier. Realtime : live process ; ready sonde Redis si configuré.
+
+Si `migrate` échoue, web n'est pas ready : Compose ne démarre pas web.
+
+## 9. Reverse proxy (AC-025)
+
+Exemple Caddy : `deploy/Caddyfile`. Overlay :
+
+```bash
+docker compose -f compose.yaml -f compose.proxy.yaml --profile proxy up
 ```
-
-`/appdata` :
-
-- uploads ;
-- trusted certificates ;
-- exports temporaires contrôlés ;
-- runtime metadata non DB.
-
-## 4. Variables environnement
-
-Exemple :
-
-```env
-NODE_ENV=production
-APP_URL=https://dashboard.example.com
-AUTH_SECRET=
-SECRET_ENCRYPTION_KEY=
-
-DB_DRIVER=postgres
-DATABASE_URL=postgresql://...
-
-REDIS_URL=redis://redis:6379
-
-WORKER_HOST=0.0.0.0
-WORKER_PORT=3001
-REALTIME_HOST=0.0.0.0
-REALTIME_PORT=3002
-WORKER_URL=http://worker:3001
-REALTIME_URL=http://realtime:3002
-
-LOG_LEVEL=info
-
-TRUSTED_PROXY_COUNT=1
-INTEGRATION_DEFAULT_TIMEOUT_MS=8000
-```
-
-Jamais de vraie clé dans `.env.example`.
-
-## 5. Reverse proxy
-
-Support :
-
-- Synology Reverse Proxy ;
-- Nginx ;
-- Nginx Proxy Manager ;
-- Traefik ;
-- Caddy.
 
 Exigences :
 
-- WebSocket upgrade si realtime (`Connection: Upgrade`, `Upgrade: websocket`) vers
-  `apps/realtime` `/ws` ou le rewrite same-origin `/api/realtime/ws` ;
-- forwarded headers ;
-- body limit pour backup ;
-- TLS.
+- TLS terminé sur le proxy
+- `APP_URL=https://<hôte-public>`
+- WebSocket : `Connection: Upgrade` + `Upgrade: websocket` vers
+  `/api/realtime/ws` (rewrite Next vers realtime `/ws`)
+- SSE : `/api/realtime/events` (proxy applicatif, `flush_interval -1`)
+- body limit suffisante pour un export backup
 
-## 6. Health endpoints
+Nginx minimal :
 
-```text
-/health/live
-/health/ready
+```nginx
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+server {
+  listen 443 ssl;
+  server_name dashboard.example.com;
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+  }
+}
 ```
 
-### live
+`X-Forwarded-For` n'est **pas** utilisé pour l'IP d'audit (ADR 0003) : valeur
+volontairement nulle. Ne pas réintroduire une confiance aveugle.
 
-Process vivant.
+## 10. Upgrade
 
-### ready
+1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
+2. Lire les notes de release. Migrations `0000`–`0006` sont immuables.
+   Phase 17 n'ajoute pas `0007`.
+3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
+4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
+5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant.
+6. Rollback si nécessaire.
 
-- DB accessible ;
-- migrations OK ;
-- dépendances obligatoires prêtes.
+Un backup schema v5 est encore accepté (upgrade in-memory vers v6).
+v6 accepté. v7+ rejeté.
 
-Ne pas considérer une intégration utilisateur en panne comme un échec de readiness globale.
+## 11. Rollback
 
-## 7. Migrations
+Deux opérations distinctes :
 
-Au démarrage :
+- **Rollback image** : redéployer le tag précédent. Possible tant que le
+  schéma DB n'a pas avancé, ou si le nouveau code reste compatible.
+- **Rollback DB** : **aucune migration descendante n'est supportée**.
+  Restaurer le dump PostgreSQL / l'archive pré-upgrade, puis relancer
+  l'image correspondant à ce schéma.
 
-Option recommandée :
+Ne pas prétendre qu'un `migrate down` existe.
 
-- job de migration explicite avant upgrade.
+## 12. Backup / restore (Phase 14 réel)
 
-Éviter plusieurs réplicas lançant une migration concurrente sans verrou.
+Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
+`schemaVersion` 5 ou 6, hash SHA-256. Secrets : ciphertext / iv / authTag /
+keyVersion uniquement.
 
-Commandes Phase 2 :
+Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
+backup pré-restore sur disque → restore transactionnel → commit.
+
+`restore` exige `confirm: true`. Échec = rollback SQL. `audit_logs` et
+`auth_sessions` ne sont pas dans l'archive.
+
+## 13. Logs et shutdown
+
+Stdout/stderr JSON. Champs startup : `service`, `version`, `environment`,
+`port`. Jamais `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, secrets OIDC, API keys.
+
+SIGTERM/SIGINT : web (PID 1 = `node apps/web/server.js`), worker et realtime
+ferment d'abord l'écoute, puis Redis/DB, timeout 10–15 s. Pas de wrapper
+qui avale les signaux.
+
+## 14. Sécurité container
+
+- non-root uid 10001
+- `cap_drop: ALL` sur web/worker/realtime/migrate
+- Redis : filesystem writable (l'image officielle fait `chown` au démarrage)
+- `read_only` + tmpfs `/tmp` (et cache Next)
+- pas de `privileged`
+- postgres/redis non publiés sur `0.0.0.0`
+- aucun secret baked (pas de `.env` réel, pas de `AUTH_SECRET` dans l'image)
+- CSP Phase 16 conservée, pas de `unsafe-eval`
+
+## 15. Smoke local
 
 ```bash
-pnpm --filter @dashboard/db db:migrate:sqlite
-pnpm --filter @dashboard/db db:migrate:postgres
+pnpm test:production
 ```
 
-`DB_DRIVER` et `DATABASE_URL` sont obligatoires au moment de créer un client DB. SQLite active les
-foreign keys à chaque connexion. PostgreSQL utilise un pool borné avec timeout de connexion.
+Vérifie `compose config`, build, migrate, live/ready, onboarding HTTP,
+non-root, absence de docker.sock, DB down → live 200 / ready 503, puis
+récupération.
 
-## 8. Upgrade
+Le test reverse-proxy HTTPS complet n'est pas dans la CI unitaire : reproduire
+avec `compose.proxy.yaml` et `APP_URL` égal à l'origine Caddy.
 
-Procédure :
+## 16. Docker socket proxy
 
-1. backup ;
-2. pull image ;
-3. migration ;
-4. démarrage ;
-5. healthcheck ;
-6. rollback documenté.
+Inchangé (Phase 8) : le dashboard n'a jamais le socket. Voir section historique
+ci-dessous pour le proxy restreint.
 
-## 9. Synology
+## 17. Synology / resource limits
 
-Prévoir images `linux/amd64` et éventuellement `linux/arm64`.
+Images `linux/amd64` et `linux/arm64`. Dossier hôte conseillé
+`/volume1/docker/<project>/` — jamais hardcodé dans le produit.
 
-Dossier conseillé :
+Aucune limite mémoire universelle. Surveiller postgres en premier.
 
-```text
-/volume1/docker/<project>/
-```
+## 18. Docker socket proxy (détail Phase 8)
 
-Ne pas coder de chemin Synology en dur dans le produit.
-
-## 10. Docker socket proxy
-
-Architecture Phase 8 :
+Architecture :
 
 ```text
 apps/web  --HTTP(S)-->  socket-proxy  --ro-->  /var/run/docker.sock
@@ -205,24 +330,3 @@ Synology DSM : URL d'origine HTTPS (port 5001 par défaut), compte DSM en config
 mot de passe dans `integration_secrets`, CA privée optionnelle via `trustedCaPem`. Ne pas
 exposer DSM sur Internet sans reverse proxy et compte de service dédié. Un NAS en 2FA
 s'enrôle comme appareil de confiance depuis la page d'édition.
-
-## 11. Resource limits
-
-Documenter :
-
-- mémoire web ;
-- worker ;
-- postgres ;
-- redis.
-
-Aucune valeur rigide universelle.
-
-## 12. Backup automatique
-
-Phase ultérieure :
-
-- cron ;
-- rotation ;
-- rétention ;
-- destination locale/NAS ;
-- test restore périodique.

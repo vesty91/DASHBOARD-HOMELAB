@@ -304,15 +304,20 @@ Hors scope : Phase 17 (image Docker, Compose prod, multi-arch, release).
 
 ## Phase 17 — Production
 
+Statut : IN PROGRESS.
+
 Livrables :
 
-- image Docker ;
-- Compose ;
-- multi-arch ;
-- health/readiness ;
-- upgrade docs ;
-- backup docs ;
-- release pipeline.
+- Dockerfile multi-target (`web` / `worker` / `realtime` / `migrate`) ;
+- Compose production (postgres, redis, migrate oneshot, web, worker, realtime) ;
+- health/live + health/ready (DB only pour web ready) ;
+- graceful shutdown SIGTERM ;
+- Caddy/Nginx + WebSocket/SSE ;
+- tests fresh install / upgrade schema 5→6 ;
+- workflow GHCR multi-arch sur tags semver uniquement ;
+- docs install / upgrade / rollback / backup.
+
+Hors scope : tag semver `v1.0.0`, Phase 18, migration `0007`.
 
 ## Phase 18 — Extensions
 

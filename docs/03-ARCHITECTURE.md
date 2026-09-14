@@ -377,3 +377,8 @@ Voir ADR 0017.
 
 COMPLETE. Headers/CSP enforcement, tRPC POST-only, rate limits des actions
 sensibles, contrôle d'origine realtime, cookies session explicites. Voir ADR 0018.
+
+# État Phase 17
+
+IN PROGRESS. Images production multi-target, Compose postgres/redis/migrate/web/worker/realtime,
+health live/ready, GHCR sur tags semver, pas de `0007`. Voir ADR 0019 et `docs/10-DEPLOYMENT.md`.

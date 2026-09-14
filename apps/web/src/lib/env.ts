@@ -36,6 +36,8 @@ export const serverEnvSchema = z.object({
   REALTIME_URL: httpServiceUrlSchema.optional(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   INTEGRATION_DEFAULT_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).optional(),
+  BACKUP_DIR: z.string().trim().min(1).max(4096).optional(),
+  APP_VERSION: z.string().trim().min(1).max(64).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -52,3 +54,21 @@ export function getAuthSessionConfiguration(environment: ServerEnv) {
 }
 
 export const serverEnv = parseServerEnv(process.env);
+
+export const APP_VERSION = process.env.APP_VERSION?.trim() || "0.1.0";
+
+export function assertRuntimeProductionEnv(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): void {
+  if (environment.NODE_ENV !== "production") return;
+  if (environment.NEXT_PHASE === "phase-production-build") return;
+  if (environment.npm_lifecycle_event === "build") return;
+  const missing: string[] = [];
+  if (!environment.AUTH_SECRET || environment.AUTH_SECRET.length < 32) missing.push("AUTH_SECRET");
+  if (!environment.DATABASE_URL?.trim()) missing.push("DATABASE_URL");
+  if (environment.DB_DRIVER !== "postgres") missing.push("DB_DRIVER");
+  if (!environment.SECRET_ENCRYPTION_KEY?.trim()) missing.push("SECRET_ENCRYPTION_KEY");
+  if (!environment.APP_URL?.trim()) missing.push("APP_URL");
+  if (missing.length > 0) throw new Error(`PRODUCTION_ENV_INVALID:${missing.join(",")}`);
+  parseServerEnv(environment);
+}
