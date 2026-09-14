@@ -214,3 +214,5 @@ upgrade Phase 6→7 SQLite/PostgreSQL. L'E2E vérifie l'empty state du catalogue
 le bus mémoire, le drop des payloads Redis invalides, les tickets HMAC expirés, `runtime.status`
 sans fuite d'URL, le heartbeat worker (y compris `/health/ready` 503 si publish échoue), le bind
 configurable, le refus SSE sans ticket, le retry d'abonnement Redis, et le RBAC `settings.read`.
+Les tickets portent des subscriptions déjà autorisées. SSE filtre `board.*`, `integration.*` et
+`job.*` côté serveur. Tampering, scopes inconnus et tickets oversized sont rejetés.

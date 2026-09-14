@@ -59,6 +59,7 @@ export {
 } from "./secrets";
 export {
   createIntegrationService,
+  type IntegrationMutationEvents,
   type IntegrationService,
   type IntegrationServiceDeps,
 } from "./service";

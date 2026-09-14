@@ -16,7 +16,11 @@ import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
 import type { SynologyService } from "@dashboard/synology";
 import type { ServiceStatusService } from "@dashboard/monitoring";
-import { createRuntimeStatusService, issueRealtimeTicket } from "@dashboard/events";
+import {
+  createRuntimeStatusService,
+  issueRealtimeTicket,
+  verifyRealtimeTicket,
+} from "@dashboard/events";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
 const actor = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -77,8 +81,8 @@ function createCaller(
       { pingRedis: async () => false, probeHttp: async () => false },
     ),
     realtimeTickets: {
-      issue(userId: string) {
-        return issueRealtimeTicket("a".repeat(32), userId);
+      issue(input) {
+        return issueRealtimeTicket("a".repeat(32), input);
       },
     },
     jobs: {
@@ -102,6 +106,7 @@ const service = (overrides: Partial<BoardService> = {}): BoardService =>
     updateItem: vi.fn(),
     deleteItem: vi.fn(),
     catalog: vi.fn(() => []),
+    canSubscribeRealtime: vi.fn(async () => false),
     ...overrides,
   }) as BoardService;
 const apps = {} as AppService;
@@ -1145,6 +1150,117 @@ describe("runtime and realtime tRPC", () => {
         docker,
       }).realtime.ticket(),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("signs only authorized board, integration, and runtime scopes", async () => {
+    const secret = "a".repeat(32);
+    const boardA = "board-a";
+    const boardB = "board-b";
+    const jellyfinId = "jellyfin-1";
+    const synologyId = "synology-1";
+    const genericId = "generic-1";
+    const closed = {
+      permissions: () => ({ canRead: false }),
+      getIntegrationMetadata: vi.fn(async () => {
+        throw new IntegrationError("NOT_FOUND", "missing");
+      }),
+    };
+    const jellyfinService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      getIntegrationMetadata: vi.fn(async (id: string) => {
+        if (id !== jellyfinId) throw new IntegrationError("NOT_FOUND", "missing");
+        return { id, name: "Jellyfin", enabled: true };
+      }),
+    } as unknown as JellyfinService;
+    const synologyService = {
+      permissions: vi.fn(() => ({ canRead: false, canManageAuth: false })),
+      getIntegrationMetadata: vi.fn(async () => {
+        throw new IntegrationError("FORBIDDEN", "Permission denied");
+      }),
+    } as unknown as SynologyService;
+    const boards = service({
+      canSubscribeRealtime: vi.fn(async (boardId: string) => boardId === boardA),
+    });
+    const integrationService = {
+      get: vi.fn(async (id: string) => {
+        if (id === genericId) return { type: "test-http" };
+        if (id === synologyId) return { type: "synology" };
+        throw new IntegrationError("NOT_FOUND", "missing");
+      }),
+    } as unknown as IntegrationService;
+    const caller = createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: [
+            "settings.read",
+            "integration.use",
+            "jellyfin.read",
+            "integration.read",
+          ],
+        },
+      },
+      boards,
+      apps,
+      integrations: integrationService,
+      docker: {
+        permissions: () => ({ canRead: false }),
+        getIntegrationMetadata: vi.fn(),
+      } as unknown as DockerService,
+      synology: synologyService,
+      jellyfin: jellyfinService,
+      immich: closed as unknown as ImmichService,
+      beszel: closed as unknown as BeszelService,
+      prometheus: closed as unknown as PrometheusService,
+      uptimeKuma: closed as unknown as UptimeKumaService,
+    });
+    const ticket = await caller.realtime.ticket({
+      boardIds: [boardA, boardB],
+      integrationIds: [jellyfinId, synologyId, genericId],
+      runtime: true,
+    });
+    expect(verifyRealtimeTicket(secret, ticket.token)).toEqual({
+      userId: "00000000-0000-4000-8000-000000000001",
+      subscriptions: [
+        { kind: "runtime" },
+        { kind: "board", id: boardA },
+        { kind: "integration", id: jellyfinId },
+        { kind: "integration", id: genericId },
+      ],
+    });
+    expect(synologyService.getIntegrationMetadata).not.toHaveBeenCalled();
+    const withoutSettings = await createCaller({
+      actor: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.use", "jellyfin.read"],
+        },
+      },
+      boards,
+      apps,
+      integrations: integrationService,
+      docker: {
+        permissions: () => ({ canRead: false }),
+        getIntegrationMetadata: vi.fn(),
+      } as unknown as DockerService,
+      synology: synologyService,
+      jellyfin: jellyfinService,
+      immich: closed as unknown as ImmichService,
+      beszel: closed as unknown as BeszelService,
+      prometheus: closed as unknown as PrometheusService,
+      uptimeKuma: closed as unknown as UptimeKumaService,
+    }).realtime.ticket({ runtime: true, boardIds: [boardA] });
+    expect(verifyRealtimeTicket(secret, withoutSettings.token)).toEqual({
+      userId: "00000000-0000-4000-8000-000000000001",
+      subscriptions: [{ kind: "board", id: boardA }],
+    });
+    await expect(caller.realtime.ticket({ boardIds: ["!!!"] })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
   });
 
   it("lists persisted jobs for settings.read without leaking secrets", async () => {

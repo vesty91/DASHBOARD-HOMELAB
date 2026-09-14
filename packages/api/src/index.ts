@@ -52,9 +52,10 @@ import {
   type SynologyService,
 } from "@dashboard/synology";
 import { serviceStatusQuerySchema, type ServiceStatusService } from "@dashboard/monitoring";
-import type { RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
+import type { RealtimeSubscription, RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 import { requireServiceStatusActor } from "./service-status";
+import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
 export const JOB_LIST_MAX = 50;
 
@@ -89,7 +90,10 @@ export interface ApiContext {
   serviceStatus: ServiceStatusService;
   runtime: RuntimeStatusService;
   realtimeTickets: {
-    issue(userId: string): RealtimeTicket;
+    issue(input: {
+      userId: string;
+      subscriptions: readonly RealtimeSubscription[];
+    }): RealtimeTicket;
   };
   jobs: {
     listRecent(limit: number): Promise<JobListItem[]>;
@@ -546,16 +550,23 @@ export const runtimeRouter = t.router({
 });
 
 export const realtimeRouter = t.router({
-  ticket: t.procedure.mutation(({ ctx }) =>
+  ticket: t.procedure.input(realtimeTicketInputSchema.optional()).mutation(({ ctx, input }) =>
     procedure(async () => {
       const userId = requireAuthenticatedUser(ctx);
       try {
-        return ctx.realtimeTickets.issue(userId);
+        const subscriptions = await resolveRealtimeSubscriptions(ctx, input ?? {});
+        return ctx.realtimeTickets.issue({ userId, subscriptions });
       } catch (error: unknown) {
         if (error instanceof Error && error.message === "AUTH_SECRET_TOO_SHORT") {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
             message: "AUTH_SECRET is not configured",
+          });
+        }
+        if (error instanceof Error && error.message === "TICKET_TOO_LARGE") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Realtime ticket payload is too large",
           });
         }
         throw error;

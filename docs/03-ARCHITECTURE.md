@@ -335,6 +335,7 @@ est vide. Voir ADR 0007.
 
 # État Phase 13
 
-`@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets SSE et
-`runtime.status` (PING Redis). `apps/worker/src/main.ts` et `apps/realtime/src/main.ts` lisent
-`REDIS_URL` et les binds `WORKER_*` / `REALTIME_*`. Redis reste optionnel. Voir ADR 0015.
+`@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets
+HMAC scopés, `canReceiveEvent` (default deny) et `runtime.status` (PING Redis).
+`apps/web` publie `board.*` / `integration.*` après commit. `apps/realtime` filtre chaque
+événement avec les subscriptions du ticket. Redis reste optionnel. Voir ADR 0015.
