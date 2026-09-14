@@ -375,5 +375,5 @@ Voir ADR 0017.
 
 # État Phase 16
 
-IN PROGRESS. Headers/CSP enforcement, tRPC POST-only, rate limits des actions
+COMPLETE. Headers/CSP enforcement, tRPC POST-only, rate limits des actions
 sensibles, contrôle d'origine realtime, cookies session explicites. Voir ADR 0018.
