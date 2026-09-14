@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@dashboard/events": "workspace:*",
-    "tsx": "4.23.13"
+    "tsx": "4.23.13",
+    "ws": "8.18.3"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
+    "@types/ws": "8.18.1",
     "vitest": "4.1.11"
   }
 }

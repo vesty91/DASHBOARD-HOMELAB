@@ -448,9 +448,12 @@ Fondations. Redis n'est pas source de vérité. Aucun appel navigateur vers Redi
 La santé Redis de `runtime.status` est un `PING` protocole (AUTH / TLS / `rediss:`), jamais un
 simple connect TCP. Jamais exposés : `REDIS_URL`, mot de passe Redis, `AUTH_SECRET`, payload brut Redis.
 
-`GET /events?ticket=` n'émet un `DomainEvent` que si le ticket vérifié contient le scope
-correspondant (`board:<id>`, `integration:<id>`, `runtime`). Default deny. Redis n'est jamais
-source de vérité RBAC. Payloads minimaux : pas de layout, ACL, config, secrets, URLs privées.
+`GET /events?ticket=` et `GET /ws?ticket=` n'émettent un `DomainEvent` que si le ticket
+vérifié contient le scope correspondant (`board:<id>`, `integration:<id>`, `runtime`).
+Default deny. Redis n'est jamais source de vérité RBAC. Payloads minimaux : pas de layout,
+ACL, config, secrets, URLs privées. WebSocket n'accepte pas de commandes client (hors
+ping/pong). Reverse proxy : `Connection: Upgrade` et `Upgrade: websocket`. Le navigateur
+tente `/api/realtime/ws` (rewrite same-origin) puis retombe sur SSE.
 
 `integration.data.changed` est un signal d'invalidation (id + type + occurredAt). Le client
 autorisé refetch le DTO existant, avec debounce. Le polling 10 s reste le producteur autonome

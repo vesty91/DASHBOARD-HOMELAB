@@ -22,9 +22,10 @@ dans `src/main.ts` et construisent `RedisEventBus` via `createConfiguredEventBus
 
 ### 2. SSE comme premier transport realtime
 
-Le processus `apps/realtime` expose `GET /events` (SSE). WebSocket reste hors
-de cette première tranche. Authentification par ticket HMAC court, émis par
-l'API après session, jamais par le navigateur vers Redis.
+Le processus `apps/realtime` expose `GET /events` (SSE) et `GET /ws` (WebSocket).
+SSE reste le fallback. Authentification par le même ticket HMAC court, émis par
+l'API après session, jamais par le navigateur vers Redis. Les deux transports
+réutilisent `verifyRealtimeTicket`, `canReceiveEvent` et le bus.
 
 ### 3. Worker heartbeat
 

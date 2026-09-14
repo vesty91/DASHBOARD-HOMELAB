@@ -341,5 +341,6 @@ HMAC scopés, `canReceiveEvent` (default deny) et `runtime.status` (PING Redis).
 événement avec les subscriptions du ticket. `integration.data.changed` signale un refresh
 overview réussi (id + type, jamais de télémétrie brute) ; le client autorisé debounce puis
 refetch le DTO via `router.refresh()`. `GET /api/realtime/events` proxy SSE same-origin.
-Le polling 10 s reste le producteur autonome des widgets live ; SSE accélère après mutation
-ou refresh manuel. Redis reste optionnel. Voir ADR 0015.
+`GET /ws` ajoute WebSocket avec le même filtre RBAC, ping/pong, plafond global et par
+utilisateur, et backpressure (`bufferedAmount`). Le client tente WS puis SSE. Le polling
+10 s reste le producteur autonome des widgets live. Redis reste optionnel. Voir ADR 0015.

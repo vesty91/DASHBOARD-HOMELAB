@@ -72,7 +72,8 @@ Support :
 
 Exigences :
 
-- WebSocket upgrade si realtime ;
+- WebSocket upgrade si realtime (`Connection: Upgrade`, `Upgrade: websocket`) vers
+  `apps/realtime` `/ws` ou le rewrite same-origin `/api/realtime/ws` ;
 - forwarded headers ;
 - body limit pour backup ;
 - TLS.
