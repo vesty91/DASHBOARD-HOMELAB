@@ -20,6 +20,7 @@ export const SPECIALIZED_INTEGRATION_TYPES = [
   "uptime-kuma",
   "proxmox",
   "grafana",
+  "ntfy",
 ] as const;
 
 export type SpecializedIntegrationType = (typeof SPECIALIZED_INTEGRATION_TYPES)[number];
@@ -91,6 +92,10 @@ export async function canSubscribeIntegrationRealtime(
     {
       canRead: ctx.grafana.permissions(actor).canRead,
       load: () => ctx.grafana.getIntegrationMetadata(integrationId, actor),
+    },
+    {
+      canRead: ctx.ntfy.permissions(actor).canRead,
+      load: () => ctx.ntfy.getIntegrationMetadata(integrationId, actor),
     },
   ];
   for (const probe of probes) {

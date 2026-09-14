@@ -34,6 +34,12 @@ import {
   MemoryGrafanaRefreshRateLimiter,
 } from "@dashboard/grafana";
 import {
+  createNtfyService,
+  MemoryNtfyOverviewCoalescer,
+  MemoryNtfyRefreshFence,
+  MemoryNtfyRefreshRateLimiter,
+} from "@dashboard/ntfy";
+import {
   createProxmoxService,
   MemoryProxmoxOverviewCoalescer,
   MemoryProxmoxRefreshFence,
@@ -118,6 +124,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     grafanaRefreshRateLimiter: MemoryGrafanaRefreshRateLimiter;
     grafanaRefreshFence: MemoryGrafanaRefreshFence;
     grafanaOverviewCoalescer: MemoryGrafanaOverviewCoalescer;
+    ntfyRefreshRateLimiter: MemoryNtfyRefreshRateLimiter;
+    ntfyRefreshFence: MemoryNtfyRefreshFence;
+    ntfyOverviewCoalescer: MemoryNtfyOverviewCoalescer;
     serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
@@ -249,6 +258,9 @@ function integrationRuntime() {
     grafanaRefreshRateLimiter: new MemoryGrafanaRefreshRateLimiter(),
     grafanaRefreshFence: new MemoryGrafanaRefreshFence(),
     grafanaOverviewCoalescer: new MemoryGrafanaOverviewCoalescer(),
+    ntfyRefreshRateLimiter: new MemoryNtfyRefreshRateLimiter(),
+    ntfyRefreshFence: new MemoryNtfyRefreshFence(),
+    ntfyOverviewCoalescer: new MemoryNtfyOverviewCoalescer(),
     serviceStatusCoalescer: new MemoryServiceStatusCoalescer(),
   });
 }
@@ -352,6 +364,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.grafanaOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const ntfy = createNtfyService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.ntfyRefreshRateLimiter,
+    refreshFence: runtime.ntfyRefreshFence,
+    overviewCoalescer: runtime.ntfyOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   attachDataChangedEvents(synology, "synology");
   attachDataChangedEvents(jellyfin, "jellyfin");
   attachDataChangedEvents(immich, "immich");
@@ -360,6 +382,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(uptimeKuma, "uptime-kuma");
   attachDataChangedEvents(proxmox, "proxmox");
   attachDataChangedEvents(grafana, "grafana");
+  attachDataChangedEvents(ntfy, "ntfy");
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -385,6 +408,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     uptimeKuma,
     proxmox,
     grafana,
+    ntfy,
     serviceStatus: createDashboardServiceStatusService({
       apps,
       docker,
@@ -396,6 +420,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       uptimeKuma,
       proxmox,
       grafana,
+      ntfy,
       coalescer: runtime.serviceStatusCoalescer,
     }),
     runtime: createRuntimeStatusService(

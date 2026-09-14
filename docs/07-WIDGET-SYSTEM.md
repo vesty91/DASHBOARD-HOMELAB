@@ -147,6 +147,11 @@ tableaux de bord, alertes firing/pending. Même `router.refresh()` 10 s ; le
 navigateur ne contacte jamais l'API Grafana. Titres, URLs et payloads d'alertes
 ne sont pas exposés.
 
+Phase 18.3 ajoute `ntfy-status` (`publicSafe=false`) : santé, version si disponible,
+nombre de messages et débit. Même `router.refresh()` 10 s ; le navigateur ne
+contacte jamais l'API ntfy. Noms de topics et corps de messages ne sont pas
+exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -160,7 +165,8 @@ ne sont pas exposés.
 - Prometheus Metric (`prometheus-metric`, Phase 12) ;
 - Service Status (`service-status`, Phase 12, agrégateur interne) ;
 - Proxmox Resources (`proxmox-resources`, Phase 18) ;
-- Grafana Status (`grafana-status`, Phase 18.2).
+- Grafana Status (`grafana-status`, Phase 18.2) ;
+- ntfy Status (`ntfy-status`, Phase 18.3).
 
 ## 11. Custom API widget
 

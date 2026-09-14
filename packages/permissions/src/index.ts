@@ -38,6 +38,7 @@ export const PERMISSIONS = [
   "uptime-kuma.read",
   "proxmox.read",
   "grafana.read",
+  "ntfy.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

@@ -136,6 +136,33 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Alertes 2 firing · 1 pending")).toBeTruthy();
   });
 
+  it("renders an ntfy status widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "ntfy-1",
+          widgetType: "ntfy-status",
+          widgetVersion: 1,
+          title: "ntfy",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        ntfyView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          healthy: true,
+          version: "2.11.0",
+          messages: 12,
+          messagesRate: 0.5,
+        }}
+      />,
+    );
+    expect(screen.getByText("Santé OK · 2.11.0")).toBeTruthy();
+    expect(screen.getByText("12 messages")).toBeTruthy();
+    expect(screen.getByText("Débit 0.5 msg/s")).toBeTruthy();
+  });
+
   it("renders a Prometheus metric widget from a ready view", () => {
     render(
       <WidgetRenderer

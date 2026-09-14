@@ -26,6 +26,7 @@ import type { PrometheusService } from "@dashboard/prometheus";
 import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
+import type { NtfyService } from "@dashboard/ntfy";
 import type { ProxmoxService } from "@dashboard/proxmox";
 
 const APP_PAGE_SIZE = 100;
@@ -306,6 +307,7 @@ export interface ServiceStatusRuntimeDeps {
   uptimeKuma: UptimeKumaService;
   proxmox: ProxmoxService;
   grafana: GrafanaService;
+  ntfy: NtfyService;
   coalescer?: ServiceStatusCoalescer;
 }
 
@@ -486,6 +488,25 @@ export function createDashboardServiceStatusService(
           detail: dashboards
             ? `${dashboards.count} tableaux de bord${alerts ? ` · ${alerts.firing} firing` : ""}`
             : "Grafana indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "ntfy",
+      canRead: (actor) => deps.ntfy.permissions(actor).canRead,
+      list: (actor) => deps.ntfy.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.ntfy.getOverview(integrationId, actor);
+        const health = overview.health.data;
+        const stats = overview.stats.data;
+        return freezeItem({
+          id: `ntfy:${integrationId}`,
+          name,
+          sourceType: "ntfy",
+          integrationId,
+          status: health?.healthy === false ? "down" : mapOverviewStatus(overview.status),
+          detail: stats ? `${stats.messages} messages` : "ntfy indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

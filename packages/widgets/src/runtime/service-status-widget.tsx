@@ -21,6 +21,7 @@ const SOURCE_LABELS = {
   prometheus: "Prometheus",
   proxmox: "Proxmox",
   grafana: "Grafana",
+  ntfy: "ntfy",
 } as const;
 
 function formatUpdatedAt(value: string | null): string | null {

@@ -50,6 +50,14 @@ export {
   grafanaStatusDefaultConfig,
   grafanaStatusDraftConfig,
 } from "./grafana-status";
+export type { NtfyStatusConfig, NtfyStatusDraftConfig, NtfyStatusView } from "./ntfy-status";
+export {
+  NTFY_STATUS_UNSET_INTEGRATION_ID,
+  ntfyStatusConfigSchema,
+  ntfyStatusContract,
+  ntfyStatusDefaultConfig,
+  ntfyStatusDraftConfig,
+} from "./ntfy-status";
 export type { BeszelHostsConfig, BeszelHostsDraftConfig, BeszelHostsView } from "./beszel-hosts";
 export {
   BESZEL_HOSTS_UNSET_INTEGRATION_ID,

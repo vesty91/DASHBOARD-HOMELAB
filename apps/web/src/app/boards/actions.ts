@@ -177,3 +177,13 @@ export async function listGrafanaIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listNtfyIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).ntfy.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

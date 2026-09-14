@@ -13,6 +13,7 @@ import type {
   GrafanaOverview,
   GrafanaSectionReason,
 } from "@dashboard/grafana";
+import type { NtfyIntegrationMetadata, NtfyOverview, NtfySectionReason } from "@dashboard/ntfy";
 import type {
   ProxmoxIntegrationMetadata,
   ProxmoxNodeStatus,
@@ -56,6 +57,8 @@ import { uptimeKumaUserError } from "../uptime-kuma-error";
 import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
 import { grafanaUserError } from "../grafana-error";
 import { GrafanaRefreshButton } from "../grafana-refresh-button";
+import { ntfyUserError } from "../ntfy-error";
+import { NtfyRefreshButton } from "../ntfy-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
 import { ProxmoxRefreshButton } from "../proxmox-refresh-button";
 import { immichUserError } from "../immich-error";
@@ -86,7 +89,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "prometheus" ||
     integration.type === "uptime-kuma" ||
     integration.type === "proxmox" ||
-    integration.type === "grafana"
+    integration.type === "grafana" ||
+    integration.type === "ntfy"
   )
     redirect("/forbidden");
   return (
@@ -1438,6 +1442,135 @@ async function GrafanaOverviewPanel({
   );
 }
 
+function ntfyReasonLabel(reason: NtfySectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API ntfy indisponible.";
+    case "permission-denied":
+      return "Permission ntfy insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers ntfy.";
+    case "invalid-response":
+      return "Réponse ntfy invalide.";
+    case "unauthorized":
+      return "Jeton d'accès ntfy invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations ntfy.";
+    case "dns":
+      return "Le serveur ntfy est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers ntfy.";
+    case "unreachable":
+      return "Le serveur ntfy est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section ntfy indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function formatNtfyRate(value: number): string {
+  if (Number.isInteger(value)) return String(value);
+  return value.toPrecision(6).replace(/\.?0+$/u, "");
+}
+
+async function NtfyOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: NtfyOverview | null = null;
+  try {
+    overview = await caller.ntfy.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = ntfyUserError(caught);
+  }
+  const health = overview?.health.data;
+  const stats = overview?.stats.data;
+  const version = overview?.version.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue ntfy partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs publics uniquement. Aucun nom de topic, aucun corps de message, aucune
+            publication. Lecture seule.
+          </p>
+          <section className="ntfy-health">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{ntfyReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>
+              {health?.healthy === true
+                ? "Santé OK"
+                : health?.healthy === false
+                  ? "Santé en échec"
+                  : "Indisponible"}
+            </p>
+          </section>
+          <section className="ntfy-version">
+            <h2>Version</h2>
+            {overview.version.status === "unavailable" ? (
+              <Alert tone="warning">{ntfyReasonLabel(overview.version.reason)}</Alert>
+            ) : null}
+            <p>Version {version?.version ?? "Indisponible"}</p>
+            {version?.commit ? <p className="ui-muted">Commit {version.commit}</p> : null}
+            {version?.date ? <p className="ui-muted">Date {version.date}</p> : null}
+          </section>
+          <section className="ntfy-stats">
+            <h2>Compteurs</h2>
+            {overview.stats.status === "unavailable" ? (
+              <Alert tone="warning">{ntfyReasonLabel(overview.stats.reason)}</Alert>
+            ) : null}
+            <p>{stats ? `${stats.messages} messages` : "Compteurs indisponibles."}</p>
+            {stats ? <p>Débit {formatNtfyRate(stats.messagesRate)} msg/s</p> : null}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function NtfyIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: NtfyIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="ntfy" />
+        <Alert tone="warning">Cette intégration ntfy est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="ntfy" />
+      <NtfyRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de ntfy…</p>}>
+        <NtfyOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 async function GrafanaIntegrationDetail({
   id,
   metadata,
@@ -1602,6 +1735,8 @@ export default async function IntegrationDetailPage({
         return <ProxmoxIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "grafana":
         return <GrafanaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "ntfy":
+        return <NtfyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

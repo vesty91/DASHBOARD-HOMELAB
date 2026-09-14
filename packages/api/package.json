@@ -22,6 +22,7 @@
     "@dashboard/uptime-kuma": "workspace:*",
     "@dashboard/proxmox": "workspace:*",
     "@dashboard/grafana": "workspace:*",
+    "@dashboard/ntfy": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/boards": "workspace:*",
