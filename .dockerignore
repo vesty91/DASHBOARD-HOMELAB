@@ -3,13 +3,13 @@
 .cursor
 .vscode
 .idea
-node_modules
-.next
-.turbo
-dist
-coverage
-playwright-report
-test-results
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
 appdata
 *.sqlite
 *.sqlite3
@@ -17,7 +17,7 @@ appdata
 .env.*
 !.env.example
 !.env.production.example
-reference/homarr
+reference
 **/*.md
 !docs/10-DEPLOYMENT.md
 licenses
@@ -28,3 +28,7 @@ apps/web/e2e
 apps/web/playwright.config.ts
 apps/web/test-results
 apps/web/playwright-report
+apps/web/.next
+apps/web/node_modules
+packages/**/node_modules
+
