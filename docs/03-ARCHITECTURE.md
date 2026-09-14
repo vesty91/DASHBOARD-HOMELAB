@@ -380,5 +380,5 @@ sensibles, contrôle d'origine realtime, cookies session explicites. Voir ADR 00
 
 # État Phase 17
 
-IN PROGRESS. Images production multi-target, Compose postgres/redis/migrate/web/worker/realtime,
+COMPLETE. Images production multi-target, Compose postgres/redis/migrate/web/worker/realtime,
 health live/ready, GHCR sur tags semver, pas de `0007`. Voir ADR 0019 et `docs/10-DEPLOYMENT.md`.

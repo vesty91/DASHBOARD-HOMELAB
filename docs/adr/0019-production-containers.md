@@ -2,7 +2,7 @@
 
 ## Statut
 
-Accepté. Phase 17 IN PROGRESS.
+Accepté. Phase 17 COMPLETE.
 
 ## Contexte
 
