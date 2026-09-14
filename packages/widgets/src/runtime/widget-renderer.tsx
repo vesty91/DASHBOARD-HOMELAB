@@ -9,6 +9,7 @@ import type { PrometheusMetricView } from "../prometheus-metric";
 import type { GrafanaStatusView } from "../grafana-status";
 import type { NtfyStatusView } from "../ntfy-status";
 import type { ProxmoxResourcesView } from "../proxmox-resources";
+import type { RadarrOverviewView } from "../radarr-overview";
 import type { SonarrOverviewView } from "../sonarr-overview";
 import type { ServiceStatusView } from "../service-status";
 import type { UptimeKumaStatusView } from "../uptime-kuma-status";
@@ -25,6 +26,7 @@ import { PrometheusMetricWidget } from "./prometheus-metric-widget";
 import { GrafanaStatusWidget } from "./grafana-status-widget";
 import { NtfyStatusWidget } from "./ntfy-status-widget";
 import { ProxmoxResourcesWidget } from "./proxmox-resources-widget";
+import { RadarrOverviewWidget } from "./radarr-overview-widget";
 import { SonarrOverviewWidget } from "./sonarr-overview-widget";
 import { ServiceStatusWidget } from "./service-status-widget";
 import { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";
@@ -73,6 +75,7 @@ function ReadyWidget({
   prometheusView,
   grafanaView,
   ntfyView,
+  radarrView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -86,6 +89,7 @@ function ReadyWidget({
   prometheusView: PrometheusMetricView | undefined;
   grafanaView: GrafanaStatusView | undefined;
   ntfyView: NtfyStatusView | undefined;
+  radarrView: RadarrOverviewView | undefined;
   sonarrView: SonarrOverviewView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
   serviceStatusView: ServiceStatusView | undefined;
@@ -110,6 +114,8 @@ function ReadyWidget({
       return <GrafanaStatusWidget view={grafanaView} />;
     case "ntfy-status":
       return <NtfyStatusWidget view={ntfyView} />;
+    case "radarr-overview":
+      return <RadarrOverviewWidget view={radarrView} />;
     case "sonarr-overview":
       return <SonarrOverviewWidget view={sonarrView} />;
     case "proxmox-resources":
@@ -132,6 +138,7 @@ export function WidgetRenderer({
   prometheusView,
   grafanaView,
   ntfyView,
+  radarrView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -145,6 +152,7 @@ export function WidgetRenderer({
   prometheusView?: PrometheusMetricView;
   grafanaView?: GrafanaStatusView;
   ntfyView?: NtfyStatusView;
+  radarrView?: RadarrOverviewView;
   sonarrView?: SonarrOverviewView;
   proxmoxView?: ProxmoxResourcesView;
   serviceStatusView?: ServiceStatusView;
@@ -166,6 +174,7 @@ export function WidgetRenderer({
           prometheusView={prometheusView}
           grafanaView={grafanaView}
           ntfyView={ntfyView}
+          radarrView={radarrView}
           sonarrView={sonarrView}
           proxmoxView={proxmoxView}
           serviceStatusView={serviceStatusView}

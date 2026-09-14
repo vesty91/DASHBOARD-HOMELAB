@@ -24,6 +24,7 @@ const SOURCE_LABELS: Record<ServiceStatusSourceType, string> = {
   proxmox: "Proxmox",
   grafana: "Grafana",
   ntfy: "ntfy",
+  radarr: "Radarr",
   sonarr: "Sonarr",
 };
 

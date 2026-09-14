@@ -440,6 +440,27 @@ overview 8 s (5 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucun
 fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 `/api/v3/diskspace` rend la section `unavailable` (pas de zéros inventés).
 
+## 18.5. Radarr
+
+Statut : IN PROGRESS (Phase 18.5).
+
+Adapter `radarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Radarr.
+Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
+`GET /api/v3/system/status`, `GET /api/v3/health`, `GET /api/v3/queue/status`,
+`GET /api/v3/movie`, `GET /api/v3/diskspace`. Voir ADR 0024. POST/PUT/DELETE,
+`/api/v3/command`, queue grab/remove et `apikey` en query sont hors scope.
+
+`radarr.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
+Radarr (`integration.use|manage` + `radarr.read`). `integration.read` n'est
+pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
+`capabilities` et l'état des secrets d'un record `radarr` sans
+`integration.manage`.
+
+Widget `radarr-overview` : `publicSafe=false`. Refresh manuel 10/min. Cache
+overview 8 s (5 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucune
+fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
+`/api/v3/diskspace` rend la section `unavailable` (pas de zéros inventés).
+
 ## 19. Service status
 
 Agrégateur interne read-only, pas une nouvelle intégration externe.
@@ -447,10 +468,10 @@ Agrégateur interne read-only, pas une nouvelle intégration externe.
 `serviceStatus.list` / `serviceStatus.catalog` assemblent un DTO canonique
 (`up` / `degraded` / `down` / `unknown` / `paused` / `maintenance`) à partir des
 sources déjà disponibles : apps health, Docker, Synology, Jellyfin, Immich,
-Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr. Le filtrage est serveur-side via les permissions
+Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr. Le filtrage est serveur-side via les permissions
 spécialisées (`app.read`, `docker.read`, `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `sonarr.read`). Un DTO
+`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`). Un DTO
 générique `integration.list` n'est jamais utilisé pour construire ce widget.
 
 Widget `service-status` : `publicSafe=false`. Config bornée (`selectedSources`,

@@ -12,6 +12,7 @@ import type {
 } from "@dashboard/uptime-kuma";
 import type { GrafanaIntegrationMetadata, GrafanaPermissionsView } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyPermissionsView } from "@dashboard/ntfy";
+import type { RadarrIntegrationMetadata, RadarrPermissionsView } from "@dashboard/radarr";
 import type { SonarrIntegrationMetadata, SonarrPermissionsView } from "@dashboard/sonarr";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
@@ -37,6 +38,7 @@ export type IntegrationDetailResolution =
   | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
   | { kind: "grafana"; metadata: GrafanaIntegrationMetadata }
   | { kind: "ntfy"; metadata: NtfyIntegrationMetadata }
+  | { kind: "radarr"; metadata: RadarrIntegrationMetadata }
   | { kind: "sonarr"; metadata: SonarrIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
@@ -99,6 +101,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<NtfyPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<NtfyIntegrationMetadata>;
+    };
+  };
+  radarr: {
+    permissions: () => Promise<Pick<RadarrPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<RadarrIntegrationMetadata>;
     };
   };
   sonarr: {
@@ -202,6 +210,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.ntfy.integration.get({ integrationId: id });
       return { kind: "ntfy", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const radarrPermissions = await caller.radarr.permissions();
+  if (radarrPermissions.canRead) {
+    try {
+      const metadata = await caller.radarr.integration.get({ integrationId: id });
+      return { kind: "radarr", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

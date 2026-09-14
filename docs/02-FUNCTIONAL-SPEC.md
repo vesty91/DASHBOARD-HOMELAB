@@ -374,6 +374,21 @@ Lecture :
 Pas de mutation, pas de `/api/v3/command`, pas de `apikey` en query. Titres de
 séries, noms d'épisodes et chemins ne sont pas exposés.
 
+### Radarr
+
+Phase 18.5 : lecture via l'API officielle v3 (header `X-Api-Key` uniquement).
+
+Lecture :
+
+- version (`GET /api/v3/system/status`) ;
+- compteurs de santé (`GET /api/v3/health`) ;
+- compteurs de file (`GET /api/v3/queue/status`) ;
+- nombre de films (`GET /api/v3/movie`) ;
+- espace disque agrégé (`GET /api/v3/diskspace`).
+
+Pas de mutation, pas de `/api/v3/command`, pas de `apikey` en query. Titres de
+films, chemins et dossiers ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

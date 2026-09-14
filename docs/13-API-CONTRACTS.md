@@ -483,6 +483,26 @@ Jamais exposés : clé API, titres de séries, chemins, `startupPath`, `appData`
 `message` de santé, `wikiUrl`, `path`/`label` disque, `/api/v3/command`,
 `baseUrl`, config.
 
+# Radarr API — Phase 18.5
+
+Routeur tRPC `radarr` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                     | Permission               | Capability    | Notes                                                |
+| ------------------------- | ------------------------ | ------------- | ---------------------------------------------------- |
+| `radarr.permissions`      | auth active              | —             | `canRead`, `canManage`                               |
+| `radarr.integration.list` | use/manage + radarr.read | —             | `{ id, name, enabled }[]`                            |
+| `radarr.integration.get`  | use/manage + radarr.read | —             | `{ id, name, enabled }`                              |
+| `radarr.overview.get`     | use/manage + radarr.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `radarr.overview.refresh` | use/manage + radarr.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
+`system`, `health`, `queue`, `movie`, `diskSpace`. Auth : header `X-Api-Key`
+uniquement. Jamais `apikey` dans l'URL.
+
+Jamais exposés : clé API, titres de films, chemins, `startupPath`, `appData`,
+`message` de santé, `wikiUrl`, `path`/`label` disque, `/api/v3/command`,
+`baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -542,7 +562,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma/proxmox/grafana/ntfy/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox/grafana/ntfy/radarr/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

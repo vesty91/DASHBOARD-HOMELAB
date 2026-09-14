@@ -69,6 +69,7 @@ describe("widget registry", () => {
       "ntfy-status",
       "prometheus-metric",
       "proxmox-resources",
+      "radarr-overview",
       "service-status",
       "sonarr-overview",
       "uptime-kuma-status",
@@ -79,6 +80,7 @@ describe("widget registry", () => {
     expect(registry.get("prometheus-metric")?.publicSafe).toBe(false);
     expect(registry.get("grafana-status")?.publicSafe).toBe(false);
     expect(registry.get("ntfy-status")?.publicSafe).toBe(false);
+    expect(registry.get("radarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("sonarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);
     expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);

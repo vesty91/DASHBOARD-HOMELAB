@@ -23,6 +23,7 @@
     "@dashboard/proxmox": "workspace:*",
     "@dashboard/grafana": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
+    "@dashboard/radarr": "workspace:*",
     "@dashboard/sonarr": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/backup": "workspace:*",

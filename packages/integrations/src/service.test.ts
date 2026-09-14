@@ -807,6 +807,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("grafana.example");
   });
 
+  it("redacts Radarr generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "radarr",
+        displayName: "Radarr",
+      },
+    ]);
+    const radarr = await service.create(
+      {
+        type: "radarr",
+        name: "Radarr",
+        baseUrl: "https://radarr.example:7878",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(radarr.id, reader);
+    expect(restricted).toMatchObject({
+      id: radarr.id,
+      type: "radarr",
+      name: "Radarr",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("radarr.example");
+  });
+
   it("redacts Sonarr generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

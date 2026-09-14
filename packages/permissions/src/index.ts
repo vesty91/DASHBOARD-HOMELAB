@@ -40,6 +40,7 @@ export const PERMISSIONS = [
   "grafana.read",
   "ntfy.read",
   "sonarr.read",
+  "radarr.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;
