@@ -96,6 +96,7 @@ async function emitBestEffort(task: () => Promise<void> | void): Promise<void> {
     await task();
   } catch (error) {
     void error;
+    console.error(JSON.stringify({ msg: "realtime_publish_failed" }));
   }
 }
 

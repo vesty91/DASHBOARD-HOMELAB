@@ -51,6 +51,7 @@ async function emitBestEffort(task: () => Promise<void> | void): Promise<void> {
     await task();
   } catch (error) {
     void error;
+    console.error(JSON.stringify({ msg: "realtime_publish_failed" }));
   }
 }
 
@@ -370,13 +371,12 @@ export function createIntegrationService(deps: IntegrationServiceDeps) {
             code: "STALE_RESULT" as const,
             message: "Configuration changed during test",
           };
-        await emitBestEffort(() =>
-          events?.publishStatusChanged(
-            current.id,
-            current.type,
-            normalized.ok ? "available" : "unavailable",
-          ),
-        );
+        const latest = await store.findById(current.id);
+        if (latest) {
+          await emitBestEffort(() =>
+            events?.publishStatusChanged(latest.id, latest.type, latest.status),
+          );
+        }
       }
       return normalized;
     },

@@ -27,6 +27,7 @@ import {
 } from "@dashboard/uptime-kuma";
 import { MemoryServiceStatusCoalescer } from "@dashboard/monitoring";
 import {
+  MemoryEventBus,
   createConfiguredEventBus,
   createRuntimeStatusService,
   issueRealtimeTicket,
@@ -98,7 +99,15 @@ const globalRuntime = globalThis as typeof globalThis & {
 };
 
 function eventBus(): Promise<EventBus> {
-  globalRuntime.dashboardEventBus ??= createConfiguredEventBus(serverEnv.REDIS_URL);
+  globalRuntime.dashboardEventBus ??= (async () => {
+    try {
+      return await createConfiguredEventBus(serverEnv.REDIS_URL);
+    } catch (error) {
+      void error;
+      delete globalRuntime.dashboardEventBus;
+      return new MemoryEventBus();
+    }
+  })();
   return globalRuntime.dashboardEventBus;
 }
 
@@ -106,10 +115,15 @@ function occurredAt(): string {
   return new Date().toISOString();
 }
 
-function boardMutationEvents(bus: EventBus) {
+async function publish(event: Parameters<EventBus["publish"]>[0]): Promise<void> {
+  const bus = await eventBus();
+  await bus.publish(event);
+}
+
+function boardMutationEvents() {
   return {
     async publishBoardUpdated(boardId: string, revision: number) {
-      await bus.publish({
+      await publish({
         type: "board.updated",
         boardId,
         revision,
@@ -117,7 +131,7 @@ function boardMutationEvents(bus: EventBus) {
       });
     },
     async publishBoardDeleted(boardId: string) {
-      await bus.publish({
+      await publish({
         type: "board.deleted",
         boardId,
         occurredAt: occurredAt(),
@@ -126,10 +140,10 @@ function boardMutationEvents(bus: EventBus) {
   };
 }
 
-function integrationMutationEvents(bus: EventBus) {
+function integrationMutationEvents() {
   return {
     async publishUpdated(integrationId: string, integrationType: string) {
-      await bus.publish({
+      await publish({
         type: "integration.updated",
         integrationId,
         integrationType,
@@ -137,7 +151,7 @@ function integrationMutationEvents(bus: EventBus) {
       });
     },
     async publishDeleted(integrationId: string, integrationType: string) {
-      await bus.publish({
+      await publish({
         type: "integration.deleted",
         integrationId,
         integrationType,
@@ -149,7 +163,7 @@ function integrationMutationEvents(bus: EventBus) {
       integrationType: string,
       status: "unknown" | "available" | "unavailable",
     ) {
-      await bus.publish({
+      await publish({
         type: "integration.status.changed",
         integrationId,
         integrationType,
@@ -197,7 +211,6 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     ? ((await database.authStore.resolvePermissionSubject(userId)) ?? null)
     : null;
   const runtime = integrationRuntime();
-  const bus = await eventBus();
   const keyring = createEnvKeyring(process.env.SECRET_ENCRYPTION_KEY);
   const apps = createAppService(database.appStore);
   const docker = createDockerService({
@@ -273,7 +286,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     boards: createBoardService(
       database.boardStore,
       createBuiltInWidgetPolicy(),
-      boardMutationEvents(bus),
+      boardMutationEvents(),
     ),
     apps,
     integrations: createIntegrationService({
@@ -281,7 +294,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       registry: runtime.registry,
       cache: runtime.cache,
       rateLimiter: runtime.rateLimiter,
-      events: integrationMutationEvents(bus),
+      events: integrationMutationEvents(),
       ...(keyring ? { keyring } : {}),
     }),
     docker,
