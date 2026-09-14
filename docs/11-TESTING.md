@@ -216,3 +216,5 @@ sans fuite d'URL, le heartbeat worker (y compris `/health/ready` 503 si publish 
 configurable, le refus SSE sans ticket, le retry d'abonnement Redis, et le RBAC `settings.read`.
 Les tickets portent des subscriptions déjà autorisées. SSE filtre `board.*`, `integration.*` et
 `job.*` côté serveur. Tampering, scopes inconnus et tickets oversized sont rejetés.
+`integration.data.changed` est un signal d'invalidation : extras/secrets stripés, refetch
+uniquement pour l'id autorisé, debounce d'un burst, pas de publish si le refresh échoue.

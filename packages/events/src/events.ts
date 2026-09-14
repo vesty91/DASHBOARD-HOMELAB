@@ -8,6 +8,7 @@ export const DOMAIN_EVENT_TYPES = [
   "integration.updated",
   "integration.deleted",
   "integration.status.changed",
+  "integration.data.changed",
 ] as const;
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number];
 
@@ -70,6 +71,12 @@ export const domainEventSchema = z.discriminatedUnion("type", [
     integrationId: EVENT_RESOURCE_ID,
     integrationType: z.string().min(1).max(64),
     status: z.enum(INTEGRATION_EVENT_STATUSES),
+    occurredAt: isoDate,
+  }),
+  z.object({
+    type: z.literal("integration.data.changed"),
+    integrationId: EVENT_RESOURCE_ID,
+    integrationType: z.string().min(1).max(64),
     occurredAt: isoDate,
   }),
 ]);

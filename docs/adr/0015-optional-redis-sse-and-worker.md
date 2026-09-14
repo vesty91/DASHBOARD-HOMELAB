@@ -37,8 +37,9 @@ persiste les heartbeats (SQLite + PostgreSQL, migration `0005`).
 ### 4. Filtrage serveur
 
 Les événements `board.updated` / `board.deleted` / `integration.updated` /
-`integration.deleted` / `integration.status.changed` / `job.*` ne sont envoyés
-à une connexion que si le ticket HMAC contient le scope correspondant.
+`integration.deleted` / `integration.status.changed` / `integration.data.changed` /
+`job.*` ne sont envoyés à une connexion que si le ticket HMAC contient le scope
+correspondant.
 `canReceiveEvent` est default-deny. Redis et le bus mémoire appliquent le même
 filtre. Un board public n'ouvre pas le stream. `runtime` exige `settings.read`.
 

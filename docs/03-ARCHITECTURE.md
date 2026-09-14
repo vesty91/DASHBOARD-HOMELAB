@@ -338,4 +338,7 @@ est vide. Voir ADR 0007.
 `@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets
 HMAC scopés, `canReceiveEvent` (default deny) et `runtime.status` (PING Redis).
 `apps/web` publie `board.*` / `integration.*` après commit. `apps/realtime` filtre chaque
-événement avec les subscriptions du ticket. Redis reste optionnel. Voir ADR 0015.
+événement avec les subscriptions du ticket. `integration.data.changed` signale un refresh
+overview réussi (id + type, jamais de télémétrie brute) ; le client autorisé debounce puis
+refetch le DTO via `router.refresh()`. `GET /api/realtime/events` proxy SSE same-origin.
+Sans realtime, le polling 10 s reste le fallback. Redis reste optionnel. Voir ADR 0015.

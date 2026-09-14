@@ -13,6 +13,8 @@ import type {
 } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
 import { JELLYFIN_BOARD_REFRESH_MS, shouldPollJellyfinBoard } from "./jellyfin-board-refresh";
+import { collectLiveIntegrationIds } from "./live-integration-ids";
+import { useBoardLiveRefresh } from "./use-board-live-refresh";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 export function ResponsiveBoardReadGrid({
@@ -43,6 +45,13 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(prometheusViews) ||
     shouldPollJellyfinBoard(uptimeKumaViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
+  const live = useBoardLiveRefresh({
+    boardId: snapshot.board.id,
+    integrationIds: collectLiveIntegrationIds(snapshot.items),
+    onRefresh: () => {
+      router.refresh();
+    },
+  });
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
     const update = () => setRequested(media.matches ? "mobile" : "desktop");
@@ -51,12 +60,12 @@ export function ResponsiveBoardReadGrid({
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (!pollBoard) return;
+    if (!pollBoard || live) return;
     const timer = window.setInterval(() => {
       router.refresh();
     }, JELLYFIN_BOARD_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [pollBoard, router]);
+  }, [pollBoard, live, router]);
   const layout =
     snapshot.layouts.find((entry) => entry.breakpoint === requested) ??
     snapshot.layouts.find((entry) => entry.breakpoint !== requested) ??

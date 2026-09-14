@@ -40,10 +40,17 @@ describe("canReceiveEvent", () => {
     ).toBe(true);
     expect(
       canReceiveEvent([jellyfin], {
-        type: "integration.status.changed",
+        type: "integration.data.changed",
+        integrationId: "jellyfin-1",
+        integrationType: "jellyfin",
+        occurredAt,
+      }),
+    ).toBe(true);
+    expect(
+      canReceiveEvent([jellyfin], {
+        type: "integration.data.changed",
         integrationId: "synology-1",
         integrationType: "synology",
-        status: "available",
         occurredAt,
       }),
     ).toBe(false);

@@ -17,6 +17,7 @@ export function canReceiveEvent(
     case "integration.updated":
     case "integration.deleted":
     case "integration.status.changed":
+    case "integration.data.changed":
       return subscriptions.some(
         (subscription) =>
           subscription.kind === "integration" && subscription.id === event.integrationId,
