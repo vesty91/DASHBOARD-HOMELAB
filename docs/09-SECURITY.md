@@ -124,9 +124,9 @@ Le backup contient des données sensibles.
 
 Options :
 
-- export chiffré recommandé ;
+- export chiffré recommandé (secrets d'intégration déjà AES-256-GCM, jamais de plaintext) ;
 - avertissement clair si export portable contient secrets ;
-- pas de téléchargement par user non admin.
+- pas de téléchargement sans `backup.manage`.
 
 ## 10. Rate limiting
 

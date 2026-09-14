@@ -16,6 +16,7 @@
     "@dashboard/app-library": "workspace:*",
     "@dashboard/apps": "workspace:*",
     "@dashboard/auth": "workspace:*",
+    "@dashboard/backup": "workspace:*",
     "@dashboard/beszel": "workspace:*",
     "@dashboard/prometheus": "workspace:*",
     "@dashboard/uptime-kuma": "workspace:*",

@@ -20,6 +20,7 @@
     "@dashboard/prometheus": "workspace:*",
     "@dashboard/uptime-kuma": "workspace:*",
     "@dashboard/apps": "workspace:*",
+    "@dashboard/backup": "workspace:*",
     "@dashboard/boards": "workspace:*",
     "@dashboard/docker": "workspace:*",
     "@dashboard/synology": "workspace:*",

@@ -1,0 +1,307 @@
+import { z } from "zod";
+
+export const BACKUP_FORMAT = "homelab-dashboard-backup";
+export const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_SCHEMA_VERSION = 5;
+export const BACKUP_APP_VERSION = "0.1.0";
+export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
+
+const uuidSchema = z.uuid();
+const isoDateTimeSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
+const jsonObjectSchema = z.record(z.string(), z.unknown());
+const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/iu);
+
+const userRowSchema = z
+  .object({
+    id: uuidSchema,
+    username: z.string().min(1).max(100),
+    usernameCanonical: z.string().min(1).max(100),
+    email: z.string().max(320).nullable(),
+    displayName: z.string().max(200).nullable(),
+    status: z.enum(["active", "disabled"]),
+    isSystemAdmin: z.boolean(),
+    authVersion: z.number().int().positive(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+    lastLoginAt: isoDateTimeSchema.nullable(),
+  })
+  .strict();
+
+const groupRowSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string().min(1).max(100),
+    description: z.string().max(2000).nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const groupMemberRowSchema = z
+  .object({
+    groupId: uuidSchema,
+    userId: uuidSchema,
+    createdAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const boardRowSchema = z
+  .object({
+    id: uuidSchema,
+    slug: z.string().min(1).max(100),
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).nullable(),
+    visibility: z.enum(["private", "authenticated", "public"]),
+    ownerUserId: uuidSchema.nullable(),
+    themeJson: jsonObjectSchema,
+    settingsJson: jsonObjectSchema,
+    revision: z.number().int().positive(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const layoutRowSchema = z
+  .object({
+    id: uuidSchema,
+    boardId: uuidSchema,
+    name: z.string().min(1).max(100),
+    breakpoint: z.string().min(1).max(40),
+    columns: z.number().int().positive(),
+    rowHeight: z.number().int().positive(),
+    sortOrder: z.number().int().nonnegative(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const itemRowSchema = z
+  .object({
+    id: uuidSchema,
+    boardId: uuidSchema,
+    widgetType: z.string().min(1).max(100),
+    widgetVersion: z.number().int().positive(),
+    title: z.string().max(200).nullable(),
+    configJson: jsonObjectSchema,
+    integrationId: uuidSchema.nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const itemLayoutRowSchema = z
+  .object({
+    id: uuidSchema,
+    itemId: uuidSchema,
+    layoutId: uuidSchema,
+    x: z.number().int().nonnegative(),
+    y: z.number().int().nonnegative(),
+    w: z.number().int().positive(),
+    h: z.number().int().positive(),
+    minW: z.number().int().positive().nullable(),
+    minH: z.number().int().positive().nullable(),
+    maxW: z.number().int().positive().nullable(),
+    maxH: z.number().int().positive().nullable(),
+  })
+  .strict();
+
+const appRowSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).nullable(),
+    url: z.string().min(1).max(2000),
+    iconRef: z.string().max(500).nullable(),
+    color: z.string().max(40).nullable(),
+    healthcheckEnabled: z.boolean(),
+    healthcheckConfigJson: jsonObjectSchema.nullable(),
+    target: z.enum(["same-tab", "new-tab"]),
+    healthStatus: z.enum(["unknown", "up", "down", "timeout", "error"]),
+    lastCheckedAt: isoDateTimeSchema.nullable(),
+    lastLatencyMs: z.number().int().nullable(),
+    lastHttpStatus: z.number().int().nullable(),
+    lastHealthErrorCode: z.string().max(100).nullable(),
+    healthConfigRevision: z.number().int().positive(),
+    integrationId: uuidSchema.nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const appTagRowSchema = z
+  .object({
+    appId: uuidSchema,
+    value: z.string().min(1).max(100),
+    canonicalValue: z.string().min(1).max(100),
+  })
+  .strict();
+
+const integrationRowSchema = z
+  .object({
+    id: uuidSchema,
+    type: z.string().min(1).max(100),
+    name: z.string().min(1).max(200),
+    baseUrl: z.string().min(1).max(2000),
+    enabled: z.boolean(),
+    configJson: jsonObjectSchema,
+    status: z.enum(["unknown", "available", "unavailable"]),
+    lastCheckedAt: isoDateTimeSchema.nullable(),
+    configRevision: z.number().int().positive(),
+    createdBy: uuidSchema.nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const integrationSecretRowSchema = z
+  .object({
+    id: uuidSchema,
+    integrationId: uuidSchema,
+    key: z.string().min(1).max(100),
+    ciphertext: z.string().min(1).max(16_384),
+    iv: z.string().min(1).max(256),
+    authTag: z.string().min(1).max(256),
+    keyVersion: z.number().int().nonnegative(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const serverSettingsRowSchema = z
+  .object({
+    id: z.literal("global"),
+    schemaVersion: z.number().int().positive(),
+    instanceName: z.string().max(200).nullable(),
+    onboardingCompleted: z.boolean(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const userCredentialRowSchema = z
+  .object({
+    userId: uuidSchema,
+    passwordHash: z.string().min(1).max(500),
+    passwordUpdatedAt: isoDateTimeSchema,
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const roleRowSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string().min(1).max(100),
+    description: z.string().max(2000).nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const rolePermissionRowSchema = z
+  .object({
+    roleId: uuidSchema,
+    permission: z.string().min(1).max(100),
+  })
+  .strict();
+
+const userRoleRowSchema = z
+  .object({
+    userId: uuidSchema,
+    roleId: uuidSchema,
+  })
+  .strict();
+
+const groupRoleRowSchema = z
+  .object({
+    groupId: uuidSchema,
+    roleId: uuidSchema,
+  })
+  .strict();
+
+const boardUserPermissionRowSchema = z
+  .object({
+    boardId: uuidSchema,
+    userId: uuidSchema,
+    permission: z.enum(["board.view", "board.edit", "board.manage"]),
+  })
+  .strict();
+
+const boardGroupPermissionRowSchema = z
+  .object({
+    boardId: uuidSchema,
+    groupId: uuidSchema,
+    permission: z.enum(["board.view", "board.edit", "board.manage"]),
+  })
+  .strict();
+
+const jobRowSchema = z
+  .object({
+    id: uuidSchema,
+    type: z.literal("heartbeat"),
+    status: z.enum(["queued", "running", "succeeded", "failed"]),
+    scheduledAt: isoDateTimeSchema,
+    startedAt: isoDateTimeSchema.nullable(),
+    finishedAt: isoDateTimeSchema.nullable(),
+    attempt: z.number().int().positive(),
+    errorCode: z.string().max(100).nullable(),
+    errorMessageSafe: z.string().max(2000).nullable(),
+    metadataJson: jsonObjectSchema,
+  })
+  .strict();
+
+export const backupTablesSchema = z
+  .object({
+    users: z.array(userRowSchema).max(10_000),
+    groups: z.array(groupRowSchema).max(1_000),
+    group_members: z.array(groupMemberRowSchema).max(20_000),
+    boards: z.array(boardRowSchema).max(500),
+    layouts: z.array(layoutRowSchema).max(2_000),
+    items: z.array(itemRowSchema).max(20_000),
+    item_layouts: z.array(itemLayoutRowSchema).max(40_000),
+    apps: z.array(appRowSchema).max(2_000),
+    app_tags: z.array(appTagRowSchema).max(10_000),
+    integrations: z.array(integrationRowSchema).max(500),
+    integration_secrets: z.array(integrationSecretRowSchema).max(2_000),
+    server_settings: z.array(serverSettingsRowSchema).length(1),
+    user_credentials: z.array(userCredentialRowSchema).max(10_000),
+    roles: z.array(roleRowSchema).max(50),
+    role_permissions: z.array(rolePermissionRowSchema).max(2_000),
+    user_roles: z.array(userRoleRowSchema).max(10_000),
+    group_roles: z.array(groupRoleRowSchema).max(2_000),
+    board_user_permissions: z.array(boardUserPermissionRowSchema).max(10_000),
+    board_group_permissions: z.array(boardGroupPermissionRowSchema).max(10_000),
+    jobs: z.array(jobRowSchema).max(10_000),
+  })
+  .strict();
+
+export const backupManifestSchema = z
+  .object({
+    format: z.literal(BACKUP_FORMAT),
+    formatVersion: z.literal(BACKUP_FORMAT_VERSION),
+    schemaVersion: z.literal(BACKUP_SCHEMA_VERSION),
+    databaseSchemaVersion: z.literal(BACKUP_SCHEMA_VERSION),
+    appVersion: z.string().min(1).max(40),
+    createdAt: isoDateTimeSchema,
+    files: z.tuple([
+      z
+        .object({
+          name: z.literal("tables.json"),
+          sha256: sha256Schema,
+          bytes: z.number().int().positive().max(MAX_BACKUP_ARCHIVE_BYTES),
+        })
+        .strict(),
+    ]),
+  })
+  .strict();
+
+export const backupArchiveSchema = z
+  .object({
+    manifest: backupManifestSchema,
+    tables: backupTablesSchema,
+  })
+  .strict();
+
+export type BackupTables = z.infer<typeof backupTablesSchema>;
+export type BackupManifest = z.infer<typeof backupManifestSchema>;
+export type BackupArchive = z.infer<typeof backupArchiveSchema>;

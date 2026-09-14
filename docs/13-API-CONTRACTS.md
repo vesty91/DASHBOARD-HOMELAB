@@ -471,3 +471,19 @@ spécialisés.
 | `jobs.list` | `settings.read` | `{ items }` borné (≤ 50). DTO : id, type, status, dates ISO, attempt, errorCode, errorMessageSafe |
 
 Jamais exposés : `metadataJson`, secrets, stack traces, `REDIS_URL`.
+
+# Backup — Phase 14
+
+Archive JSON non fiable. Permission `backup.manage` uniquement (SYSTEM_ADMIN par
+défaut). Les secrets d'intégration restent en ciphertext. Pas de mutation pendant
+`validate`. `restore` exige `confirm: true` et prend un backup pré-restore avant
+la transaction.
+
+| Route             | Permission      | Notes                                                                                       |
+| ----------------- | --------------- | ------------------------------------------------------------------------------------------- |
+| `backup.export`   | `backup.manage` | Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 5, hash SHA-256.         |
+| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.     |
+| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache. |
+
+Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
+en clair dans l'archive. Schéma ≠ 5 → `INCOMPATIBLE_SCHEMA`.

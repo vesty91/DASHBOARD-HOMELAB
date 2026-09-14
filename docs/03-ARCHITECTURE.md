@@ -24,6 +24,8 @@ packages/
   apps/
   ui/
   shared/
+  events/
+  backup/
 
 tooling/
   eslint/
@@ -188,6 +190,16 @@ Les adapters de production sont composés dans `apps/web`
 - result/error types ;
 - utilities sans dépendance infrastructure.
 
+### packages/backup
+
+- contrat d'archive JSON versionné ;
+- hashes SHA-256 ;
+- validation default-deny ;
+- preview sans secret en clair ;
+- service export / validate / restore.
+
+Le package ne dépend pas de Next, React, Drizzle ni de `@dashboard/db`.
+
 ## 3. Règles de dépendances
 
 Recommandation :
@@ -344,3 +356,11 @@ refetch le DTO via `router.refresh()`. `GET /api/realtime/events` proxy SSE same
 `GET /ws` ajoute WebSocket avec le même filtre RBAC, ping/pong, plafond global et par
 utilisateur, et backpressure (`bufferedAmount`). Le client tente WS puis SSE. Le polling
 10 s reste le producteur autonome des widgets live. Redis reste optionnel. Voir ADR 0015.
+
+# État Phase 14
+
+IN PROGRESS. `@dashboard/backup` valide une archive JSON non fiable (vocabulaire fermé,
+secrets uniquement chiffrés, hash SHA-256). `packages/db` dump/replace en transaction
+sans migration `0006`. tRPC `backup.export` / `backup.validate` / `backup.restore`
+exige `backup.manage`. Pipeline : export → manifeste + hashes → preview sans mutation →
+backup pré-restore → restore transactionnel → commit → invalidation cache. Voir ADR 0016.
