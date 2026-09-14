@@ -45,9 +45,9 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(prometheusViews) ||
     shouldPollJellyfinBoard(uptimeKumaViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
-  const live = useBoardLiveRefresh({
+  useBoardLiveRefresh({
     boardId: snapshot.board.id,
-    integrationIds: collectLiveIntegrationIds(snapshot.items),
+    integrationIds: collectLiveIntegrationIds(snapshot.items, serviceStatusViews),
     onRefresh: () => {
       router.refresh();
     },
@@ -60,12 +60,12 @@ export function ResponsiveBoardReadGrid({
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (!pollBoard || live) return;
+    if (!pollBoard) return;
     const timer = window.setInterval(() => {
       router.refresh();
     }, JELLYFIN_BOARD_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [pollBoard, live, router]);
+  }, [pollBoard, router]);
   const layout =
     snapshot.layouts.find((entry) => entry.breakpoint === requested) ??
     snapshot.layouts.find((entry) => entry.breakpoint !== requested) ??

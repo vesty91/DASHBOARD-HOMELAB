@@ -1,8 +1,14 @@
 const UNSET_INTEGRATION_ID = "00000000-0000-4000-8000-000000000000";
 const SERVICE_STATUS_ID =
   /^(?:docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/iu;
+export const MAX_LIVE_INTEGRATION_IDS = 49;
 
-export function collectLiveIntegrationIds(items: readonly { config: unknown }[]): string[] {
+export function collectLiveIntegrationIds(
+  items: readonly { config: unknown }[],
+  serviceStatusViews: Readonly<
+    Record<string, { status: string; items?: readonly { integrationId: string | null }[] }>
+  > = {},
+): string[] {
   const ids = new Set<string>();
   for (const item of items) {
     const config = item.config;
@@ -19,5 +25,13 @@ export function collectLiveIntegrationIds(items: readonly { config: unknown }[])
       }
     }
   }
-  return [...ids];
+  for (const view of Object.values(serviceStatusViews)) {
+    if (view.status !== "ready" || !view.items) continue;
+    for (const entry of view.items) {
+      if (typeof entry.integrationId === "string" && entry.integrationId.length > 0) {
+        ids.add(entry.integrationId);
+      }
+    }
+  }
+  return [...ids].slice(0, MAX_LIVE_INTEGRATION_IDS);
 }

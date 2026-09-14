@@ -453,9 +453,10 @@ correspondant (`board:<id>`, `integration:<id>`, `runtime`). Default deny. Redis
 source de vérité RBAC. Payloads minimaux : pas de layout, ACL, config, secrets, URLs privées.
 
 `integration.data.changed` est un signal d'invalidation (id + type + occurredAt). Le client
-autorisé refetch le DTO existant, avec debounce. Sans realtime, le board conserve le polling
-10 s déjà en place. Le proxy same-origin `GET /api/realtime/events` relais SSE sans exposer
-`REALTIME_URL` au navigateur.
+autorisé refetch le DTO existant, avec debounce. Le polling 10 s reste le producteur autonome
+des vues board (aucun second client d'intégration dans le worker). SSE accélère le refetch
+après un refresh manuel ou une mutation. Le proxy same-origin `GET /api/realtime/events`
+relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
