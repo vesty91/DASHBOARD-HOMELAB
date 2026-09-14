@@ -20,7 +20,7 @@ mémoire in-process. Un Redis indisponible ne fait pas tomber `apps/web` ;
 `runtime.status` signale `redis: down`. Worker et realtime lisent `REDIS_URL`
 dans `src/main.ts` et construisent `RedisEventBus` via `createConfiguredEventBus`.
 
-### 2. SSE comme premier transport realtime
+### 2. SSE et WebSocket
 
 Le processus `apps/realtime` expose `GET /events` (SSE) et `GET /ws` (WebSocket).
 SSE reste le fallback. Authentification par le même ticket HMAC court, émis par
@@ -30,10 +30,8 @@ réutilisent `verifyRealtimeTicket`, `canReceiveEvent` et le bus.
 ### 3. Worker heartbeat
 
 `apps/worker` exécute un job `heartbeat` borné et publie `job.heartbeat`.
-Pas de fake data. La table `jobs` persistée arrivera dans une tranche suivante
-de la Phase 13 ; le heartbeat in-process est observable via le bus et `/health`.
-Un échec de publish rend `/health/ready` en 503 (`lastErrorCode`). La table `jobs`
-persiste les heartbeats (SQLite + PostgreSQL, migration `0005`).
+Pas de fake data. Un échec de publish rend `/health/ready` en 503 (`lastErrorCode`).
+La table `jobs` persiste les heartbeats (SQLite + PostgreSQL, migration `0005`).
 
 ### 4. Filtrage serveur
 
