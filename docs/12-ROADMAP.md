@@ -258,16 +258,21 @@ Livrables :
 
 ## Phase 14 — Backup/Restore
 
-Statut : IN PROGRESS.
+Statut : COMPLETE / merged (PR #25), tag `phase-14-complete`.
 
 Livrables :
 
-- export JSON + manifeste versionné + SHA-256 (`AC-015`) ;
+- export JSON + manifeste versionné `homelab-dashboard-backup`
+  (`formatVersion` 1, `schemaVersion` 5) + SHA-256 (`AC-015`) ;
 - validation default-deny / preview sans mutation (`AC-016`) ;
-- backup pré-restore puis restore transactionnel ;
-- secrets conservés chiffrés ;
-- permission `backup.manage` ;
+- backup pré-restore écrit sur disque avant mutation, puis restore
+  transactionnel ;
+- secrets conservés chiffrés (ciphertext / iv / authTag / keyVersion) ;
+- permission unique `backup.manage` ;
 - compatibilité : schéma 5 uniquement.
+
+Hors scope : migration `0006`, OIDC, group mapping, audit logs, session
+management (Phase 15).
 
 ## Phase 15 — SSO + Admin avancé
 

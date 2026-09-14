@@ -359,7 +359,7 @@ utilisateur, et backpressure (`bufferedAmount`). Le client tente WS puis SSE. Le
 
 # État Phase 14
 
-IN PROGRESS. `@dashboard/backup` valide une archive JSON non fiable (vocabulaire fermé,
+COMPLETE. `@dashboard/backup` valide une archive JSON non fiable (vocabulaire fermé,
 secrets uniquement chiffrés, hash SHA-256). `packages/db` dump/replace en transaction
 sans migration `0006`. tRPC `backup.export` / `backup.validate` / `backup.restore`
 exige `backup.manage`. Pipeline : export → manifeste + hashes → preview sans mutation →
