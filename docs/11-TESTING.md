@@ -232,3 +232,12 @@ Tests ciblés : CSP/headers, tRPC GET 405, rate limit restore après RBAC, nonce
 absent / replay / clock skew plafonné, groupes OIDC malformés default-deny, origine
 realtime, Docker `exec`/`attach` en POST, archive backup trop grosse. L'E2E
 `security-headers.spec.ts` lit les headers de `/login`.
+
+## 17. Couverture Phase 17
+
+Tests unitaires : `assertRuntimeProductionEnv`, contrats `/health/live` et
+`/health/ready` (503 sans fuite d'URL), migrate CLI refuse SQLite.
+Upgrade AC-024 : SQLite et PostgreSQL seedent un board avant `0006` et
+vérifient la persistance. `scripts/check-production-compose.mjs` refuse
+`docker.sock`, `privileged`, et les ports postgres/redis. `pnpm test:production`
+exerce Compose + health + onboarding HTTP + DB down. Backup v5/v6/v7 inchangé.
