@@ -157,6 +157,11 @@ séries, file `totalCount`, santé erreurs/avertissements. Même
 `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Sonarr. Titres
 et chemins ne sont pas exposés.
 
+Phase 18.5 ajoute `radarr-overview` (`publicSafe=false`) : version, nombre de
+films, file `totalCount`, santé erreurs/avertissements. Même
+`router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Radarr. Titres
+et chemins ne sont pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -172,7 +177,8 @@ et chemins ne sont pas exposés.
 - Proxmox Resources (`proxmox-resources`, Phase 18) ;
 - Grafana Status (`grafana-status`, Phase 18.2) ;
 - ntfy Status (`ntfy-status`, Phase 18.3) ;
-- Sonarr Overview (`sonarr-overview`, Phase 18.4).
+- Sonarr Overview (`sonarr-overview`, Phase 18.4) ;
+- Radarr Overview (`radarr-overview`, Phase 18.5).
 
 ## 11. Custom API widget
 

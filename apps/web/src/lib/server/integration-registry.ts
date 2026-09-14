@@ -7,6 +7,7 @@ import { jellyfinIntegrationDefinition } from "@dashboard/jellyfin";
 import { ntfyIntegrationDefinition } from "@dashboard/ntfy";
 import { prometheusIntegrationDefinition } from "@dashboard/prometheus";
 import { proxmoxIntegrationDefinition } from "@dashboard/proxmox";
+import { radarrIntegrationDefinition } from "@dashboard/radarr";
 import { sonarrIntegrationDefinition } from "@dashboard/sonarr";
 import { synologyIntegrationDefinition } from "@dashboard/synology";
 import { uptimeKumaIntegrationDefinition } from "@dashboard/uptime-kuma";
@@ -21,6 +22,7 @@ export function createApplicationIntegrationRegistry() {
     .register(ntfyIntegrationDefinition)
     .register(prometheusIntegrationDefinition)
     .register(proxmoxIntegrationDefinition)
+    .register(radarrIntegrationDefinition)
     .register(sonarrIntegrationDefinition)
     .register(synologyIntegrationDefinition)
     .register(uptimeKumaIntegrationDefinition)

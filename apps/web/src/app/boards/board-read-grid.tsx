@@ -8,6 +8,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
 } from "@dashboard/widgets";
@@ -27,6 +28,7 @@ export function BoardReadGrid({
   proxmoxViews = {},
   grafanaViews = {},
   ntfyViews = {},
+  radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
 }: {
@@ -42,6 +44,7 @@ export function BoardReadGrid({
   proxmoxViews?: Record<string, ProxmoxResourcesView>;
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
+  radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
 }) {
@@ -84,6 +87,7 @@ export function BoardReadGrid({
                 {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                 {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                 {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
+                {...(radarrViews[entry.id] ? { radarrView: radarrViews[entry.id] } : {})}
                 {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
               />
             ) : null}

@@ -46,6 +46,7 @@ import {
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
 import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
+import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
 import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
@@ -105,6 +106,7 @@ export interface ApiContext {
   proxmox: ProxmoxService;
   grafana: GrafanaService;
   ntfy: NtfyService;
+  radarr: RadarrService;
   sonarr: SonarrService;
   serviceStatus: ServiceStatusService;
   runtime: RuntimeStatusService;
@@ -783,6 +785,29 @@ export const ntfyRouter = t.router({
       ),
   }),
 });
+export const radarrRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.radarr.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.radarr.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(radarrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.radarr.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(radarrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.radarr.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(radarrIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.radarr.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const sonarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.sonarr.permissions(ctx.actor)),
   integration: t.router({
@@ -1115,6 +1140,7 @@ export const dashboardRouter = t.router({
   proxmox: proxmoxRouter,
   grafana: grafanaRouter,
   ntfy: ntfyRouter,
+  radarr: radarrRouter,
   sonarr: sonarrRouter,
   serviceStatus: serviceStatusRouter,
   runtime: runtimeRouter,

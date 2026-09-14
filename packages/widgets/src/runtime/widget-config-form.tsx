@@ -8,6 +8,7 @@ import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
 import type { GrafanaStatusDraftConfig } from "../grafana-status";
 import type { NtfyStatusDraftConfig } from "../ntfy-status";
 import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
+import type { RadarrOverviewDraftConfig } from "../radarr-overview";
 import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
 import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
@@ -21,6 +22,7 @@ import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./promet
 import { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
 import { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 import { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
+import { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
@@ -37,6 +39,7 @@ export function WidgetConfigForm({
   prometheusIntegrations,
   grafanaIntegrations,
   ntfyIntegrations,
+  radarrIntegrations,
   sonarrIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
@@ -53,6 +56,7 @@ export function WidgetConfigForm({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
@@ -124,6 +128,15 @@ export function WidgetConfigForm({
           config={config as NtfyStatusDraftConfig}
           onChange={onChange}
           integrations={ntfyIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "radarr-overview":
+      return (
+        <RadarrOverviewForm
+          config={config as RadarrOverviewDraftConfig}
+          onChange={onChange}
+          integrations={radarrIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

@@ -16,6 +16,8 @@ export { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-stat
 export { GrafanaStatusWidget } from "./grafana-status-widget";
 export { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 export { NtfyStatusWidget } from "./ntfy-status-widget";
+export { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
+export { RadarrOverviewWidget } from "./radarr-overview-widget";
 export { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 export { SonarrOverviewWidget } from "./sonarr-overview-widget";
 export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";

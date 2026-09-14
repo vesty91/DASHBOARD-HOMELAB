@@ -8,6 +8,7 @@ import { prometheusMetricContract } from "./prometheus-metric";
 import { grafanaStatusContract } from "./grafana-status";
 import { ntfyStatusContract } from "./ntfy-status";
 import { proxmoxResourcesContract } from "./proxmox-resources";
+import { radarrOverviewContract } from "./radarr-overview";
 import { sonarrOverviewContract } from "./sonarr-overview";
 import { serviceStatusContract } from "./service-status";
 import { uptimeKumaStatusContract } from "./uptime-kuma-status";
@@ -25,6 +26,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(jellyfinSessionsContract)
     .register(prometheusMetricContract)
     .register(proxmoxResourcesContract)
+    .register(radarrOverviewContract)
     .register(sonarrOverviewContract)
     .register(serviceStatusContract)
     .register(uptimeKumaStatusContract)

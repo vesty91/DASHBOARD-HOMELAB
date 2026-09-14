@@ -136,6 +136,7 @@ async function toDto(
       record.type === "proxmox" ||
       record.type === "grafana" ||
       record.type === "ntfy" ||
+      record.type === "radarr" ||
       record.type === "sonarr") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {

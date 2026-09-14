@@ -27,6 +27,7 @@ import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
+import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
 
@@ -309,6 +310,7 @@ export interface ServiceStatusRuntimeDeps {
   proxmox: ProxmoxService;
   grafana: GrafanaService;
   ntfy: NtfyService;
+  radarr: RadarrService;
   sonarr: SonarrService;
   coalescer?: ServiceStatusCoalescer;
 }
@@ -509,6 +511,27 @@ export function createDashboardServiceStatusService(
           integrationId,
           status: health?.healthy === false ? "down" : mapOverviewStatus(overview.status),
           detail: stats ? `${stats.messages} messages` : "ntfy indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "radarr",
+      canRead: (actor) => deps.radarr.permissions(actor).canRead,
+      list: (actor) => deps.radarr.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.radarr.getOverview(integrationId, actor);
+        const movie = overview.movie.data;
+        const health = overview.health.data;
+        return freezeItem({
+          id: `radarr:${integrationId}`,
+          name,
+          sourceType: "radarr",
+          integrationId,
+          status: (health?.error ?? 0) > 0 ? "down" : mapOverviewStatus(overview.status),
+          detail: movie
+            ? `${movie.count} films${health ? ` · ${health.error} erreurs` : ""}`
+            : "Radarr indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

@@ -40,6 +40,12 @@ import {
   MemoryNtfyRefreshRateLimiter,
 } from "@dashboard/ntfy";
 import {
+  createRadarrService,
+  MemoryRadarrOverviewCoalescer,
+  MemoryRadarrRefreshFence,
+  MemoryRadarrRefreshRateLimiter,
+} from "@dashboard/radarr";
+import {
   createSonarrService,
   MemorySonarrOverviewCoalescer,
   MemorySonarrRefreshFence,
@@ -133,6 +139,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     ntfyRefreshRateLimiter: MemoryNtfyRefreshRateLimiter;
     ntfyRefreshFence: MemoryNtfyRefreshFence;
     ntfyOverviewCoalescer: MemoryNtfyOverviewCoalescer;
+    radarrRefreshRateLimiter: MemoryRadarrRefreshRateLimiter;
+    radarrRefreshFence: MemoryRadarrRefreshFence;
+    radarrOverviewCoalescer: MemoryRadarrOverviewCoalescer;
     sonarrRefreshRateLimiter: MemorySonarrRefreshRateLimiter;
     sonarrRefreshFence: MemorySonarrRefreshFence;
     sonarrOverviewCoalescer: MemorySonarrOverviewCoalescer;
@@ -270,6 +279,9 @@ function integrationRuntime() {
     ntfyRefreshRateLimiter: new MemoryNtfyRefreshRateLimiter(),
     ntfyRefreshFence: new MemoryNtfyRefreshFence(),
     ntfyOverviewCoalescer: new MemoryNtfyOverviewCoalescer(),
+    radarrRefreshRateLimiter: new MemoryRadarrRefreshRateLimiter(),
+    radarrRefreshFence: new MemoryRadarrRefreshFence(),
+    radarrOverviewCoalescer: new MemoryRadarrOverviewCoalescer(),
     sonarrRefreshRateLimiter: new MemorySonarrRefreshRateLimiter(),
     sonarrRefreshFence: new MemorySonarrRefreshFence(),
     sonarrOverviewCoalescer: new MemorySonarrOverviewCoalescer(),
@@ -386,6 +398,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.ntfyOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const radarr = createRadarrService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.radarrRefreshRateLimiter,
+    refreshFence: runtime.radarrRefreshFence,
+    overviewCoalescer: runtime.radarrOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   const sonarr = createSonarrService({
     store: database.integrationStore,
     registry: runtime.registry,
@@ -405,6 +427,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(proxmox, "proxmox");
   attachDataChangedEvents(grafana, "grafana");
   attachDataChangedEvents(ntfy, "ntfy");
+  attachDataChangedEvents(radarr, "radarr");
   attachDataChangedEvents(sonarr, "sonarr");
   return {
     actor: { userId, subject },
@@ -432,6 +455,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     proxmox,
     grafana,
     ntfy,
+    radarr,
     sonarr,
     serviceStatus: createDashboardServiceStatusService({
       apps,
@@ -445,6 +469,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       proxmox,
       grafana,
       ntfy,
+      radarr,
       sonarr,
       coalescer: runtime.serviceStatusCoalescer,
     }),

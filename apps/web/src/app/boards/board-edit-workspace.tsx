@@ -12,6 +12,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
   WidgetCatalogEntry,
@@ -25,6 +26,7 @@ import type {
   UptimeKumaIntegrationOption,
   GrafanaIntegrationOption,
   NtfyIntegrationOption,
+  RadarrIntegrationOption,
   SonarrIntegrationOption,
   ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
@@ -54,6 +56,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations = [],
   ntfyViews = {},
   ntfyIntegrations = [],
+  radarrViews = {},
+  radarrIntegrations = [],
   sonarrViews = {},
   sonarrIntegrations = [],
   serviceStatusViews = {},
@@ -79,6 +83,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyViews?: Record<string, NtfyStatusView>;
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  radarrViews?: Record<string, RadarrOverviewView>;
+  radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
@@ -192,6 +198,8 @@ export function BoardEditWorkspace({
         grafanaIntegrations={grafanaIntegrations}
         ntfyViews={ntfyViews}
         ntfyIntegrations={ntfyIntegrations}
+        radarrViews={radarrViews}
+        radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}
         sonarrIntegrations={sonarrIntegrations}
         serviceStatusViews={serviceStatusViews}

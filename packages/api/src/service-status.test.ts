@@ -67,6 +67,7 @@ describe("service status collectors", () => {
       proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const result = await service.list(
@@ -120,6 +121,7 @@ describe("service status collectors", () => {
       proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const result = await service.list({}, actor(["integration.use", "docker.read", "app.read"]));
@@ -174,6 +176,7 @@ describe("service status collectors", () => {
       proxmox: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
     const listed = await service.list({}, actor(["app.read"]));

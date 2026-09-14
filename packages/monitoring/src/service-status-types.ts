@@ -21,6 +21,7 @@ export const SERVICE_SOURCE_TYPES = [
   "proxmox",
   "grafana",
   "ntfy",
+  "radarr",
   "sonarr",
 ] as const;
 

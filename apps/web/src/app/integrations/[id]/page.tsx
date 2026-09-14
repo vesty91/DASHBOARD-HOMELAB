@@ -15,6 +15,11 @@ import type {
 } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyOverview, NtfySectionReason } from "@dashboard/ntfy";
 import type {
+  RadarrIntegrationMetadata,
+  RadarrOverview,
+  RadarrSectionReason,
+} from "@dashboard/radarr";
+import type {
   SonarrIntegrationMetadata,
   SonarrOverview,
   SonarrSectionReason,
@@ -64,6 +69,8 @@ import { grafanaUserError } from "../grafana-error";
 import { GrafanaRefreshButton } from "../grafana-refresh-button";
 import { ntfyUserError } from "../ntfy-error";
 import { NtfyRefreshButton } from "../ntfy-refresh-button";
+import { radarrUserError } from "../radarr-error";
+import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
 import { SonarrRefreshButton } from "../sonarr-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
@@ -98,6 +105,7 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "proxmox" ||
     integration.type === "grafana" ||
     integration.type === "ntfy" ||
+    integration.type === "radarr" ||
     integration.type === "sonarr"
   )
     redirect("/forbidden");
@@ -1551,6 +1559,153 @@ async function NtfyOverviewPanel({
   );
 }
 
+function radarrReasonLabel(reason: RadarrSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Radarr indisponible.";
+    case "permission-denied":
+      return "Permission Radarr insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Radarr.";
+    case "invalid-response":
+      return "Réponse Radarr invalide.";
+    case "unauthorized":
+      return "Clé API Radarr invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Radarr.";
+    case "dns":
+      return "Le serveur Radarr est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Radarr.";
+    case "unreachable":
+      return "Le serveur Radarr est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Radarr indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function RadarrOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: RadarrOverview | null = null;
+  try {
+    overview = await caller.radarr.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = radarrUserError(caught);
+  }
+  const system = overview?.system.data;
+  const health = overview?.health.data;
+  const queue = overview?.queue.data;
+  const movie = overview?.movie.data;
+  const diskSpace = overview?.diskSpace.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Radarr partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Aucun titre de film, aucun chemin, aucune mutation. Lecture seule.
+          </p>
+          <section className="radarr-system">
+            <h2>Système</h2>
+            {overview.system.status === "unavailable" ? (
+              <Alert tone="warning">{radarrReasonLabel(overview.system.reason)}</Alert>
+            ) : null}
+            <p>Version {system?.version ?? "Indisponible"}</p>
+            {system?.appName ? <p className="ui-muted">{system.appName}</p> : null}
+          </section>
+          <section className="radarr-movie">
+            <h2>Films</h2>
+            {overview.movie.status === "unavailable" ? (
+              <Alert tone="warning">{radarrReasonLabel(overview.movie.reason)}</Alert>
+            ) : null}
+            <p>
+              {movie
+                ? `${movie.count} films${movie.truncated ? " · liste tronquée" : ""}`
+                : "Films indisponibles."}
+            </p>
+          </section>
+          <section className="radarr-queue">
+            <h2>File d&apos;attente</h2>
+            {overview.queue.status === "unavailable" ? (
+              <Alert tone="warning">{radarrReasonLabel(overview.queue.reason)}</Alert>
+            ) : null}
+            <p>
+              {queue?.totalCount !== undefined
+                ? `File ${queue.totalCount}`
+                : "File d'attente indisponible."}
+            </p>
+          </section>
+          <section className="radarr-health">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{radarrReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>
+              {health
+                ? `${health.error} erreurs · ${health.warning} avertissements`
+                : "Santé indisponible."}
+            </p>
+          </section>
+          <section className="radarr-diskspace">
+            <h2>Espace disque</h2>
+            {overview.diskSpace.status === "unavailable" ? (
+              <Alert tone="warning">{radarrReasonLabel(overview.diskSpace.reason)}</Alert>
+            ) : null}
+            <p>
+              {diskSpace
+                ? `${diskSpace.freeBytes} octets libres / ${diskSpace.totalBytes} octets`
+                : "Espace disque indisponible."}
+            </p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function RadarrIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: RadarrIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Radarr" />
+        <Alert tone="warning">Cette intégration Radarr est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Radarr" />
+      <RadarrRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Radarr…</p>}>
+        <RadarrOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function sonarrReasonLabel(reason: SonarrSectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -1893,6 +2048,8 @@ export default async function IntegrationDetailPage({
         return <GrafanaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "ntfy":
         return <NtfyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "radarr":
+        return <RadarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "sonarr":
         return <SonarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":

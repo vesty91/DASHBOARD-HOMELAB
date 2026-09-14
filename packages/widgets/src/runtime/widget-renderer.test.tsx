@@ -163,6 +163,35 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Débit 0.5 msg/s")).toBeTruthy();
   });
 
+  it("renders a Radarr overview widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "radarr-1",
+          widgetType: "radarr-overview",
+          widgetVersion: 1,
+          title: "Radarr",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        radarrView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          version: "5.26.2.10099",
+          movieCount: 12,
+          queueTotalCount: 4,
+          healthErrors: 1,
+          healthWarnings: 2,
+        }}
+      />,
+    );
+    expect(screen.getByText("Version 5.26.2.10099")).toBeTruthy();
+    expect(screen.getByText("12 films")).toBeTruthy();
+    expect(screen.getByText("File 4")).toBeTruthy();
+    expect(screen.getByText("Santé 1 erreurs · 2 avertissements")).toBeTruthy();
+  });
+
   it("renders a Sonarr overview widget from a ready view", () => {
     render(
       <WidgetRenderer

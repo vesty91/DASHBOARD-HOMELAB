@@ -13,6 +13,7 @@ import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../resolve-ntfy-status";
+import { resolveRadarrOverviewViews } from "../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
@@ -47,6 +48,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     proxmoxViews,
     grafanaViews,
     ntfyViews,
+    radarrViews,
     sonarrViews,
     serviceStatusViews,
   ] = await Promise.all([
@@ -60,6 +62,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveProxmoxResourcesViews(snapshot, caller),
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
+    resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
@@ -90,6 +93,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         proxmoxViews={proxmoxViews}
         grafanaViews={grafanaViews}
         ntfyViews={ntfyViews}
+        radarrViews={radarrViews}
         sonarrViews={sonarrViews}
         serviceStatusViews={serviceStatusViews}
       />
