@@ -38,6 +38,18 @@ export type {
   WidgetSizing,
 } from "./types";
 export { parseHttpUrl } from "./urls";
+export type {
+  GrafanaStatusConfig,
+  GrafanaStatusDraftConfig,
+  GrafanaStatusView,
+} from "./grafana-status";
+export {
+  GRAFANA_STATUS_UNSET_INTEGRATION_ID,
+  grafanaStatusConfigSchema,
+  grafanaStatusContract,
+  grafanaStatusDefaultConfig,
+  grafanaStatusDraftConfig,
+} from "./grafana-status";
 export type { BeszelHostsConfig, BeszelHostsDraftConfig, BeszelHostsView } from "./beszel-hosts";
 export {
   BESZEL_HOSTS_UNSET_INTEGRATION_ID,

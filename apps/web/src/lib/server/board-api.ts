@@ -28,6 +28,12 @@ import {
   MemoryUptimeKumaRefreshRateLimiter,
 } from "@dashboard/uptime-kuma";
 import {
+  createGrafanaService,
+  MemoryGrafanaOverviewCoalescer,
+  MemoryGrafanaRefreshFence,
+  MemoryGrafanaRefreshRateLimiter,
+} from "@dashboard/grafana";
+import {
   createProxmoxService,
   MemoryProxmoxOverviewCoalescer,
   MemoryProxmoxRefreshFence,
@@ -109,6 +115,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     proxmoxRefreshRateLimiter: MemoryProxmoxRefreshRateLimiter;
     proxmoxRefreshFence: MemoryProxmoxRefreshFence;
     proxmoxOverviewCoalescer: MemoryProxmoxOverviewCoalescer;
+    grafanaRefreshRateLimiter: MemoryGrafanaRefreshRateLimiter;
+    grafanaRefreshFence: MemoryGrafanaRefreshFence;
+    grafanaOverviewCoalescer: MemoryGrafanaOverviewCoalescer;
     serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
@@ -237,6 +246,9 @@ function integrationRuntime() {
     proxmoxRefreshRateLimiter: new MemoryProxmoxRefreshRateLimiter(),
     proxmoxRefreshFence: new MemoryProxmoxRefreshFence(),
     proxmoxOverviewCoalescer: new MemoryProxmoxOverviewCoalescer(),
+    grafanaRefreshRateLimiter: new MemoryGrafanaRefreshRateLimiter(),
+    grafanaRefreshFence: new MemoryGrafanaRefreshFence(),
+    grafanaOverviewCoalescer: new MemoryGrafanaOverviewCoalescer(),
     serviceStatusCoalescer: new MemoryServiceStatusCoalescer(),
   });
 }
@@ -330,6 +342,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.proxmoxOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const grafana = createGrafanaService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.grafanaRefreshRateLimiter,
+    refreshFence: runtime.grafanaRefreshFence,
+    overviewCoalescer: runtime.grafanaOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   attachDataChangedEvents(synology, "synology");
   attachDataChangedEvents(jellyfin, "jellyfin");
   attachDataChangedEvents(immich, "immich");
@@ -337,6 +359,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(prometheus, "prometheus");
   attachDataChangedEvents(uptimeKuma, "uptime-kuma");
   attachDataChangedEvents(proxmox, "proxmox");
+  attachDataChangedEvents(grafana, "grafana");
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -361,6 +384,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     prometheus,
     uptimeKuma,
     proxmox,
+    grafana,
     serviceStatus: createDashboardServiceStatusService({
       apps,
       docker,
@@ -371,6 +395,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       prometheus,
       uptimeKuma,
       proxmox,
+      grafana,
       coalescer: runtime.serviceStatusCoalescer,
     }),
     runtime: createRuntimeStatusService(

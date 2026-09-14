@@ -12,6 +12,8 @@ export { WidgetStateView } from "./widget-state-view";
 export { WidgetConfigForm } from "./widget-config-form";
 export { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
 export { BeszelHostsWidget } from "./beszel-hosts-widget";
+export { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
+export { GrafanaStatusWidget } from "./grafana-status-widget";
 export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 export { ImmichStatsWidget } from "./immich-stats-widget";
 export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";

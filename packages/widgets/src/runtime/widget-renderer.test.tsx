@@ -108,6 +108,34 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("CPU 25 %")).toBeTruthy();
   });
 
+  it("renders a Grafana status widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "gf-1",
+          widgetType: "grafana-status",
+          widgetVersion: 1,
+          title: "Grafana",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        grafanaView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          version: "11.2.0",
+          database: "ok",
+          dashboardCount: 12,
+          alertsFiring: 2,
+          alertsPending: 1,
+        }}
+      />,
+    );
+    expect(screen.getByText("Santé OK · 11.2.0")).toBeTruthy();
+    expect(screen.getByText("12 tableaux de bord")).toBeTruthy();
+    expect(screen.getByText("Alertes 2 firing · 1 pending")).toBeTruthy();
+  });
+
   it("renders a Prometheus metric widget from a ready view", () => {
     render(
       <WidgetRenderer

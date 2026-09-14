@@ -37,6 +37,7 @@ export const PERMISSIONS = [
   "prometheus.read",
   "uptime-kuma.read",
   "proxmox.read",
+  "grafana.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

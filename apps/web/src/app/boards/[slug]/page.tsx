@@ -11,6 +11,7 @@ import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../resolve-prometheus-metric";
 import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
+import { resolveGrafanaStatusViews } from "../resolve-grafana-status";
 import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
@@ -42,6 +43,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     prometheusViews,
     uptimeKumaViews,
     proxmoxViews,
+    grafanaViews,
     serviceStatusViews,
   ] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
@@ -52,6 +54,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolvePrometheusMetricViews(snapshot, caller),
     resolveUptimeKumaStatusViews(snapshot, caller),
     resolveProxmoxResourcesViews(snapshot, caller),
+    resolveGrafanaStatusViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   return (
@@ -79,6 +82,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         prometheusViews={prometheusViews}
         uptimeKumaViews={uptimeKumaViews}
         proxmoxViews={proxmoxViews}
+        grafanaViews={grafanaViews}
         serviceStatusViews={serviceStatusViews}
       />
     </PageContainer>

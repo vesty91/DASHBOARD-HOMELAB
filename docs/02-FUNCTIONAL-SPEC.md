@@ -331,6 +331,21 @@ Lecture :
 Pas de start/stop/reboot/snapshot/migration. Les noms de VM/CT ne sont pas exposés
 dans le widget.
 
+### Grafana
+
+Phase 18.2 : lecture via l'API officielle (jeton de compte de service Bearer).
+
+Lecture :
+
+- santé / version / état de la base ;
+- nombre de tableaux de bord (`search` type `dash-db`) ;
+- nombre de dossiers ;
+- compteurs d'alertes (firing / pending / inactive / other) ;
+- nombre et types de sources de données.
+
+Pas d'iframe, pas de proxy, pas de `/api/ds/query`. Titres, URLs, noms de sources
+et payloads d'alertes ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

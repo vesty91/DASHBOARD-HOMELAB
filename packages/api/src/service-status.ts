@@ -25,6 +25,7 @@ import { hasPermission } from "@dashboard/permissions";
 import type { PrometheusService } from "@dashboard/prometheus";
 import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
+import type { GrafanaService } from "@dashboard/grafana";
 import type { ProxmoxService } from "@dashboard/proxmox";
 
 const APP_PAGE_SIZE = 100;
@@ -304,6 +305,7 @@ export interface ServiceStatusRuntimeDeps {
   prometheus: PrometheusService;
   uptimeKuma: UptimeKumaService;
   proxmox: ProxmoxService;
+  grafana: GrafanaService;
   coalescer?: ServiceStatusCoalescer;
 }
 
@@ -462,6 +464,28 @@ export function createDashboardServiceStatusService(
           detail: guests
             ? `${guests.vmRunning}/${guests.vmCount} VM · ${guests.lxcRunning}/${guests.lxcCount} CT`
             : "Cluster indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "grafana",
+      canRead: (actor) => deps.grafana.permissions(actor).canRead,
+      list: (actor) => deps.grafana.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.grafana.getOverview(integrationId, actor);
+        const health = overview.health.data;
+        const dashboards = overview.dashboards.data;
+        const alerts = overview.alerts.data;
+        return freezeItem({
+          id: `grafana:${integrationId}`,
+          name,
+          sourceType: "grafana",
+          integrationId,
+          status: health?.database === "failing" ? "down" : mapOverviewStatus(overview.status),
+          detail: dashboards
+            ? `${dashboards.count} tableaux de bord${alerts ? ` · ${alerts.firing} firing` : ""}`
+            : "Grafana indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

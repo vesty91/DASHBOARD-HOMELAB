@@ -19,6 +19,7 @@ export const SERVICE_SOURCE_TYPES = [
   "uptime-kuma",
   "prometheus",
   "proxmox",
+  "grafana",
 ] as const;
 
 export type ServiceSourceType = (typeof SERVICE_SOURCE_TYPES)[number];

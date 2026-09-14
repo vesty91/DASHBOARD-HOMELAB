@@ -6,6 +6,7 @@ import type { BeszelHostsView } from "../beszel-hosts";
 import type { ImmichStatsView } from "../immich-stats";
 import type { JellyfinSessionsView } from "../jellyfin-sessions";
 import type { PrometheusMetricView } from "../prometheus-metric";
+import type { GrafanaStatusView } from "../grafana-status";
 import type { ProxmoxResourcesView } from "../proxmox-resources";
 import type { ServiceStatusView } from "../service-status";
 import type { UptimeKumaStatusView } from "../uptime-kuma-status";
@@ -19,6 +20,7 @@ import { BeszelHostsWidget } from "./beszel-hosts-widget";
 import { ImmichStatsWidget } from "./immich-stats-widget";
 import { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
 import { PrometheusMetricWidget } from "./prometheus-metric-widget";
+import { GrafanaStatusWidget } from "./grafana-status-widget";
 import { ProxmoxResourcesWidget } from "./proxmox-resources-widget";
 import { ServiceStatusWidget } from "./service-status-widget";
 import { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";
@@ -65,6 +67,7 @@ function ReadyWidget({
   immichView,
   beszelView,
   prometheusView,
+  grafanaView,
   proxmoxView,
   serviceStatusView,
   uptimeKumaView,
@@ -75,6 +78,7 @@ function ReadyWidget({
   immichView: ImmichStatsView | undefined;
   beszelView: BeszelHostsView | undefined;
   prometheusView: PrometheusMetricView | undefined;
+  grafanaView: GrafanaStatusView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
   serviceStatusView: ServiceStatusView | undefined;
   uptimeKumaView: UptimeKumaStatusView | undefined;
@@ -94,6 +98,8 @@ function ReadyWidget({
       return <BeszelHostsWidget view={beszelView} />;
     case "prometheus-metric":
       return <PrometheusMetricWidget view={prometheusView} />;
+    case "grafana-status":
+      return <GrafanaStatusWidget view={grafanaView} />;
     case "proxmox-resources":
       return <ProxmoxResourcesWidget view={proxmoxView} />;
     case "service-status":
@@ -112,6 +118,7 @@ export function WidgetRenderer({
   immichView,
   beszelView,
   prometheusView,
+  grafanaView,
   proxmoxView,
   serviceStatusView,
   uptimeKumaView,
@@ -122,6 +129,7 @@ export function WidgetRenderer({
   immichView?: ImmichStatsView;
   beszelView?: BeszelHostsView;
   prometheusView?: PrometheusMetricView;
+  grafanaView?: GrafanaStatusView;
   proxmoxView?: ProxmoxResourcesView;
   serviceStatusView?: ServiceStatusView;
   uptimeKumaView?: UptimeKumaStatusView;
@@ -140,6 +148,7 @@ export function WidgetRenderer({
           immichView={immichView}
           beszelView={beszelView}
           prometheusView={prometheusView}
+          grafanaView={grafanaView}
           proxmoxView={proxmoxView}
           serviceStatusView={serviceStatusView}
           uptimeKumaView={uptimeKumaView}

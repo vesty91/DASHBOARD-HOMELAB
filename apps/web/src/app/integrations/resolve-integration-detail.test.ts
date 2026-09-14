@@ -90,6 +90,15 @@ const proxmoxDenied = {
   },
 };
 
+const grafanaDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("grafana unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -107,6 +116,7 @@ describe("resolveIntegrationDetail", () => {
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -143,6 +153,7 @@ describe("resolveIntegrationDetail", () => {
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -183,6 +194,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -223,6 +235,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -230,6 +243,47 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "77777777-7777-4777-8777-777777777777",
         name: "PVE Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Grafana reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("88888888-8888-4888-8888-888888888888", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
+      grafana: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "88888888-8888-4888-8888-888888888888",
+            name: "Grafana Lab",
+            enabled: true,
+          }),
+        },
+      },
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "grafana",
+      metadata: {
+        id: "88888888-8888-4888-8888-888888888888",
+        name: "Grafana Lab",
         enabled: true,
       },
     });
@@ -263,6 +317,7 @@ describe("resolveIntegrationDetail", () => {
       },
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -299,6 +354,7 @@ describe("resolveIntegrationDetail", () => {
       prometheus: prometheusDenied,
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -383,6 +439,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      grafana: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Grafana introuvable",
+            });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -406,6 +473,7 @@ describe("resolveIntegrationDetail", () => {
         prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
         proxmox: proxmoxDenied,
+        grafana: grafanaDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -451,6 +519,10 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      grafana: {
+        permissions: async () => ({ canRead: false }),
+        integration: { get: vi.fn() },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -476,6 +548,7 @@ describe("resolveIntegrationDetail", () => {
         prometheus: prometheusDenied,
         uptimeKuma: uptimeKumaDenied,
         proxmox: proxmoxDenied,
+        grafana: grafanaDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

@@ -7,11 +7,12 @@ describe("application integration registry", () => {
     expect(createProductionIntegrationRegistry().list()).toEqual([]);
   });
 
-  it("registers Beszel, Docker, Immich, Jellyfin, Prometheus, Proxmox, Synology and Uptime Kuma in the application composition", () => {
+  it("registers Beszel, Docker, Grafana, Immich, Jellyfin, Prometheus, Proxmox, Synology and Uptime Kuma in the application composition", () => {
     const registry = createApplicationIntegrationRegistry();
     expect(registry.list().map((item) => item.id)).toEqual([
       "beszel",
       "docker",
+      "grafana",
       "immich",
       "jellyfin",
       "prometheus",
@@ -35,6 +36,9 @@ describe("application integration registry", () => {
     ]);
     expect(registry.get("uptime-kuma")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("proxmox")?.secretFields.map((field) => field.key)).toEqual(["apiToken"]);
+    expect(registry.get("grafana")?.secretFields.map((field) => field.key)).toEqual([
+      "serviceAccountToken",
+    ]);
     expect(() => registry.register(registry.get("docker")!)).toThrow(/frozen/);
   });
 });

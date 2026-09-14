@@ -142,6 +142,11 @@ Phase 18 ajoute `proxmox-resources` (`publicSafe=false`) : nœuds en ligne, VM/C
 CPU et RAM agrégés. Même `router.refresh()` 10 s ; le navigateur ne contacte jamais
 l'API Proxmox. Les noms de VM/CT ne sont pas exposés.
 
+Phase 18.2 ajoute `grafana-status` (`publicSafe=false`) : santé/version, nombre de
+tableaux de bord, alertes firing/pending. Même `router.refresh()` 10 s ; le
+navigateur ne contacte jamais l'API Grafana. Titres, URLs et payloads d'alertes
+ne sont pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -154,7 +159,8 @@ l'API Proxmox. Les noms de VM/CT ne sont pas exposés.
 - Uptime Kuma Status (`uptime-kuma-status`, Phase 12) ;
 - Prometheus Metric (`prometheus-metric`, Phase 12) ;
 - Service Status (`service-status`, Phase 12, agrégateur interne) ;
-- Proxmox Resources (`proxmox-resources`, Phase 18).
+- Proxmox Resources (`proxmox-resources`, Phase 18) ;
+- Grafana Status (`grafana-status`, Phase 18.2).
 
 ## 11. Custom API widget
 
