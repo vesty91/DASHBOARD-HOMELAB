@@ -18,6 +18,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  SonarrOverviewView,
   ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -34,6 +35,7 @@ import {
   uptimeKumaStatusDraftConfig,
   grafanaStatusDraftConfig,
   ntfyStatusDraftConfig,
+  sonarrOverviewDraftConfig,
   proxmoxResourcesDraftConfig,
 } from "@dashboard/widgets";
 import {
@@ -47,6 +49,7 @@ import {
   type UptimeKumaIntegrationOption,
   type GrafanaIntegrationOption,
   type NtfyIntegrationOption,
+  type SonarrIntegrationOption,
   type ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
@@ -83,6 +86,8 @@ function defaultConfig(widgetType: string): unknown {
       return grafanaStatusDraftConfig;
     case "ntfy-status":
       return ntfyStatusDraftConfig;
+    case "sonarr-overview":
+      return sonarrOverviewDraftConfig;
     case "proxmox-resources":
       return proxmoxResourcesDraftConfig;
     default:
@@ -112,6 +117,8 @@ export function BoardEditor({
   grafanaIntegrations = [],
   ntfyViews = {},
   ntfyIntegrations = [],
+  sonarrViews = {},
+  sonarrIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -141,6 +148,8 @@ export function BoardEditor({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyViews?: Record<string, NtfyStatusView>;
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  sonarrViews?: Record<string, SonarrOverviewView>;
+  sonarrIntegrations?: readonly SonarrIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -166,6 +175,7 @@ export function BoardEditor({
   const [pendingProxmox, setPendingProxmox] = useState(false);
   const [pendingGrafana, setPendingGrafana] = useState(false);
   const [pendingNtfy, setPendingNtfy] = useState(false);
+  const [pendingSonarr, setPendingSonarr] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -241,6 +251,8 @@ export function BoardEditor({
     setPendingUptimeKuma(false);
     setPendingProxmox(false);
     setPendingGrafana(false);
+    setPendingNtfy(false);
+    setPendingSonarr(false);
     router.refresh();
   };
 
@@ -308,7 +320,8 @@ export function BoardEditor({
     pendingUptimeKuma ||
     pendingProxmox ||
     pendingGrafana ||
-    pendingNtfy;
+    pendingNtfy ||
+    pendingSonarr;
   const pendingWidgetType = pendingJellyfin
     ? "jellyfin-sessions"
     : pendingImmich
@@ -325,7 +338,9 @@ export function BoardEditor({
                 ? "grafana-status"
                 : pendingNtfy
                   ? "ntfy-status"
-                  : "app-tile";
+                  : pendingSonarr
+                    ? "sonarr-overview"
+                    : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -342,7 +357,9 @@ export function BoardEditor({
                 ? grafanaStatusDraftConfig
                 : pendingNtfy
                   ? ntfyStatusDraftConfig
-                  : appTileDraftConfig;
+                  : pendingSonarr
+                    ? sonarrOverviewDraftConfig
+                    : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -359,7 +376,9 @@ export function BoardEditor({
                 ? grafanaIntegrations.length === 0
                 : pendingNtfy
                   ? ntfyIntegrations.length === 0
-                  : !canReadApps;
+                  : pendingSonarr
+                    ? sonarrIntegrations.length === 0
+                    : !canReadApps;
 
   return (
     <section>
@@ -408,6 +427,7 @@ export function BoardEditor({
                 proxmoxIntegrations={proxmoxIntegrations}
                 grafanaIntegrations={grafanaIntegrations}
                 ntfyIntegrations={ntfyIntegrations}
+                sonarrIntegrations={sonarrIntegrations}
               />
               <button
                 type="submit"
@@ -512,6 +532,11 @@ export function BoardEditor({
                           setPendingNtfy(true);
                           return;
                         }
+                        if (entry.id === "sonarr-overview") {
+                          setDraftConfig(sonarrOverviewDraftConfig);
+                          setPendingSonarr(true);
+                          return;
+                        }
                         void addWidget(entry.id, defaultConfig(entry.id));
                       }}
                     >
@@ -568,6 +593,7 @@ export function BoardEditor({
                     {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                     {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                     {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
+                    {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -623,6 +649,7 @@ export function BoardEditor({
             proxmoxIntegrations={proxmoxIntegrations}
             grafanaIntegrations={grafanaIntegrations}
             ntfyIntegrations={ntfyIntegrations}
+            sonarrIntegrations={sonarrIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

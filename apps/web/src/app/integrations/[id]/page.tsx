@@ -15,6 +15,11 @@ import type {
 } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyOverview, NtfySectionReason } from "@dashboard/ntfy";
 import type {
+  SonarrIntegrationMetadata,
+  SonarrOverview,
+  SonarrSectionReason,
+} from "@dashboard/sonarr";
+import type {
   ProxmoxIntegrationMetadata,
   ProxmoxNodeStatus,
   ProxmoxOverview,
@@ -59,6 +64,8 @@ import { grafanaUserError } from "../grafana-error";
 import { GrafanaRefreshButton } from "../grafana-refresh-button";
 import { ntfyUserError } from "../ntfy-error";
 import { NtfyRefreshButton } from "../ntfy-refresh-button";
+import { sonarrUserError } from "../sonarr-error";
+import { SonarrRefreshButton } from "../sonarr-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
 import { ProxmoxRefreshButton } from "../proxmox-refresh-button";
 import { immichUserError } from "../immich-error";
@@ -90,7 +97,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "uptime-kuma" ||
     integration.type === "proxmox" ||
     integration.type === "grafana" ||
-    integration.type === "ntfy"
+    integration.type === "ntfy" ||
+    integration.type === "sonarr"
   )
     redirect("/forbidden");
   return (
@@ -1543,6 +1551,154 @@ async function NtfyOverviewPanel({
   );
 }
 
+function sonarrReasonLabel(reason: SonarrSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Sonarr indisponible.";
+    case "permission-denied":
+      return "Permission Sonarr insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Sonarr.";
+    case "invalid-response":
+      return "Réponse Sonarr invalide.";
+    case "unauthorized":
+      return "Clé API Sonarr invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Sonarr.";
+    case "dns":
+      return "Le serveur Sonarr est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Sonarr.";
+    case "unreachable":
+      return "Le serveur Sonarr est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Sonarr indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function SonarrOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: SonarrOverview | null = null;
+  try {
+    overview = await caller.sonarr.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = sonarrUserError(caught);
+  }
+  const system = overview?.system.data;
+  const health = overview?.health.data;
+  const queue = overview?.queue.data;
+  const series = overview?.series.data;
+  const diskSpace = overview?.diskSpace.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Sonarr partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Aucun titre de série, aucun chemin, aucune mutation. Lecture
+            seule.
+          </p>
+          <section className="sonarr-system">
+            <h2>Système</h2>
+            {overview.system.status === "unavailable" ? (
+              <Alert tone="warning">{sonarrReasonLabel(overview.system.reason)}</Alert>
+            ) : null}
+            <p>Version {system?.version ?? "Indisponible"}</p>
+            {system?.appName ? <p className="ui-muted">{system.appName}</p> : null}
+          </section>
+          <section className="sonarr-series">
+            <h2>Séries</h2>
+            {overview.series.status === "unavailable" ? (
+              <Alert tone="warning">{sonarrReasonLabel(overview.series.reason)}</Alert>
+            ) : null}
+            <p>
+              {series
+                ? `${series.count} séries${series.truncated ? " · liste tronquée" : ""}`
+                : "Séries indisponibles."}
+            </p>
+          </section>
+          <section className="sonarr-queue">
+            <h2>File d&apos;attente</h2>
+            {overview.queue.status === "unavailable" ? (
+              <Alert tone="warning">{sonarrReasonLabel(overview.queue.reason)}</Alert>
+            ) : null}
+            <p>
+              {queue?.totalCount !== undefined
+                ? `File ${queue.totalCount}`
+                : "File d'attente indisponible."}
+            </p>
+          </section>
+          <section className="sonarr-health">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{sonarrReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>
+              {health
+                ? `${health.error} erreurs · ${health.warning} avertissements`
+                : "Santé indisponible."}
+            </p>
+          </section>
+          <section className="sonarr-diskspace">
+            <h2>Espace disque</h2>
+            {overview.diskSpace.status === "unavailable" ? (
+              <Alert tone="warning">{sonarrReasonLabel(overview.diskSpace.reason)}</Alert>
+            ) : null}
+            <p>
+              {diskSpace
+                ? `${diskSpace.freeBytes} octets libres / ${diskSpace.totalBytes} octets`
+                : "Espace disque indisponible."}
+            </p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function SonarrIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: SonarrIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Sonarr" />
+        <Alert tone="warning">Cette intégration Sonarr est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Sonarr" />
+      <SonarrRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Sonarr…</p>}>
+        <SonarrOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 async function NtfyIntegrationDetail({
   id,
   metadata,
@@ -1737,6 +1893,8 @@ export default async function IntegrationDetailPage({
         return <GrafanaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "ntfy":
         return <NtfyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "sonarr":
+        return <SonarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

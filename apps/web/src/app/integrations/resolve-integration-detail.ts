@@ -12,6 +12,7 @@ import type {
 } from "@dashboard/uptime-kuma";
 import type { GrafanaIntegrationMetadata, GrafanaPermissionsView } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyPermissionsView } from "@dashboard/ntfy";
+import type { SonarrIntegrationMetadata, SonarrPermissionsView } from "@dashboard/sonarr";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
@@ -36,6 +37,7 @@ export type IntegrationDetailResolution =
   | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
   | { kind: "grafana"; metadata: GrafanaIntegrationMetadata }
   | { kind: "ntfy"; metadata: NtfyIntegrationMetadata }
+  | { kind: "sonarr"; metadata: SonarrIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -97,6 +99,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<NtfyPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<NtfyIntegrationMetadata>;
+    };
+  };
+  sonarr: {
+    permissions: () => Promise<Pick<SonarrPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<SonarrIntegrationMetadata>;
     };
   };
   integration: {
@@ -194,6 +202,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.ntfy.integration.get({ integrationId: id });
       return { kind: "ntfy", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const sonarrPermissions = await caller.sonarr.permissions();
+  if (sonarrPermissions.canRead) {
+    try {
+      const metadata = await caller.sonarr.integration.get({ integrationId: id });
+      return { kind: "sonarr", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

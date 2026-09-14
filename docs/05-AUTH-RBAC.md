@@ -229,9 +229,14 @@ Phase 18.3 : lecture ntfy exige (`integration.use` ou `integration.manage`) **et
 `/integrations/[id]` ntfy : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `ntfy.read`.
 
+Phase 18.4 : lecture Sonarr exige (`integration.use` ou `integration.manage`) **et**
+`sonarr.read`. Cette conjonction suffit pour `sonarr.integration.get` et
+`/integrations/[id]` Sonarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `sonarr.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `docker.*` ni
+`grafana.read`, `ntfy.read`, `sonarr.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

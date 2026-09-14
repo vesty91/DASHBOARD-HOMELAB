@@ -46,6 +46,7 @@ import {
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
 import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
+import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
@@ -104,6 +105,7 @@ export interface ApiContext {
   proxmox: ProxmoxService;
   grafana: GrafanaService;
   ntfy: NtfyService;
+  sonarr: SonarrService;
   serviceStatus: ServiceStatusService;
   runtime: RuntimeStatusService;
   realtimeTickets: {
@@ -781,6 +783,29 @@ export const ntfyRouter = t.router({
       ),
   }),
 });
+export const sonarrRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.sonarr.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.sonarr.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(sonarrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.sonarr.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(sonarrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.sonarr.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(sonarrIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.sonarr.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 function requireAuthenticatedUser(ctx: ApiContext): string {
   if (!ctx.actor.userId || !ctx.actor.subject || ctx.actor.subject.status !== "active")
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
@@ -1090,6 +1115,7 @@ export const dashboardRouter = t.router({
   proxmox: proxmoxRouter,
   grafana: grafanaRouter,
   ntfy: ntfyRouter,
+  sonarr: sonarrRouter,
   serviceStatus: serviceStatusRouter,
   runtime: runtimeRouter,
   realtime: realtimeRouter,

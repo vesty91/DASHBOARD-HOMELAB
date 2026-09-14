@@ -12,6 +12,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  SonarrOverviewView,
   ProxmoxResourcesView,
 } from "@dashboard/widgets";
 import { BoardReadGrid } from "./board-read-grid";
@@ -31,6 +32,7 @@ export function ResponsiveBoardReadGrid({
   proxmoxViews = {},
   grafanaViews = {},
   ntfyViews = {},
+  sonarrViews = {},
   serviceStatusViews = {},
 }: {
   snapshot: BoardSnapshot;
@@ -43,6 +45,7 @@ export function ResponsiveBoardReadGrid({
   proxmoxViews?: Record<string, ProxmoxResourcesView>;
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
+  sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
 }) {
   const router = useRouter();
@@ -56,6 +59,7 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(proxmoxViews) ||
     shouldPollJellyfinBoard(grafanaViews) ||
     shouldPollJellyfinBoard(ntfyViews) ||
+    shouldPollJellyfinBoard(sonarrViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
   useBoardLiveRefresh({
     boardId: snapshot.board.id,
@@ -97,6 +101,7 @@ export function ResponsiveBoardReadGrid({
       proxmoxViews={proxmoxViews}
       grafanaViews={grafanaViews}
       ntfyViews={ntfyViews}
+      sonarrViews={sonarrViews}
       serviceStatusViews={serviceStatusViews}
     />
   );

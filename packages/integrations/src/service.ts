@@ -135,7 +135,8 @@ async function toDto(
       record.type === "uptime-kuma" ||
       record.type === "proxmox" ||
       record.type === "grafana" ||
-      record.type === "ntfy") &&
+      record.type === "ntfy" ||
+      record.type === "sonarr") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {
     const { configRevision: _configRevision, ...withoutRevision } = dto;

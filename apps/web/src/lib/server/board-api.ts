@@ -40,6 +40,12 @@ import {
   MemoryNtfyRefreshRateLimiter,
 } from "@dashboard/ntfy";
 import {
+  createSonarrService,
+  MemorySonarrOverviewCoalescer,
+  MemorySonarrRefreshFence,
+  MemorySonarrRefreshRateLimiter,
+} from "@dashboard/sonarr";
+import {
   createProxmoxService,
   MemoryProxmoxOverviewCoalescer,
   MemoryProxmoxRefreshFence,
@@ -127,6 +133,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     ntfyRefreshRateLimiter: MemoryNtfyRefreshRateLimiter;
     ntfyRefreshFence: MemoryNtfyRefreshFence;
     ntfyOverviewCoalescer: MemoryNtfyOverviewCoalescer;
+    sonarrRefreshRateLimiter: MemorySonarrRefreshRateLimiter;
+    sonarrRefreshFence: MemorySonarrRefreshFence;
+    sonarrOverviewCoalescer: MemorySonarrOverviewCoalescer;
     serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
@@ -261,6 +270,9 @@ function integrationRuntime() {
     ntfyRefreshRateLimiter: new MemoryNtfyRefreshRateLimiter(),
     ntfyRefreshFence: new MemoryNtfyRefreshFence(),
     ntfyOverviewCoalescer: new MemoryNtfyOverviewCoalescer(),
+    sonarrRefreshRateLimiter: new MemorySonarrRefreshRateLimiter(),
+    sonarrRefreshFence: new MemorySonarrRefreshFence(),
+    sonarrOverviewCoalescer: new MemorySonarrOverviewCoalescer(),
     serviceStatusCoalescer: new MemoryServiceStatusCoalescer(),
   });
 }
@@ -374,6 +386,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.ntfyOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const sonarr = createSonarrService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.sonarrRefreshRateLimiter,
+    refreshFence: runtime.sonarrRefreshFence,
+    overviewCoalescer: runtime.sonarrOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   attachDataChangedEvents(synology, "synology");
   attachDataChangedEvents(jellyfin, "jellyfin");
   attachDataChangedEvents(immich, "immich");
@@ -383,6 +405,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(proxmox, "proxmox");
   attachDataChangedEvents(grafana, "grafana");
   attachDataChangedEvents(ntfy, "ntfy");
+  attachDataChangedEvents(sonarr, "sonarr");
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -409,6 +432,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     proxmox,
     grafana,
     ntfy,
+    sonarr,
     serviceStatus: createDashboardServiceStatusService({
       apps,
       docker,
@@ -421,6 +445,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       proxmox,
       grafana,
       ntfy,
+      sonarr,
       coalescer: runtime.serviceStatusCoalescer,
     }),
     runtime: createRuntimeStatusService(

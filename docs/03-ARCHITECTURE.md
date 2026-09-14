@@ -25,6 +25,7 @@ packages/
   proxmox/
   grafana/
   ntfy/
+  sonarr/
   permissions/
   secrets/
   monitoring/

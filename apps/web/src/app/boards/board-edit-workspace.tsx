@@ -12,6 +12,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  SonarrOverviewView,
   ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -24,6 +25,7 @@ import type {
   UptimeKumaIntegrationOption,
   GrafanaIntegrationOption,
   NtfyIntegrationOption,
+  SonarrIntegrationOption,
   ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { useRouter } from "next/navigation";
@@ -52,6 +54,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations = [],
   ntfyViews = {},
   ntfyIntegrations = [],
+  sonarrViews = {},
+  sonarrIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -75,6 +79,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyViews?: Record<string, NtfyStatusView>;
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  sonarrViews?: Record<string, SonarrOverviewView>;
+  sonarrIntegrations?: readonly SonarrIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -186,6 +192,8 @@ export function BoardEditWorkspace({
         grafanaIntegrations={grafanaIntegrations}
         ntfyViews={ntfyViews}
         ntfyIntegrations={ntfyIntegrations}
+        sonarrViews={sonarrViews}
+        sonarrIntegrations={sonarrIntegrations}
         serviceStatusViews={serviceStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}

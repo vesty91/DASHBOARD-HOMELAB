@@ -359,6 +359,21 @@ Lecture :
 Pas de publication, pas d'abonnement topic, pas de `/v1/config` ni `/metrics`.
 Les noms de topics et les corps de messages ne sont pas exposés.
 
+### Sonarr
+
+Phase 18.4 : lecture via l'API officielle v3 (header `X-Api-Key` uniquement).
+
+Lecture :
+
+- version (`GET /api/v3/system/status`) ;
+- compteurs de santé (`GET /api/v3/health`) ;
+- compteurs de file (`GET /api/v3/queue/status`) ;
+- nombre de séries (`GET /api/v3/series`) ;
+- espace disque agrégé (`GET /api/v3/diskspace`).
+
+Pas de mutation, pas de `/api/v3/command`, pas de `apikey` en query. Titres de
+séries, noms d'épisodes et chemins ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

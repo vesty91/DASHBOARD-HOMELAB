@@ -163,6 +163,35 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Débit 0.5 msg/s")).toBeTruthy();
   });
 
+  it("renders a Sonarr overview widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "sonarr-1",
+          widgetType: "sonarr-overview",
+          widgetVersion: 1,
+          title: "Sonarr",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        sonarrView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          version: "4.0.14.2939",
+          seriesCount: 12,
+          queueTotalCount: 4,
+          healthErrors: 1,
+          healthWarnings: 2,
+        }}
+      />,
+    );
+    expect(screen.getByText("Version 4.0.14.2939")).toBeTruthy();
+    expect(screen.getByText("12 séries")).toBeTruthy();
+    expect(screen.getByText("File 4")).toBeTruthy();
+    expect(screen.getByText("Santé 1 erreurs · 2 avertissements")).toBeTruthy();
+  });
+
   it("renders a Prometheus metric widget from a ready view", () => {
     render(
       <WidgetRenderer

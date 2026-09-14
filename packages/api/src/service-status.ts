@@ -27,6 +27,7 @@ import type { SynologyService } from "@dashboard/synology";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
+import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
 
 const APP_PAGE_SIZE = 100;
@@ -308,6 +309,7 @@ export interface ServiceStatusRuntimeDeps {
   proxmox: ProxmoxService;
   grafana: GrafanaService;
   ntfy: NtfyService;
+  sonarr: SonarrService;
   coalescer?: ServiceStatusCoalescer;
 }
 
@@ -507,6 +509,27 @@ export function createDashboardServiceStatusService(
           integrationId,
           status: health?.healthy === false ? "down" : mapOverviewStatus(overview.status),
           detail: stats ? `${stats.messages} messages` : "ntfy indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "sonarr",
+      canRead: (actor) => deps.sonarr.permissions(actor).canRead,
+      list: (actor) => deps.sonarr.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.sonarr.getOverview(integrationId, actor);
+        const series = overview.series.data;
+        const health = overview.health.data;
+        return freezeItem({
+          id: `sonarr:${integrationId}`,
+          name,
+          sourceType: "sonarr",
+          integrationId,
+          status: (health?.error ?? 0) > 0 ? "down" : mapOverviewStatus(overview.status),
+          detail: series
+            ? `${series.count} séries${health ? ` · ${health.error} erreurs` : ""}`
+            : "Sonarr indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

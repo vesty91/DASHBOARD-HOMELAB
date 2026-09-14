@@ -24,6 +24,7 @@ const SOURCE_LABELS: Record<ServiceStatusSourceType, string> = {
   proxmox: "Proxmox",
   grafana: "Grafana",
   ntfy: "ntfy",
+  sonarr: "Sonarr",
 };
 
 function toggleValue<T>(values: readonly T[], value: T, enabled: boolean): T[] {

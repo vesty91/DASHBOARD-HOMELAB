@@ -22,6 +22,7 @@ const SOURCE_LABELS = {
   proxmox: "Proxmox",
   grafana: "Grafana",
   ntfy: "ntfy",
+  sonarr: "Sonarr",
 } as const;
 
 function formatUpdatedAt(value: string | null): string | null {

@@ -152,6 +152,11 @@ nombre de messages et débit. Même `router.refresh()` 10 s ; le navigateur ne
 contacte jamais l'API ntfy. Noms de topics et corps de messages ne sont pas
 exposés.
 
+Phase 18.4 ajoute `sonarr-overview` (`publicSafe=false`) : version, nombre de
+séries, file `totalCount`, santé erreurs/avertissements. Même
+`router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Sonarr. Titres
+et chemins ne sont pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -166,7 +171,8 @@ exposés.
 - Service Status (`service-status`, Phase 12, agrégateur interne) ;
 - Proxmox Resources (`proxmox-resources`, Phase 18) ;
 - Grafana Status (`grafana-status`, Phase 18.2) ;
-- ntfy Status (`ntfy-status`, Phase 18.3).
+- ntfy Status (`ntfy-status`, Phase 18.3) ;
+- Sonarr Overview (`sonarr-overview`, Phase 18.4).
 
 ## 11. Custom API widget
 
