@@ -18,6 +18,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -40,6 +41,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
       "next",
       "react",
       "drizzle-orm",
@@ -83,6 +85,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -100,6 +103,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -117,6 +121,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -134,6 +139,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -151,6 +157,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -168,6 +175,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -185,6 +193,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/beszel",
       "@dashboard/prometheus",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -202,6 +211,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/beszel",
       "@dashboard/uptime-kuma",
       "@dashboard/proxmox",
+      "@dashboard/grafana",
     ]),
   ],
   [
@@ -219,6 +229,25 @@ const forbiddenDependencies = new Map([
       "@dashboard/beszel",
       "@dashboard/prometheus",
       "@dashboard/uptime-kuma",
+      "@dashboard/grafana",
+    ]),
+  ],
+  [
+    "packages/grafana/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
+      "@dashboard/jellyfin",
+      "@dashboard/immich",
+      "@dashboard/beszel",
+      "@dashboard/prometheus",
+      "@dashboard/uptime-kuma",
+      "@dashboard/proxmox",
     ]),
   ],
 ]);

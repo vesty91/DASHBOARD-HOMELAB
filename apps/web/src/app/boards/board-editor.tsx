@@ -16,6 +16,7 @@ import type {
   PrometheusMetricView,
   ServiceStatusView,
   UptimeKumaStatusView,
+  GrafanaStatusView,
   ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -30,6 +31,7 @@ import {
   prometheusMetricDraftConfig,
   serviceStatusDefaultConfig,
   uptimeKumaStatusDraftConfig,
+  grafanaStatusDraftConfig,
   proxmoxResourcesDraftConfig,
 } from "@dashboard/widgets";
 import {
@@ -41,6 +43,7 @@ import {
   type PrometheusIntegrationOption,
   type ServiceStatusCatalogOption,
   type UptimeKumaIntegrationOption,
+  type GrafanaIntegrationOption,
   type ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
@@ -73,6 +76,8 @@ function defaultConfig(widgetType: string): unknown {
       return serviceStatusDefaultConfig;
     case "uptime-kuma-status":
       return uptimeKumaStatusDraftConfig;
+    case "grafana-status":
+      return grafanaStatusDraftConfig;
     case "proxmox-resources":
       return proxmoxResourcesDraftConfig;
     default:
@@ -98,6 +103,8 @@ export function BoardEditor({
   uptimeKumaIntegrations = [],
   proxmoxViews = {},
   proxmoxIntegrations = [],
+  grafanaViews = {},
+  grafanaIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -123,6 +130,8 @@ export function BoardEditor({
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
   proxmoxViews?: Record<string, ProxmoxResourcesView>;
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
+  grafanaViews?: Record<string, GrafanaStatusView>;
+  grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -146,6 +155,7 @@ export function BoardEditor({
   const [pendingPrometheus, setPendingPrometheus] = useState(false);
   const [pendingUptimeKuma, setPendingUptimeKuma] = useState(false);
   const [pendingProxmox, setPendingProxmox] = useState(false);
+  const [pendingGrafana, setPendingGrafana] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -220,6 +230,7 @@ export function BoardEditor({
     setPendingPrometheus(false);
     setPendingUptimeKuma(false);
     setPendingProxmox(false);
+    setPendingGrafana(false);
     router.refresh();
   };
 
@@ -285,7 +296,8 @@ export function BoardEditor({
     pendingBeszel ||
     pendingPrometheus ||
     pendingUptimeKuma ||
-    pendingProxmox;
+    pendingProxmox ||
+    pendingGrafana;
   const pendingWidgetType = pendingJellyfin
     ? "jellyfin-sessions"
     : pendingImmich
@@ -298,7 +310,9 @@ export function BoardEditor({
             ? "uptime-kuma-status"
             : pendingProxmox
               ? "proxmox-resources"
-              : "app-tile";
+              : pendingGrafana
+                ? "grafana-status"
+                : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -311,7 +325,9 @@ export function BoardEditor({
             ? uptimeKumaStatusDraftConfig
             : pendingProxmox
               ? proxmoxResourcesDraftConfig
-              : appTileDraftConfig;
+              : pendingGrafana
+                ? grafanaStatusDraftConfig
+                : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -324,7 +340,9 @@ export function BoardEditor({
             ? uptimeKumaIntegrations.length === 0
             : pendingProxmox
               ? proxmoxIntegrations.length === 0
-              : !canReadApps;
+              : pendingGrafana
+                ? grafanaIntegrations.length === 0
+                : !canReadApps;
 
   return (
     <section>
@@ -371,6 +389,7 @@ export function BoardEditor({
                 serviceStatusCatalog={serviceStatusCatalog}
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
                 proxmoxIntegrations={proxmoxIntegrations}
+                grafanaIntegrations={grafanaIntegrations}
               />
               <button
                 type="submit"
@@ -401,6 +420,7 @@ export function BoardEditor({
                   setPendingPrometheus(false);
                   setPendingUptimeKuma(false);
                   setPendingProxmox(false);
+                  setPendingGrafana(false);
                 }}
               >
                 Annuler
@@ -463,6 +483,11 @@ export function BoardEditor({
                           setPendingProxmox(true);
                           return;
                         }
+                        if (entry.id === "grafana-status") {
+                          setDraftConfig(grafanaStatusDraftConfig);
+                          setPendingGrafana(true);
+                          return;
+                        }
                         void addWidget(entry.id, defaultConfig(entry.id));
                       }}
                     >
@@ -517,6 +542,7 @@ export function BoardEditor({
                       ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                       : {})}
                     {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
+                    {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -570,6 +596,7 @@ export function BoardEditor({
             serviceStatusCatalog={serviceStatusCatalog}
             uptimeKumaIntegrations={uptimeKumaIntegrations}
             proxmoxIntegrations={proxmoxIntegrations}
+            grafanaIntegrations={grafanaIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

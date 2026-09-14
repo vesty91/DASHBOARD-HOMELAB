@@ -9,6 +9,11 @@ import type {
 } from "@dashboard/beszel";
 import type { PrometheusIntegrationMetadata, PrometheusQueryDto } from "@dashboard/prometheus";
 import type {
+  GrafanaIntegrationMetadata,
+  GrafanaOverview,
+  GrafanaSectionReason,
+} from "@dashboard/grafana";
+import type {
   ProxmoxIntegrationMetadata,
   ProxmoxNodeStatus,
   ProxmoxOverview,
@@ -49,6 +54,8 @@ import { prometheusUserError } from "../prometheus-error";
 import { PrometheusRefreshButton } from "../prometheus-refresh-button";
 import { uptimeKumaUserError } from "../uptime-kuma-error";
 import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
+import { grafanaUserError } from "../grafana-error";
+import { GrafanaRefreshButton } from "../grafana-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
 import { ProxmoxRefreshButton } from "../proxmox-refresh-button";
 import { immichUserError } from "../immich-error";
@@ -78,7 +85,8 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "beszel" ||
     integration.type === "prometheus" ||
     integration.type === "uptime-kuma" ||
-    integration.type === "proxmox"
+    integration.type === "proxmox" ||
+    integration.type === "grafana"
   )
     redirect("/forbidden");
   return (
@@ -1291,6 +1299,173 @@ async function ProxmoxIntegrationDetail({
   );
 }
 
+function grafanaReasonLabel(reason: GrafanaSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Grafana indisponible.";
+    case "permission-denied":
+      return "Permission Grafana insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Grafana.";
+    case "invalid-response":
+      return "Réponse Grafana invalide.";
+    case "unauthorized":
+      return "Jeton de compte de service Grafana invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Grafana.";
+    case "dns":
+      return "Le serveur Grafana est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Grafana.";
+    case "unreachable":
+      return "Le serveur Grafana est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Grafana indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function GrafanaOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: GrafanaOverview | null = null;
+  try {
+    overview = await caller.grafana.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = grafanaUserError(caught);
+  }
+  const health = overview?.health.data;
+  const dashboards = overview?.dashboards.data;
+  const folders = overview?.folders.data;
+  const alerts = overview?.alerts.data;
+  const datasources = overview?.datasources.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Grafana partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Titres, URLs, noms de sources et charges d&apos;alertes ne sont
+            pas exposés. Lecture seule, sans iframe ni proxy.
+          </p>
+          <section className="grafana-health">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{grafanaReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>Version {health?.version ?? "Indisponible"}</p>
+            <p>
+              Base de données{" "}
+              {health?.database === "ok"
+                ? "OK"
+                : health?.database === "failing"
+                  ? "En échec"
+                  : "Indisponible"}
+            </p>
+          </section>
+          <section className="grafana-dashboards">
+            <h2>Tableaux de bord</h2>
+            {overview.dashboards.status === "unavailable" ? (
+              <Alert tone="warning">{grafanaReasonLabel(overview.dashboards.reason)}</Alert>
+            ) : null}
+            <p>
+              {dashboards
+                ? `${dashboards.count} tableaux de bord`
+                : "Tableaux de bord indisponibles."}
+            </p>
+            {dashboards?.truncated ? (
+              <p className="ui-muted">Liste tronquée (limite 100).</p>
+            ) : null}
+          </section>
+          <section className="grafana-folders">
+            <h2>Dossiers</h2>
+            {overview.folders.status === "unavailable" ? (
+              <Alert tone="warning">{grafanaReasonLabel(overview.folders.reason)}</Alert>
+            ) : null}
+            <p>{folders ? `${folders.count} dossiers` : "Dossiers indisponibles."}</p>
+            {folders?.truncated ? <p className="ui-muted">Liste tronquée (limite 100).</p> : null}
+          </section>
+          <section className="grafana-alerts">
+            <h2>Alertes</h2>
+            {overview.alerts.status === "unavailable" ? (
+              <Alert tone="warning">{grafanaReasonLabel(overview.alerts.reason)}</Alert>
+            ) : null}
+            {alerts ? (
+              <>
+                <p>{alerts.firing} firing</p>
+                <p>{alerts.pending} pending</p>
+                <p>{alerts.inactive} inactive</p>
+                <p>{alerts.other} other</p>
+              </>
+            ) : (
+              <p className="ui-muted">Alertes indisponibles.</p>
+            )}
+          </section>
+          <section className="grafana-datasources">
+            <h2>Sources de données</h2>
+            {overview.datasources.status === "unavailable" ? (
+              <Alert tone="warning">{grafanaReasonLabel(overview.datasources.reason)}</Alert>
+            ) : null}
+            <p>
+              {datasources ? `${datasources.count} sources` : "Sources de données indisponibles."}
+            </p>
+            {datasources?.types.length ? (
+              <ul>
+                {datasources.types.map((entry) => (
+                  <li key={entry.type}>
+                    {entry.type} · {entry.count}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function GrafanaIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: GrafanaIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Grafana" />
+        <Alert tone="warning">Cette intégration Grafana est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Grafana" />
+      <GrafanaRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Grafana…</p>}>
+        <GrafanaOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function formatPrometheusValue(value: number | null): string {
   if (value === null) return "Indisponible";
   if (Number.isInteger(value)) return String(value);
@@ -1425,6 +1600,8 @@ export default async function IntegrationDetailPage({
         return <UptimeKumaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "proxmox":
         return <ProxmoxIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "grafana":
+        return <GrafanaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "generic":
         return <GenericIntegrationDetail integration={detail.integration} />;
       default: {

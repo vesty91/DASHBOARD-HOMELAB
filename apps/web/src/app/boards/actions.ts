@@ -167,3 +167,13 @@ export async function listProxmoxIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listGrafanaIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).grafana.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

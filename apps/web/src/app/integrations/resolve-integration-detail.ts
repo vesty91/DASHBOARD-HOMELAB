@@ -10,6 +10,7 @@ import type {
   UptimeKumaIntegrationMetadata,
   UptimeKumaPermissionsView,
 } from "@dashboard/uptime-kuma";
+import type { GrafanaIntegrationMetadata, GrafanaPermissionsView } from "@dashboard/grafana";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
@@ -32,6 +33,7 @@ export type IntegrationDetailResolution =
   | { kind: "prometheus"; metadata: PrometheusIntegrationMetadata }
   | { kind: "uptime-kuma"; metadata: UptimeKumaIntegrationMetadata }
   | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
+  | { kind: "grafana"; metadata: GrafanaIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -81,6 +83,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<ProxmoxPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<ProxmoxIntegrationMetadata>;
+    };
+  };
+  grafana: {
+    permissions: () => Promise<Pick<GrafanaPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<GrafanaIntegrationMetadata>;
     };
   };
   integration: {
@@ -160,6 +168,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.proxmox.integration.get({ integrationId: id });
       return { kind: "proxmox", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const grafanaPermissions = await caller.grafana.permissions();
+  if (grafanaPermissions.canRead) {
+    try {
+      const metadata = await caller.grafana.integration.get({ integrationId: id });
+      return { kind: "grafana", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

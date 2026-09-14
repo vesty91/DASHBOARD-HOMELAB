@@ -23,6 +23,7 @@ export function IntegrationForm({
   const showPrometheusHelp = selectedType === "prometheus";
   const showUptimeKumaHelp = selectedType === "uptime-kuma";
   const showProxmoxHelp = selectedType === "proxmox";
+  const showGrafanaHelp = selectedType === "grafana";
   const showTrustedCa =
     showDockerHelp ||
     showSynologyHelp ||
@@ -31,7 +32,8 @@ export function IntegrationForm({
     showBeszelHelp ||
     showPrometheusHelp ||
     showUptimeKumaHelp ||
-    showProxmoxHelp;
+    showProxmoxHelp ||
+    showGrafanaHelp;
   const timeoutMs =
     typeof integration?.config.timeoutMs === "number" ? integration.config.timeoutMs : 8000;
   const trustedCaPem =
@@ -83,7 +85,9 @@ export function IntegrationForm({
                           ? "https://uptime.example:3001"
                           : showProxmoxHelp
                             ? "https://pve.example:8006"
-                            : undefined
+                            : showGrafanaHelp
+                              ? "https://grafana.example:3000"
+                              : undefined
           }
         />
       </Field>
@@ -134,6 +138,13 @@ export function IntegrationForm({
           Utilisez l&apos;URL HTTP(S) du serveur Proxmox VE (origine uniquement, port 8006). Le
           jeton API se configure ensuite comme secret serveur et n&apos;est jamais envoyé au
           navigateur. Lecture seule : version, cluster/status et cluster/resources.
+        </Alert>
+      ) : null}
+      {showGrafanaHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Grafana (origine uniquement). Le jeton de compte de
+          service se configure ensuite comme secret serveur et n&apos;est jamais envoyé au
+          navigateur. Lecture seule : santé, tableaux de bord, dossiers, alertes et sources.
         </Alert>
       ) : null}
       {showSynologyHelp ? (
@@ -212,7 +223,11 @@ export function IntegrationForm({
                       ? "Utilisez ce champ pour un Prometheus HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                       : showUptimeKumaHelp
                         ? "Utilisez ce champ pour un Uptime Kuma HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                        : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                        : showGrafanaHelp
+                          ? "Utilisez ce champ pour un Grafana HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                          : showProxmoxHelp
+                            ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                            : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

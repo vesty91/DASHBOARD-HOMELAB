@@ -22,6 +22,7 @@ const SOURCE_LABELS: Record<ServiceStatusSourceType, string> = {
   "uptime-kuma": "Uptime Kuma",
   prometheus: "Prometheus",
   proxmox: "Proxmox",
+  grafana: "Grafana",
 };
 
 function toggleValue<T>(values: readonly T[], value: T, enabled: boolean): T[] {

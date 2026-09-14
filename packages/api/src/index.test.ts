@@ -19,6 +19,7 @@ import type { DockerService } from "@dashboard/docker";
 import type { BeszelService } from "@dashboard/beszel";
 import type { PrometheusService } from "@dashboard/prometheus";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
+import type { GrafanaService } from "@dashboard/grafana";
 import type { ProxmoxService } from "@dashboard/proxmox";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
@@ -41,6 +42,7 @@ const beszel = {} as BeszelService;
 const prometheus = {} as PrometheusService;
 const uptimeKuma = {} as UptimeKumaService;
 const proxmox = {} as ProxmoxService;
+const grafana = {} as GrafanaService;
 const serviceStatus = {
   list: vi.fn(async () => ({
     status: "available" as const,
@@ -61,6 +63,7 @@ function createCaller(
     | "prometheus"
     | "uptimeKuma"
     | "proxmox"
+    | "grafana"
     | "serviceStatus"
     | "runtime"
     | "realtimeTickets"
@@ -77,6 +80,7 @@ function createCaller(
     prometheus?: PrometheusService;
     uptimeKuma?: UptimeKumaService;
     proxmox?: ProxmoxService;
+    grafana?: GrafanaService;
     serviceStatus?: ServiceStatusService;
     runtime?: ApiContext["runtime"];
     realtimeTickets?: ApiContext["realtimeTickets"];
@@ -95,6 +99,7 @@ function createCaller(
     prometheus,
     uptimeKuma,
     proxmox,
+    grafana,
     serviceStatus,
     runtime: createRuntimeStatusService(
       {},
@@ -1169,6 +1174,64 @@ describe("proxmox tRPC router", () => {
   });
 });
 
+describe("grafana tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000031";
+  const grafanaActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "grafana.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    health: { status: "available" as const, data: { version: "11.2.0", database: "ok" as const } },
+    dashboards: { status: "available" as const, data: { count: 12, truncated: false } },
+    folders: { status: "available" as const, data: { count: 3, truncated: false } },
+    alerts: {
+      status: "available" as const,
+      data: { firing: 2, pending: 1, inactive: 4, other: 0 },
+    },
+    datasources: {
+      status: "available" as const,
+      data: { count: 1, types: [{ type: "prometheus", count: 1 }] },
+    },
+  };
+
+  it("returns a bounded overview DTO without secrets", async () => {
+    const grafanaService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        { id: integrationId, name: "Grafana Lab", enabled: true },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Grafana Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as GrafanaService;
+    const caller = createCaller({
+      actor: grafanaActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      grafana: grafanaService,
+    });
+    const metadata = await caller.grafana.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "Grafana Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.grafana.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(
+      /Bearer|serviceAccountToken|password|secureJsonData/u,
+    );
+  });
+});
+
 describe("serviceStatus tRPC router", () => {
   it("requires authentication and does not leak secrets", async () => {
     const listed = {
@@ -1326,6 +1389,7 @@ describe("runtime and realtime tRPC", () => {
       prometheus: closed as unknown as PrometheusService,
       uptimeKuma: closed as unknown as UptimeKumaService,
       proxmox: closed as unknown as ProxmoxService,
+      grafana: closed as unknown as GrafanaService,
     });
     const ticket = await caller.realtime.ticket({
       boardIds: [boardA, boardB],
@@ -1365,6 +1429,7 @@ describe("runtime and realtime tRPC", () => {
       prometheus: closed as unknown as PrometheusService,
       uptimeKuma: closed as unknown as UptimeKumaService,
       proxmox: closed as unknown as ProxmoxService,
+      grafana: closed as unknown as GrafanaService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });
     expect(verifyRealtimeTicket(secret, withoutSettings.token)).toEqual({
       userId: "00000000-0000-4000-8000-000000000001",

@@ -219,8 +219,14 @@ Phase 18 : lecture Proxmox exige (`integration.use` ou `integration.manage`) **e
 `/integrations/[id]` Proxmox : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `proxmox.read`.
 
+Phase 18.2 : lecture Grafana exige (`integration.use` ou `integration.manage`) **et**
+`grafana.read`. Cette conjonction suffit pour `grafana.integration.get` et
+`/integrations/[id]` Grafana : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `grafana.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
-`immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`, `docker.*` ni
+`immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
+`grafana.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

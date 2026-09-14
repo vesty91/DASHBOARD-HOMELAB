@@ -63,6 +63,7 @@ describe("widget registry", () => {
       "beszel-hosts",
       "bookmarks",
       "clock",
+      "grafana-status",
       "immich-stats",
       "jellyfin-sessions",
       "prometheus-metric",
@@ -74,6 +75,7 @@ describe("widget registry", () => {
     expect(registry.get("bookmarks")?.publicSafe).toBe(false);
     expect(registry.get("app-tile")?.publicSafe).toBe(false);
     expect(registry.get("prometheus-metric")?.publicSafe).toBe(false);
+    expect(registry.get("grafana-status")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);
     expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);
     expect(() => registry.register(clockContract)).toThrow(/immutable/);

@@ -423,6 +423,27 @@ Jamais dans l'URL.
 Jamais exposés : jeton API, cookie `PVEAuthCookie`, noms de VM/CT, chemins storage,
 IP de nœuds, `baseUrl`, config.
 
+# Grafana API — Phase 18.2
+
+Routeur tRPC `grafana` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                      | Permission                | Capability    | Notes                                                |
+| -------------------------- | ------------------------- | ------------- | ---------------------------------------------------- |
+| `grafana.permissions`      | auth active               | —             | `canRead`, `canManage`                               |
+| `grafana.integration.list` | use/manage + grafana.read | —             | `{ id, name, enabled }[]`                            |
+| `grafana.integration.get`  | use/manage + grafana.read | —             | `{ id, name, enabled }`                              |
+| `grafana.overview.get`     | use/manage + grafana.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `grafana.overview.refresh` | use/manage + grafana.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
+`health`, `dashboards`, `folders`, `alerts`, `datasources`. Auth : header
+`Authorization: Bearer`. Jamais dans l'URL.
+
+Jamais exposés : jeton de compte de service, titres de dashboards, URLs, noms
+de dossiers, payloads d'alertes, `password`, `basicAuthPassword`,
+`secureJsonData`, `secureJsonFields`, `url`, `user`, `database`, `jsonData`,
+`name` de datasource, `baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -482,7 +503,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma/proxmox `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox/grafana `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

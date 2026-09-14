@@ -23,6 +23,7 @@ packages/
   prometheus/
   uptime-kuma/
   proxmox/
+  grafana/
   permissions/
   secrets/
   monitoring/
