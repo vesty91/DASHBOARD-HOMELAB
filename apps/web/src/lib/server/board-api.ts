@@ -1,5 +1,6 @@
 import "server-only";
 import { createBoardService } from "@dashboard/boards";
+import { createBackupService } from "@dashboard/backup";
 import {
   createCaller,
   createDashboardServiceStatusService,
@@ -378,6 +379,10 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
         }));
       },
     },
+    backup: createBackupService({
+      store: database.backupStore,
+      afterCommit: () => runtime.cache.clear(),
+    }),
   };
 }
 

@@ -54,6 +54,7 @@ import {
 import { serviceStatusQuerySchema, type ServiceStatusService } from "@dashboard/monitoring";
 import type { RealtimeSubscription, RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
+import { BackupError, type BackupService } from "@dashboard/backup";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -98,10 +99,37 @@ export interface ApiContext {
   jobs: {
     listRecent(limit: number): Promise<JobListItem[]>;
   };
+  backup: BackupService;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
+function mapBackupError(error: BackupError): never {
+  switch (error.code) {
+    case "UNAUTHORIZED":
+      throw new TRPCError({ code: "UNAUTHORIZED", message: error.message, cause: error });
+    case "FORBIDDEN":
+      throw new TRPCError({ code: "FORBIDDEN", message: error.message, cause: error });
+    case "RESTORE_FAILED":
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message, cause: error });
+    case "VALIDATION_ERROR":
+    case "INCOMPATIBLE_SCHEMA":
+    case "HASH_MISMATCH":
+    case "TOO_LARGE":
+    case "CONFIRM_REQUIRED":
+      throw new TRPCError({ code: "BAD_REQUEST", message: error.message, cause: error });
+    default: {
+      const exhaustive: never = error.code;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Backup failed",
+        cause: exhaustive,
+      });
+    }
+  }
+}
+
 const mapError = (error: unknown): never => {
+  if (error instanceof BackupError) mapBackupError(error);
   if (
     error instanceof BoardError ||
     error instanceof AppError ||
@@ -585,6 +613,43 @@ export const jobsRouter = t.router({
   ),
 });
 
+export const backupValidateInputSchema = z.object({
+  archive: z.unknown(),
+});
+
+export const backupRestoreInputSchema = z.object({
+  archive: z.unknown(),
+  confirm: z.literal(true),
+});
+
+function requireBackupManage(ctx: ApiContext): void {
+  requireAuthenticatedUser(ctx);
+  const subject = ctx.actor.subject;
+  if (!subject || !hasPermission(subject, "backup.manage"))
+    throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });
+}
+
+export const backupRouter = t.router({
+  export: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requireBackupManage(ctx);
+      return ctx.backup.exportArchive();
+    }),
+  ),
+  validate: t.procedure.input(backupValidateInputSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      requireBackupManage(ctx);
+      return ctx.backup.validate(input.archive);
+    }),
+  ),
+  restore: t.procedure.input(backupRestoreInputSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      requireBackupManage(ctx);
+      return ctx.backup.restore(input.archive, input.confirm);
+    }),
+  ),
+});
+
 export const serviceStatusRouter = t.router({
   list: t.procedure.input(serviceStatusQuerySchema.optional()).query(({ ctx, input }) =>
     procedure(async () => {
@@ -615,6 +680,7 @@ export const dashboardRouter = t.router({
   runtime: runtimeRouter,
   realtime: realtimeRouter,
   jobs: jobsRouter,
+  backup: backupRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

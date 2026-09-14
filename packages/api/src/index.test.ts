@@ -6,6 +6,7 @@ import {
   type BoardService,
 } from "@dashboard/boards";
 import { createCaller as createAppCaller, type ApiContext } from "./index";
+import { BackupError, buildArchive, emptyBackupTables } from "@dashboard/backup";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
@@ -55,6 +56,7 @@ function createCaller(
     | "runtime"
     | "realtimeTickets"
     | "jobs"
+    | "backup"
   > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
@@ -66,6 +68,7 @@ function createCaller(
     runtime?: ApiContext["runtime"];
     realtimeTickets?: ApiContext["realtimeTickets"];
     jobs?: ApiContext["jobs"];
+    backup?: ApiContext["backup"];
   },
 ) {
   return createAppCaller({
@@ -87,6 +90,17 @@ function createCaller(
     },
     jobs: {
       listRecent: async () => [],
+    },
+    backup: {
+      exportArchive: async () => {
+        throw new Error("backup not stubbed");
+      },
+      validate: async () => {
+        throw new Error("backup not stubbed");
+      },
+      restore: async () => {
+        throw new Error("backup not stubbed");
+      },
     },
     ...context,
   });
@@ -1319,5 +1333,63 @@ describe("runtime and realtime tRPC", () => {
         docker,
       }).jobs.list(),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("backup tRPC router", () => {
+  const systemAdmin = {
+    userId: "00000000-0000-4000-8000-000000000001",
+    subject: { status: "active" as const, isSystemAdmin: true },
+  };
+  const archive = buildArchive(emptyBackupTables(), "2026-09-14T12:00:00.000Z");
+
+  it("exports a versioned archive for backup.manage and forbids weaker roles", async () => {
+    const backup = {
+      exportArchive: vi.fn(async () => archive),
+      validate: vi.fn(),
+      restore: vi.fn(),
+    };
+    await expect(
+      createCaller({
+        actor: systemAdmin,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        backup,
+      }).backup.export(),
+    ).resolves.toEqual(archive);
+    await expect(
+      createCaller({
+        actor,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        backup,
+      }).backup.export(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(backup.exportArchive).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an invalid archive before restore mutates state", async () => {
+    const backup = {
+      exportArchive: vi.fn(),
+      validate: vi.fn(async () => {
+        throw new BackupError("VALIDATION_ERROR", "Backup archive failed validation");
+      }),
+      restore: vi.fn(),
+    };
+    await expect(
+      createCaller({
+        actor: systemAdmin,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        backup,
+      }).backup.validate({ archive: { not: "a-backup" } }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(backup.restore).not.toHaveBeenCalled();
   });
 });

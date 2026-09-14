@@ -5,6 +5,11 @@ const realtimeUrl = process.env.REALTIME_URL?.replace(/\/$/u, "");
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "8mb",
+    },
+  },
   async rewrites() {
     if (!realtimeUrl) return [];
     return [{ source: "/api/realtime/ws", destination: `${realtimeUrl}/ws` }];

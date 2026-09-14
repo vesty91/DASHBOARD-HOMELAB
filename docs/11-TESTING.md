@@ -111,7 +111,8 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide.
+- manifest valide ;
+- fichier invalide rejeté avant mutation.
 
 ## 6. Tests non fonctionnels
 

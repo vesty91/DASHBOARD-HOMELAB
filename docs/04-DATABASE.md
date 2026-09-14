@@ -339,12 +339,18 @@ Le manifest doit contenir :
 
 ```json
 {
+  "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "databaseSchemaVersion": "...",
-  "appVersion": "...",
-  "createdAt": "..."
+  "schemaVersion": 5,
+  "databaseSchemaVersion": 5,
+  "appVersion": "0.1.0",
+  "createdAt": "...",
+  "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
 }
 ```
+
+La v1 n'accepte que le schéma Drizzle 5. Pas de migration `0006` : l'archive est un
+fichier JSON, pas une table. Le restore s'exécute dans une transaction.
 
 ## 8. Implémentation Phase 2
 

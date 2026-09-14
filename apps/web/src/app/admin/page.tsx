@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { hasPermission, type Permission } from "@dashboard/permissions";
 import { redirect } from "next/navigation";
-import { KeyRound, Plug, Users, UsersRound } from "lucide-react";
+import { Archive, KeyRound, Plug, Users, UsersRound } from "lucide-react";
 import { PageContainer, PageHeader } from "@dashboard/ui";
 import { requireSession } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
@@ -11,6 +11,7 @@ const ADMIN_ENTRY_PERMISSIONS: readonly Permission[] = [
   "group.read",
   "app.manage",
   "integration.manage",
+  "backup.manage",
 ];
 
 export default async function AdminPage() {
@@ -24,6 +25,7 @@ export default async function AdminPage() {
   const canGroups = hasPermission(subject, "group.read");
   const canIntegrations =
     hasPermission(subject, "integration.manage") || hasPermission(subject, "integration.read");
+  const canBackup = hasPermission(subject, "backup.manage");
   return (
     <PageContainer>
       <PageHeader
@@ -61,6 +63,17 @@ export default async function AdminPage() {
             <span className="shortcut-card-copy">
               <span className="ui-card-title">Intégrations</span>
               <span className="ui-muted">Connexions externes.</span>
+            </span>
+          </Link>
+        ) : null}
+        {canBackup ? (
+          <Link href="/admin/backup" className="shortcut-card">
+            <span className="shortcut-card-icon" aria-hidden="true">
+              <Archive />
+            </span>
+            <span className="shortcut-card-copy">
+              <span className="ui-card-title">Backup</span>
+              <span className="ui-muted">Export, validation et restore.</span>
             </span>
           </Link>
         ) : null}

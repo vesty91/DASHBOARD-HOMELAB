@@ -9,7 +9,8 @@
     "./board-runtime": "./src/board-runtime.ts",
     "./app-runtime": "./src/app-runtime.ts",
     "./integration-runtime": "./src/integration-runtime.ts",
-    "./job-runtime": "./src/job-runtime.ts"
+    "./job-runtime": "./src/job-runtime.ts",
+    "./backup-runtime": "./src/backup-runtime.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
@@ -31,6 +32,7 @@
     "vitest": "4.1.11"
   },
   "dependencies": {
+    "@dashboard/backup": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "drizzle-orm": "0.45.2",
     "pg": "8.16.3",
