@@ -1,3 +1,4 @@
+import { createConnection } from "node:net";
 import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { issueRealtimeTicket, MemoryEventBus } from "@dashboard/events";
@@ -396,6 +397,46 @@ describe("realtime WebSocket", () => {
       const sawPing = new Promise<void>((resolve) => pinged.once("ping", () => resolve()));
       await sawPing;
       pinged.close();
+    } finally {
+      await realtime.close();
+    }
+  });
+
+  it("does not consume a connection slot when the websocket handshake is malformed", async () => {
+    const bus = new MemoryEventBus();
+    const realtime = await startRealtime({
+      bus,
+      secret,
+      heartbeatMs: 1_000,
+      maxConnections: 1,
+      maxConnectionsPerUser: 1,
+    });
+    try {
+      const ticket = issueRealtimeTicket(secret, {
+        userId: "user-1",
+        subscriptions: [{ kind: "runtime" }],
+      });
+      await new Promise<void>((resolve, reject) => {
+        const socket = createConnection({ host: "127.0.0.1", port: realtime.port() }, () => {
+          socket.write(
+            `GET /ws?ticket=${encodeURIComponent(ticket.token)} HTTP/1.1\r\n` +
+              "Host: 127.0.0.1\r\n" +
+              "Upgrade: websocket\r\n" +
+              "Connection: Upgrade\r\n" +
+              "Sec-WebSocket-Version: 13\r\n" +
+              "Sec-WebSocket-Key: invalid\r\n\r\n",
+          );
+        });
+        socket.once("data", () => {
+          socket.end();
+          resolve();
+        });
+        socket.once("error", reject);
+      });
+      expect(realtime.connectionCount()).toBe(0);
+      const opened = await openWs(wsUrl(realtime.port(), ticket.token));
+      expect(realtime.connectionCount()).toBe(1);
+      opened.close();
     } finally {
       await realtime.close();
     }

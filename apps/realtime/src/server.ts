@@ -240,11 +240,18 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       rejectUpgrade(socket, 401, "Unauthorized");
       return;
     }
-    if (!limiter.tryAcquire(verified.userId)) {
+    if (
+      limiter.size >= limiter.maxGlobal ||
+      limiter.countFor(verified.userId) >= limiter.maxPerUser
+    ) {
       rejectUpgrade(socket, 429, "Too Many Requests");
       return;
     }
     wss.handleUpgrade(request, socket, head, (websocket) => {
+      if (!limiter.tryAcquire(verified.userId)) {
+        websocket.close();
+        return;
+      }
       attachSocket(websocket, verified);
     });
   });
