@@ -147,5 +147,8 @@ describe("backup archive", () => {
       }),
     ).toThrow(BackupError);
     expect(() => parseBackupArchive("{not-json")).toThrow(BackupError);
+    expect(() => buildArchive(emptyBackupTables(), "2026-09-14T12:00:00.000Z")).toThrow(
+      BackupError,
+    );
   });
 });

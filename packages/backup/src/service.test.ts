@@ -20,7 +20,8 @@ describe("backup service", () => {
       replaceSnapshot: vi.fn(async () => undefined),
     };
     const afterCommit = vi.fn();
-    const service = createBackupService({ store, afterCommit });
+    const persistPreRestore = vi.fn(async () => undefined);
+    const service = createBackupService({ store, persistPreRestore, afterCommit });
     const preview = await service.validate(archive);
     expect(preview.compatible).toBe(true);
     expect(store.replaceSnapshot).not.toHaveBeenCalled();
@@ -30,8 +31,15 @@ describe("backup service", () => {
     expect(store.replaceSnapshot).not.toHaveBeenCalled();
     await expect(service.restore("{not-json", true)).rejects.toBeInstanceOf(BackupError);
     expect(store.replaceSnapshot).not.toHaveBeenCalled();
+    persistPreRestore.mockRejectedValueOnce(new Error("disk full"));
+    await expect(service.restore(archive, true)).rejects.toMatchObject({
+      code: "RESTORE_FAILED",
+    });
+    expect(store.replaceSnapshot).not.toHaveBeenCalled();
+    persistPreRestore.mockResolvedValue(undefined);
     const restored = await service.restore(archive, true);
     expect(restored.restored).toBe(true);
+    expect(persistPreRestore).toHaveBeenCalledTimes(2);
     expect(store.replaceSnapshot).toHaveBeenCalledTimes(1);
     expect(afterCommit).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(restored.preview)).not.toMatch(/passwordHash|ciphertext/u);

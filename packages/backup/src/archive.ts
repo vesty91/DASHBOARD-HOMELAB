@@ -60,6 +60,14 @@ export function emptyBackupTables(): BackupTables {
   };
 }
 
+function parseTables(tables: unknown): BackupTables {
+  const parsed = backupTablesSchema.safeParse(tables);
+  if (!parsed.success) {
+    throw new BackupError("VALIDATION_ERROR", "Backup archive failed validation");
+  }
+  return parsed.data;
+}
+
 export function hashBackupTables(tables: BackupTables): { sha256: string; bytes: number } {
   const canonical = canonicalJson(tables);
   const bytes = Buffer.byteLength(canonical, "utf8");
@@ -73,10 +81,10 @@ export function buildArchive(
   tables: BackupTables,
   createdAt = new Date().toISOString(),
 ): BackupArchive {
-  const parsedTables = backupTablesSchema.parse(tables);
+  const parsedTables = parseTables(tables);
   assertNoPlaintextSecrets(parsedTables, "tables");
   const hashed = hashBackupTables(parsedTables);
-  return backupArchiveSchema.parse({
+  const archive = backupArchiveSchema.parse({
     manifest: {
       format: BACKUP_FORMAT,
       formatVersion: BACKUP_FORMAT_VERSION,
@@ -88,6 +96,10 @@ export function buildArchive(
     },
     tables: parsedTables,
   });
+  if (archiveBytes(archive) > MAX_BACKUP_ARCHIVE_BYTES) {
+    throw new BackupError("TOO_LARGE", "Backup archive exceeds the maximum size");
+  }
+  return archive;
 }
 
 export function parseBackupArchive(input: unknown): BackupArchive {

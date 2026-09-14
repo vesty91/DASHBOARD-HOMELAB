@@ -1,4 +1,5 @@
 import type { InferInsertModel } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   BACKUP_COLUMNS,
   BACKUP_TABLE_NAMES,
@@ -73,30 +74,52 @@ function sqliteBindValue(value: unknown): string | number | null {
   throw new TypeError("Unsupported SQLite backup parameter type");
 }
 
+const POSTGRES_INSERT_BATCH = 200;
+
+function postgresLockStatement(): ReturnType<typeof sql> {
+  return sql.raw(
+    `LOCK TABLE ${TABLE_DELETE_ORDER.map((table) => `"${table}"`).join(", ")} IN ACCESS EXCLUSIVE MODE`,
+  );
+}
+
 async function exportSqliteTables(client: SqliteClient): Promise<BackupTables> {
-  const tables = emptyBackupTables();
-  for (const name of BACKUP_TABLE_NAMES) {
-    const rows = await client.db.select().from(sqliteTables[name]).all();
-    assignTable(
-      tables,
-      name,
-      rows.map((row) => serializeBackupRow(name, row)),
-    );
+  client.sqlite.exec("BEGIN");
+  try {
+    const tables = emptyBackupTables();
+    for (const name of BACKUP_TABLE_NAMES) {
+      const rows = await client.db.select().from(sqliteTables[name]).all();
+      assignTable(
+        tables,
+        name,
+        rows.map((row) => serializeBackupRow(name, row)),
+      );
+    }
+    client.sqlite.exec("COMMIT");
+    return tables;
+  } catch (error) {
+    try {
+      client.sqlite.exec("ROLLBACK");
+    } catch (rollbackError) {
+      void rollbackError;
+    }
+    throw error;
   }
-  return tables;
 }
 
 async function exportPostgresqlTables(client: PostgresqlClient): Promise<BackupTables> {
-  const tables = emptyBackupTables();
-  for (const name of BACKUP_TABLE_NAMES) {
-    const rows = await client.db.select().from(postgresqlTables[name]);
-    assignTable(
-      tables,
-      name,
-      rows.map((row) => serializeBackupRow(name, row)),
-    );
-  }
-  return tables;
+  return client.db.transaction(async (tx) => {
+    await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`);
+    const tables = emptyBackupTables();
+    for (const name of BACKUP_TABLE_NAMES) {
+      const rows = await tx.select().from(postgresqlTables[name]);
+      assignTable(
+        tables,
+        name,
+        rows.map((row) => serializeBackupRow(name, row)),
+      );
+    }
+    return tables;
+  });
 }
 
 function assignTable(
@@ -139,14 +162,18 @@ async function replacePostgresqlTables(
   tables: BackupTables,
 ): Promise<void> {
   await client.db.transaction(async (tx) => {
+    await tx.execute(postgresLockStatement());
     for (const table of TABLE_DELETE_ORDER) await tx.delete(postgresqlTables[table]);
     for (const table of TABLE_INSERT_ORDER) {
       const rows = tables[table];
       if (rows.length === 0) continue;
       const mapped = rows.map((row) => deserializeBackupRow(table, row, "postgres"));
-      await tx
-        .insert(postgresqlTables[table])
-        .values(mapped as InferInsertModel<(typeof postgresqlTables)[BackupTableName]>[]);
+      for (let index = 0; index < mapped.length; index += POSTGRES_INSERT_BATCH) {
+        const batch = mapped.slice(index, index + POSTGRES_INSERT_BATCH);
+        await tx
+          .insert(postgresqlTables[table])
+          .values(batch as InferInsertModel<(typeof postgresqlTables)[BackupTableName]>[]);
+      }
     }
   });
 }

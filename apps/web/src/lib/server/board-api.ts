@@ -1,6 +1,7 @@
 import "server-only";
 import { createBoardService } from "@dashboard/boards";
 import { createBackupService } from "@dashboard/backup";
+import { persistPreRestoreArchive } from "./persist-pre-restore";
 import {
   createCaller,
   createDashboardServiceStatusService,
@@ -381,6 +382,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     },
     backup: createBackupService({
       store: database.backupStore,
+      persistPreRestore: persistPreRestoreArchive,
       afterCommit: () => runtime.cache.clear(),
     }),
   };

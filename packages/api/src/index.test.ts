@@ -1341,7 +1341,18 @@ describe("backup tRPC router", () => {
     userId: "00000000-0000-4000-8000-000000000001",
     subject: { status: "active" as const, isSystemAdmin: true },
   };
-  const archive = buildArchive(emptyBackupTables(), "2026-09-14T12:00:00.000Z");
+  const tables = emptyBackupTables();
+  tables.server_settings = [
+    {
+      id: "global",
+      schemaVersion: 2,
+      instanceName: null,
+      onboardingCompleted: true,
+      createdAt: "2026-09-14T12:00:00.000Z",
+      updatedAt: "2026-09-14T12:00:00.000Z",
+    },
+  ];
+  const archive = buildArchive(tables, "2026-09-14T12:00:00.000Z");
 
   it("exports a versioned archive for backup.manage and forbids weaker roles", async () => {
     const backup = {

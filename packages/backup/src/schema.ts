@@ -263,7 +263,7 @@ export const backupTablesSchema = z
     app_tags: z.array(appTagRowSchema).max(10_000),
     integrations: z.array(integrationRowSchema).max(500),
     integration_secrets: z.array(integrationSecretRowSchema).max(2_000),
-    server_settings: z.array(serverSettingsRowSchema).max(1),
+    server_settings: z.array(serverSettingsRowSchema).length(1),
     user_credentials: z.array(userCredentialRowSchema).max(10_000),
     roles: z.array(roleRowSchema).max(50),
     role_permissions: z.array(rolePermissionRowSchema).max(2_000),

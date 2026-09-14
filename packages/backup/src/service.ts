@@ -22,6 +22,7 @@ export interface BackupService {
 
 export interface BackupServiceDeps {
   store: BackupSnapshotStore;
+  persistPreRestore(archive: BackupArchive): Promise<void>;
   afterCommit?: () => Promise<void> | void;
 }
 
@@ -48,6 +49,13 @@ export function createBackupService(deps: BackupServiceDeps): BackupService {
         throw new BackupError("CONFIRM_REQUIRED", "Backup restore requires explicit confirmation");
       }
       const preRestore = buildArchive(await deps.store.exportSnapshot());
+      try {
+        await deps.persistPreRestore(preRestore);
+      } catch (error) {
+        if (error instanceof BackupError) throw error;
+        void error;
+        throw new BackupError("RESTORE_FAILED", "Pre-restore backup could not be persisted");
+      }
       try {
         await deps.store.replaceSnapshot(incoming.tables);
       } catch (error) {
