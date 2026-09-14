@@ -8,6 +8,9 @@ const shared = {
   packages: "bundle",
   legalComments: "none",
   external: ["pg", "pg-native"],
+  banner: {
+    js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
+  },
 };
 
 await Promise.all([
