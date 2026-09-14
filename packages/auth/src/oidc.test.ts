@@ -111,6 +111,28 @@ describe("OIDC claims and linking", () => {
     } catch (error) {
       expect(error).toMatchObject({ code: "OIDC_INVALID_NONCE" });
     }
+    try {
+      validateOidcClaims({
+        claims: claims({ nonce: "" }),
+        expectedIssuer: "https://id.example/realms/homelab",
+        expectedAudience: "dashboard-client",
+        nowSeconds: now,
+      });
+    } catch (error) {
+      expect(error).toMatchObject({ code: "OIDC_INVALID_NONCE" });
+    }
+    try {
+      validateOidcClaims({
+        claims: claims({ exp: now - 121 }),
+        expectedIssuer: "https://id.example/realms/homelab",
+        expectedAudience: "dashboard-client",
+        expectedNonce: "nonce-1",
+        nowSeconds: now,
+        clockSkewSeconds: 10_000,
+      });
+    } catch (error) {
+      expect(error).toMatchObject({ code: "OIDC_TOKEN_EXPIRED" });
+    }
   });
 
   it("rejects replayed state and nonce", () => {
@@ -167,6 +189,7 @@ describe("OIDC claims and linking", () => {
       }),
     ).toEqual({ add: [], remove: ["g-admin", "g-ops"] });
     expect(extractOidcGroups({ groups: ["a", 1, "b"] }, "groups")).toEqual(["a", "b"]);
+    expect(extractOidcGroups({ groups: { cn: "admins" } }, "groups")).toEqual([]);
     expect(extractOidcGroups({ groups: null }, "groups")).toEqual([]);
     expect(
       parseOidcDiscovery({

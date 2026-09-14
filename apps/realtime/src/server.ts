@@ -19,6 +19,7 @@ import {
   shouldCloseSlowConsumer,
 } from "./limits";
 import { ticketFromUrl } from "./ticket-from-request";
+import { isAllowedRealtimeOrigin } from "./origin";
 
 export {
   REALTIME_HEARTBEAT_MS,
@@ -40,6 +41,7 @@ export interface RealtimeOptions {
   maxBufferedBytes?: number;
   maxPayloadBytes?: number;
   isReady?: () => Promise<boolean>;
+  allowedOrigin?: string;
 }
 
 export interface RealtimeHandle {
@@ -216,6 +218,10 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       sendJson(response, 404, { status: "not-found" });
       return;
     }
+    if (!isAllowedRealtimeOrigin(request.headers.origin, options.allowedOrigin)) {
+      sendJson(response, 403, { status: "forbidden-origin" });
+      return;
+    }
     const ticket = ticketFromUrl(request.url);
     const verified = ticket ? verifyRealtimeTicket(options.secret, ticket) : null;
     if (!verified) {
@@ -232,6 +238,10 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
   server.on("upgrade", (request, socket, head) => {
     if (request.method !== "GET" || !request.url?.startsWith("/ws")) {
       socket.destroy();
+      return;
+    }
+    if (!isAllowedRealtimeOrigin(request.headers.origin, options.allowedOrigin)) {
+      rejectUpgrade(socket, 403, "Forbidden");
       return;
     }
     const ticket = ticketFromUrl(request.url);

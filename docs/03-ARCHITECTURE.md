@@ -372,3 +372,8 @@ COMPLETE. OIDC générique via NextAuth (pas de provider codé en dur), identit�
 Migration `0006` / `schemaVersion` 6. Backup inclut les identités et mappings OIDC
 ainsi que le secret OIDC chiffré ; `audit_logs` et `auth_sessions` sont exclus.
 Voir ADR 0017.
+
+# État Phase 16
+
+IN PROGRESS. Headers/CSP enforcement, tRPC POST-only, rate limits des actions
+sensibles, contrôle d'origine realtime, cookies session explicites. Voir ADR 0018.

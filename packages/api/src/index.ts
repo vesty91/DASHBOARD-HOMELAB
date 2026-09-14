@@ -58,7 +58,9 @@ import { BackupError, type BackupService } from "@dashboard/backup";
 import {
   AuthError,
   auditListInputSchema,
+  createInMemoryActionRateLimiter,
   oidcSettingsInputSchema,
+  type ActionRateLimiter,
   type AuditEvent,
   type AuditEventInput,
   type PublicAuthSession,
@@ -153,6 +155,7 @@ export interface ApiContext {
     ): Promise<void>;
     listGroups(): Promise<{ id: string; name: string }[]>;
   };
+  actionRateLimiter?: ActionRateLimiter | undefined;
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -221,6 +224,15 @@ const mapError = (error: unknown): never => {
   throw error;
 };
 const procedure = <T>(operation: () => Promise<T>) => operation().catch(mapError);
+
+const defaultSensitiveActionLimiter = createInMemoryActionRateLimiter(8, 60_000);
+
+function consumeSensitiveAction(ctx: ApiContext, action: string): void {
+  const limiter = ctx.actionRateLimiter ?? defaultSensitiveActionLimiter;
+  const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
+  if (!limiter.tryConsume(key))
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
 
 async function emitAudit(ctx: ApiContext, event: AuditEventInput): Promise<void> {
   try {
@@ -769,9 +781,10 @@ function requireBackupManage(ctx: ApiContext): void {
 }
 
 export const backupRouter = t.router({
-  export: t.procedure.query(({ ctx }) =>
+  export: t.procedure.mutation(({ ctx }) =>
     procedure(async () => {
       requireBackupManage(ctx);
+      consumeSensitiveAction(ctx, "backup.export");
       const archive = await ctx.backup.exportArchive();
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -785,6 +798,7 @@ export const backupRouter = t.router({
   validate: t.procedure.input(backupValidateInputSchema).mutation(({ ctx, input }) =>
     procedure(async () => {
       requireBackupManage(ctx);
+      consumeSensitiveAction(ctx, "backup.validate");
       const preview = await ctx.backup.validate(input.archive);
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -799,6 +813,7 @@ export const backupRouter = t.router({
   restore: t.procedure.input(backupRestoreInputSchema).mutation(({ ctx, input }) =>
     procedure(async () => {
       requireBackupManage(ctx);
+      consumeSensitiveAction(ctx, "backup.restore");
       const restored = await ctx.backup.restore(input.archive, input.confirm);
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -845,6 +860,7 @@ export const sessionRouter = t.router({
   revokeSelf: t.procedure.input(z.object({ sessionId: z.uuid() })).mutation(({ ctx, input }) =>
     procedure(async () => {
       requirePermission(ctx, "session.revoke.self");
+      consumeSensitiveAction(ctx, "session.revoke");
       await ctx.sessions.revokeSelf(input.sessionId);
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -858,6 +874,7 @@ export const sessionRouter = t.router({
   revokeOthers: t.procedure.mutation(({ ctx }) =>
     procedure(async () => {
       requirePermission(ctx, "session.revoke.self");
+      consumeSensitiveAction(ctx, "session.revoke");
       await ctx.sessions.revokeOthers();
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -878,6 +895,7 @@ export const sessionRouter = t.router({
     .mutation(({ ctx, input }) =>
       procedure(async () => {
         requirePermission(ctx, "session.manage");
+        consumeSensitiveAction(ctx, "session.revoke");
         await ctx.sessions.revokeForUser(input.userId, input.sessionId);
         await emitAudit(ctx, {
           actorUserId: ctx.actor.userId,
@@ -892,6 +910,7 @@ export const sessionRouter = t.router({
   revokeAllForUser: t.procedure.input(z.object({ userId: z.uuid() })).mutation(({ ctx, input }) =>
     procedure(async () => {
       requirePermission(ctx, "session.manage");
+      consumeSensitiveAction(ctx, "session.revoke");
       await ctx.sessions.revokeAllForUser(input.userId);
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -915,6 +934,7 @@ export const oidcRouter = t.router({
   saveSettings: t.procedure.input(oidcSettingsInputSchema).mutation(({ ctx, input }) =>
     procedure(async () => {
       requirePermission(ctx, "oidc.manage");
+      consumeSensitiveAction(ctx, "oidc.save");
       await ctx.oidc.saveSettings(input);
       await emitAudit(ctx, {
         actorUserId: ctx.actor.userId,
@@ -947,6 +967,7 @@ export const oidcRouter = t.router({
     .mutation(({ ctx, input }) =>
       procedure(async () => {
         requirePermission(ctx, "oidc.manage");
+        consumeSensitiveAction(ctx, "oidc.mappings");
         await ctx.oidc.replaceMappings(input.mappings);
         await emitAudit(ctx, {
           actorUserId: ctx.actor.userId,

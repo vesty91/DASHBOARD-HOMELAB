@@ -3,6 +3,7 @@ import {
   BACKUP_FORMAT,
   BACKUP_SCHEMA_VERSION,
   BackupError,
+  MAX_BACKUP_ARCHIVE_BYTES,
   buildArchive,
   canonicalJson,
   emptyBackupTables,
@@ -159,6 +160,11 @@ describe("backup archive", () => {
       }),
     ).toThrow(BackupError);
     expect(() => parseBackupArchive("{not-json")).toThrow(BackupError);
+    try {
+      parseBackupArchive("x".repeat(MAX_BACKUP_ARCHIVE_BYTES + 1));
+    } catch (error) {
+      expect(error).toMatchObject({ code: "TOO_LARGE" });
+    }
     expect(() => buildArchive(emptyBackupTables(), "2026-09-14T12:00:00.000Z")).toThrow(
       BackupError,
     );

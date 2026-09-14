@@ -132,7 +132,7 @@ export function validateOidcClaims(input: {
   claims: OidcClaims;
   expectedIssuer: string;
   expectedAudience: string;
-  expectedNonce: string;
+  expectedNonce?: string;
   nowSeconds?: number;
   clockSkewSeconds?: number;
 }): void {
@@ -149,7 +149,8 @@ export function validateOidcClaims(input: {
     throw new AuthError("OIDC_TOKEN_EXPIRED", "OIDC token is expired");
   if (typeof input.claims.iat === "number" && input.claims.iat - skew > now)
     throw new AuthError("OIDC_TOKEN_EXPIRED", "OIDC token is expired");
-  if (!input.claims.nonce || input.claims.nonce !== input.expectedNonce)
+  if (!input.claims.nonce) throw new AuthError("OIDC_INVALID_NONCE", "OIDC nonce is invalid");
+  if (input.expectedNonce !== undefined && input.claims.nonce !== input.expectedNonce)
     throw new AuthError("OIDC_INVALID_NONCE", "OIDC nonce is invalid");
   if (!input.claims.sub || typeof input.claims.sub !== "string")
     throw new AuthError("OIDC_MISCONFIGURED", "OIDC subject is invalid");

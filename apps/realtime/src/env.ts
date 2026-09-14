@@ -13,10 +13,12 @@ export function realtimeOptionsFromEnv(
   if (redisRaw && !isRedisUrl(redisRaw)) {
     throw new Error("INVALID_REDIS_URL");
   }
+  const appUrl = env.APP_URL?.trim();
   return {
     secret,
     host: listen.host,
     port: listen.port,
     ...(redisRaw ? { redisUrl: redisRaw } : {}),
+    ...(appUrl ? { allowedOrigin: appUrl } : {}),
   };
 }
