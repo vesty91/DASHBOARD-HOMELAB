@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { revokeCurrentSessionAction } from "@/app/logout-action";
 import { useEffect, useState, type ReactNode } from "react";
 import type { ShellNav, ShellUser } from "./get-shell-context";
 
@@ -198,7 +199,13 @@ export function AppShell({
               }
             >
               <DropdownItem href="/account/security">Compte</DropdownItem>
-              <DropdownItem onSelect={() => void signOut({ callbackUrl: "/login" })}>
+              <DropdownItem
+                onSelect={() => {
+                  void revokeCurrentSessionAction().finally(() => {
+                    void signOut({ callbackUrl: "/login" });
+                  });
+                }}
+              >
                 Déconnexion
               </DropdownItem>
             </DropdownMenu>

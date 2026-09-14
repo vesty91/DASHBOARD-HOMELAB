@@ -65,12 +65,14 @@ import {
 } from "@dashboard/integrations";
 import { createEnvKeyring } from "@dashboard/secrets";
 import { createBuiltInWidgetPolicy } from "@dashboard/widgets";
+import { toPublicAuthSession } from "@dashboard/auth";
 import { getServerSession } from "next-auth";
-import { authOptions } from "./auth";
+import { clearAuthOptionsCache, getAuthOptions } from "./auth";
 import { getDatabase } from "./database";
 import { createApplicationIntegrationRegistry } from "./integration-registry";
 import { serverEnv } from "../env";
 import { publishAfterSuccess } from "./publish-after-success";
+import { saveOidcSettings } from "./security-services";
 
 const globalRuntime = globalThis as typeof globalThis & {
   dashboardEventBus?: Promise<EventBus>;
@@ -228,9 +230,10 @@ function integrationRuntime() {
 }
 
 export async function createBoardApiContext(): Promise<BoardApiContext> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(await getAuthOptions());
   const database = await getDatabase();
   const userId = session?.user?.id ?? null;
+  const currentSessionId = session?.sessionId ?? "";
   const subject = userId
     ? ((await database.authStore.resolvePermissionSubject(userId)) ?? null)
     : null;
@@ -385,6 +388,69 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       persistPreRestore: persistPreRestoreArchive,
       afterCommit: () => runtime.cache.clear(),
     }),
+    audit: {
+      record: (event) => database.securityStore.recordAudit(event),
+      list: (query) => database.securityStore.listAudit(query),
+    },
+    sessions: {
+      listSelf: async () => {
+        if (!userId) return [];
+        const rows = await database.securityStore.listSessions(userId);
+        return rows.map((row) => toPublicAuthSession(row, currentSessionId));
+      },
+      revokeSelf: async (sessionId) => {
+        if (!userId) return;
+        await database.securityStore.revokeSession(sessionId, userId);
+      },
+      revokeOthers: async () => {
+        if (!userId || !currentSessionId) return;
+        await database.securityStore.revokeOtherSessions(userId, currentSessionId);
+      },
+      listForUser: async (targetUserId) => {
+        const rows = await database.securityStore.listSessions(targetUserId);
+        return rows.map((row) => toPublicAuthSession(row, currentSessionId));
+      },
+      revokeForUser: (targetUserId, sessionId) =>
+        database.securityStore.revokeSession(sessionId, targetUserId),
+      revokeAllForUser: (targetUserId) => database.securityStore.revokeAllSessions(targetUserId),
+    },
+    oidc: {
+      publicConfig: async () => {
+        const settings = await database.securityStore.getOidcSettings();
+        return {
+          enabled: settings.enabled,
+          displayName: settings.displayName,
+          allowLocalLogin: settings.allowLocalLogin,
+        };
+      },
+      getSettings: async () => {
+        const settings = await database.securityStore.getOidcSettings();
+        const secret = await database.securityStore.getOidcSecret();
+        return {
+          enabled: settings.enabled,
+          issuer: settings.issuer,
+          clientId: settings.clientId,
+          displayName: settings.displayName,
+          scopes: settings.scopes,
+          redirectUri: settings.redirectUri,
+          groupClaim: settings.groupClaim,
+          autoLinkVerifiedEmail: settings.autoLinkVerifiedEmail,
+          autoProvision: settings.autoProvision,
+          allowLocalLogin: settings.allowLocalLogin,
+          hasClientSecret: Boolean(secret),
+        };
+      },
+      saveSettings: async (input) => {
+        await saveOidcSettings(input);
+        clearAuthOptionsCache();
+      },
+      listMappings: () => database.securityStore.listOidcMappings(),
+      replaceMappings: (mappings) => database.securityStore.replaceOidcMappings(mappings),
+      listGroups: async () => {
+        const groups = await database.authStore.listGroups();
+        return groups.map((group) => ({ id: group.id, name: group.name }));
+      },
+    },
   };
 }
 

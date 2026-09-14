@@ -39,9 +39,20 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("beszel.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prometheus.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("uptime-kuma.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");
+  });
+  it("grants self-session permissions to every default role", () => {
+    expect(DEFAULT_ROLE_PERMISSIONS.VIEWER).toContain("session.read.self");
+    expect(DEFAULT_ROLE_PERMISSIONS.VIEWER).toContain("session.revoke.self");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).toContain("session.read.self");
   });
   it("grants active system admins the catalog", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "backup.manage")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "oidc.manage")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "audit.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "session.manage")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "synology.read")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
   });

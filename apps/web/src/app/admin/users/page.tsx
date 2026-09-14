@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { hasPermission } from "@dashboard/permissions";
 import { Badge, Button, Field, Input, PageContainer, PageHeader, Select } from "@dashboard/ui";
 import { requireAdminPagePermission } from "@/lib/server/auth";
@@ -12,6 +13,7 @@ export default async function UsersPage() {
     authStore.resolvePermissionSubject(session.user.id),
   ]);
   const canManage = Boolean(subject && hasPermission(subject, "user.manage"));
+  const canSessions = Boolean(subject && hasPermission(subject, "session.manage"));
   return (
     <PageContainer>
       <PageHeader title="Utilisateurs" description="Comptes locaux de l'instance." />
@@ -56,7 +58,7 @@ export default async function UsersPage() {
               <th>Utilisateur</th>
               <th>Nom affiché</th>
               <th>Statut</th>
-              {canManage ? <th className="ui-table-actions">Actions</th> : null}
+              {canManage || canSessions ? <th className="ui-table-actions">Actions</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -74,19 +76,26 @@ export default async function UsersPage() {
                     {user.status === "active" ? "Actif" : "Désactivé"}
                   </Badge>
                 </td>
-                {canManage ? (
+                {canManage || canSessions ? (
                   <td className="ui-table-actions">
-                    <form action={setStatusAction}>
-                      <input type="hidden" name="userId" value={user.id} />
-                      <input
-                        type="hidden"
-                        name="status"
-                        value={user.status === "active" ? "disabled" : "active"}
-                      />
-                      <button type="submit" className="ui-btn-ghost">
-                        {user.status === "active" ? "Désactiver" : "Activer"}
-                      </button>
-                    </form>
+                    {canManage ? (
+                      <form action={setStatusAction}>
+                        <input type="hidden" name="userId" value={user.id} />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value={user.status === "active" ? "disabled" : "active"}
+                        />
+                        <button type="submit" className="ui-btn-ghost">
+                          {user.status === "active" ? "Désactiver" : "Activer"}
+                        </button>
+                      </form>
+                    ) : null}
+                    {canSessions ? (
+                      <Link className="ui-btn-ghost" href={`/admin/users/${user.id}/sessions`}>
+                        Sessions
+                      </Link>
+                    ) : null}
                   </td>
                 ) : null}
               </tr>

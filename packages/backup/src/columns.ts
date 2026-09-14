@@ -19,6 +19,9 @@ export const BACKUP_TABLE_NAMES = [
   "board_user_permissions",
   "board_group_permissions",
   "jobs",
+  "oidc_identities",
+  "oidc_group_mappings",
+  "oidc_secrets",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLE_NAMES)[number];
@@ -44,6 +47,9 @@ export const TABLE_INSERT_ORDER = [
   "board_user_permissions",
   "board_group_permissions",
   "jobs",
+  "oidc_identities",
+  "oidc_group_mappings",
+  "oidc_secrets",
 ] as const satisfies readonly BackupTableName[];
 
 export const TABLE_DELETE_ORDER = [...TABLE_INSERT_ORDER].reverse();
@@ -151,6 +157,16 @@ export const BACKUP_COLUMNS = {
     "schemaVersion",
     "instanceName",
     "onboardingCompleted",
+    "oidcEnabled",
+    "oidcIssuer",
+    "oidcClientId",
+    "oidcDisplayName",
+    "oidcScopes",
+    "oidcRedirectUri",
+    "oidcGroupClaim",
+    "oidcAutoLinkVerifiedEmail",
+    "oidcAutoProvision",
+    "oidcAllowLocalLogin",
     "createdAt",
     "updatedAt",
   ],
@@ -173,6 +189,9 @@ export const BACKUP_COLUMNS = {
     "errorMessageSafe",
     "metadataJson",
   ],
+  oidc_identities: ["id", "userId", "issuer", "subject", "email", "createdAt", "updatedAt"],
+  oidc_group_mappings: ["id", "oidcGroup", "localGroupId", "createdAt"],
+  oidc_secrets: ["id", "ciphertext", "iv", "authTag", "keyVersion", "createdAt", "updatedAt"],
 } as const satisfies Record<BackupTableName, readonly string[]>;
 
 export const JSON_OBJECT_COLUMNS = new Set([
@@ -200,6 +219,10 @@ export const BOOLEAN_COLUMNS = new Set([
   "enabled",
   "onboardingCompleted",
   "healthcheckEnabled",
+  "oidcEnabled",
+  "oidcAutoLinkVerifiedEmail",
+  "oidcAutoProvision",
+  "oidcAllowLocalLogin",
 ]);
 
 export const PREVIEW_REDACTED_COLUMNS = new Set(["ciphertext", "iv", "authTag", "passwordHash"]);

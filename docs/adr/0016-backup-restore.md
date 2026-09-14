@@ -38,5 +38,5 @@ un échec d'effet secondaire ne défait pas le restore.
 
 ### 4. Compatibilité
 
-La v1 n'accepte que le schéma 5. Une version future est `INCOMPATIBLE_SCHEMA`,
-jamais une migration silencieuse.
+La v1 Phase 14 n'acceptait que le schéma 5. La Phase 15 étend le vocabulaire au
+schéma 6 et accepte encore une archive v5 (upgrade in-memory). Voir ADR 0017.

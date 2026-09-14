@@ -43,6 +43,13 @@
       "when": 1789336818022,
       "tag": "0005_curved_stephen_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789411313970,
+      "tag": "0006_natural_boomer",
+      "breakpoints": true
     }
   ]
 }

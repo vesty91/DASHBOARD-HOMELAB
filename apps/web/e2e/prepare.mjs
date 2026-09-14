@@ -12,6 +12,7 @@ try {
     "0003_loud_titanium_man.sql",
     "0004_green_tenebrous.sql",
     "0005_wandering_mac_gargan.sql",
+    "0006_exotic_sugar_man.sql",
   ])
     database.exec(
       await readFile(

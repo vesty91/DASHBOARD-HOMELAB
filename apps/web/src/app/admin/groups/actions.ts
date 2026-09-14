@@ -5,6 +5,7 @@ import { z } from "zod";
 import { canAssignGroupPermissionGrants } from "@dashboard/permissions";
 import { requireServerPermission, requireSession } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
+import { recordAudit } from "@/lib/server/security-services";
 import { groupPermissionGrantsInputSchema } from "./group-permission-grants";
 
 const createGroupInputSchema = z.object({
@@ -19,7 +20,7 @@ const createGroupInputSchema = z.object({
 });
 
 export async function createGroupAction(formData: FormData) {
-  await requireServerPermission("group.manage");
+  const session = await requireServerPermission("group.manage");
   const input = createGroupInputSchema.parse({
     name: String(formData.get("name") ?? ""),
     description: String(formData.get("description") ?? ""),
@@ -27,7 +28,15 @@ export async function createGroupAction(formData: FormData) {
     userId: String(formData.get("userId") ?? ""),
   });
   const { authStore } = await getDatabase();
-  await authStore.createGroupWithRoleAndOptionalMember(input);
+  const created = await authStore.createGroupWithRoleAndOptionalMember(input);
+  await recordAudit({
+    actorUserId: session.user.id,
+    action: "group.update",
+    targetType: "group",
+    targetId: created.id,
+    outcome: "success",
+    metadata: { operation: "create" },
+  });
   revalidatePath("/admin/groups");
 }
 
@@ -41,5 +50,13 @@ export async function setGroupPermissionGrantsAction(groupId: string, formData: 
     permissions: formData.getAll("permission").map(String),
   });
   await authStore.setGroupPermissionGrants(input.groupId, input.permissions);
+  await recordAudit({
+    actorUserId: session.user.id,
+    action: "permission.update",
+    targetType: "group",
+    targetId: input.groupId,
+    outcome: "success",
+    metadata: { operation: "group_grants", count: input.permissions.length },
+  });
   revalidatePath("/admin/groups");
 }

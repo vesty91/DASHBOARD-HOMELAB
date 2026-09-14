@@ -249,6 +249,20 @@ export const serverSettings = sqliteTable(
     onboardingCompleted: integer("onboarding_completed", { mode: "boolean" })
       .notNull()
       .default(false),
+    oidcEnabled: integer("oidc_enabled", { mode: "boolean" }).notNull().default(false),
+    oidcIssuer: text("oidc_issuer"),
+    oidcClientId: text("oidc_client_id"),
+    oidcDisplayName: text("oidc_display_name"),
+    oidcScopes: text("oidc_scopes").notNull().default("openid profile email groups"),
+    oidcRedirectUri: text("oidc_redirect_uri"),
+    oidcGroupClaim: text("oidc_group_claim").notNull().default("groups"),
+    oidcAutoLinkVerifiedEmail: integer("oidc_auto_link_verified_email", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    oidcAutoProvision: integer("oidc_auto_provision", { mode: "boolean" }).notNull().default(false),
+    oidcAllowLocalLogin: integer("oidc_allow_local_login", { mode: "boolean" })
+      .notNull()
+      .default(true),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
@@ -368,4 +382,80 @@ export const jobs = sqliteTable(
     check("jobs_status_valid", sql`${t.status} IN ('queued','running','succeeded','failed')`),
     check("jobs_attempt_positive", sql`${t.attempt} > 0`),
   ],
+);
+export const oidcIdentities = sqliteTable(
+  "oidc_identities",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    issuer: text("issuer").notNull(),
+    subject: text("subject").notNull(),
+    email: text("email"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("oidc_identities_issuer_subject_uq").on(t.issuer, t.subject),
+    index("oidc_identities_user_idx").on(t.userId),
+  ],
+);
+export const oidcGroupMappings = sqliteTable(
+  "oidc_group_mappings",
+  {
+    id: text("id").primaryKey(),
+    oidcGroup: text("oidc_group").notNull(),
+    localGroupId: text("local_group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [uniqueIndex("oidc_group_mappings_group_local_uq").on(t.oidcGroup, t.localGroupId)],
+);
+export const oidcSecrets = sqliteTable("oidc_secrets", {
+  id: text("id").primaryKey(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: text("iv").notNull(),
+  authTag: text("auth_tag").notNull(),
+  keyVersion: integer("key_version").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+export const auditLogs = sqliteTable(
+  "audit_logs",
+  {
+    id: text("id").primaryKey(),
+    actorUserId: text("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id"),
+    outcome: text("outcome", { enum: ["success", "failure", "denied"] }).notNull(),
+    metadataJson: text("metadata_json").notNull().default("{}"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    sessionIdHash: text("session_id_hash"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("audit_logs_created_at_idx").on(t.createdAt),
+    index("audit_logs_actor_created_idx").on(t.actorUserId, t.createdAt),
+    check("audit_logs_outcome_valid", sql`${t.outcome} IN ('success','failure','denied')`),
+  ],
+);
+export const authSessions = sqliteTable(
+  "auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+  },
+  (t) => [index("auth_sessions_user_revoked_idx").on(t.userId, t.revokedAt)],
 );

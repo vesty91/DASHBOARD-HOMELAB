@@ -479,11 +479,32 @@ défaut). Les secrets d'intégration restent en ciphertext. Pas de mutation pend
 `validate`. `restore` exige `confirm: true` et prend un backup pré-restore avant
 la transaction.
 
-| Route             | Permission      | Notes                                                                                       |
-| ----------------- | --------------- | ------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 5, hash SHA-256.         |
-| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.     |
-| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache. |
+| Route             | Permission      | Notes                                                                                                   |
+| ----------------- | --------------- | ------------------------------------------------------------------------------------------------------- |
+| `backup.export`   | `backup.manage` | Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 6, hash SHA-256. Accepte restore v5. |
+| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                 |
+| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.             |
 
 Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
-en clair dans l'archive. Schéma ≠ 5 → `INCOMPATIBLE_SCHEMA`.
+en clair dans l'archive. Schéma ≠ 5 et ≠ 6 → `INCOMPATIBLE_SCHEMA`. `audit_logs` et
+`auth_sessions` sont exclus de l'archive.
+
+# SSO / admin avancé — Phase 15
+
+OIDC générique, audit et sessions. Les secrets OIDC et d'intégration restent
+côté serveur.
+
+| Route                      | Permission            | Notes                                                                  |
+| -------------------------- | --------------------- | ---------------------------------------------------------------------- |
+| `oidc.publicConfig`        | public                | `{ enabled, displayName, allowLocalLogin }` sans secret.               |
+| `oidc.getSettings`         | `oidc.manage`         | Config + `hasClientSecret`. Jamais le plaintext.                       |
+| `oidc.saveSettings`        | `oidc.manage`         | Secret optionnel, chiffré. Redirect borné à `/api/auth/callback/oidc`. |
+| `oidc.listMappings`        | `oidc.manage`         | Mapping groupes OIDC → groupes locaux.                                 |
+| `oidc.replaceMappings`     | `oidc.manage`         | Remplacement atomique, default-deny.                                   |
+| `audit.list`               | `audit.read`          | Pagination `limit` ≤ 100, curseur, filtres action/acteur/dates.        |
+| `session.listSelf`         | `session.read.self`   | Sessions actives de l'appelant. `current` sans secret.                 |
+| `session.revokeSelf`       | `session.revoke.self` | Révoque une session de l'appelant.                                     |
+| `session.revokeOthers`     | `session.revoke.self` | Révoque toutes sauf la session courante.                               |
+| `session.listForUser`      | `session.manage`      | Sessions d'un autre utilisateur.                                       |
+| `session.revokeForUser`    | `session.manage`      | Révocation admin.                                                      |
+| `session.revokeAllForUser` | `session.manage`      | Révocation admin de toutes les sessions.                               |

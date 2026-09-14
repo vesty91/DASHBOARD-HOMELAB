@@ -111,8 +111,12 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide ;
+- manifest valide (`schemaVersion` 6) ;
 - fichier invalide rejeté avant mutation.
+
+### E2E-009 SSO admin
+
+- pages OIDC, audit et sessions self visibles pour SYSTEM_ADMIN.
 
 ## 6. Tests non fonctionnels
 

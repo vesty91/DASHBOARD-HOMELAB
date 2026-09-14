@@ -341,16 +341,17 @@ Le manifest doit contenir :
 {
   "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "schemaVersion": 5,
-  "databaseSchemaVersion": 5,
+  "schemaVersion": 6,
+  "databaseSchemaVersion": 6,
   "appVersion": "0.1.0",
   "createdAt": "...",
   "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
 }
 ```
 
-La v1 n'accepte que le schéma Drizzle 5. Pas de migration `0006` : l'archive est un
-fichier JSON, pas une table. Le restore s'exécute dans une transaction.
+La v1 n'accepte que les schémas Drizzle 5 et 6. La migration `0006` ajoute OIDC,
+audit et sessions. Le restore d'une archive v5 complète les tables OIDC vides.
+`audit_logs` et `auth_sessions` ne sont pas exportés.
 
 ## 8. Implémentation Phase 2
 
