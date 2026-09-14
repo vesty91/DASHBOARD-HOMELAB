@@ -1,15 +1,32 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { type Duplex } from "node:stream";
+import { WebSocketServer, WebSocket } from "ws";
 import {
-  canReceiveEvent,
   createConfiguredEventBus,
-  parseDomainEvent,
   verifyRealtimeTicket,
   type DomainEvent,
   type EventBus,
+  type VerifiedRealtimeTicket,
 } from "@dashboard/events";
+import { authorizedEvent } from "./authorized-event";
+import {
+  ConnectionLimiter,
+  REALTIME_HEARTBEAT_MS,
+  REALTIME_MAX_BUFFERED_BYTES,
+  REALTIME_MAX_CONNECTIONS,
+  REALTIME_MAX_CONNECTIONS_PER_USER,
+  REALTIME_MAX_PAYLOAD_BYTES,
+  shouldCloseSlowConsumer,
+} from "./limits";
+import { ticketFromUrl } from "./ticket-from-request";
 
-export const REALTIME_MAX_CONNECTIONS = 100;
-export const REALTIME_HEARTBEAT_MS = 15_000;
+export {
+  REALTIME_HEARTBEAT_MS,
+  REALTIME_MAX_BUFFERED_BYTES,
+  REALTIME_MAX_CONNECTIONS,
+  REALTIME_MAX_CONNECTIONS_PER_USER,
+  REALTIME_MAX_PAYLOAD_BYTES,
+};
 
 export interface RealtimeOptions {
   bus?: EventBus;
@@ -18,6 +35,11 @@ export interface RealtimeOptions {
   host?: string;
   port?: number;
   heartbeatMs?: number;
+  maxConnections?: number;
+  maxConnectionsPerUser?: number;
+  maxBufferedBytes?: number;
+  maxPayloadBytes?: number;
+  isReady?: () => Promise<boolean>;
 }
 
 export interface RealtimeHandle {
@@ -32,30 +54,146 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(JSON.stringify(body));
 }
 
-function ticketFromUrl(url: string | undefined): string | null {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url, "http://realtime.invalid");
-    const ticket = parsed.searchParams.get("ticket");
-    return ticket && ticket.length > 0 ? ticket : null;
-  } catch {
-    return null;
-  }
-}
-
 function writeSse(response: ServerResponse, event: DomainEvent): void {
   response.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
 }
 
+function rejectUpgrade(socket: Duplex, status: number, reason: string): void {
+  socket.write(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\n\r\n`);
+  socket.destroy();
+}
+
+function busPing(bus: EventBus): Promise<boolean> | null {
+  const candidate = bus as EventBus & { ping?: () => Promise<boolean> };
+  if (typeof candidate.ping === "function") return candidate.ping();
+  return null;
+}
+
 export async function startRealtime(options: RealtimeOptions): Promise<RealtimeHandle> {
   const bus = options.bus ?? (await createConfiguredEventBus(options.redisUrl));
-  const connections = new Set<ServerResponse>();
+  const limiter = new ConnectionLimiter(
+    options.maxConnections ?? REALTIME_MAX_CONNECTIONS,
+    options.maxConnectionsPerUser ?? REALTIME_MAX_CONNECTIONS_PER_USER,
+  );
   const heartbeatMs = Math.min(
     30_000,
-    Math.max(5_000, options.heartbeatMs ?? REALTIME_HEARTBEAT_MS),
+    Math.max(1_000, options.heartbeatMs ?? REALTIME_HEARTBEAT_MS),
   );
+  const maxBufferedBytes = options.maxBufferedBytes ?? REALTIME_MAX_BUFFERED_BYTES;
+  const maxPayloadBytes = options.maxPayloadBytes ?? REALTIME_MAX_PAYLOAD_BYTES;
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 0;
+  const sseConnections = new Set<ServerResponse>();
+  const sockets = new Set<WebSocket>();
+
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: maxPayloadBytes,
+    clientTracking: false,
+  });
+
+  function dispatch(
+    ticket: VerifiedRealtimeTicket,
+    raw: unknown,
+    send: (event: DomainEvent) => void,
+  ): void {
+    const event = authorizedEvent(ticket.subscriptions, raw);
+    if (!event) return;
+    send(event);
+  }
+
+  function attachSse(
+    request: IncomingMessage,
+    response: ServerResponse,
+    ticket: VerifiedRealtimeTicket,
+  ): void {
+    sseConnections.add(response);
+    const unsubscribe = bus.subscribe((raw) => {
+      dispatch(ticket, raw, (event) => writeSse(response, event));
+    });
+    response.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      connection: "keep-alive",
+    });
+    response.write("retry: 5000\n\n");
+    const ping = setInterval(() => {
+      response.write(": keepalive\n\n");
+    }, heartbeatMs);
+    ping.unref();
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      clearInterval(ping);
+      unsubscribe();
+      sseConnections.delete(response);
+      limiter.release(ticket.userId);
+    };
+    request.on("close", cleanup);
+    response.on("close", cleanup);
+  }
+
+  function attachSocket(socket: WebSocket, ticket: VerifiedRealtimeTicket): void {
+    sockets.add(socket);
+    socket.binaryType = "arraybuffer";
+    let alive = true;
+    const unsubscribe = bus.subscribe((raw) => {
+      dispatch(ticket, raw, (event) => {
+        if (socket.readyState !== WebSocket.OPEN) return;
+        if (shouldCloseSlowConsumer(socket.bufferedAmount, maxBufferedBytes)) {
+          socket.close();
+          return;
+        }
+        socket.send(JSON.stringify(event));
+      });
+    });
+    const ping = setInterval(() => {
+      if (socket.readyState !== WebSocket.OPEN) return;
+      if (!alive) {
+        socket.terminate();
+        return;
+      }
+      alive = false;
+      socket.ping();
+    }, heartbeatMs);
+    ping.unref();
+    socket.on("pong", () => {
+      alive = true;
+    });
+    socket.on("message", () => {
+      socket.close();
+    });
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      clearInterval(ping);
+      unsubscribe();
+      sockets.delete(socket);
+      limiter.release(ticket.userId);
+    };
+    socket.on("close", cleanup);
+    socket.on("error", cleanup);
+  }
+
+  async function respondReady(response: ServerResponse): Promise<void> {
+    try {
+      const probe = options.isReady
+        ? await options.isReady()
+        : options.redisUrl
+          ? ((await busPing(bus)) ?? true)
+          : true;
+      if (!probe) {
+        sendJson(response, 503, { status: "not-ready" });
+        return;
+      }
+      sendJson(response, 200, { status: "ready", connections: limiter.size });
+    } catch (error) {
+      void error;
+      sendJson(response, 503, { status: "not-ready" });
+    }
+  }
 
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method !== "GET") {
@@ -67,7 +205,11 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       return;
     }
     if (request.url === "/health/ready") {
-      sendJson(response, 200, { status: "ready", connections: connections.size });
+      void respondReady(response);
+      return;
+    }
+    if (request.url?.startsWith("/ws")) {
+      sendJson(response, 426, { status: "upgrade-required" });
       return;
     }
     if (!request.url?.startsWith("/events")) {
@@ -80,34 +222,31 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       sendJson(response, 401, { status: "unauthorized" });
       return;
     }
-    if (connections.size >= REALTIME_MAX_CONNECTIONS) {
+    if (!limiter.tryAcquire(verified.userId)) {
       sendJson(response, 429, { status: "too-many-connections" });
       return;
     }
-    connections.add(response);
-    const unsubscribe = bus.subscribe((event) => {
-      const safe = parseDomainEvent(event);
-      if (!safe) return;
-      if (!canReceiveEvent(verified.subscriptions, safe)) return;
-      writeSse(response, safe);
+    attachSse(request, response, verified);
+  });
+
+  server.on("upgrade", (request, socket, head) => {
+    if (request.method !== "GET" || !request.url?.startsWith("/ws")) {
+      socket.destroy();
+      return;
+    }
+    const ticket = ticketFromUrl(request.url);
+    const verified = ticket ? verifyRealtimeTicket(options.secret, ticket) : null;
+    if (!verified) {
+      rejectUpgrade(socket, 401, "Unauthorized");
+      return;
+    }
+    if (!limiter.tryAcquire(verified.userId)) {
+      rejectUpgrade(socket, 429, "Too Many Requests");
+      return;
+    }
+    wss.handleUpgrade(request, socket, head, (websocket) => {
+      attachSocket(websocket, verified);
     });
-    response.writeHead(200, {
-      "content-type": "text/event-stream; charset=utf-8",
-      "cache-control": "no-cache, no-transform",
-      connection: "keep-alive",
-    });
-    response.write("retry: 5000\n\n");
-    const ping = setInterval(() => {
-      response.write(": keepalive\n\n");
-    }, heartbeatMs);
-    ping.unref();
-    const cleanup = () => {
-      clearInterval(ping);
-      unsubscribe();
-      connections.delete(response);
-    };
-    request.on("close", cleanup);
-    response.on("close", cleanup);
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -123,11 +262,14 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
       return address.port;
     },
     connectionCount() {
-      return connections.size;
+      return limiter.size;
     },
     async close() {
-      for (const connection of connections) connection.end();
-      connections.clear();
+      for (const connection of sseConnections) connection.end();
+      sseConnections.clear();
+      for (const socket of sockets) socket.terminate();
+      sockets.clear();
+      wss.close();
       await bus.close();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

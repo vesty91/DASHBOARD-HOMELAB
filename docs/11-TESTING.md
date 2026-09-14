@@ -218,3 +218,5 @@ Les tickets portent des subscriptions déjà autorisées. SSE filtre `board.*`, 
 `job.*` côté serveur. Tampering, scopes inconnus et tickets oversized sont rejetés.
 `integration.data.changed` est un signal d'invalidation : extras/secrets stripés, refetch
 uniquement pour l'id autorisé, debounce d'un burst, pas de publish si le refresh échoue.
+WebSocket `/ws` réutilise le même filtre, refuse les messages client, borne connexions et
+frames, et ping/pong ; SSE `/events` reste le fallback.

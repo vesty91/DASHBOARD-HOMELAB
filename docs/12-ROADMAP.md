@@ -246,7 +246,7 @@ Livrables :
 
 ## Phase 13 — Worker + realtime
 
-Statut : IN PROGRESS (jobs persistés, événements RBAC, live stats en cours ; WebSocket ensuite).
+Statut : IN PROGRESS (jobs, événements RBAC, live stats mergés ; WebSocket en cours).
 
 Livrables :
 
