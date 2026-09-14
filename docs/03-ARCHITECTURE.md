@@ -361,6 +361,14 @@ utilisateur, et backpressure (`bufferedAmount`). Le client tente WS puis SSE. Le
 
 COMPLETE. `@dashboard/backup` valide une archive JSON non fiable (vocabulaire fermé,
 secrets uniquement chiffrés, hash SHA-256). `packages/db` dump/replace en transaction
-sans migration `0006`. tRPC `backup.export` / `backup.validate` / `backup.restore`
+sans table de backup. tRPC `backup.export` / `backup.validate` / `backup.restore`
 exige `backup.manage`. Pipeline : export → manifeste + hashes → preview sans mutation →
 backup pré-restore → restore transactionnel → commit → invalidation cache. Voir ADR 0016.
+
+# État Phase 15
+
+IN PROGRESS. OIDC générique via NextAuth (pas de provider codé en dur), identités
+`issuer+sub`, mapping de groupes default-deny, journal d'audit, sessions révocables.
+Migration `0006` / `schemaVersion` 6. Backup inclut les identités et mappings OIDC
+ainsi que le secret OIDC chiffré ; `audit_logs` et `auth_sessions` sont exclus.
+Voir ADR 0017.

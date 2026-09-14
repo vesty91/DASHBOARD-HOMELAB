@@ -1,19 +1,23 @@
 import { redirect } from "next/navigation";
 import { Button, Field, Input, PageContainer, PageHeader } from "@dashboard/ui";
 import { requireSession } from "@/lib/server/auth";
+import { getBoardCaller } from "@/lib/server/board-api";
 import { changePasswordAction } from "./actions";
+import { SessionsPanel } from "./sessions-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function SecurityPage() {
   if (!(await requireSession().catch(() => null))) redirect("/login");
+  const sessions = await (await getBoardCaller()).session.listSelf();
   return (
     <PageContainer>
       <PageHeader
         title="Sécurité du compte"
-        description="Modifier le mot de passe de votre compte local."
+        description="Mot de passe local et sessions actives."
       />
-      <form action={changePasswordAction} className="ui-form">
+      <form action={changePasswordAction} className="ui-form ui-card ui-form-card">
+        <h2 className="ui-section-title">Mot de passe</h2>
         <Field label="Mot de passe actuel">
           <Input required type="password" name="currentPassword" autoComplete="current-password" />
         </Field>
@@ -31,6 +35,7 @@ export default async function SecurityPage() {
           Changer le mot de passe
         </Button>
       </form>
+      <SessionsPanel sessions={sessions} />
     </PageContainer>
   );
 }

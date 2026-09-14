@@ -276,12 +276,15 @@ management (Phase 15).
 
 ## Phase 15 — SSO + Admin avancé
 
+Statut : IN PROGRESS.
+
 Livrables :
 
-- OIDC ;
-- groups mapping ;
-- audit logs ;
-- sessions management.
+- OIDC générique (Authorization Code + PKCE, state, nonce) ;
+- association d'identité `issuer + sub` ;
+- mapping de groupes default-deny ;
+- audit logs serveur + UI `/admin/audit` (`audit.read`) ;
+- gestion des sessions (`auth_sessions`, révocation immédiate).
 
 ## Phase 16 — Hardening
 

@@ -15,6 +15,10 @@ export const PERMISSIONS = [
   "settings.manage",
   "backup.manage",
   "audit.read",
+  "oidc.manage",
+  "session.read.self",
+  "session.revoke.self",
+  "session.manage",
   "board.view",
   "board.edit",
   "board.manage",
@@ -36,7 +40,12 @@ export const PERMISSIONS = [
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;
 export type RoleName = (typeof ROLE_NAMES)[number];
-const viewer: readonly Permission[] = ["app.read", "integration.read"];
+const viewer: readonly Permission[] = [
+  "app.read",
+  "integration.read",
+  "session.read.self",
+  "session.revoke.self",
+];
 export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<RoleName, readonly Permission[]>> = {
   VIEWER: viewer,
   USER: [...viewer, "board.create"],

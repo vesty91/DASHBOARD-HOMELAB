@@ -28,7 +28,8 @@ export function previewArchive(archive: BackupArchive): BackupPreview {
     createdAt: archive.manifest.createdAt,
     compatible: true,
     tableCounts,
-    encryptedSecretCount: archive.tables.integration_secrets.length,
+    encryptedSecretCount:
+      archive.tables.integration_secrets.length + archive.tables.oidc_secrets.length,
     credentialCount: archive.tables.user_credentials.length,
     files: archive.manifest.files.map((file) => ({
       name: file.name,

@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 5;
+export const BACKUP_SCHEMA_VERSION = 6;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6] as const;
 export const BACKUP_APP_VERSION = "0.1.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -173,6 +174,49 @@ const serverSettingsRowSchema = z
     schemaVersion: z.number().int().positive(),
     instanceName: z.string().max(200).nullable(),
     onboardingCompleted: z.boolean(),
+    oidcEnabled: z.boolean(),
+    oidcIssuer: z.string().max(500).nullable(),
+    oidcClientId: z.string().max(200).nullable(),
+    oidcDisplayName: z.string().max(80).nullable(),
+    oidcScopes: z.string().min(1).max(300),
+    oidcRedirectUri: z.string().max(500).nullable(),
+    oidcGroupClaim: z.string().min(1).max(80),
+    oidcAutoLinkVerifiedEmail: z.boolean(),
+    oidcAutoProvision: z.boolean(),
+    oidcAllowLocalLogin: z.boolean(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const oidcIdentityRowSchema = z
+  .object({
+    id: uuidSchema,
+    userId: uuidSchema,
+    issuer: z.string().min(1).max(500),
+    subject: z.string().min(1).max(255),
+    email: z.string().max(320).nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const oidcGroupMappingRowSchema = z
+  .object({
+    id: uuidSchema,
+    oidcGroup: z.string().min(1).max(200),
+    localGroupId: uuidSchema,
+    createdAt: isoDateTimeSchema,
+  })
+  .strict();
+
+const oidcSecretRowSchema = z
+  .object({
+    id: z.string().min(1).max(80),
+    ciphertext: z.string().min(1).max(20_000),
+    iv: z.string().min(1).max(200),
+    authTag: z.string().min(1).max(200),
+    keyVersion: z.number().int().positive(),
     createdAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema,
   })
@@ -272,6 +316,9 @@ export const backupTablesSchema = z
     board_user_permissions: z.array(boardUserPermissionRowSchema).max(10_000),
     board_group_permissions: z.array(boardGroupPermissionRowSchema).max(10_000),
     jobs: z.array(jobRowSchema).max(10_000),
+    oidc_identities: z.array(oidcIdentityRowSchema).max(10_000),
+    oidc_group_mappings: z.array(oidcGroupMappingRowSchema).max(2_000),
+    oidc_secrets: z.array(oidcSecretRowSchema).max(10),
   })
   .strict();
 
@@ -279,8 +326,8 @@ export const backupManifestSchema = z
   .object({
     format: z.literal(BACKUP_FORMAT),
     formatVersion: z.literal(BACKUP_FORMAT_VERSION),
-    schemaVersion: z.literal(BACKUP_SCHEMA_VERSION),
-    databaseSchemaVersion: z.literal(BACKUP_SCHEMA_VERSION),
+    schemaVersion: z.union([z.literal(5), z.literal(BACKUP_SCHEMA_VERSION)]),
+    databaseSchemaVersion: z.union([z.literal(5), z.literal(BACKUP_SCHEMA_VERSION)]),
     appVersion: z.string().min(1).max(40),
     createdAt: isoDateTimeSchema,
     files: z.tuple([
@@ -302,6 +349,45 @@ export const backupArchiveSchema = z
   })
   .strict();
 
+export const backupTablesSchemaV5 = z
+  .object({
+    users: backupTablesSchema.shape.users,
+    groups: backupTablesSchema.shape.groups,
+    group_members: backupTablesSchema.shape.group_members,
+    boards: backupTablesSchema.shape.boards,
+    layouts: backupTablesSchema.shape.layouts,
+    items: backupTablesSchema.shape.items,
+    item_layouts: backupTablesSchema.shape.item_layouts,
+    apps: backupTablesSchema.shape.apps,
+    app_tags: backupTablesSchema.shape.app_tags,
+    integrations: backupTablesSchema.shape.integrations,
+    integration_secrets: backupTablesSchema.shape.integration_secrets,
+    server_settings: z
+      .array(
+        z
+          .object({
+            id: z.literal("global"),
+            schemaVersion: z.number().int().positive(),
+            instanceName: z.string().max(200).nullable(),
+            onboardingCompleted: z.boolean(),
+            createdAt: isoDateTimeSchema,
+            updatedAt: isoDateTimeSchema,
+          })
+          .strict(),
+      )
+      .length(1),
+    user_credentials: backupTablesSchema.shape.user_credentials,
+    roles: backupTablesSchema.shape.roles,
+    role_permissions: backupTablesSchema.shape.role_permissions,
+    user_roles: backupTablesSchema.shape.user_roles,
+    group_roles: backupTablesSchema.shape.group_roles,
+    board_user_permissions: backupTablesSchema.shape.board_user_permissions,
+    board_group_permissions: backupTablesSchema.shape.board_group_permissions,
+    jobs: backupTablesSchema.shape.jobs,
+  })
+  .strict();
+
+export type BackupTablesV5 = z.infer<typeof backupTablesSchemaV5>;
 export type BackupTables = z.infer<typeof backupTablesSchema>;
 export type BackupManifest = z.infer<typeof backupManifestSchema>;
 export type BackupArchive = z.infer<typeof backupArchiveSchema>;

@@ -57,6 +57,9 @@ function createCaller(
     | "realtimeTickets"
     | "jobs"
     | "backup"
+    | "audit"
+    | "sessions"
+    | "oidc"
   > & {
     synology?: SynologyService;
     jellyfin?: JellyfinService;
@@ -69,6 +72,9 @@ function createCaller(
     realtimeTickets?: ApiContext["realtimeTickets"];
     jobs?: ApiContext["jobs"];
     backup?: ApiContext["backup"];
+    audit?: ApiContext["audit"];
+    sessions?: ApiContext["sessions"];
+    oidc?: ApiContext["oidc"];
   },
 ) {
   return createAppCaller({
@@ -101,6 +107,28 @@ function createCaller(
       restore: async () => {
         throw new Error("backup not stubbed");
       },
+    },
+    audit: {
+      record: async () => undefined,
+      list: async () => ({ items: [], nextCursor: null }),
+    },
+    sessions: {
+      listSelf: async () => [],
+      revokeSelf: async () => undefined,
+      revokeOthers: async () => undefined,
+      listForUser: async () => [],
+      revokeForUser: async () => undefined,
+      revokeAllForUser: async () => undefined,
+    },
+    oidc: {
+      publicConfig: async () => ({ enabled: false, displayName: null, allowLocalLogin: true }),
+      getSettings: async () => {
+        throw new Error("oidc not stubbed");
+      },
+      saveSettings: async () => undefined,
+      listMappings: async () => [],
+      replaceMappings: async () => undefined,
+      listGroups: async () => [],
     },
     ...context,
   });
@@ -1345,9 +1373,19 @@ describe("backup tRPC router", () => {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 2,
+      schemaVersion: 6,
       instanceName: null,
       onboardingCompleted: true,
+      oidcEnabled: false,
+      oidcIssuer: null,
+      oidcClientId: null,
+      oidcDisplayName: null,
+      oidcScopes: "openid profile email groups",
+      oidcRedirectUri: null,
+      oidcGroupClaim: "groups",
+      oidcAutoLinkVerifiedEmail: false,
+      oidcAutoProvision: false,
+      oidcAllowLocalLogin: true,
       createdAt: "2026-09-14T12:00:00.000Z",
       updatedAt: "2026-09-14T12:00:00.000Z",
     },
@@ -1402,5 +1440,106 @@ describe("backup tRPC router", () => {
       }).backup.validate({ archive: { not: "a-backup" } }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(backup.restore).not.toHaveBeenCalled();
+  });
+});
+
+describe("phase 15 admin security routers", () => {
+  const systemAdmin = {
+    userId: "00000000-0000-4000-8000-000000000001",
+    subject: { status: "active" as const, isSystemAdmin: true },
+  };
+  const viewer = {
+    userId: "00000000-0000-4000-8000-000000000099",
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["session.read.self", "session.revoke.self"],
+    },
+  };
+
+  it("forbids audit, oidc and session.manage without the matching permission", async () => {
+    const caller = createCaller({
+      actor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+    });
+    await expect(caller.audit.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.oidc.getSettings()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      caller.session.listForUser({ userId: "00000000-0000-4000-8000-000000000001" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("lists self sessions for session.read.self and forbids a weaker actor", async () => {
+    const listSelf = vi.fn(async () => [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        createdAt: "2026-09-14T12:00:00.000Z",
+        lastSeenAt: "2026-09-14T12:00:00.000Z",
+        expiresAt: "2026-09-15T12:00:00.000Z",
+        userAgent: "Mozilla/5.0",
+        ip: null,
+        current: true,
+      },
+    ]);
+    await expect(
+      createCaller({
+        actor: viewer,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+        sessions: {
+          listSelf,
+          revokeSelf: async () => undefined,
+          revokeOthers: async () => undefined,
+          listForUser: async () => [],
+          revokeForUser: async () => undefined,
+          revokeAllForUser: async () => undefined,
+        },
+      }).session.listSelf(),
+    ).resolves.toHaveLength(1);
+    await expect(
+      createCaller({
+        actor,
+        boards: service(),
+        apps,
+        integrations,
+        docker,
+      }).session.listSelf(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("allows SYSTEM_ADMIN to read audit logs without exposing secrets in the payload", async () => {
+    const list = vi.fn(async () => ({
+      items: [
+        {
+          id: "evt-1",
+          actorUserId: systemAdmin.userId,
+          action: "integration.secret.set" as const,
+          targetType: "integration",
+          targetId: "int-1",
+          outcome: "success" as const,
+          metadata: { key: "apiKey" },
+          ip: null,
+          userAgent: null,
+          sessionIdHash: "abcd1234abcd1234",
+          createdAt: "2026-09-14T12:00:00.000Z",
+        },
+      ],
+      nextCursor: null,
+    }));
+    const result = await createCaller({
+      actor: systemAdmin,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      audit: { record: async () => undefined, list },
+    }).audit.list({ limit: 20 });
+    expect(JSON.stringify(result)).not.toMatch(/password|token|ciphertext|Bearer /u);
+    expect(result.items[0]?.action).toBe("integration.secret.set");
   });
 });

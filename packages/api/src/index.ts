@@ -55,6 +55,14 @@ import { serviceStatusQuerySchema, type ServiceStatusService } from "@dashboard/
 import type { RealtimeSubscription, RealtimeTicket, RuntimeStatusService } from "@dashboard/events";
 import { APP_TILE_UNSET_APP_ID, appTileConfigSchema } from "@dashboard/widgets";
 import { BackupError, type BackupService } from "@dashboard/backup";
+import {
+  AuthError,
+  auditListInputSchema,
+  oidcSettingsInputSchema,
+  type AuditEvent,
+  type AuditEventInput,
+  type PublicAuthSession,
+} from "@dashboard/auth";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -100,6 +108,51 @@ export interface ApiContext {
     listRecent(limit: number): Promise<JobListItem[]>;
   };
   backup: BackupService;
+  audit: {
+    record(event: AuditEventInput): Promise<void>;
+    list(query: {
+      limit: number;
+      cursor?: string;
+      action?: AuditEventInput["action"];
+      actorUserId?: string;
+      from?: Date;
+      to?: Date;
+    }): Promise<{ items: AuditEvent[]; nextCursor: string | null }>;
+  };
+  sessions: {
+    listSelf(): Promise<PublicAuthSession[]>;
+    revokeSelf(sessionId: string): Promise<void>;
+    revokeOthers(): Promise<void>;
+    listForUser(userId: string): Promise<PublicAuthSession[]>;
+    revokeForUser(userId: string, sessionId: string): Promise<void>;
+    revokeAllForUser(userId: string): Promise<void>;
+  };
+  oidc: {
+    publicConfig(): Promise<{
+      enabled: boolean;
+      displayName: string | null;
+      allowLocalLogin: boolean;
+    }>;
+    getSettings(): Promise<{
+      enabled: boolean;
+      issuer: string | null;
+      clientId: string | null;
+      displayName: string | null;
+      scopes: string;
+      redirectUri: string | null;
+      groupClaim: string;
+      autoLinkVerifiedEmail: boolean;
+      autoProvision: boolean;
+      allowLocalLogin: boolean;
+      hasClientSecret: boolean;
+    }>;
+    saveSettings(input: z.infer<typeof oidcSettingsInputSchema>): Promise<void>;
+    listMappings(): Promise<{ id: string; oidcGroup: string; localGroupId: string }[]>;
+    replaceMappings(
+      mappings: readonly { oidcGroup: string; localGroupId: string }[],
+    ): Promise<void>;
+    listGroups(): Promise<{ id: string; name: string }[]>;
+  };
 }
 export type BoardApiContext = ApiContext;
 const t = initTRPC.context<ApiContext>().create();
@@ -153,9 +206,30 @@ const mapError = (error: unknown): never => {
                     : "BAD_REQUEST";
     throw new TRPCError({ code, message: error.message, cause: error });
   }
+  if (error instanceof AuthError) {
+    throw new TRPCError({
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "AUTH_REQUIRED" || error.code === "AUTH_SESSION_INVALID"
+            ? "UNAUTHORIZED"
+            : "BAD_REQUEST",
+      message: error.message,
+      cause: error,
+    });
+  }
   throw error;
 };
 const procedure = <T>(operation: () => Promise<T>) => operation().catch(mapError);
+
+async function emitAudit(ctx: ApiContext, event: AuditEventInput): Promise<void> {
+  try {
+    await ctx.audit.record(event);
+  } catch (error) {
+    void error;
+    console.error(JSON.stringify({ msg: "audit_write_failed" }));
+  }
+}
 
 async function ensureAppTileTarget(
   ctx: ApiContext,
@@ -336,21 +410,53 @@ export const integrationsRouter = t.router({
   get: t.procedure
     .input(z.object({ id: z.uuid() }))
     .query(({ ctx, input }) => procedure(() => ctx.integrations.get(input.id, ctx.actor))),
-  create: t.procedure
-    .input(integrationCreateSchema)
-    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.create(input, ctx.actor))),
+  create: t.procedure.input(integrationCreateSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      const created = await ctx.integrations.create(input, ctx.actor);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "integration.create",
+        targetType: "integration",
+        targetId: created.id,
+        outcome: "success",
+        metadata: { type: input.type },
+      });
+      return created;
+    }),
+  ),
   update: t.procedure
     .input(integrationUpdateSchema)
     .mutation(({ ctx, input }) => procedure(() => ctx.integrations.update(input, ctx.actor))),
-  setSecret: t.procedure
-    .input(integrationSetSecretSchema)
-    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.setSecret(input, ctx.actor))),
+  setSecret: t.procedure.input(integrationSetSecretSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      const result = await ctx.integrations.setSecret(input, ctx.actor);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "integration.secret.set",
+        targetType: "integration",
+        targetId: input.integrationId,
+        outcome: "success",
+        metadata: { key: input.key },
+      });
+      return result;
+    }),
+  ),
   test: t.procedure
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.integrations.test(input.id, ctx.actor))),
-  delete: t.procedure
-    .input(z.object({ id: z.uuid() }))
-    .mutation(({ ctx, input }) => procedure(() => ctx.integrations.delete(input.id, ctx.actor))),
+  delete: t.procedure.input(z.object({ id: z.uuid() })).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      const result = await ctx.integrations.delete(input.id, ctx.actor);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "integration.delete",
+        targetType: "integration",
+        targetId: input.id,
+        outcome: "success",
+      });
+      return result;
+    }),
+  ),
 });
 export const dockerRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.docker.permissions(ctx.actor)),
@@ -382,15 +488,48 @@ export const dockerRouter = t.router({
     logs: t.procedure
       .input(dockerLogsInputSchema)
       .mutation(({ ctx, input }) => procedure(() => ctx.docker.getContainerLogs(input, ctx.actor))),
-    start: t.procedure
-      .input(dockerContainerInputSchema)
-      .mutation(({ ctx, input }) => procedure(() => ctx.docker.startContainer(input, ctx.actor))),
-    stop: t.procedure
-      .input(dockerActionInputSchema)
-      .mutation(({ ctx, input }) => procedure(() => ctx.docker.stopContainer(input, ctx.actor))),
-    restart: t.procedure
-      .input(dockerActionInputSchema)
-      .mutation(({ ctx, input }) => procedure(() => ctx.docker.restartContainer(input, ctx.actor))),
+    start: t.procedure.input(dockerContainerInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.docker.startContainer(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "docker.start",
+          targetType: "container",
+          targetId: input.containerId,
+          outcome: "success",
+          metadata: { integrationId: input.integrationId },
+        });
+        return result;
+      }),
+    ),
+    stop: t.procedure.input(dockerActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.docker.stopContainer(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "docker.stop",
+          targetType: "container",
+          targetId: input.containerId,
+          outcome: "success",
+          metadata: { integrationId: input.integrationId },
+        });
+        return result;
+      }),
+    ),
+    restart: t.procedure.input(dockerActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.docker.restartContainer(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "docker.restart",
+          targetType: "container",
+          targetId: input.containerId,
+          outcome: "success",
+          metadata: { integrationId: input.integrationId },
+        });
+        return result;
+      }),
+    ),
   }),
 });
 export const synologyRouter = t.router({
@@ -633,19 +772,195 @@ export const backupRouter = t.router({
   export: t.procedure.query(({ ctx }) =>
     procedure(async () => {
       requireBackupManage(ctx);
-      return ctx.backup.exportArchive();
+      const archive = await ctx.backup.exportArchive();
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "backup.export",
+        targetType: "backup",
+        outcome: "success",
+      });
+      return archive;
     }),
   ),
   validate: t.procedure.input(backupValidateInputSchema).mutation(({ ctx, input }) =>
     procedure(async () => {
       requireBackupManage(ctx);
-      return ctx.backup.validate(input.archive);
+      const preview = await ctx.backup.validate(input.archive);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "backup.validate",
+        targetType: "backup",
+        outcome: "success",
+        metadata: { schemaVersion: preview.schemaVersion },
+      });
+      return preview;
     }),
   ),
   restore: t.procedure.input(backupRestoreInputSchema).mutation(({ ctx, input }) =>
     procedure(async () => {
       requireBackupManage(ctx);
-      return ctx.backup.restore(input.archive, input.confirm);
+      const restored = await ctx.backup.restore(input.archive, input.confirm);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "backup.restore",
+        targetType: "backup",
+        outcome: "success",
+        metadata: { schemaVersion: restored.preview.schemaVersion },
+      });
+      return restored;
+    }),
+  ),
+});
+
+function requirePermission(ctx: ApiContext, permission: Parameters<typeof hasPermission>[1]) {
+  requireAuthenticatedUser(ctx);
+  const subject = ctx.actor.subject;
+  if (!subject || !hasPermission(subject, permission))
+    throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });
+}
+
+export const auditRouter = t.router({
+  list: t.procedure.input(auditListInputSchema.optional()).query(({ ctx, input }) =>
+    procedure(async () => {
+      requirePermission(ctx, "audit.read");
+      return ctx.audit.list({
+        limit: input?.limit ?? 50,
+        ...(input?.cursor ? { cursor: input.cursor } : {}),
+        ...(input?.action ? { action: input.action } : {}),
+        ...(input?.actorUserId ? { actorUserId: input.actorUserId } : {}),
+        ...(input?.from ? { from: new Date(input.from) } : {}),
+        ...(input?.to ? { to: new Date(input.to) } : {}),
+      });
+    }),
+  ),
+});
+
+export const sessionRouter = t.router({
+  listSelf: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requirePermission(ctx, "session.read.self");
+      return ctx.sessions.listSelf();
+    }),
+  ),
+  revokeSelf: t.procedure.input(z.object({ sessionId: z.uuid() })).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      requirePermission(ctx, "session.revoke.self");
+      await ctx.sessions.revokeSelf(input.sessionId);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "session.revoke",
+        targetType: "session",
+        targetId: input.sessionId,
+        outcome: "success",
+      });
+    }),
+  ),
+  revokeOthers: t.procedure.mutation(({ ctx }) =>
+    procedure(async () => {
+      requirePermission(ctx, "session.revoke.self");
+      await ctx.sessions.revokeOthers();
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "session.revoke_others",
+        targetType: "session",
+        outcome: "success",
+      });
+    }),
+  ),
+  listForUser: t.procedure.input(z.object({ userId: z.uuid() })).query(({ ctx, input }) =>
+    procedure(async () => {
+      requirePermission(ctx, "session.manage");
+      return ctx.sessions.listForUser(input.userId);
+    }),
+  ),
+  revokeForUser: t.procedure
+    .input(z.object({ userId: z.uuid(), sessionId: z.uuid() }))
+    .mutation(({ ctx, input }) =>
+      procedure(async () => {
+        requirePermission(ctx, "session.manage");
+        await ctx.sessions.revokeForUser(input.userId, input.sessionId);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "session.revoke",
+          targetType: "session",
+          targetId: input.sessionId,
+          outcome: "success",
+          metadata: { userId: input.userId },
+        });
+      }),
+    ),
+  revokeAllForUser: t.procedure.input(z.object({ userId: z.uuid() })).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      requirePermission(ctx, "session.manage");
+      await ctx.sessions.revokeAllForUser(input.userId);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "session.revoke_all",
+        targetType: "user",
+        targetId: input.userId,
+        outcome: "success",
+      });
+    }),
+  ),
+});
+
+export const oidcRouter = t.router({
+  publicConfig: t.procedure.query(({ ctx }) => procedure(() => ctx.oidc.publicConfig())),
+  getSettings: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requirePermission(ctx, "oidc.manage");
+      return ctx.oidc.getSettings();
+    }),
+  ),
+  saveSettings: t.procedure.input(oidcSettingsInputSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      requirePermission(ctx, "oidc.manage");
+      await ctx.oidc.saveSettings(input);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "auth.oidc.settings.update",
+        targetType: "oidc",
+        outcome: "success",
+        metadata: { enabled: input.enabled, issuer: input.issuer },
+      });
+    }),
+  ),
+  listMappings: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requirePermission(ctx, "oidc.manage");
+      return ctx.oidc.listMappings();
+    }),
+  ),
+  replaceMappings: t.procedure
+    .input(
+      z.object({
+        mappings: z
+          .array(
+            z.object({
+              oidcGroup: z.string().trim().min(1).max(200),
+              localGroupId: z.uuid(),
+            }),
+          )
+          .max(200),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      procedure(async () => {
+        requirePermission(ctx, "oidc.manage");
+        await ctx.oidc.replaceMappings(input.mappings);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "auth.oidc.mapping.update",
+          targetType: "oidc",
+          outcome: "success",
+          metadata: { count: input.mappings.length },
+        });
+      }),
+    ),
+  listGroups: t.procedure.query(({ ctx }) =>
+    procedure(async () => {
+      requirePermission(ctx, "oidc.manage");
+      return ctx.oidc.listGroups();
     }),
   ),
 });
@@ -681,6 +996,9 @@ export const dashboardRouter = t.router({
   realtime: realtimeRouter,
   jobs: jobsRouter,
   backup: backupRouter,
+  audit: auditRouter,
+  session: sessionRouter,
+  oidc: oidcRouter,
 });
 export const appRouter = dashboardRouter;
 export type AppRouter = typeof dashboardRouter;

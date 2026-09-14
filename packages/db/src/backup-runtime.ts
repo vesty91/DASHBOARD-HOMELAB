@@ -37,6 +37,9 @@ const sqliteTables = {
   board_user_permissions: sqliteSchema.boardUserPermissions,
   board_group_permissions: sqliteSchema.boardGroupPermissions,
   jobs: sqliteSchema.jobs,
+  oidc_identities: sqliteSchema.oidcIdentities,
+  oidc_group_mappings: sqliteSchema.oidcGroupMappings,
+  oidc_secrets: sqliteSchema.oidcSecrets,
 } as const;
 
 const postgresqlTables = {
@@ -60,6 +63,9 @@ const postgresqlTables = {
   board_user_permissions: postgresqlSchema.boardUserPermissions,
   board_group_permissions: postgresqlSchema.boardGroupPermissions,
   jobs: postgresqlSchema.jobs,
+  oidc_identities: postgresqlSchema.oidcIdentities,
+  oidc_group_mappings: postgresqlSchema.oidcGroupMappings,
+  oidc_secrets: postgresqlSchema.oidcSecrets,
 } as const;
 
 function toSnakeCase(column: string): string {

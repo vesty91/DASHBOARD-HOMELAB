@@ -10,7 +10,8 @@
     "./app-runtime": "./src/app-runtime.ts",
     "./integration-runtime": "./src/integration-runtime.ts",
     "./job-runtime": "./src/job-runtime.ts",
-    "./backup-runtime": "./src/backup-runtime.ts"
+    "./backup-runtime": "./src/backup-runtime.ts",
+    "./security-runtime": "./src/security-runtime.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
@@ -32,6 +33,7 @@
     "vitest": "4.1.11"
   },
   "dependencies": {
+    "@dashboard/auth": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "drizzle-orm": "0.45.2",

@@ -22,9 +22,10 @@ est NFKC + minuscules et possède une contrainte unique portable.
 - invalidation ;
 - expiration configurable.
 
-Les sessions JWT expirent après `AUTH_SESSION_MAX_AGE_SECONDS` (24 h par défaut). `authVersion` est
-vérifié en base à chaque résolution serveur ; les permissions ne sont jamais une source de vérité du
-JWT. Voir ADR 0003.
+Les sessions JWT expirent après `AUTH_SESSION_MAX_AGE_SECONDS` (24 h par défaut). Un
+`sessionId` (UUID) est persisté dans `auth_sessions`. `authVersion` et l'état de
+révocation sont vérifiés en base à chaque résolution serveur ; les permissions ne
+sont jamais une source de vérité du JWT. Voir ADR 0003 et ADR 0017.
 
 Le schéma Zod de l'environnement serveur est l'unique source de vérité pour cette durée. Les valeurs
 doivent être des secondes entières comprises entre 300 et 2 592 000 ; une valeur vide, non numérique
@@ -33,17 +34,21 @@ ou hors limites empêche le démarrage au lieu de transmettre une durée invalid
 La limitation login de Phase 3 est volontairement en mémoire et mono-processus. Elle ne fait pas
 confiance aux en-têtes forwarded. Redis et la politique proxy distribuée restent au hardening.
 
+Un utilisateur peut lister et révoquer ses autres sessions (`session.read.self` /
+`session.revoke.self`). Un administrateur avec `session.manage` peut révoquer les
+sessions d'un autre compte. Le token/session secret n'est jamais affiché.
+
 ## 3. OIDC
 
-Support futur dès conception :
+Support générique (Authentik, Keycloak, Authelia compatible OIDC) :
 
-- issuer ;
-- client id ;
-- client secret ;
-- scopes ;
-- mapping claims ;
-- auto-provisioning configurable ;
-- groupe admin jamais accordé par défaut sans règle explicite.
+- issuer, client id, client secret chiffré, scopes, redirect URI, displayName ;
+- Authorization Code + PKCE, state, nonce, validation issuer/audience/exp ;
+- association `issuer + sub` ; auto-link email seulement si configuré et vérifié ;
+- mapping de groupes explicite, default-deny, jamais SYSTEM_ADMIN via OIDC ;
+- login local conservé sauf si `oidcAllowLocalLogin` est désactivé.
+
+Permission `oidc.manage` (SYSTEM_ADMIN par défaut). Voir ADR 0017.
 
 ## 4. Rôles
 
@@ -78,6 +83,10 @@ settings.read
 settings.manage
 backup.manage
 audit.read
+oidc.manage
+session.read.self
+session.revoke.self
+session.manage
 ```
 
 ## 6. Permissions board
@@ -150,6 +159,8 @@ utilise `integration.manage` (`canManageAuth`), pas une permission `synology.man
 | Gérer utilisateurs      |    non |  non |    non |   oui |          oui |
 | Paramètres système      |    non |  non |    non |   non |          oui |
 | Backup/restore          |    non |  non |    non |   non |          oui |
+| OIDC / audit            |    non |  non |    non |   non |          oui |
+| Sessions self           |    oui |  oui |    oui |   oui |          oui |
 
 La matrice finale est configurable via permissions explicites.
 
@@ -209,17 +220,10 @@ par défaut **n'obtient pas** `prometheus.read`.
 
 ## 10. Audit
 
-Actions à journaliser :
-
-- login failure répétée ;
-- changement rôle ;
-- ajout/suppression permission ;
-- création/suppression intégration ;
-- modification secret ;
-- action Docker ;
-- restore backup ;
-- rotation clé ;
-- changement paramètres sécurité.
+Journal serveur `audit_logs` (Phase 15). Couvre login, OIDC, utilisateurs,
+groupes, permissions, intégrations, secrets (sans contenu), Docker, backup et
+sessions. Lecture `audit.read` avec pagination. Jamais de mot de passe, token,
+cookie ou clé API.
 
 ## 11. Anti-bruteforce
 

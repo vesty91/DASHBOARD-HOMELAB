@@ -136,6 +136,66 @@ export function createSqliteAuthStore(database: DatabaseSync) {
         .prepare("INSERT OR IGNORE INTO group_members(group_id,user_id,created_at) VALUES(?,?,?)")
         .run(groupId, userId, Date.now());
     },
+    async removeGroupMember(groupId: string, userId: string) {
+      database
+        .prepare("DELETE FROM group_members WHERE group_id=? AND user_id=?")
+        .run(groupId, userId);
+    },
+    async listUserGroupIds(userId: string) {
+      return database
+        .prepare("SELECT group_id FROM group_members WHERE user_id=?")
+        .all(userId)
+        .map((row) => String(row.group_id));
+    },
+    async findUserByEmail(email: string) {
+      const row = database
+        .prepare(
+          "SELECT id, username, display_name, status, is_system_admin, auth_version FROM users WHERE lower(email)=lower(?)",
+        )
+        .get(email);
+      return row ? mapSqliteUser(row) : undefined;
+    },
+    async findUserByCanonicalUsername(usernameCanonical: string) {
+      const row = database
+        .prepare(
+          "SELECT id, username, display_name, status, is_system_admin, auth_version FROM users WHERE username_canonical=?",
+        )
+        .get(usernameCanonical);
+      return row ? mapSqliteUser(row) : undefined;
+    },
+    async createOidcProvisionedUser(input: {
+      username: string;
+      usernameCanonical: string;
+      email?: string | null;
+      displayName?: string | null;
+    }) {
+      const id = randomUUID(),
+        now = Date.now();
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database
+          .prepare(
+            "INSERT INTO users(id,username,username_canonical,email,display_name,status,is_system_admin,auth_version,created_at,updated_at) VALUES(?,?,?,?,?,'active',0,1,?,?)",
+          )
+          .run(
+            id,
+            input.username,
+            input.usernameCanonical,
+            input.email ?? null,
+            input.displayName ?? null,
+            now,
+            now,
+          );
+        database
+          .prepare("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE name=?")
+          .run(id, "USER");
+        database.exec("COMMIT");
+        return findUser(id)!;
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async assignGroupRole(groupId: string, roleName: string) {
       database
         .prepare(
@@ -419,6 +479,69 @@ export function createPostgresqlAuthStore(pool: Pool) {
         "INSERT INTO group_members(group_id,user_id,created_at) VALUES($1,$2,now()) ON CONFLICT DO NOTHING",
         [groupId, userId],
       );
+    },
+    async removeGroupMember(groupId: string, userId: string) {
+      await pool.query("DELETE FROM group_members WHERE group_id=$1 AND user_id=$2", [
+        groupId,
+        userId,
+      ]);
+    },
+    async listUserGroupIds(userId: string) {
+      const result = await pool.query("SELECT group_id FROM group_members WHERE user_id=$1", [
+        userId,
+      ]);
+      return result.rows.map((row) => String(row.group_id));
+    },
+    async findUserByEmail(email: string) {
+      const result = await pool.query(
+        "SELECT id,username,display_name,status,is_system_admin,auth_version FROM users WHERE lower(email)=lower($1)",
+        [email],
+      );
+      return result.rows[0]
+        ? mapPostgresUser(result.rows[0] as Record<string, unknown>)
+        : undefined;
+    },
+    async findUserByCanonicalUsername(usernameCanonical: string) {
+      const result = await pool.query(
+        "SELECT id,username,display_name,status,is_system_admin,auth_version FROM users WHERE username_canonical=$1",
+        [usernameCanonical],
+      );
+      return result.rows[0]
+        ? mapPostgresUser(result.rows[0] as Record<string, unknown>)
+        : undefined;
+    },
+    async createOidcProvisionedUser(input: {
+      username: string;
+      usernameCanonical: string;
+      email?: string | null;
+      displayName?: string | null;
+    }) {
+      const client = await pool.connect();
+      const id = randomUUID();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          "INSERT INTO users(id,username,username_canonical,email,display_name,status,is_system_admin,auth_version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,'active',false,1,now(),now())",
+          [
+            id,
+            input.username,
+            input.usernameCanonical,
+            input.email ?? null,
+            input.displayName ?? null,
+          ],
+        );
+        await client.query(
+          "INSERT INTO user_roles(user_id,role_id) SELECT $1,id FROM roles WHERE name=$2",
+          [id, "USER"],
+        );
+        await client.query("COMMIT");
+        return (await findUser(id))!;
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     },
     async assignGroupRole(groupId: string, roleName: string) {
       await pool.query(

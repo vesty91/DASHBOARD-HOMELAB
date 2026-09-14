@@ -239,6 +239,10 @@ Minimum :
 - unauthorized Docker action ;
 - backup unauthorized.
 
+La Phase 15 ajoute : validation OIDC (issuer, audience, nonce, redirect), account
+linking sans takeover email, mapping groupes default-deny, audit sans secrets,
+révocation de session immédiate, et backup schéma 6 sans exporter `auth_sessions`.
+
 La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="noopener noreferrer"`
 pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board
 vérifiée serveur), isolation d'erreur par widget sans stack client, distinction CONFLICT vs

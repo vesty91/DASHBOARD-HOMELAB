@@ -183,6 +183,11 @@ describe("SQLite database foundation", () => {
       board_user_permissions: sqliteSchema.boardUserPermissions,
       board_group_permissions: sqliteSchema.boardGroupPermissions,
       jobs: sqliteSchema.jobs,
+      oidc_identities: sqliteSchema.oidcIdentities,
+      oidc_group_mappings: sqliteSchema.oidcGroupMappings,
+      oidc_secrets: sqliteSchema.oidcSecrets,
+      audit_logs: sqliteSchema.auditLogs,
+      auth_sessions: sqliteSchema.authSessions,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -205,6 +210,11 @@ describe("SQLite database foundation", () => {
       board_user_permissions: postgresqlSchema.boardUserPermissions,
       board_group_permissions: postgresqlSchema.boardGroupPermissions,
       jobs: postgresqlSchema.jobs,
+      oidc_identities: postgresqlSchema.oidcIdentities,
+      oidc_group_mappings: postgresqlSchema.oidcGroupMappings,
+      oidc_secrets: postgresqlSchema.oidcSecrets,
+      audit_logs: postgresqlSchema.auditLogs,
+      auth_sessions: postgresqlSchema.authSessions,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

@@ -5,7 +5,7 @@ import { PageContainer } from "@dashboard/ui";
 import { PublicAuthLayout } from "@/components/public-auth-layout";
 import { AppShellServer } from "@/components/shell/app-shell-server";
 import { getShellContext } from "@/components/shell/get-shell-context";
-import { authOptions } from "@/lib/server/auth";
+import { getAuthOptions } from "@/lib/server/auth";
 import { getBoardCaller } from "@/lib/server/board-api";
 import { getDatabase } from "@/lib/server/database";
 
@@ -28,7 +28,7 @@ async function countOrNull(load: () => Promise<number | null>): Promise<number |
 }
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(await getAuthOptions());
   if (!session?.user?.id) {
     const { authStore } = await getDatabase();
     const onboarded = await authStore.isOnboardingCompleted();

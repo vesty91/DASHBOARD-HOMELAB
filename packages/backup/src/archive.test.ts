@@ -4,9 +4,11 @@ import {
   BACKUP_SCHEMA_VERSION,
   BackupError,
   buildArchive,
+  canonicalJson,
   emptyBackupTables,
   parseBackupArchive,
   previewArchive,
+  sha256Hex,
 } from "./index";
 
 function validTables() {
@@ -14,9 +16,19 @@ function validTables() {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 2,
+      schemaVersion: 6,
       instanceName: null,
       onboardingCompleted: true,
+      oidcEnabled: false,
+      oidcIssuer: null,
+      oidcClientId: null,
+      oidcDisplayName: null,
+      oidcScopes: "openid profile email groups",
+      oidcRedirectUri: null,
+      oidcGroupClaim: "groups",
+      oidcAutoLinkVerifiedEmail: false,
+      oidcAutoProvision: false,
+      oidcAllowLocalLogin: true,
       createdAt: "2026-09-14T12:00:00.000Z",
       updatedAt: "2026-09-14T12:00:00.000Z",
     },
@@ -120,13 +132,13 @@ describe("backup archive", () => {
     expect(() =>
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 6, databaseSchemaVersion: 6 },
+        manifest: { ...archive.manifest, schemaVersion: 7, databaseSchemaVersion: 7 },
       }),
     ).toThrow(BackupError);
     try {
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 6, databaseSchemaVersion: 6 },
+        manifest: { ...archive.manifest, schemaVersion: 7, databaseSchemaVersion: 7 },
       });
     } catch (error) {
       expect(error).toMatchObject({ code: "INCOMPATIBLE_SCHEMA" });
@@ -150,5 +162,60 @@ describe("backup archive", () => {
     expect(() => buildArchive(emptyBackupTables(), "2026-09-14T12:00:00.000Z")).toThrow(
       BackupError,
     );
+  });
+
+  it("upgrades a schema 5 archive and keeps OIDC tables empty", () => {
+    const tables = {
+      users: validTables().users,
+      groups: [],
+      group_members: [],
+      boards: [],
+      layouts: [],
+      items: [],
+      item_layouts: [],
+      apps: [],
+      app_tags: [],
+      integrations: [],
+      integration_secrets: validTables().integration_secrets,
+      server_settings: [
+        {
+          id: "global" as const,
+          schemaVersion: 5,
+          instanceName: null,
+          onboardingCompleted: true,
+          createdAt: "2026-09-14T12:00:00.000Z",
+          updatedAt: "2026-09-14T12:00:00.000Z",
+        },
+      ],
+      user_credentials: [],
+      roles: [],
+      role_permissions: [],
+      user_roles: [],
+      group_roles: [],
+      board_user_permissions: [],
+      board_group_permissions: [],
+      jobs: [],
+    };
+    const canonical = canonicalJson(tables);
+    const hashed = {
+      sha256: sha256Hex(canonical),
+      bytes: Buffer.byteLength(canonical, "utf8"),
+    };
+    const parsed = parseBackupArchive({
+      manifest: {
+        format: BACKUP_FORMAT,
+        formatVersion: 1,
+        schemaVersion: 5,
+        databaseSchemaVersion: 5,
+        appVersion: "0.1.0",
+        createdAt: "2026-09-14T12:00:00.000Z",
+        files: [{ name: "tables.json", sha256: hashed.sha256, bytes: hashed.bytes }],
+      },
+      tables,
+    });
+    expect(parsed.manifest.schemaVersion).toBe(5);
+    expect(parsed.tables.oidc_identities).toEqual([]);
+    expect(parsed.tables.server_settings[0]?.oidcEnabled).toBe(false);
+    expect(parsed.tables.oidc_secrets).toEqual([]);
   });
 });

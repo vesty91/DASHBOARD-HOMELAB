@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { hasPermission, type Permission } from "@dashboard/permissions";
 import { redirect } from "next/navigation";
-import { Archive, KeyRound, Plug, Users, UsersRound } from "lucide-react";
+import { Archive, FileText, KeyRound, Plug, Shield, Users, UsersRound } from "lucide-react";
 import { PageContainer, PageHeader } from "@dashboard/ui";
 import { requireSession } from "@/lib/server/auth";
 import { getDatabase } from "@/lib/server/database";
@@ -12,6 +12,9 @@ const ADMIN_ENTRY_PERMISSIONS: readonly Permission[] = [
   "app.manage",
   "integration.manage",
   "backup.manage",
+  "audit.read",
+  "oidc.manage",
+  "session.manage",
 ];
 
 export default async function AdminPage() {
@@ -26,6 +29,8 @@ export default async function AdminPage() {
   const canIntegrations =
     hasPermission(subject, "integration.manage") || hasPermission(subject, "integration.read");
   const canBackup = hasPermission(subject, "backup.manage");
+  const canOidc = hasPermission(subject, "oidc.manage");
+  const canAudit = hasPermission(subject, "audit.read");
   return (
     <PageContainer>
       <PageHeader
@@ -74,6 +79,28 @@ export default async function AdminPage() {
             <span className="shortcut-card-copy">
               <span className="ui-card-title">Backup</span>
               <span className="ui-muted">Export, validation et restore.</span>
+            </span>
+          </Link>
+        ) : null}
+        {canOidc ? (
+          <Link href="/admin/oidc" className="shortcut-card">
+            <span className="shortcut-card-icon" aria-hidden="true">
+              <Shield />
+            </span>
+            <span className="shortcut-card-copy">
+              <span className="ui-card-title">OpenID Connect</span>
+              <span className="ui-muted">SSO, association et mapping de groupes.</span>
+            </span>
+          </Link>
+        ) : null}
+        {canAudit ? (
+          <Link href="/admin/audit" className="shortcut-card">
+            <span className="shortcut-card-icon" aria-hidden="true">
+              <FileText />
+            </span>
+            <span className="shortcut-card-copy">
+              <span className="ui-card-title">Audit</span>
+              <span className="ui-muted">Journal des actions sensibles.</span>
             </span>
           </Link>
         ) : null}

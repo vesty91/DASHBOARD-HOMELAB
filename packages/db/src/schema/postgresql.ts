@@ -242,6 +242,16 @@ export const serverSettings = pgTable(
     schemaVersion: integer("schema_version").notNull().default(1),
     instanceName: text("instance_name"),
     onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+    oidcEnabled: boolean("oidc_enabled").notNull().default(false),
+    oidcIssuer: text("oidc_issuer"),
+    oidcClientId: text("oidc_client_id"),
+    oidcDisplayName: text("oidc_display_name"),
+    oidcScopes: text("oidc_scopes").notNull().default("openid profile email groups"),
+    oidcRedirectUri: text("oidc_redirect_uri"),
+    oidcGroupClaim: text("oidc_group_claim").notNull().default("groups"),
+    oidcAutoLinkVerifiedEmail: boolean("oidc_auto_link_verified_email").notNull().default(false),
+    oidcAutoProvision: boolean("oidc_auto_provision").notNull().default(false),
+    oidcAllowLocalLogin: boolean("oidc_allow_local_login").notNull().default(true),
     ...timestamps,
   },
   (t) => [check("server_settings_singleton", sql`${t.id} = 'global'`)],
@@ -354,4 +364,78 @@ export const jobs = pgTable(
     check("jobs_status_valid", sql`${t.status} IN ('queued','running','succeeded','failed')`),
     check("jobs_attempt_positive", sql`${t.attempt} > 0`),
   ],
+);
+export const oidcIdentities = pgTable(
+  "oidc_identities",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    issuer: text("issuer").notNull(),
+    subject: text("subject").notNull(),
+    email: text("email"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("oidc_identities_issuer_subject_uq").on(t.issuer, t.subject),
+    index("oidc_identities_user_idx").on(t.userId),
+  ],
+);
+export const oidcGroupMappings = pgTable(
+  "oidc_group_mappings",
+  {
+    id: uuid("id").primaryKey(),
+    oidcGroup: text("oidc_group").notNull(),
+    localGroupId: uuid("local_group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [uniqueIndex("oidc_group_mappings_group_local_uq").on(t.oidcGroup, t.localGroupId)],
+);
+export const oidcSecrets = pgTable("oidc_secrets", {
+  id: text("id").primaryKey(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: text("iv").notNull(),
+  authTag: text("auth_tag").notNull(),
+  keyVersion: integer("key_version").notNull(),
+  ...timestamps,
+});
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id"),
+    outcome: text("outcome").notNull(),
+    metadataJson: jsonb("metadata_json").notNull().default({}),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    sessionIdHash: text("session_id_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("audit_logs_created_at_idx").on(t.createdAt),
+    index("audit_logs_actor_created_idx").on(t.actorUserId, t.createdAt),
+    check("audit_logs_outcome_valid", sql`${t.outcome} IN ('success','failure','denied')`),
+  ],
+);
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+  },
+  (t) => [index("auth_sessions_user_revoked_idx").on(t.userId, t.revokedAt)],
 );

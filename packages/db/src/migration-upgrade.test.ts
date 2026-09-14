@@ -12,6 +12,10 @@ const phase13JobsMigration = new URL(
   "../drizzle/sqlite/0005_wandering_mac_gargan.sql",
   import.meta.url,
 );
+const phase15SecurityMigration = new URL(
+  "../drizzle/sqlite/0006_exotic_sugar_man.sql",
+  import.meta.url,
+);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -270,6 +274,40 @@ describe("Phase 13 jobs migration", () => {
           .prepare("SELECT name FROM integrations WHERE id='11111111-1111-4111-8111-111111111111'")
           .get(),
       ).toMatchObject({ name: "NAS" });
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 15 security migration", () => {
+  it("adds OIDC, audit and session tables and bumps schema_version to 6", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase13JobsMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase15SecurityMigration, "utf8"));
+      for (const table of [
+        "oidc_identities",
+        "oidc_group_mappings",
+        "oidc_secrets",
+        "audit_logs",
+        "auth_sessions",
+      ]) {
+        expect(
+          database
+            .prepare("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name=?")
+            .get(table)?.count,
+        ).toBe(1);
+      }
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 6 });
     } finally {
       database.close();
     }

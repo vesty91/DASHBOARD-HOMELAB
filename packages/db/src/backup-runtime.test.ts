@@ -20,8 +20,12 @@ async function setup() {
 }
 
 describe("backup runtime", () => {
-  it("keeps the backup vocabulary aligned with the database tables", () => {
-    expect([...BACKUP_TABLE_NAMES].sort()).toEqual([...TABLE_NAMES].sort());
+  it("keeps the backup vocabulary aligned with the restorable database tables", () => {
+    for (const table of BACKUP_TABLE_NAMES) expect(TABLE_NAMES).toContain(table);
+    expect(TABLE_NAMES).toContain("audit_logs");
+    expect(TABLE_NAMES).toContain("auth_sessions");
+    expect(BACKUP_TABLE_NAMES).not.toContain("audit_logs");
+    expect(BACKUP_TABLE_NAMES).not.toContain("auth_sessions");
   });
 
   it("round-trips a snapshot, keeps secrets encrypted, and rolls back failed restores", async () => {

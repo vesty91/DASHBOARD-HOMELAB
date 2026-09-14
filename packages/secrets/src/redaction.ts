@@ -7,6 +7,9 @@ const SENSITIVE_KEYS = new Set([
   "cookie",
   "setcookie",
   "clientsecret",
+  "idtoken",
+  "accesstoken",
+  "refreshtoken",
 ]);
 
 function normalizeKey(key: string): string {

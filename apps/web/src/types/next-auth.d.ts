@@ -17,6 +17,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
     };
+    sessionId?: string;
   }
 }
 declare module "next-auth/jwt" {
@@ -25,5 +26,6 @@ declare module "next-auth/jwt" {
     displayName?: string | null;
     isSystemAdmin?: boolean;
     authVersion?: number;
+    sessionId?: string;
   }
 }

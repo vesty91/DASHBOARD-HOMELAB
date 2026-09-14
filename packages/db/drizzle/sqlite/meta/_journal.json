@@ -43,6 +43,13 @@
       "when": 1789336816548,
       "tag": "0005_wandering_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789411308147,
+      "tag": "0006_exotic_sugar_man",
+      "breakpoints": true
     }
   ]
 }
