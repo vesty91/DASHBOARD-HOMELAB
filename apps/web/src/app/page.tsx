@@ -9,6 +9,8 @@ import { getAuthOptions } from "@/lib/server/auth";
 import { getBoardCaller } from "@/lib/server/board-api";
 import { getDatabase } from "@/lib/server/database";
 
+export const dynamic = "force-dynamic";
+
 function isDenied(error: unknown): boolean {
   return Boolean(
     error &&

@@ -11,7 +11,8 @@
     "./integration-runtime": "./src/integration-runtime.ts",
     "./job-runtime": "./src/job-runtime.ts",
     "./backup-runtime": "./src/backup-runtime.ts",
-    "./security-runtime": "./src/security-runtime.ts"
+    "./security-runtime": "./src/security-runtime.ts",
+    "./health": "./src/health.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

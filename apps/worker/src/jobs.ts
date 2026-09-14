@@ -26,14 +26,24 @@ export function createJobRecorder(store: JobStore): JobRecorder {
 
 export function createJobRecorderFromEnv(
   env: Readonly<Record<string, string | undefined>>,
-): JobRecorder | undefined {
+): { recorder: JobRecorder; close: () => Promise<void> } | undefined {
   if (!env.DATABASE_URL?.trim()) return undefined;
   const config = parseDatabaseConfig({
     DB_DRIVER: env.DB_DRIVER ?? "sqlite",
     DATABASE_URL: env.DATABASE_URL,
   });
   if (config.DB_DRIVER === "postgres") {
-    return createJobRecorder(createPostgresqlJobStore(createPostgresqlClient(config.DATABASE_URL)));
+    const client = createPostgresqlClient(config.DATABASE_URL);
+    return {
+      recorder: createJobRecorder(createPostgresqlJobStore(client)),
+      close: () => client.close(),
+    };
   }
-  return createJobRecorder(createSqliteJobStore(createSqliteClient(config.DATABASE_URL)));
+  const client = createSqliteClient(config.DATABASE_URL);
+  return {
+    recorder: createJobRecorder(createSqliteJobStore(client)),
+    close: async () => {
+      client.close();
+    },
+  };
 }

@@ -128,10 +128,10 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
     async close() {
       running = false;
       clearInterval(timer);
-      await bus.close();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       });
+      await bus.close();
     },
   };
 }
