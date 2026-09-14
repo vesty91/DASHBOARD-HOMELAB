@@ -30,16 +30,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 5s
     networks:
       - internal
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /data
 
   migrate:
     build:
