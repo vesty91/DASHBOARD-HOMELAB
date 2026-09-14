@@ -182,8 +182,21 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
   } catch {
     // OIDC stays disabled if discovery or secrets fail. Local login remains available.
   }
+  const useSecureCookies = serverEnv.APP_URL.startsWith("https:");
   const options: NextAuthOptions = {
     ...(serverEnv.AUTH_SECRET ? { secret: serverEnv.AUTH_SECRET } : {}),
+    useSecureCookies,
+    cookies: {
+      sessionToken: {
+        name: `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          secure: useSecureCookies,
+        },
+      },
+    },
     session: { strategy: "jwt", ...sessionConfiguration },
     jwt: { maxAge: sessionConfiguration.maxAge },
     pages: { signIn: "/login", error: "/login" },
@@ -204,7 +217,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
             claims: payload as OidcClaims,
             expectedIssuer: runtime.settings.issuer,
             expectedAudience: runtime.settings.clientId,
-            expectedNonce: nonce,
           });
           const result = await completeOidcLogin({
             issuer: runtime.settings.issuer,

@@ -153,14 +153,45 @@ describe("realtime SSE", () => {
         REDIS_URL: "rediss://redis:6380/0",
         REALTIME_HOST: "0.0.0.0",
         REALTIME_PORT: "3002",
+        APP_URL: "https://dashboard.example",
       }),
     ).toEqual({
       secret,
       redisUrl: "rediss://redis:6380/0",
       host: "0.0.0.0",
       port: 3002,
+      allowedOrigin: "https://dashboard.example",
     });
     expect(() => realtimeOptionsFromEnv({ AUTH_SECRET: "short" })).toThrow("AUTH_SECRET_TOO_SHORT");
+  });
+
+  it("rejects a mismatched Origin when APP_URL is configured", async () => {
+    const bus = new MemoryEventBus();
+    const realtime = await startRealtime({
+      bus,
+      secret,
+      heartbeatMs: 5_000,
+      allowedOrigin: "https://dashboard.example",
+    });
+    try {
+      const ticket = issueRealtimeTicket(secret, {
+        userId: "user-1",
+        subscriptions: [{ kind: "runtime" }],
+      });
+      const denied = await fetch(
+        `http://127.0.0.1:${realtime.port()}/events?ticket=${encodeURIComponent(ticket.token)}`,
+        { headers: { origin: "https://evil.example" } },
+      );
+      expect(denied.status).toBe(403);
+      const allowed = await fetch(
+        `http://127.0.0.1:${realtime.port()}/events?ticket=${encodeURIComponent(ticket.token)}`,
+        { headers: { origin: "https://dashboard.example" } },
+      );
+      expect(allowed.status).toBe(200);
+      await allowed.body?.cancel();
+    } finally {
+      await realtime.close();
+    }
   });
 
   it("returns 503 when the configured ready probe fails", async () => {

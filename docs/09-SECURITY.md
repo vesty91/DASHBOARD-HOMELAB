@@ -71,19 +71,28 @@ Procédure future :
 
 ## 5. CSP
 
-Objectif :
+Enforcement (Phase 16) :
 
 - `default-src 'self'` ;
-- script restrictions ;
-- frame-src configurable uniquement pour iframe widget ;
-- connect-src limité ;
-- nonce si nécessaire.
+- `script-src 'self' 'unsafe-inline'` (Next.js 16, pas de nonce encore) ;
+- `style-src 'self' 'unsafe-inline'` ;
+- **pas** de `'unsafe-eval'` ;
+- `img-src 'self' data: blob: http: https:` (icônes homelab) ;
+- `connect-src 'self' ws: wss:` ;
+- `frame-ancestors 'none'` ;
+- `object-src 'none'` ;
+- `base-uri 'self'` ;
+- `form-action 'self'`.
 
 ## 6. CSRF
 
-Mutations authentifiées par cookie protégées.
+Mutations authentifiées par cookie protégées (`SameSite=Lax`).
 
-Valider Origin/Host pour opérations critiques.
+`serverActions.allowedOrigins` = hôte de `APP_URL`. tRPC HTTP : POST uniquement.
+`backup.export` est une mutation. Un header `Origin` présent doit matcher `APP_URL`
+(tRPC et realtime). Les appels sans `Origin` (non navigateur) restent acceptés.
+
+Pas de mutation sensible par GET.
 
 ## 7. SSRF
 
@@ -132,19 +141,21 @@ Options :
 
 Sur :
 
-- login ;
-- password reset ;
-- test connection ;
-- actions Docker ;
-- API publiques ;
-- import backup.
+- login local (existant) ;
+- setup (5 / 5 min) ;
+- backup export / validate / restore (8 / min / acteur, RBAC d'abord) ;
+- OIDC save / mappings ;
+- révocation de sessions ;
+- test connection / actions Docker (existants).
+
+Le rate limiter n'est pas un substitut au RBAC. Il est process-local (mémoire).
 
 ## 11. Headers
 
-- HSTS si HTTPS ;
-- X-Content-Type-Options ;
-- Referrer-Policy ;
-- Permissions-Policy ;
+- HSTS si `APP_URL` est HTTPS ;
+- X-Content-Type-Options: nosniff ;
+- Referrer-Policy: strict-origin-when-cross-origin ;
+- Permissions-Policy (camera, microphone, geolocation, payment) ;
 - frame-ancestors via CSP.
 
 ## 12. Docker
@@ -242,6 +253,27 @@ Minimum :
 La Phase 15 ajoute : validation OIDC (issuer, audience, nonce, redirect), account
 linking sans takeover email, mapping groupes default-deny, audit sans secrets,
 révocation de session immédiate, et backup schéma 6 sans exporter `auth_sessions`.
+
+La Phase 16 ajoute : CSP enforcement, tRPC POST-only, rate limit backup/OIDC/sessions,
+origine realtime, cookies session explicites, et tests négatifs Docker POST exec.
+
+## 17. OIDC et sessions (Phase 15+16)
+
+- Authorization Code + PKCE + state + nonce (NextAuth) ;
+- replay nonce rejeté ; clock skew max 120 s ;
+- linking `issuer+sub` ; email auto-link seulement si configuré et `email_verified` ;
+- mapping groupes default-deny ;
+- session JWT + `auth_sessions` ; révocation immédiate ;
+- cookie HttpOnly / SameSite=Lax / Secure si HTTPS ;
+- nouveau `sessionId` à chaque login.
+
+## 18. Risques résiduels (Phase 16)
+
+- `'unsafe-inline'` conservé pour Next.js ;
+- rate limit non partagé entre processus / replicas ;
+- IP d'audit volontairement absente (`X-Forwarded-For` non fiable, ADR 0003) ;
+- RFC1918 autorisé pour les intégrations homelab (loopback / metadata / link-local bloqués) ;
+- `audit_logs` et `auth_sessions` exclus du backup.
 
 La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="noopener noreferrer"`
 pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board

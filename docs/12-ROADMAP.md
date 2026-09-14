@@ -288,17 +288,19 @@ Livrables :
 
 ## Phase 16 — Hardening
 
-Audit :
+Statut : IN PROGRESS.
 
-- RBAC ;
-- SSRF ;
-- CSRF ;
-- XSS ;
-- CSP ;
-- Docker ;
-- secrets ;
-- rate limit ;
-- backup.
+Audit et corrections :
+
+- headers HTTP + CSP enforcement (sans `'unsafe-eval'`) ;
+- CSRF : `allowedOrigins`, tRPC POST-only, `backup.export` en mutation ;
+- rate limit backup / OIDC / sessions / setup ;
+- origine realtime vs `APP_URL` ;
+- OIDC nonce (présence + replay, pas d'auto-comparaison) ;
+- cookies session HttpOnly / SameSite / Secure ;
+- tests de non-régression (RBAC, Docker exec POST, backup trop gros).
+
+Hors scope : Phase 17 (image Docker, Compose prod, multi-arch, release).
 
 ## Phase 17 — Production
 

@@ -479,11 +479,11 @@ défaut). Les secrets d'intégration restent en ciphertext. Pas de mutation pend
 `validate`. `restore` exige `confirm: true` et prend un backup pré-restore avant
 la transaction.
 
-| Route             | Permission      | Notes                                                                                                   |
-| ----------------- | --------------- | ------------------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 6, hash SHA-256. Accepte restore v5. |
-| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                 |
-| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.             |
+| Route             | Permission      | Notes                                                                                                            |
+| ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 6. Rate limité. |
+| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                          |
+| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
 
 Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
 en clair dans l'archive. Schéma ≠ 5 et ≠ 6 → `INCOMPATIBLE_SCHEMA`. `audit_logs` et

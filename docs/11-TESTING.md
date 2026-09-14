@@ -225,3 +225,10 @@ Les tickets portent des subscriptions déjà autorisées. SSE filtre `board.*`, 
 uniquement pour l'id autorisé, debounce d'un burst, pas de publish si le refresh échoue.
 WebSocket `/ws` réutilise le même filtre, refuse les messages client, borne connexions et
 frames, et ping/pong ; SSE `/events` reste le fallback.
+
+## 16. Couverture Phase 16
+
+Tests ciblés : CSP/headers, tRPC GET 405, rate limit restore après RBAC, nonce OIDC
+absent / replay / clock skew plafonné, groupes OIDC malformés default-deny, origine
+realtime, Docker `exec`/`attach` en POST, archive backup trop grosse. L'E2E
+`security-headers.spec.ts` lit les headers de `/login`.

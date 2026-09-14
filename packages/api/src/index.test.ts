@@ -6,7 +6,13 @@ import {
   type BoardService,
 } from "@dashboard/boards";
 import { createCaller as createAppCaller, type ApiContext } from "./index";
-import { BackupError, buildArchive, emptyBackupTables } from "@dashboard/backup";
+import {
+  BackupError,
+  buildArchive,
+  emptyBackupTables,
+  type BackupRestoreResult,
+} from "@dashboard/backup";
+import { createInMemoryActionRateLimiter } from "@dashboard/auth";
 import { AppError, type AppService } from "@dashboard/apps";
 import { IntegrationError, type IntegrationService } from "@dashboard/integrations";
 import type { DockerService } from "@dashboard/docker";
@@ -1440,6 +1446,68 @@ describe("backup tRPC router", () => {
       }).backup.validate({ archive: { not: "a-backup" } }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(backup.restore).not.toHaveBeenCalled();
+  });
+
+  it("rate limits backup restore after RBAC and before mutation", async () => {
+    const restore = vi.fn(async (): Promise<BackupRestoreResult> => ({
+      restored: true,
+      preview: {
+        format: "homelab-dashboard-backup",
+        formatVersion: 1,
+        schemaVersion: 6,
+        databaseSchemaVersion: 6,
+        appVersion: "0.1.0",
+        createdAt: "2026-09-14T12:00:00.000Z",
+        compatible: true,
+        tableCounts: {
+          users: 0,
+          groups: 0,
+          group_members: 0,
+          boards: 0,
+          layouts: 0,
+          items: 0,
+          item_layouts: 0,
+          apps: 0,
+          app_tags: 0,
+          integrations: 0,
+          integration_secrets: 0,
+          server_settings: 0,
+          user_credentials: 0,
+          roles: 0,
+          role_permissions: 0,
+          user_roles: 0,
+          group_roles: 0,
+          board_user_permissions: 0,
+          board_group_permissions: 0,
+          jobs: 0,
+          oidc_identities: 0,
+          oidc_group_mappings: 0,
+          oidc_secrets: 0,
+        },
+        encryptedSecretCount: 0,
+        credentialCount: 0,
+        files: [],
+      },
+      preRestore: archive,
+    }));
+    const caller = createCaller({
+      actor: systemAdmin,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      backup: {
+        exportArchive: vi.fn(),
+        validate: vi.fn(),
+        restore,
+      },
+      actionRateLimiter: createInMemoryActionRateLimiter(1, 60_000),
+    });
+    await caller.backup.restore({ archive, confirm: true });
+    await expect(caller.backup.restore({ archive, confirm: true })).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
+    expect(restore).toHaveBeenCalledTimes(1);
   });
 });
 

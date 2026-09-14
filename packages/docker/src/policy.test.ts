@@ -62,6 +62,7 @@ describe("Docker endpoint policy", () => {
     ];
     for (const path of denied) {
       expect(() => assertDockerEndpointAllowed("GET", url(path))).toThrow(IntegrationError);
+      expect(() => assertDockerEndpointAllowed("POST", url(path))).toThrow(IntegrationError);
     }
   });
 
