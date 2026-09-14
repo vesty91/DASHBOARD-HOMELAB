@@ -246,15 +246,15 @@ Livrables :
 
 ## Phase 13 — Worker + realtime
 
-Statut : IN PROGRESS (jobs, événements RBAC, live stats mergés ; WebSocket en cours).
+Statut : COMPLETE.
 
 Livrables :
 
-- Redis ;
-- jobs ;
-- WebSocket/SSE ;
-- pub/sub ;
-- stats live.
+- Redis optionnel (PING protocole, jamais source de vérité RBAC) ;
+- jobs persistés (`0005`, `jobs.list` + `settings.read`) ;
+- tickets HMAC scopés, événements board/intégration, live stats (signal + refetch) ;
+- SSE `/events` et WebSocket `/ws` avec le même filtre serveur ;
+- heartbeat, health/live, health/ready, reconnect, backpressure, fallback polling.
 
 ## Phase 14 — Backup/Restore
 

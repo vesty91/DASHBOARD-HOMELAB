@@ -2,7 +2,7 @@
 
 ## Statut
 
-Accepté pour la Phase 13 (fondations).
+Accepté. Phase 13 COMPLETE.
 
 ## Contexte
 

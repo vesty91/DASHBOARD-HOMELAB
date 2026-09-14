@@ -335,7 +335,7 @@ est vide. Voir ADR 0007.
 
 # État Phase 13
 
-`@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets
+COMPLETE. `@dashboard/events` fournit le bus mémoire, `createConfiguredEventBus(REDIS_URL)`, les tickets
 HMAC scopés, `canReceiveEvent` (default deny) et `runtime.status` (PING Redis).
 `apps/web` publie `board.*` / `integration.*` après commit. `apps/realtime` filtre chaque
 événement avec les subscriptions du ticket. `integration.data.changed` signale un refresh
