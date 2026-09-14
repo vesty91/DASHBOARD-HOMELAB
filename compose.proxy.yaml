@@ -1,0 +1,29 @@
+services:
+  proxy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    profiles: ["proxy"]
+    ports:
+      - "127.0.0.1:${PROXY_HTTPS_PORT:-8443}:443"
+      - "127.0.0.1:${PROXY_HTTP_PORT:-8080}:80"
+    environment:
+      DASHBOARD_HOST: ${DASHBOARD_HOST:-dashboard.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - internal
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-data:
+  caddy-config:
