@@ -444,6 +444,25 @@ de dossiers, payloads d'alertes, `password`, `basicAuthPassword`,
 `secureJsonData`, `secureJsonFields`, `url`, `user`, `database`, `jsonData`,
 `name` de datasource, `baseUrl`, config.
 
+# ntfy API — Phase 18.3
+
+Routeur tRPC `ntfy` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                   | Permission             | Capability    | Notes                                                |
+| ----------------------- | ---------------------- | ------------- | ---------------------------------------------------- |
+| `ntfy.permissions`      | auth active            | —             | `canRead`, `canManage`                               |
+| `ntfy.integration.list` | use/manage + ntfy.read | —             | `{ id, name, enabled }[]`                            |
+| `ntfy.integration.get`  | use/manage + ntfy.read | —             | `{ id, name, enabled }`                              |
+| `ntfy.overview.get`     | use/manage + ntfy.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `ntfy.overview.refresh` | use/manage + ntfy.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
+`health`, `stats`, `version`. Auth : header `Authorization: Bearer` seulement
+si un jeton est configuré. Jamais dans l'URL.
+
+Jamais exposés : jeton d'accès, noms de topics, corps de messages, listes
+d'utilisateurs, `/v1/config`, `/metrics`, `/v1/account`, `baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -503,7 +522,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma/proxmox/grafana `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox/grafana/ntfy `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

@@ -45,6 +45,7 @@ import {
 } from "@dashboard/prometheus";
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
+import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
@@ -102,6 +103,7 @@ export interface ApiContext {
   uptimeKuma: UptimeKumaService;
   proxmox: ProxmoxService;
   grafana: GrafanaService;
+  ntfy: NtfyService;
   serviceStatus: ServiceStatusService;
   runtime: RuntimeStatusService;
   realtimeTickets: {
@@ -756,6 +758,29 @@ export const grafanaRouter = t.router({
       ),
   }),
 });
+export const ntfyRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.ntfy.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.ntfy.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(ntfyIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.ntfy.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(ntfyIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.ntfy.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(ntfyIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.ntfy.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 function requireAuthenticatedUser(ctx: ApiContext): string {
   if (!ctx.actor.userId || !ctx.actor.subject || ctx.actor.subject.status !== "active")
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
@@ -1064,6 +1089,7 @@ export const dashboardRouter = t.router({
   uptimeKuma: uptimeKumaRouter,
   proxmox: proxmoxRouter,
   grafana: grafanaRouter,
+  ntfy: ntfyRouter,
   serviceStatus: serviceStatusRouter,
   runtime: runtimeRouter,
   realtime: realtimeRouter,

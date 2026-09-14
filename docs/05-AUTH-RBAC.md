@@ -224,9 +224,14 @@ Phase 18.2 : lecture Grafana exige (`integration.use` ou `integration.manage`) *
 `/integrations/[id]` Grafana : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `grafana.read`.
 
+Phase 18.3 : lecture ntfy exige (`integration.use` ou `integration.manage`) **et**
+`ntfy.read`. Cette conjonction suffit pour `ntfy.integration.get` et
+`/integrations/[id]` ntfy : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `ntfy.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `docker.*` ni
+`grafana.read`, `ntfy.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

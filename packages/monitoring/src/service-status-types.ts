@@ -20,6 +20,7 @@ export const SERVICE_SOURCE_TYPES = [
   "prometheus",
   "proxmox",
   "grafana",
+  "ntfy",
 ] as const;
 
 export type ServiceSourceType = (typeof SERVICE_SOURCE_TYPES)[number];

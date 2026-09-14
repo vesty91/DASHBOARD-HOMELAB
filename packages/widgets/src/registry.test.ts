@@ -66,6 +66,7 @@ describe("widget registry", () => {
       "grafana-status",
       "immich-stats",
       "jellyfin-sessions",
+      "ntfy-status",
       "prometheus-metric",
       "proxmox-resources",
       "service-status",
@@ -76,6 +77,7 @@ describe("widget registry", () => {
     expect(registry.get("app-tile")?.publicSafe).toBe(false);
     expect(registry.get("prometheus-metric")?.publicSafe).toBe(false);
     expect(registry.get("grafana-status")?.publicSafe).toBe(false);
+    expect(registry.get("ntfy-status")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);
     expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);
     expect(() => registry.register(clockContract)).toThrow(/immutable/);

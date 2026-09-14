@@ -23,6 +23,7 @@ const SOURCE_LABELS: Record<ServiceStatusSourceType, string> = {
   prometheus: "Prometheus",
   proxmox: "Proxmox",
   grafana: "Grafana",
+  ntfy: "ntfy",
 };
 
 function toggleValue<T>(values: readonly T[], value: T, enabled: boolean): T[] {

@@ -17,6 +17,7 @@ import type {
   ServiceStatusView,
   UptimeKumaStatusView,
   GrafanaStatusView,
+  NtfyStatusView,
   ProxmoxResourcesView,
   WidgetCatalogEntry,
 } from "@dashboard/widgets";
@@ -32,6 +33,7 @@ import {
   serviceStatusDefaultConfig,
   uptimeKumaStatusDraftConfig,
   grafanaStatusDraftConfig,
+  ntfyStatusDraftConfig,
   proxmoxResourcesDraftConfig,
 } from "@dashboard/widgets";
 import {
@@ -44,6 +46,7 @@ import {
   type ServiceStatusCatalogOption,
   type UptimeKumaIntegrationOption,
   type GrafanaIntegrationOption,
+  type NtfyIntegrationOption,
   type ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
 import { GridStack, type GridStackNode } from "gridstack";
@@ -78,6 +81,8 @@ function defaultConfig(widgetType: string): unknown {
       return uptimeKumaStatusDraftConfig;
     case "grafana-status":
       return grafanaStatusDraftConfig;
+    case "ntfy-status":
+      return ntfyStatusDraftConfig;
     case "proxmox-resources":
       return proxmoxResourcesDraftConfig;
     default:
@@ -105,6 +110,8 @@ export function BoardEditor({
   proxmoxIntegrations = [],
   grafanaViews = {},
   grafanaIntegrations = [],
+  ntfyViews = {},
+  ntfyIntegrations = [],
   serviceStatusViews = {},
   serviceStatusCatalog = [],
   canReadApps,
@@ -132,6 +139,8 @@ export function BoardEditor({
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   grafanaViews?: Record<string, GrafanaStatusView>;
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
+  ntfyViews?: Record<string, NtfyStatusView>;
+  ntfyIntegrations?: readonly NtfyIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   canReadApps: boolean;
@@ -156,6 +165,7 @@ export function BoardEditor({
   const [pendingUptimeKuma, setPendingUptimeKuma] = useState(false);
   const [pendingProxmox, setPendingProxmox] = useState(false);
   const [pendingGrafana, setPendingGrafana] = useState(false);
+  const [pendingNtfy, setPendingNtfy] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [gridEpoch, setGridEpoch] = useState(0);
   const router = useRouter();
@@ -297,7 +307,8 @@ export function BoardEditor({
     pendingPrometheus ||
     pendingUptimeKuma ||
     pendingProxmox ||
-    pendingGrafana;
+    pendingGrafana ||
+    pendingNtfy;
   const pendingWidgetType = pendingJellyfin
     ? "jellyfin-sessions"
     : pendingImmich
@@ -312,7 +323,9 @@ export function BoardEditor({
               ? "proxmox-resources"
               : pendingGrafana
                 ? "grafana-status"
-                : "app-tile";
+                : pendingNtfy
+                  ? "ntfy-status"
+                  : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -327,7 +340,9 @@ export function BoardEditor({
               ? proxmoxResourcesDraftConfig
               : pendingGrafana
                 ? grafanaStatusDraftConfig
-                : appTileDraftConfig;
+                : pendingNtfy
+                  ? ntfyStatusDraftConfig
+                  : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -342,7 +357,9 @@ export function BoardEditor({
               ? proxmoxIntegrations.length === 0
               : pendingGrafana
                 ? grafanaIntegrations.length === 0
-                : !canReadApps;
+                : pendingNtfy
+                  ? ntfyIntegrations.length === 0
+                  : !canReadApps;
 
   return (
     <section>
@@ -390,6 +407,7 @@ export function BoardEditor({
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
                 proxmoxIntegrations={proxmoxIntegrations}
                 grafanaIntegrations={grafanaIntegrations}
+                ntfyIntegrations={ntfyIntegrations}
               />
               <button
                 type="submit"
@@ -421,6 +439,7 @@ export function BoardEditor({
                   setPendingUptimeKuma(false);
                   setPendingProxmox(false);
                   setPendingGrafana(false);
+                  setPendingNtfy(false);
                 }}
               >
                 Annuler
@@ -488,6 +507,11 @@ export function BoardEditor({
                           setPendingGrafana(true);
                           return;
                         }
+                        if (entry.id === "ntfy-status") {
+                          setDraftConfig(ntfyStatusDraftConfig);
+                          setPendingNtfy(true);
+                          return;
+                        }
                         void addWidget(entry.id, defaultConfig(entry.id));
                       }}
                     >
@@ -543,6 +567,7 @@ export function BoardEditor({
                       : {})}
                     {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                     {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
+                    {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
                   />
                 ) : null}
                 <div className="widget-edit-controls">
@@ -597,6 +622,7 @@ export function BoardEditor({
             uptimeKumaIntegrations={uptimeKumaIntegrations}
             proxmoxIntegrations={proxmoxIntegrations}
             grafanaIntegrations={grafanaIntegrations}
+            ntfyIntegrations={ntfyIntegrations}
           />
           <button type="submit">Enregistrer la configuration</button>
           <button type="button" onClick={() => setEditingId(null)}>

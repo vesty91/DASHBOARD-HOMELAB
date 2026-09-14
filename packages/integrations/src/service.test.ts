@@ -739,6 +739,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("pve.example");
   });
 
+  it("redacts ntfy generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "ntfy",
+        displayName: "ntfy",
+      },
+    ]);
+    const ntfy = await service.create(
+      {
+        type: "ntfy",
+        name: "ntfy",
+        baseUrl: "https://ntfy.example",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(ntfy.id, reader);
+    expect(restricted).toMatchObject({
+      id: ntfy.id,
+      type: "ntfy",
+      name: "ntfy",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("ntfy.example");
+  });
+
   it("redacts Grafana generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

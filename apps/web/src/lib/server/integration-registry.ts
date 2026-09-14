@@ -4,6 +4,7 @@ import { dockerIntegrationDefinition } from "@dashboard/docker";
 import { grafanaIntegrationDefinition } from "@dashboard/grafana";
 import { immichIntegrationDefinition } from "@dashboard/immich";
 import { jellyfinIntegrationDefinition } from "@dashboard/jellyfin";
+import { ntfyIntegrationDefinition } from "@dashboard/ntfy";
 import { prometheusIntegrationDefinition } from "@dashboard/prometheus";
 import { proxmoxIntegrationDefinition } from "@dashboard/proxmox";
 import { synologyIntegrationDefinition } from "@dashboard/synology";
@@ -16,6 +17,7 @@ export function createApplicationIntegrationRegistry() {
     .register(grafanaIntegrationDefinition)
     .register(immichIntegrationDefinition)
     .register(jellyfinIntegrationDefinition)
+    .register(ntfyIntegrationDefinition)
     .register(prometheusIntegrationDefinition)
     .register(proxmoxIntegrationDefinition)
     .register(synologyIntegrationDefinition)

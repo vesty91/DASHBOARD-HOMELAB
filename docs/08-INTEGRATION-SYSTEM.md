@@ -398,6 +398,27 @@ fake data. Titres de dashboards, noms de dossiers, URLs, payloads d'alertes et
 secrets de datasources jamais exposés. Un 403/404 sur les alertes rend la
 section `unavailable` (pas de compteurs inventés).
 
+## 18.3. ntfy
+
+Statut : IN PROGRESS (Phase 18.3).
+
+Adapter `ntfy` composé dans `apps/web`. Transport HTTP(S) vers l'origine ntfy.
+Auth Bearer optionnelle (`Authorization: Bearer <accessToken>` uniquement si un
+jeton est configuré). Lecture seule `GET /v1/health`, `GET /v1/stats`,
+`GET /v1/version`. Voir ADR 0022. Publication, subscribe/poll/websocket/SSE,
+`/v1/config`, `/metrics` et `/v1/account` sont hors scope.
+
+`ntfy.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
+ntfy (`integration.use|manage` + `ntfy.read`). `integration.read` n'est
+pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
+`capabilities` et l'état des secrets d'un record `ntfy` sans
+`integration.manage`.
+
+Widget `ntfy-status` : `publicSafe=false`. Refresh manuel 10/min. Cache
+overview 8 s (5 s si partiel). Jeton jamais renvoyé. Aucune mutation. Aucune
+fake data. Noms de topics et corps de messages jamais exposés. Un 401/403/404
+sur `/v1/version` rend la section `unavailable` (pas de version inventée).
+
 ## 19. Service status
 
 Agrégateur interne read-only, pas une nouvelle intégration externe.
@@ -405,10 +426,10 @@ Agrégateur interne read-only, pas une nouvelle intégration externe.
 `serviceStatus.list` / `serviceStatus.catalog` assemblent un DTO canonique
 (`up` / `degraded` / `down` / `unknown` / `paused` / `maintenance`) à partir des
 sources déjà disponibles : apps health, Docker, Synology, Jellyfin, Immich,
-Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana. Le filtrage est serveur-side via les permissions
+Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy. Le filtrage est serveur-side via les permissions
 spécialisées (`app.read`, `docker.read`, `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`, `proxmox.read`,
-`grafana.read`). Un DTO
+`grafana.read`, `ntfy.read`). Un DTO
 générique `integration.list` n'est jamais utilisé pour construire ce widget.
 
 Widget `service-status` : `publicSafe=false`. Config bornée (`selectedSources`,

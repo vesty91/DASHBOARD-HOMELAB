@@ -12,6 +12,7 @@ import { resolvePrometheusMetricViews } from "../../resolve-prometheus-metric";
 import { resolveServiceStatusViews } from "../../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
+import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
@@ -39,6 +40,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     uptimeKumaViews,
     proxmoxViews,
     grafanaViews,
+    ntfyViews,
     serviceStatusViews,
   ] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
@@ -49,6 +51,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveUptimeKumaStatusViews(snapshot, caller),
     resolveProxmoxResourcesViews(snapshot, caller),
     resolveGrafanaStatusViews(snapshot, caller),
+    resolveNtfyStatusViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   let canReadApps = true;
@@ -129,6 +132,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let ntfyIntegrations: Awaited<ReturnType<typeof caller.ntfy.integration.list>> = [];
+  try {
+    ntfyIntegrations = await caller.ntfy.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let serviceStatusCatalog: Awaited<ReturnType<typeof caller.serviceStatus.catalog>>["items"] = [];
   try {
     serviceStatusCatalog = (await caller.serviceStatus.catalog({})).items;
@@ -168,6 +181,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         proxmoxIntegrations={proxmoxIntegrations}
         grafanaViews={grafanaViews}
         grafanaIntegrations={grafanaIntegrations}
+        ntfyViews={ntfyViews}
+        ntfyIntegrations={ntfyIntegrations}
         serviceStatusViews={serviceStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}

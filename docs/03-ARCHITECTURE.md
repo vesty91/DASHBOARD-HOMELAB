@@ -24,6 +24,7 @@ packages/
   uptime-kuma/
   proxmox/
   grafana/
+  ntfy/
   permissions/
   secrets/
   monitoring/

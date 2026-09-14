@@ -99,6 +99,15 @@ const grafanaDenied = {
   },
 };
 
+const ntfyDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("ntfy unused");
+    },
+  },
+};
+
 describe("resolveIntegrationDetail", () => {
   it("lets a delegated Docker reader open the page by name without integration.get", async () => {
     const integrationGet = vi.fn();
@@ -117,6 +126,7 @@ describe("resolveIntegrationDetail", () => {
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -154,6 +164,7 @@ describe("resolveIntegrationDetail", () => {
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -195,6 +206,7 @@ describe("resolveIntegrationDetail", () => {
       },
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -236,6 +248,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -277,6 +290,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -284,6 +298,48 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "88888888-8888-4888-8888-888888888888",
         name: "Grafana Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated ntfy reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("99999999-9999-4999-8999-999999999999", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
+      ntfy: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "99999999-9999-4999-8999-999999999999",
+            name: "ntfy Lab",
+            enabled: true,
+          }),
+        },
+      },
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "ntfy",
+      metadata: {
+        id: "99999999-9999-4999-8999-999999999999",
+        name: "ntfy Lab",
         enabled: true,
       },
     });
@@ -318,6 +374,7 @@ describe("resolveIntegrationDetail", () => {
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -355,6 +412,7 @@ describe("resolveIntegrationDetail", () => {
       uptimeKuma: uptimeKumaDenied,
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
+      ntfy: ntfyDenied,
       integration: { get: integrationGet },
     });
     expect(resolved).toEqual({
@@ -450,6 +508,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      ntfy: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition ntfy introuvable",
+            });
+          },
+        },
+      },
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved).toEqual({ kind: "generic", integration: genericIntegration() });
@@ -474,6 +543,7 @@ describe("resolveIntegrationDetail", () => {
         uptimeKuma: uptimeKumaDenied,
         proxmox: proxmoxDenied,
         grafana: grafanaDenied,
+        ntfy: ntfyDenied,
         integration: {
           get: async () => {
             throw new Error("should not be called");
@@ -523,6 +593,7 @@ describe("resolveIntegrationDetail", () => {
         permissions: async () => ({ canRead: false }),
         integration: { get: vi.fn() },
       },
+      ntfy: ntfyDenied,
       integration: { get: async () => genericIntegration() },
     });
     expect(resolved.kind).toBe("generic");
@@ -549,6 +620,7 @@ describe("resolveIntegrationDetail", () => {
         uptimeKuma: uptimeKumaDenied,
         proxmox: proxmoxDenied,
         grafana: grafanaDenied,
+        ntfy: ntfyDenied,
         integration: {
           get: async () => {
             throw new TRPCError({ code: "FORBIDDEN", message: "Permission denied" });

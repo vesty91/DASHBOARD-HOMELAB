@@ -346,6 +346,19 @@ Lecture :
 Pas d'iframe, pas de proxy, pas de `/api/ds/query`. Titres, URLs, noms de sources
 et payloads d'alertes ne sont pas exposés.
 
+### ntfy
+
+Phase 18.3 : lecture via l'API officielle (jeton d'accès Bearer optionnel).
+
+Lecture :
+
+- santé (`GET /v1/health`, champ `healthy`) ;
+- compteurs publics (`GET /v1/stats` : `messages`, `messages_rate`) ;
+- version serveur (`GET /v1/version`) si l'API admin est accessible.
+
+Pas de publication, pas d'abonnement topic, pas de `/v1/config` ni `/metrics`.
+Les noms de topics et les corps de messages ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

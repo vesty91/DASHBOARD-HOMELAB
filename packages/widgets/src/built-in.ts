@@ -6,6 +6,7 @@ import { immichStatsContract } from "./immich-stats";
 import { jellyfinSessionsContract } from "./jellyfin-sessions";
 import { prometheusMetricContract } from "./prometheus-metric";
 import { grafanaStatusContract } from "./grafana-status";
+import { ntfyStatusContract } from "./ntfy-status";
 import { proxmoxResourcesContract } from "./proxmox-resources";
 import { serviceStatusContract } from "./service-status";
 import { uptimeKumaStatusContract } from "./uptime-kuma-status";
@@ -19,6 +20,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(beszelHostsContract)
     .register(grafanaStatusContract)
     .register(immichStatsContract)
+    .register(ntfyStatusContract)
     .register(jellyfinSessionsContract)
     .register(prometheusMetricContract)
     .register(proxmoxResourcesContract)

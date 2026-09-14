@@ -6,6 +6,7 @@ import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
 import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
 import type { GrafanaStatusDraftConfig } from "../grafana-status";
+import type { NtfyStatusDraftConfig } from "../ntfy-status";
 import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
 import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
@@ -17,6 +18,7 @@ import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-fo
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
 import { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
+import { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 import { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
@@ -32,6 +34,7 @@ export function WidgetConfigForm({
   beszelIntegrations,
   prometheusIntegrations,
   grafanaIntegrations,
+  ntfyIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
   uptimeKumaIntegrations,
@@ -46,6 +49,7 @@ export function WidgetConfigForm({
   beszelIntegrations?: readonly BeszelIntegrationOption[];
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
+  ntfyIntegrations?: readonly NtfyIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
@@ -107,6 +111,15 @@ export function WidgetConfigForm({
           config={config as GrafanaStatusDraftConfig}
           onChange={onChange}
           integrations={grafanaIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "ntfy-status":
+      return (
+        <NtfyStatusForm
+          config={config as NtfyStatusDraftConfig}
+          onChange={onChange}
+          integrations={ntfyIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

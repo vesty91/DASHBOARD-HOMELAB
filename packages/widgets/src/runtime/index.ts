@@ -14,6 +14,8 @@ export { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-fo
 export { BeszelHostsWidget } from "./beszel-hosts-widget";
 export { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
 export { GrafanaStatusWidget } from "./grafana-status-widget";
+export { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
+export { NtfyStatusWidget } from "./ntfy-status-widget";
 export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 export { ImmichStatsWidget } from "./immich-stats-widget";
 export { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";

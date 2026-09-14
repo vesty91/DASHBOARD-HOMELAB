@@ -11,6 +11,7 @@ import type {
   UptimeKumaPermissionsView,
 } from "@dashboard/uptime-kuma";
 import type { GrafanaIntegrationMetadata, GrafanaPermissionsView } from "@dashboard/grafana";
+import type { NtfyIntegrationMetadata, NtfyPermissionsView } from "@dashboard/ntfy";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
 import type { ImmichIntegrationMetadata, ImmichPermissionsView } from "@dashboard/immich";
 import type { JellyfinIntegrationMetadata, JellyfinPermissionsView } from "@dashboard/jellyfin";
@@ -34,6 +35,7 @@ export type IntegrationDetailResolution =
   | { kind: "uptime-kuma"; metadata: UptimeKumaIntegrationMetadata }
   | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
   | { kind: "grafana"; metadata: GrafanaIntegrationMetadata }
+  | { kind: "ntfy"; metadata: NtfyIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
 
 export interface IntegrationDetailCaller {
@@ -89,6 +91,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<GrafanaPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<GrafanaIntegrationMetadata>;
+    };
+  };
+  ntfy: {
+    permissions: () => Promise<Pick<NtfyPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<NtfyIntegrationMetadata>;
     };
   };
   integration: {
@@ -177,6 +185,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.grafana.integration.get({ integrationId: id });
       return { kind: "grafana", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const ntfyPermissions = await caller.ntfy.permissions();
+  if (ntfyPermissions.canRead) {
+    try {
+      const metadata = await caller.ntfy.integration.get({ integrationId: id });
+      return { kind: "ntfy", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

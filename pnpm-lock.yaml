@@ -99,6 +99,9 @@ importers:
       '@dashboard/monitoring':
         specifier: workspace:*
         version: link:../../packages/monitoring
+      '@dashboard/ntfy':
+        specifier: workspace:*
+        version: link:../../packages/ntfy
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
@@ -230,6 +233,9 @@ importers:
       '@dashboard/monitoring':
         specifier: workspace:*
         version: link:../monitoring
+      '@dashboard/ntfy':
+        specifier: workspace:*
+        version: link:../ntfy
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../permissions
@@ -527,6 +533,28 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.25.11)(jiti@2.7.0)(tsx@4.23.13))
+
+  packages/ntfy:
+    dependencies:
+      '@dashboard/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@dashboard/secrets':
+        specifier: workspace:*
+        version: link:../secrets
       '@types/node':
         specifier: 26.2.0
         version: 26.2.0
