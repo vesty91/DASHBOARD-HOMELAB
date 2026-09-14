@@ -47,8 +47,13 @@ function run(args, options = {}) {
 }
 
 function compose(args, options) {
-  const extra = skipBuild && args[0] === "up" ? ["--no-build"] : [];
-  return run(["compose", "-f", composeFile, "--project-name", project, ...extra, ...args], options);
+  if (skipBuild && args[0] === "up") {
+    return run(
+      ["compose", "-f", composeFile, "--project-name", project, "up", "--no-build", ...args.slice(1)],
+      options,
+    );
+  }
+  return run(["compose", "-f", composeFile, "--project-name", project, ...args], options);
 }
 
 async function waitFor(url, expectedStatus, label) {
@@ -96,7 +101,7 @@ async function inspectUser(service) {
 try {
   await compose(["config", "--quiet"]);
   if (!skipBuild) await compose(["build"]);
-  await compose(["up", "-d", "postgres", "redis"]);
+  await compose(["up", "-d", "--wait", "postgres", "redis"]);
   await compose(["up", "migrate", "--exit-code-from", "migrate"]);
   await compose(["up", "-d", "web", "worker", "realtime"]);
   const live = await waitFor("http://127.0.0.1:3000/health/live", 200, "web live");
