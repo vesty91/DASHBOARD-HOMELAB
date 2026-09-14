@@ -288,9 +288,9 @@ Livrables :
 
 ## Phase 16 — Hardening
 
-Statut : IN PROGRESS.
+Statut : COMPLETE / merged (PR #29).
 
-Audit et corrections :
+Livrables :
 
 - headers HTTP + CSP enforcement (sans `'unsafe-eval'`) ;
 - CSRF : `allowedOrigins`, tRPC POST-only, `backup.export` en mutation ;

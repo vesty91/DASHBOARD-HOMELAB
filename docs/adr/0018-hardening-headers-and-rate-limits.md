@@ -2,7 +2,7 @@
 
 ## Statut
 
-Accepté. Phase 16.
+Accepté. Phase 16 COMPLETE.
 
 ## Contexte
 
