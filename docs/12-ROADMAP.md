@@ -276,7 +276,7 @@ management (Phase 15).
 
 ## Phase 15 — SSO + Admin avancé
 
-Statut : IN PROGRESS.
+Statut : COMPLETE / merged (PR #27).
 
 Livrables :
 

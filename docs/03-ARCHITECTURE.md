@@ -367,7 +367,7 @@ backup pré-restore → restore transactionnel → commit → invalidation cache
 
 # État Phase 15
 
-IN PROGRESS. OIDC générique via NextAuth (pas de provider codé en dur), identités
+COMPLETE. OIDC générique via NextAuth (pas de provider codé en dur), identités
 `issuer+sub`, mapping de groupes default-deny, journal d'audit, sessions révocables.
 Migration `0006` / `schemaVersion` 6. Backup inclut les identités et mappings OIDC
 ainsi que le secret OIDC chiffré ; `audit_logs` et `auth_sessions` sont exclus.
