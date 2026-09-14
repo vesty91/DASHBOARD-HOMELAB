@@ -29,6 +29,10 @@ COPY . .
 RUN pnpm --filter @dashboard/web build \
   && pnpm bundle:runtime
 
+FROM node:24-bookworm-slim AS pg-deps
+WORKDIR /pg
+RUN npm install --omit=dev pg@8.16.3
+
 FROM node:24-bookworm-slim AS runtime-base
 RUN groupadd --system --gid 10001 dashboard \
   && useradd --system --uid 10001 --gid dashboard --home /app --create-home dashboard
@@ -60,28 +64,30 @@ ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     WORKER_HOST=0.0.0.0 \
     WORKER_PORT=3001
-COPY --from=build --chown=dashboard:dashboard /repo/dist/worker.cjs ./worker.cjs
+COPY --from=pg-deps --chown=dashboard:dashboard /pg/node_modules ./node_modules
+COPY --from=build --chown=dashboard:dashboard /repo/dist/worker.mjs ./worker.mjs
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3001/health/live').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "worker.cjs"]
+CMD ["node", "worker.mjs"]
 
 FROM runtime-base AS realtime
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     REALTIME_HOST=0.0.0.0 \
     REALTIME_PORT=3002
-COPY --from=build --chown=dashboard:dashboard /repo/dist/realtime.cjs ./realtime.cjs
+COPY --from=build --chown=dashboard:dashboard /repo/dist/realtime.mjs ./realtime.mjs
 EXPOSE 3002
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3002/health/live').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "realtime.cjs"]
+CMD ["node", "realtime.mjs"]
 
 FROM runtime-base AS migrate
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     DB_DRIVER=postgres \
     MIGRATIONS_DIR=/migrations/postgresql
-COPY --from=build --chown=dashboard:dashboard /repo/dist/migrate.cjs ./migrate.cjs
+COPY --from=pg-deps --chown=dashboard:dashboard /pg/node_modules ./node_modules
+COPY --from=build --chown=dashboard:dashboard /repo/dist/migrate.mjs ./migrate.mjs
 COPY --from=build --chown=dashboard:dashboard /repo/packages/db/drizzle/postgresql /migrations/postgresql
-CMD ["node", "migrate.cjs"]
+CMD ["node", "migrate.mjs"]
