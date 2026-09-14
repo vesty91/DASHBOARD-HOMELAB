@@ -60,28 +60,28 @@ ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     WORKER_HOST=0.0.0.0 \
     WORKER_PORT=3001
-COPY --from=build --chown=dashboard:dashboard /repo/dist/worker.mjs ./worker.mjs
+COPY --from=build --chown=dashboard:dashboard /repo/dist/worker.cjs ./worker.cjs
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3001/health/live').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "worker.mjs"]
+CMD ["node", "worker.cjs"]
 
 FROM runtime-base AS realtime
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     REALTIME_HOST=0.0.0.0 \
     REALTIME_PORT=3002
-COPY --from=build --chown=dashboard:dashboard /repo/dist/realtime.mjs ./realtime.mjs
+COPY --from=build --chown=dashboard:dashboard /repo/dist/realtime.cjs ./realtime.cjs
 EXPOSE 3002
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:3002/health/live').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "realtime.mjs"]
+CMD ["node", "realtime.cjs"]
 
 FROM runtime-base AS migrate
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION \
     DB_DRIVER=postgres \
     MIGRATIONS_DIR=/migrations/postgresql
-COPY --from=build --chown=dashboard:dashboard /repo/dist/migrate.mjs ./migrate.mjs
+COPY --from=build --chown=dashboard:dashboard /repo/dist/migrate.cjs ./migrate.cjs
 COPY --from=build --chown=dashboard:dashboard /repo/packages/db/drizzle/postgresql /migrations/postgresql
-CMD ["node", "migrate.mjs"]
+CMD ["node", "migrate.cjs"]

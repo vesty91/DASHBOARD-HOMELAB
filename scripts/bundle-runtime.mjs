@@ -3,7 +3,7 @@ import { build } from "esbuild";
 const shared = {
   bundle: true,
   platform: "node",
-  format: "esm",
+  format: "cjs",
   target: "node24",
   packages: "bundle",
   legalComments: "none",
@@ -13,17 +13,17 @@ await Promise.all([
   build({
     ...shared,
     entryPoints: ["apps/worker/src/main.ts"],
-    outfile: "dist/worker.mjs",
+    outfile: "dist/worker.cjs",
   }),
   build({
     ...shared,
     entryPoints: ["apps/realtime/src/main.ts"],
-    outfile: "dist/realtime.mjs",
+    outfile: "dist/realtime.cjs",
   }),
   build({
     ...shared,
     entryPoints: ["packages/db/src/migrate.ts"],
-    outfile: "dist/migrate.mjs",
+    outfile: "dist/migrate.cjs",
   }),
 ]);
 

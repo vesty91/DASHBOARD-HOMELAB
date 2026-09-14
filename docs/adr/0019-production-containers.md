@@ -19,7 +19,7 @@ Targets `web`, `worker`, `realtime`, `migrate`. Moins de duplication qu'un
 Dockerfile par app. Build multi-stage, pnpm `11.23.0`, Node 24 bookworm-slim
 (argon2 natif). Runtime non-root uid/gid `10001`. Aucun secret en ARG/ENV
 d'image. Next.js `output: "standalone"`. Worker/realtime/migrate sont bundlés
-esbuild (`dist/*.mjs`) pour éviter `tsx` au runtime.
+esbuild CJS (`dist/*.cjs`) pour éviter `tsx` au runtime et le `require` dynamique de `pg`.
 
 ### 2. Migrate oneshot
 
