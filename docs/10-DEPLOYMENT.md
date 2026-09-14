@@ -232,7 +232,8 @@ qui avale les signaux.
 ## 14. Sécurité container
 
 - non-root uid 10001
-- `cap_drop: ALL` sur web/worker/realtime/migrate/redis
+- `cap_drop: ALL` sur web/worker/realtime/migrate
+- Redis : filesystem writable (l'image officielle fait `chown` au démarrage)
 - `read_only` + tmpfs `/tmp` (et cache Next)
 - pas de `privileged`
 - postgres/redis non publiés sur `0.0.0.0`
