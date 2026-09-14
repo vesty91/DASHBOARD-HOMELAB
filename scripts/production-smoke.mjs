@@ -49,7 +49,16 @@ function run(args, options = {}) {
 function compose(args, options) {
   if (skipBuild && args[0] === "up") {
     return run(
-      ["compose", "-f", composeFile, "--project-name", project, "up", "--no-build", ...args.slice(1)],
+      [
+        "compose",
+        "-f",
+        composeFile,
+        "--project-name",
+        project,
+        "up",
+        "--no-build",
+        ...args.slice(1),
+      ],
       options,
     );
   }
