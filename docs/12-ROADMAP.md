@@ -304,20 +304,25 @@ Hors scope : Phase 17 (image Docker, Compose prod, multi-arch, release).
 
 ## Phase 17 — Production
 
-Statut : IN PROGRESS.
+Statut : COMPLETE / merged (PR #31), close docs.
 
 Livrables :
 
-- Dockerfile multi-target (`web` / `worker` / `realtime` / `migrate`) ;
-- Compose production (postgres, redis, migrate oneshot, web, worker, realtime) ;
-- health/live + health/ready (DB only pour web ready) ;
-- graceful shutdown SIGTERM ;
-- Caddy/Nginx + WebSocket/SSE ;
-- tests fresh install / upgrade schema 5→6 ;
-- workflow GHCR multi-arch sur tags semver uniquement ;
-- docs install / upgrade / rollback / backup.
+- Dockerfile multi-target `web` / `worker` / `realtime` / `migrate`
+  (Node 24 bookworm-slim, pnpm 11.23.0, non-root uid 10001) ;
+- Compose production : postgres 18, redis 7.4, migrate oneshot, web, worker,
+  realtime ; postgres/redis non publiés ; volume `appdata` pour backup
+  pré-restore ;
+- `GET /health/live` (process) et `GET /health/ready` (SELECT 1, pas Redis,
+  pas d'intégrations) ;
+- graceful shutdown SIGTERM/SIGINT borné ;
+- Caddy/Nginx + rewrite WebSocket `/api/realtime/ws` ;
+- tests fresh install Compose + AC-024 schema 5→6 SQLite/PostgreSQL ;
+- GHCR multi-arch sur tags semver `v*.*.*` uniquement ;
+- docs install / upgrade / rollback / backup Phase 14.
 
-Hors scope : tag semver `v1.0.0`, Phase 18, migration `0007`.
+Hors scope : tag semver `v1.0.0` (le package reste `0.1.0`), Phase 18,
+migration `0007`.
 
 ## Phase 18 — Extensions
 
