@@ -8,6 +8,7 @@ import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
 import type { GrafanaStatusDraftConfig } from "../grafana-status";
 import type { NtfyStatusDraftConfig } from "../ntfy-status";
 import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
+import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
 import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
 import { AppTileForm, type AppOption } from "./app-tile-form";
@@ -20,6 +21,7 @@ import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./promet
 import { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
 import { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 import { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
+import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 
@@ -35,6 +37,7 @@ export function WidgetConfigForm({
   prometheusIntegrations,
   grafanaIntegrations,
   ntfyIntegrations,
+  sonarrIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
   uptimeKumaIntegrations,
@@ -50,6 +53,7 @@ export function WidgetConfigForm({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
@@ -120,6 +124,15 @@ export function WidgetConfigForm({
           config={config as NtfyStatusDraftConfig}
           onChange={onChange}
           integrations={ntfyIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "sonarr-overview":
+      return (
+        <SonarrOverviewForm
+          config={config as SonarrOverviewDraftConfig}
+          onChange={onChange}
+          integrations={sonarrIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

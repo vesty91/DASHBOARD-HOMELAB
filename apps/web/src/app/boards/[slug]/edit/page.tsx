@@ -13,6 +13,7 @@ import { resolveServiceStatusViews } from "../../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
+import { resolveSonarrOverviewViews } from "../../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
 import { TRPCError } from "@trpc/server";
 import { redirect } from "next/navigation";
@@ -41,6 +42,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     proxmoxViews,
     grafanaViews,
     ntfyViews,
+    sonarrViews,
     serviceStatusViews,
   ] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
@@ -52,6 +54,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveProxmoxResourcesViews(snapshot, caller),
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
+    resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   let canReadApps = true;
@@ -142,6 +145,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let sonarrIntegrations: Awaited<ReturnType<typeof caller.sonarr.integration.list>> = [];
+  try {
+    sonarrIntegrations = await caller.sonarr.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let serviceStatusCatalog: Awaited<ReturnType<typeof caller.serviceStatus.catalog>>["items"] = [];
   try {
     serviceStatusCatalog = (await caller.serviceStatus.catalog({})).items;
@@ -183,6 +196,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         grafanaIntegrations={grafanaIntegrations}
         ntfyViews={ntfyViews}
         ntfyIntegrations={ntfyIntegrations}
+        sonarrViews={sonarrViews}
+        sonarrIntegrations={sonarrIntegrations}
         serviceStatusViews={serviceStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
         canReadApps={canReadApps}

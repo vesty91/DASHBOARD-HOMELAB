@@ -13,6 +13,7 @@ import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../resolve-ntfy-status";
+import { resolveSonarrOverviewViews } from "../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
 import { ResponsiveBoardReadGrid } from "../responsive-board-read-grid";
 
@@ -46,6 +47,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     proxmoxViews,
     grafanaViews,
     ntfyViews,
+    sonarrViews,
     serviceStatusViews,
   ] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
@@ -58,6 +60,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveProxmoxResourcesViews(snapshot, caller),
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
+    resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
   ]);
   return (
@@ -87,6 +90,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         proxmoxViews={proxmoxViews}
         grafanaViews={grafanaViews}
         ntfyViews={ntfyViews}
+        sonarrViews={sonarrViews}
         serviceStatusViews={serviceStatusViews}
       />
     </PageContainer>

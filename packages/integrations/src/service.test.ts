@@ -807,6 +807,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("grafana.example");
   });
 
+  it("redacts Sonarr generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "sonarr",
+        displayName: "Sonarr",
+      },
+    ]);
+    const sonarr = await service.create(
+      {
+        type: "sonarr",
+        name: "Sonarr",
+        baseUrl: "https://sonarr.example:8989",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(sonarr.id, reader);
+    expect(restricted).toMatchObject({
+      id: sonarr.id,
+      type: "sonarr",
+      name: "Sonarr",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("sonarr.example");
+  });
+
   it("publishes minimal integration events after commit and never on forbidden mutations", async () => {
     const store = createMemoryStore();
     const published: unknown[] = [];

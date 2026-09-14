@@ -70,6 +70,7 @@ describe("widget registry", () => {
       "prometheus-metric",
       "proxmox-resources",
       "service-status",
+      "sonarr-overview",
       "uptime-kuma-status",
     ]);
     expect(registry.get("clock")).toMatchObject({ version: 1, publicSafe: true });
@@ -78,6 +79,7 @@ describe("widget registry", () => {
     expect(registry.get("prometheus-metric")?.publicSafe).toBe(false);
     expect(registry.get("grafana-status")?.publicSafe).toBe(false);
     expect(registry.get("ntfy-status")?.publicSafe).toBe(false);
+    expect(registry.get("sonarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);
     expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);
     expect(() => registry.register(clockContract)).toThrow(/immutable/);

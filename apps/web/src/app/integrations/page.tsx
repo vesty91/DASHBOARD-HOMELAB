@@ -50,6 +50,7 @@ export default async function IntegrationsPage({
       proxmoxPermissions,
       grafanaPermissions,
       ntfyPermissions,
+      sonarrPermissions,
     ] = await Promise.all([
       caller.integration.list({ limit: 50, cursor }),
       caller.integration.canManage(),
@@ -65,6 +66,7 @@ export default async function IntegrationsPage({
       caller.proxmox.permissions(),
       caller.grafana.permissions(),
       caller.ntfy.permissions(),
+      caller.sonarr.permissions(),
     ]);
     const canAdd = canCreate && catalog.length > 0;
     return (
@@ -89,7 +91,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana ou ntfy."
+                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy ou Sonarr."
             }
           />
         ) : (
@@ -128,7 +130,8 @@ export default async function IntegrationsPage({
                   (integration.type === "uptime-kuma" && uptimeKumaPermissions.canRead) ||
                   (integration.type === "proxmox" && proxmoxPermissions.canRead) ||
                   (integration.type === "grafana" && grafanaPermissions.canRead) ||
-                  (integration.type === "ntfy" && ntfyPermissions.canRead) ? (
+                  (integration.type === "ntfy" && ntfyPermissions.canRead) ||
+                  (integration.type === "sonarr" && sonarrPermissions.canRead) ? (
                     <Link
                       className="ui-btn ui-btn-primary"
                       href={`/integrations/${integration.id}`}

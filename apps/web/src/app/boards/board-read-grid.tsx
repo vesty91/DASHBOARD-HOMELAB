@@ -8,6 +8,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  SonarrOverviewView,
   ProxmoxResourcesView,
 } from "@dashboard/widgets";
 import type { ItemRecord, LayoutRecord, PlacementRecord } from "@dashboard/boards";
@@ -26,6 +27,7 @@ export function BoardReadGrid({
   proxmoxViews = {},
   grafanaViews = {},
   ntfyViews = {},
+  sonarrViews = {},
   serviceStatusViews = {},
 }: {
   layout: LayoutRecord;
@@ -40,6 +42,7 @@ export function BoardReadGrid({
   proxmoxViews?: Record<string, ProxmoxResourcesView>;
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
+  sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
 }) {
   return (
@@ -81,6 +84,7 @@ export function BoardReadGrid({
                 {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                 {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                 {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
+                {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
               />
             ) : null}
           </div>

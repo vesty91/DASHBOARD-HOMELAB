@@ -21,6 +21,7 @@ export const SPECIALIZED_INTEGRATION_TYPES = [
   "proxmox",
   "grafana",
   "ntfy",
+  "sonarr",
 ] as const;
 
 export type SpecializedIntegrationType = (typeof SPECIALIZED_INTEGRATION_TYPES)[number];
@@ -96,6 +97,10 @@ export async function canSubscribeIntegrationRealtime(
     {
       canRead: ctx.ntfy.permissions(actor).canRead,
       load: () => ctx.ntfy.getIntegrationMetadata(integrationId, actor),
+    },
+    {
+      canRead: ctx.sonarr.permissions(actor).canRead,
+      load: () => ctx.sonarr.getIntegrationMetadata(integrationId, actor),
     },
   ];
   for (const probe of probes) {

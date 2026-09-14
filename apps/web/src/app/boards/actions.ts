@@ -187,3 +187,13 @@ export async function listNtfyIntegrationsForWidgetAction() {
     throw error;
   }
 }
+
+export async function listSonarrIntegrationsForWidgetAction() {
+  try {
+    return await (await getBoardCaller()).sonarr.integration.list();
+  } catch (error) {
+    if (error instanceof TRPCError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED"))
+      return [];
+    throw error;
+  }
+}

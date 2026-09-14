@@ -21,6 +21,7 @@ import type { PrometheusService } from "@dashboard/prometheus";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
+import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
 import type { ImmichService } from "@dashboard/immich";
 import type { JellyfinService } from "@dashboard/jellyfin";
@@ -45,6 +46,7 @@ const uptimeKuma = {} as UptimeKumaService;
 const proxmox = {} as ProxmoxService;
 const grafana = {} as GrafanaService;
 const ntfy = {} as NtfyService;
+const sonarr = {} as SonarrService;
 const serviceStatus = {
   list: vi.fn(async () => ({
     status: "available" as const,
@@ -67,6 +69,7 @@ function createCaller(
     | "proxmox"
     | "grafana"
     | "ntfy"
+    | "sonarr"
     | "serviceStatus"
     | "runtime"
     | "realtimeTickets"
@@ -85,6 +88,7 @@ function createCaller(
     proxmox?: ProxmoxService;
     grafana?: GrafanaService;
     ntfy?: NtfyService;
+    sonarr?: SonarrService;
     serviceStatus?: ServiceStatusService;
     runtime?: ApiContext["runtime"];
     realtimeTickets?: ApiContext["realtimeTickets"];
@@ -105,6 +109,7 @@ function createCaller(
     proxmox,
     grafana,
     ntfy,
+    sonarr,
     serviceStatus,
     runtime: createRuntimeStatusService(
       {},
@@ -1288,6 +1293,58 @@ describe("ntfy tRPC router", () => {
   });
 });
 
+describe("sonarr tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000051";
+  const sonarrActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "sonarr.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    system: { status: "available" as const, data: { version: "4.0.14.2939" } },
+    health: { status: "available" as const, data: { error: 0, warning: 1, notice: 0, other: 0 } },
+    queue: { status: "available" as const, data: { totalCount: 3, count: 2 } },
+    series: { status: "available" as const, data: { count: 12, truncated: false } },
+    diskSpace: { status: "available" as const, data: { freeBytes: 100, totalBytes: 200 } },
+  };
+
+  it("returns a bounded overview DTO without secrets or titles", async () => {
+    const sonarrService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        { id: integrationId, name: "Sonarr Lab", enabled: true },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Sonarr Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as SonarrService;
+    const caller = createCaller({
+      actor: sonarrActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      sonarr: sonarrService,
+    });
+    const metadata = await caller.sonarr.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "Sonarr Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.sonarr.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(
+      /X-Api-Key|apiKey|apikey|startupPath|rootFolderPath|title|wikiUrl/u,
+    );
+  });
+});
+
 describe("serviceStatus tRPC router", () => {
   it("requires authentication and does not leak secrets", async () => {
     const listed = {
@@ -1447,6 +1504,7 @@ describe("runtime and realtime tRPC", () => {
       proxmox: closed as unknown as ProxmoxService,
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
+      sonarr: closed as unknown as SonarrService,
     });
     const ticket = await caller.realtime.ticket({
       boardIds: [boardA, boardB],
@@ -1488,6 +1546,7 @@ describe("runtime and realtime tRPC", () => {
       proxmox: closed as unknown as ProxmoxService,
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
+      sonarr: closed as unknown as SonarrService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });
     expect(verifyRealtimeTicket(secret, withoutSettings.token)).toEqual({
       userId: "00000000-0000-4000-8000-000000000001",

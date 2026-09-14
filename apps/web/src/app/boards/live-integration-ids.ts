@@ -1,6 +1,6 @@
 const UNSET_INTEGRATION_ID = "00000000-0000-4000-8000-000000000000";
 const SERVICE_STATUS_ID =
-  /^(?:docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus|proxmox|grafana|ntfy):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/iu;
+  /^(?:docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus|proxmox|grafana|ntfy|sonarr):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/iu;
 export const MAX_LIVE_INTEGRATION_IDS = 49;
 
 export function collectLiveIntegrationIds(

@@ -21,6 +21,7 @@ export const SERVICE_SOURCE_TYPES = [
   "proxmox",
   "grafana",
   "ntfy",
+  "sonarr",
 ] as const;
 
 export type ServiceSourceType = (typeof SERVICE_SOURCE_TYPES)[number];
