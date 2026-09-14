@@ -79,7 +79,7 @@ L'intégration Docker continue d'utiliser un socket proxy HTTP(S) externe.
 
 | Volume          | Chemin container           | Contenu                       |
 | --------------- | -------------------------- | ----------------------------- |
-| `postgres-data` | `/var/lib/postgresql/data` | Source de vérité              |
+| `postgres-data` | `/var/lib/postgresql` | Source de vérité (PostgreSQL 18+) |
 | `appdata`       | `/appdata`                 | `BACKUP_DIR=/appdata/backups` |
 
 Le restore Phase 14 écrit un backup pré-restore **avant** mutation :
