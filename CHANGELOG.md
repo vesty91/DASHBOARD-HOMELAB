@@ -13,6 +13,8 @@ Voir ADR 0029.
 - Moteur de triggers/conditions déclaratif (Phase 22.2) : intervalle,
   cron UTC 5 champs, events d'intégration/job, status-transition,
   cooldown et anti-boucle.
+- Scheduler worker at-most-once (Phase 22.3) : leases DB, `runKey`,
+  pas de retry des mutations externes, `unknown` après crash.
 - Permissions `automation.read` / `automation.manage` / `automation.run`
   (ADMIN default-deny).
 - Backup `schemaVersion` 7. Compat 5 → 6 → 7. Schéma 8+ rejeté.
