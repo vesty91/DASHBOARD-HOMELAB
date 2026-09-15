@@ -22,6 +22,7 @@ export const SPECIALIZED_INTEGRATION_TYPES = [
   "grafana",
   "ntfy",
   "prowlarr",
+  "qbittorrent",
   "radarr",
   "sonarr",
 ] as const;
@@ -103,6 +104,10 @@ export async function canSubscribeIntegrationRealtime(
     {
       canRead: ctx.prowlarr.permissions(actor).canRead,
       load: () => ctx.prowlarr.getIntegrationMetadata(integrationId, actor),
+    },
+    {
+      canRead: ctx.qbittorrent.permissions(actor).canRead,
+      load: () => ctx.qbittorrent.getIntegrationMetadata(integrationId, actor),
     },
     {
       canRead: ctx.radarr.permissions(actor).canRead,

@@ -22,6 +22,7 @@ import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
 import type { ProwlarrService } from "@dashboard/prowlarr";
+import type { QbittorrentService } from "@dashboard/qbittorrent";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -49,6 +50,7 @@ const proxmox = {} as ProxmoxService;
 const grafana = {} as GrafanaService;
 const ntfy = {} as NtfyService;
 const prowlarr = {} as ProwlarrService;
+const qbittorrent = {} as QbittorrentService;
 const radarr = {} as RadarrService;
 const sonarr = {} as SonarrService;
 const serviceStatus = {
@@ -74,6 +76,7 @@ function createCaller(
     | "grafana"
     | "ntfy"
     | "prowlarr"
+    | "qbittorrent"
     | "radarr"
     | "sonarr"
     | "serviceStatus"
@@ -95,6 +98,7 @@ function createCaller(
     grafana?: GrafanaService;
     ntfy?: NtfyService;
     prowlarr?: ProwlarrService;
+    qbittorrent?: QbittorrentService;
     radarr?: RadarrService;
     sonarr?: SonarrService;
     serviceStatus?: ServiceStatusService;
@@ -118,6 +122,7 @@ function createCaller(
     grafana,
     ntfy,
     prowlarr,
+    qbittorrent,
     radarr,
     sonarr,
     serviceStatus,
@@ -1354,6 +1359,62 @@ describe("prowlarr tRPC router", () => {
   });
 });
 
+describe("qbittorrent tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000081";
+  const qbittorrentActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "qbittorrent.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    version: { status: "available" as const, data: { version: "v4.6.5" } },
+    transfer: {
+      status: "available" as const,
+      data: { downloadSpeedBps: 1024, uploadSpeedBps: 256, connectionStatus: "connected" as const },
+    },
+    torrents: {
+      status: "available" as const,
+      data: { downloading: 1, uploading: 1, stalled: 0, queued: 2, paused: 0, other: 0 },
+    },
+  };
+
+  it("returns a bounded overview DTO without SID, password or torrent names", async () => {
+    const qbittorrentService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        { id: integrationId, name: "qBittorrent Lab", enabled: true },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "qBittorrent Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as QbittorrentService;
+    const caller = createCaller({
+      actor: qbittorrentActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      qbittorrent: qbittorrentService,
+    });
+    const metadata = await caller.qbittorrent.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "qBittorrent Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.qbittorrent.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(
+      /SID|password|username|magnet|hash|save_path|tracker|Secret/u,
+    );
+  });
+});
+
 describe("radarr tRPC router", () => {
   const integrationId = "00000000-0000-4000-8000-000000000061";
   const radarrActor = {
@@ -1618,6 +1679,7 @@ describe("runtime and realtime tRPC", () => {
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
       prowlarr: closed as unknown as ProwlarrService,
+      qbittorrent: closed as unknown as QbittorrentService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     });
@@ -1662,6 +1724,7 @@ describe("runtime and realtime tRPC", () => {
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
       prowlarr: closed as unknown as ProwlarrService,
+      qbittorrent: closed as unknown as QbittorrentService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });

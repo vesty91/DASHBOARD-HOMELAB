@@ -9,6 +9,7 @@ import type {
   GrafanaStatusView,
   NtfyStatusView,
   ProwlarrStatusView,
+  QbittorrentTransferView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -30,6 +31,7 @@ export function BoardReadGrid({
   grafanaViews = {},
   ntfyViews = {},
   prowlarrViews = {},
+  qbittorrentViews = {},
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
@@ -47,6 +49,7 @@ export function BoardReadGrid({
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
   prowlarrViews?: Record<string, ProwlarrStatusView>;
+  qbittorrentViews?: Record<string, QbittorrentTransferView>;
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
@@ -91,6 +94,9 @@ export function BoardReadGrid({
                 {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                 {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
                 {...(prowlarrViews[entry.id] ? { prowlarrView: prowlarrViews[entry.id] } : {})}
+                {...(qbittorrentViews[entry.id]
+                  ? { qbittorrentView: qbittorrentViews[entry.id] }
+                  : {})}
                 {...(radarrViews[entry.id] ? { radarrView: radarrViews[entry.id] } : {})}
                 {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
               />

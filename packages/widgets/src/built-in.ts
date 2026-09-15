@@ -9,6 +9,7 @@ import { grafanaStatusContract } from "./grafana-status";
 import { ntfyStatusContract } from "./ntfy-status";
 import { proxmoxResourcesContract } from "./proxmox-resources";
 import { prowlarrStatusContract } from "./prowlarr-status";
+import { qbittorrentTransferContract } from "./qbittorrent-transfer";
 import { radarrOverviewContract } from "./radarr-overview";
 import { sonarrOverviewContract } from "./sonarr-overview";
 import { serviceStatusContract } from "./service-status";
@@ -28,6 +29,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(prometheusMetricContract)
     .register(proxmoxResourcesContract)
     .register(prowlarrStatusContract)
+    .register(qbittorrentTransferContract)
     .register(radarrOverviewContract)
     .register(sonarrOverviewContract)
     .register(serviceStatusContract)

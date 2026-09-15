@@ -14,6 +14,7 @@ import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../resolve-ntfy-status";
 import { resolveProwlarrStatusViews } from "../resolve-prowlarr-status";
+import { resolveQbittorrentTransferViews } from "../resolve-qbittorrent-transfer";
 import { resolveRadarrOverviewViews } from "../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
@@ -50,6 +51,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     grafanaViews,
     ntfyViews,
     prowlarrViews,
+    qbittorrentViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -65,6 +67,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
     resolveProwlarrStatusViews(snapshot, caller),
+    resolveQbittorrentTransferViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -97,6 +100,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         grafanaViews={grafanaViews}
         ntfyViews={ntfyViews}
         prowlarrViews={prowlarrViews}
+        qbittorrentViews={qbittorrentViews}
         radarrViews={radarrViews}
         sonarrViews={sonarrViews}
         serviceStatusViews={serviceStatusViews}

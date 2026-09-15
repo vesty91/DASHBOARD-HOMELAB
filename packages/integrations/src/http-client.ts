@@ -46,8 +46,35 @@ export type SecureHttpResult =
       latencyMs: number;
       retryAfterMs?: number;
       truncated?: boolean;
+      setCookie?: readonly string[];
     }
   | { ok: false; code: IntegrationErrorCode; latencyMs: number };
+
+function readSetCookie(headers: http.IncomingHttpHeaders): readonly string[] | undefined {
+  const raw = headers["set-cookie"];
+  if (raw === undefined) return undefined;
+  if (Array.isArray(raw)) return raw.length > 0 ? raw : undefined;
+  return [raw];
+}
+
+function successHttpResult(
+  status: number,
+  body: Buffer,
+  latencyMs: number,
+  headers: http.IncomingHttpHeaders,
+  extras: { retryAfterMs?: number; truncated?: boolean } = {},
+): Extract<SecureHttpResult, { ok: true }> {
+  const setCookie = readSetCookie(headers);
+  return {
+    ok: true,
+    status,
+    body,
+    latencyMs,
+    ...(extras.retryAfterMs === undefined ? {} : { retryAfterMs: extras.retryAfterMs }),
+    ...(extras.truncated === undefined ? {} : { truncated: extras.truncated }),
+    ...(setCookie === undefined ? {} : { setCookie }),
+  };
+}
 
 function isTlsFailure(error: NodeJS.ErrnoException): boolean {
   const code = error.code ?? "";
@@ -230,14 +257,18 @@ function onceRequest(
             if (options.onBodyLimit === "truncate") {
               const keep = maxBodyBytes - size;
               if (keep > 0) chunks.push(chunk.subarray(0, keep));
-              finish({
-                ok: true,
-                status: response.statusCode ?? 0,
-                body: Buffer.concat(chunks),
-                latencyMs: latency(),
-                truncated: true,
-                ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-              });
+              finish(
+                successHttpResult(
+                  response.statusCode ?? 0,
+                  Buffer.concat(chunks),
+                  latency(),
+                  response.headers,
+                  {
+                    truncated: true,
+                    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+                  },
+                ),
+              );
               return;
             }
             finish(fail("INVALID_RESPONSE"));
@@ -247,13 +278,15 @@ function onceRequest(
           chunks.push(chunk);
         });
         response.on("end", () => {
-          finish({
-            ok: true,
-            status: response.statusCode ?? 0,
-            body: Buffer.concat(chunks),
-            latencyMs: latency(),
-            ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
-          });
+          finish(
+            successHttpResult(
+              response.statusCode ?? 0,
+              Buffer.concat(chunks),
+              latency(),
+              response.headers,
+              retryAfterMs === undefined ? {} : { retryAfterMs },
+            ),
+          );
         });
         response.on("error", () => finish(fail("UNREACHABLE")));
       });

@@ -23,6 +23,7 @@ const SOURCE_LABELS = {
   grafana: "Grafana",
   ntfy: "ntfy",
   prowlarr: "Prowlarr",
+  qbittorrent: "qBittorrent",
   radarr: "Radarr",
   sonarr: "Sonarr",
 } as const;

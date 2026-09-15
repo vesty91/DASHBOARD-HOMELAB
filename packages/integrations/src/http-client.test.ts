@@ -129,6 +129,61 @@ describe("secure HTTP client", () => {
     });
     expect(result).toMatchObject({ ok: true, status: 200 });
     expect(resolutions).toBe(1);
+    if (result.ok) expect(result).not.toHaveProperty("setCookie");
+  });
+
+  it("exposes Set-Cookie on a mocked login response and omits it when absent", async () => {
+    const { url: loginUrl } = await makeServer((_request, response) => {
+      response.writeHead(200, {
+        "content-type": "text/plain",
+        "set-cookie": ["SID=qb-session-cookie-value; HttpOnly; Path=/", "OTHER=ignore; Path=/"],
+      });
+      response.end("Ok.");
+    });
+    const login = await secureRequest({
+      url: loginUrl,
+      method: "POST",
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+      maxRetries: 0,
+    });
+    expect(login).toMatchObject({ ok: true, status: 200 });
+    if (!login.ok) throw new Error("expected login success");
+    expect(login.setCookie).toEqual([
+      "SID=qb-session-cookie-value; HttpOnly; Path=/",
+      "OTHER=ignore; Path=/",
+    ]);
+    const { url: plainUrl } = await makeServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end("{}");
+    });
+    const plain = await secureRequest({
+      url: plainUrl,
+      timeoutMs: 1000,
+      resolver: localResolver,
+      allowAddress: allowLocal,
+      maxRetries: 0,
+    });
+    expect(plain).toMatchObject({ ok: true, status: 200 });
+    if (plain.ok) expect(plain).not.toHaveProperty("setCookie");
+    const hugeLogin = await makeServer((_request, response) => {
+      response.writeHead(200, {
+        "set-cookie": "SID=truncated-session; Path=/",
+      });
+      response.end("x".repeat(2_000));
+    });
+    const truncated = await secureRequest({
+      url: hugeLogin.url,
+      timeoutMs: 1000,
+      maxBodyBytes: 64,
+      onBodyLimit: "truncate",
+      resolver: localResolver,
+      allowAddress: allowLocal,
+    });
+    expect(truncated).toMatchObject({ ok: true, truncated: true });
+    if (!truncated.ok) throw new Error("expected truncated success");
+    expect(truncated.setCookie).toEqual(["SID=truncated-session; Path=/"]);
   });
 
   it("classifies timeout, closed sockets and oversized bodies", async () => {

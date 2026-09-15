@@ -20,6 +20,11 @@ import type {
   ProwlarrSectionReason,
 } from "@dashboard/prowlarr";
 import type {
+  QbittorrentIntegrationMetadata,
+  QbittorrentOverview,
+  QbittorrentSectionReason,
+} from "@dashboard/qbittorrent";
+import type {
   RadarrIntegrationMetadata,
   RadarrOverview,
   RadarrSectionReason,
@@ -76,6 +81,8 @@ import { ntfyUserError } from "../ntfy-error";
 import { NtfyRefreshButton } from "../ntfy-refresh-button";
 import { prowlarrUserError } from "../prowlarr-error";
 import { ProwlarrRefreshButton } from "../prowlarr-refresh-button";
+import { qbittorrentUserError } from "../qbittorrent-error";
+import { QbittorrentRefreshButton } from "../qbittorrent-refresh-button";
 import { radarrUserError } from "../radarr-error";
 import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
@@ -113,6 +120,7 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "grafana" ||
     integration.type === "ntfy" ||
     integration.type === "prowlarr" ||
+    integration.type === "qbittorrent" ||
     integration.type === "radarr" ||
     integration.type === "sonarr"
   )
@@ -1705,6 +1713,160 @@ async function ProwlarrIntegrationDetail({
   );
 }
 
+function qbittorrentReasonLabel(reason: QbittorrentSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API qBittorrent indisponible.";
+    case "permission-denied":
+      return "Permission qBittorrent insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers qBittorrent.";
+    case "invalid-response":
+      return "Réponse qBittorrent invalide.";
+    case "unauthorized":
+      return "Identifiants qBittorrent invalides.";
+    case "rate-limited":
+      return "Trop d'actualisations qBittorrent.";
+    case "dns":
+      return "Le serveur qBittorrent est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers qBittorrent.";
+    case "unreachable":
+      return "Le serveur qBittorrent est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section qBittorrent indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function formatQbittorrentSpeed(bytesPerSecond: number | null | undefined): string {
+  if (bytesPerSecond === null || bytesPerSecond === undefined) return "Indisponible";
+  if (bytesPerSecond < 1024) return `${Math.round(bytesPerSecond)} o/s`;
+  if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} Kio/s`;
+  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} Mio/s`;
+}
+
+function qbittorrentConnectionLabel(
+  status: "connected" | "firewalled" | "disconnected" | undefined,
+): string {
+  switch (status) {
+    case "connected":
+      return "connecté";
+    case "firewalled":
+      return "pare-feu";
+    case "disconnected":
+      return "déconnecté";
+    case undefined:
+      return "inconnu";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+async function QbittorrentOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: QbittorrentOverview | null = null;
+  try {
+    overview = await caller.qbittorrent.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = qbittorrentUserError(caught);
+  }
+  const version = overview?.version.data;
+  const transfer = overview?.transfer.data;
+  const torrents = overview?.torrents.data;
+  const active =
+    torrents === null || torrents === undefined ? null : torrents.downloading + torrents.uploading;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue qBittorrent partielle : certaines sections sont indisponibles.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Aucun nom de torrent, aucun hash, aucun magnet. Lecture seule.
+          </p>
+          <section className="qbittorrent-version">
+            <h2>Version</h2>
+            {overview.version.status === "unavailable" ? (
+              <Alert tone="warning">{qbittorrentReasonLabel(overview.version.reason)}</Alert>
+            ) : null}
+            <p>Version {version?.version ?? "Indisponible"}</p>
+          </section>
+          <section className="qbittorrent-transfer">
+            <h2>Transfert</h2>
+            {overview.transfer.status === "unavailable" ? (
+              <Alert tone="warning">{qbittorrentReasonLabel(overview.transfer.reason)}</Alert>
+            ) : null}
+            <p>↓ {formatQbittorrentSpeed(transfer?.downloadSpeedBps)}</p>
+            <p>↑ {formatQbittorrentSpeed(transfer?.uploadSpeedBps)}</p>
+            {transfer?.connectionStatus ? (
+              <p className="ui-muted">
+                Connexion {qbittorrentConnectionLabel(transfer.connectionStatus)}
+              </p>
+            ) : null}
+          </section>
+          <section className="qbittorrent-torrents">
+            <h2>Torrents</h2>
+            {overview.torrents.status === "unavailable" ? (
+              <Alert tone="warning">{qbittorrentReasonLabel(overview.torrents.reason)}</Alert>
+            ) : null}
+            <p>
+              {torrents && active !== null
+                ? `${active} actifs · ${torrents.queued} en file · ${torrents.paused} en pause`
+                : "Compteurs torrents indisponibles."}
+            </p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function QbittorrentIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: QbittorrentIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="qBittorrent" />
+        <Alert tone="warning">Cette intégration qBittorrent est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="qBittorrent" />
+      <QbittorrentRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de qBittorrent…</p>}>
+        <QbittorrentOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function radarrReasonLabel(reason: RadarrSectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -2196,6 +2358,8 @@ export default async function IntegrationDetailPage({
         return <NtfyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "prowlarr":
         return <ProwlarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "qbittorrent":
+        return <QbittorrentIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "radarr":
         return <RadarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "sonarr":

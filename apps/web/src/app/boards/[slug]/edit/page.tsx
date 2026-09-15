@@ -14,6 +14,7 @@ import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
 import { resolveProwlarrStatusViews } from "../../resolve-prowlarr-status";
+import { resolveQbittorrentTransferViews } from "../../resolve-qbittorrent-transfer";
 import { resolveRadarrOverviewViews } from "../../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
@@ -45,6 +46,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     grafanaViews,
     ntfyViews,
     prowlarrViews,
+    qbittorrentViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -59,6 +61,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
     resolveProwlarrStatusViews(snapshot, caller),
+    resolveQbittorrentTransferViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -161,6 +164,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let qbittorrentIntegrations: Awaited<ReturnType<typeof caller.qbittorrent.integration.list>> = [];
+  try {
+    qbittorrentIntegrations = await caller.qbittorrent.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let radarrIntegrations: Awaited<ReturnType<typeof caller.radarr.integration.list>> = [];
   try {
     radarrIntegrations = await caller.radarr.integration.list();
@@ -224,6 +237,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         ntfyIntegrations={ntfyIntegrations}
         prowlarrViews={prowlarrViews}
         prowlarrIntegrations={prowlarrIntegrations}
+        qbittorrentViews={qbittorrentViews}
+        qbittorrentIntegrations={qbittorrentIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

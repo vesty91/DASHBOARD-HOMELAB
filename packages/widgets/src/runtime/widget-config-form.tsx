@@ -9,6 +9,7 @@ import type { GrafanaStatusDraftConfig } from "../grafana-status";
 import type { NtfyStatusDraftConfig } from "../ntfy-status";
 import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
 import type { ProwlarrStatusDraftConfig } from "../prowlarr-status";
+import type { QbittorrentTransferDraftConfig } from "../qbittorrent-transfer";
 import type { RadarrOverviewDraftConfig } from "../radarr-overview";
 import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
 import type { ServiceStatusDraftConfig } from "../service-status";
@@ -24,6 +25,10 @@ import { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-stat
 import { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 import { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
 import { ProwlarrStatusForm, type ProwlarrIntegrationOption } from "./prowlarr-status-form";
+import {
+  QbittorrentTransferForm,
+  type QbittorrentIntegrationOption,
+} from "./qbittorrent-transfer-form";
 import { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
@@ -42,6 +47,7 @@ export function WidgetConfigForm({
   grafanaIntegrations,
   ntfyIntegrations,
   prowlarrIntegrations,
+  qbittorrentIntegrations,
   radarrIntegrations,
   sonarrIntegrations,
   proxmoxIntegrations,
@@ -60,6 +66,7 @@ export function WidgetConfigForm({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
   prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
+  qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
@@ -141,6 +148,15 @@ export function WidgetConfigForm({
           config={config as ProwlarrStatusDraftConfig}
           onChange={onChange}
           integrations={prowlarrIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "qbittorrent-transfer":
+      return (
+        <QbittorrentTransferForm
+          config={config as QbittorrentTransferDraftConfig}
+          onChange={onChange}
+          integrations={qbittorrentIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

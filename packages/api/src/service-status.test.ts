@@ -68,6 +68,7 @@ describe("service status collectors", () => {
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
@@ -123,6 +124,7 @@ describe("service status collectors", () => {
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
@@ -179,6 +181,7 @@ describe("service status collectors", () => {
       grafana: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });

@@ -47,6 +47,7 @@ import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashb
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
 import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
 import { prowlarrIntegrationInputSchema, type ProwlarrService } from "@dashboard/prowlarr";
+import { qbittorrentIntegrationInputSchema, type QbittorrentService } from "@dashboard/qbittorrent";
 import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
 import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
@@ -108,6 +109,7 @@ export interface ApiContext {
   grafana: GrafanaService;
   ntfy: NtfyService;
   prowlarr: ProwlarrService;
+  qbittorrent: QbittorrentService;
   radarr: RadarrService;
   sonarr: SonarrService;
   serviceStatus: ServiceStatusService;
@@ -810,6 +812,31 @@ export const prowlarrRouter = t.router({
       ),
   }),
 });
+export const qbittorrentRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.qbittorrent.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) =>
+      procedure(() => ctx.qbittorrent.listIntegrations(ctx.actor)),
+    ),
+    get: t.procedure
+      .input(qbittorrentIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.qbittorrent.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(qbittorrentIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.qbittorrent.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(qbittorrentIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.qbittorrent.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const radarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.radarr.permissions(ctx.actor)),
   integration: t.router({
@@ -1166,6 +1193,7 @@ export const dashboardRouter = t.router({
   grafana: grafanaRouter,
   ntfy: ntfyRouter,
   prowlarr: prowlarrRouter,
+  qbittorrent: qbittorrentRouter,
   radarr: radarrRouter,
   sonarr: sonarrRouter,
   serviceStatus: serviceStatusRouter,

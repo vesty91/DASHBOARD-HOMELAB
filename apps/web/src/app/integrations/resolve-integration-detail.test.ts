@@ -117,6 +117,15 @@ const prowlarrDenied = {
   },
 };
 
+const qbittorrentDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("qbittorrent unused");
+    },
+  },
+};
+
 const radarrDenied = {
   permissions: async () => ({ canRead: false as const }),
   integration: {
@@ -155,6 +164,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -196,6 +206,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -241,6 +252,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -286,6 +298,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -331,6 +344,7 @@ describe("resolveIntegrationDetail", () => {
       },
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -376,6 +390,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -421,6 +436,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -430,6 +446,52 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
         name: "Prowlarr Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated qBittorrent reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("dddddddd-dddd-4ddd-8ddd-dddddddddddd", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
+      ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
+      qbittorrent: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            name: "qBittorrent Lab",
+            enabled: true,
+          }),
+        },
+      },
+      radarr: radarrDenied,
+      sonarr: sonarrDenied,
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "qbittorrent",
+      metadata: {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        name: "qBittorrent Lab",
         enabled: true,
       },
     });
@@ -457,6 +519,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -502,6 +565,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: {
         permissions: async () => ({ canRead: true }),
@@ -556,6 +620,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -597,6 +662,7 @@ describe("resolveIntegrationDetail", () => {
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -716,6 +782,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      qbittorrent: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition qBittorrent introuvable",
+            });
+          },
+        },
+      },
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -764,6 +841,7 @@ describe("resolveIntegrationDetail", () => {
         grafana: grafanaDenied,
         ntfy: ntfyDenied,
         prowlarr: prowlarrDenied,
+        qbittorrent: qbittorrentDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {
@@ -817,6 +895,7 @@ describe("resolveIntegrationDetail", () => {
       },
       ntfy: ntfyDenied,
       prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: async () => genericIntegration() },
@@ -847,6 +926,7 @@ describe("resolveIntegrationDetail", () => {
         grafana: grafanaDenied,
         ntfy: ntfyDenied,
         prowlarr: prowlarrDenied,
+        qbittorrent: qbittorrentDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {

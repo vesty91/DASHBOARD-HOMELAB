@@ -404,6 +404,20 @@ Pas de mutation, pas de `/api/v1/search`, pas de `/api/v1/command`, pas de
 `apikey` en query. Noms d'indexeurs, URLs, clés et détails de trackers privés
 ne sont pas exposés.
 
+### qBittorrent
+
+Phase 18.7 : lecture via l'API officielle WebUI v2 (cookie `SID` de session,
+jamais une clé API).
+
+Lecture :
+
+- version (`GET /api/v2/app/version`, texte brut) ;
+- débits (`GET /api/v2/transfer/info`) ;
+- compteurs d'état torrent (`GET /api/v2/torrents/info`).
+
+Auth : `POST /api/v2/auth/login` en `application/x-www-form-urlencoded`. Cookie
+`SID` éphémère en mémoire uniquement. Pas de noms, hashs, magnets ni chemins.
+
 ## 11. Recherche globale
 
 V1.5 :
