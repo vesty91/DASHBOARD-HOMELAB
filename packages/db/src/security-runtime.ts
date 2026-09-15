@@ -11,8 +11,8 @@ import {
   type AuditEvent,
   type AuditEventInput,
   type AuditOutcome,
-  type AuthSessionRecord,
-} from "@dashboard/auth";
+} from "@dashboard/auth/audit";
+import type { AuthSessionRecord } from "@dashboard/auth/sessions";
 
 export const OIDC_SECRET_ID = "client_secret";
 
