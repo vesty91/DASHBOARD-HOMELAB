@@ -122,3 +122,41 @@ ajoute `Strict-Transport-Security` lorsque `APP_URL` commence par `https:`.
 
 CI : job `containers`, après le smoke HTTP, `SKIP_BUILD=1` (images bake, pas
 un second `docker build`).
+
+## 20.5 Dépendances / Next.js
+
+Audit du 2026-09-15 (`pnpm outdated`, `pnpm audit --audit-level=moderate`).
+
+### Correctifs de sécurité appliqués
+
+| Package                | Avant  | Après      | Motif                                                                                                                                                        |
+| ---------------------- | ------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `next`                 | 16.3.2 | **16.3.5** | GHSA-p293-qw3h-jr36 et GHSA-2xp9-vwfh-vxw4 (`>=16.0.0 <16.3.3`). Plus petit palier 16.3.x qui inclut le patch, plus les rustines 16.3.4/16.3.5. Pas de 16.4. |
+| `ws` (direct realtime) | 8.18.3 | **8.21.3** | GHSA-96hv-2xvq-fx4p / GHSA-58qx-3vcg-4xpx. Override workspace `ws: 8.21.3`.                                                                                  |
+
+`sharp` (via Next) n’apparaît plus dans l’audit après 16.3.5.
+
+### Non bumpés (volontaire)
+
+- TypeScript 6.0.3 → 7 : majeur.
+- esbuild racine 0.25.11 → 0.28 : hors patch sécurité (déjà ≥ 0.25).
+- Playwright 1.62.1, turbo 2.10.10, eslint 10.8.1 : pas d’advisory applicable.
+
+### Résiduel audit
+
+`drizzle-kit` → `@esbuild-kit/*` → `esbuild <=0.24.2` (moderate, GHSA-67mh-4wv8-2f99).
+C’est le CLI de migrations, pas le runtime production. L’advisory vise le
+**dev server** esbuild. Pas d’override global (risque de casser drizzle-kit).
+
+### Warning Windows standalone path length
+
+Message Turbo/Next :
+
+`IO error: provided value is too long when setting link name for apps/web/.next/standalone/node_modules/.pnpm/next@16.3.x_…`
+
+Origine : limite de nom de lien NTFS / `MAX_PATH` sur le graphe pnpm copié dans
+`output: "standalone"`. `outputFileTracingRoot` pointe déjà la racine du
+monorepo. Impact : bruit local Windows ; le `next build` se termine (exit 0).
+Les images Docker/CI Linux ne sont pas concernées. Mitigation : activer les
+longs chemins Windows, ou ignorer le warning. Pas de changement
+d’architecture de build.
