@@ -1,5 +1,12 @@
 import { IntegrationError, type IntegrationClientContext } from "@dashboard/integrations";
-import { mapClusterResources, mapClusterStatus, mapVersion, parseJsonValue } from "./dto";
+import {
+  mapClusterResources,
+  mapClusterStatus,
+  mapGuestPowerStatus,
+  mapVersion,
+  parseJsonValue,
+} from "./dto";
+import { proxmoxGuestPowerPath, proxmoxGuestStatusCurrentPath } from "./guest-path";
 import { ProxmoxError, sectionReasonFromError, toIntegrationError } from "./errors";
 import {
   PROXMOX_CLUSTER_RESOURCES_PATH,
@@ -16,6 +23,9 @@ import {
 } from "./transport";
 import type {
   ProxmoxClusterDto,
+  ProxmoxGuestPowerAction,
+  ProxmoxGuestPowerStatus,
+  ProxmoxGuestType,
   ProxmoxGuestsDto,
   ProxmoxNodesDto,
   ProxmoxOverview,
@@ -65,6 +75,36 @@ async function readJson(
 ): Promise<unknown> {
   const result = await proxmoxFetch(request, ctx, "GET", pathname, options);
   return parseJsonValue(result.body);
+}
+
+export async function fetchProxmoxGuestPowerStatus(
+  ctx: ProxmoxClientContext,
+  node: string,
+  guestType: ProxmoxGuestType,
+  vmid: number,
+): Promise<ProxmoxGuestPowerStatus> {
+  const payload = await readJson(
+    ctx.request,
+    ctx,
+    proxmoxGuestStatusCurrentPath(node, guestType, vmid),
+    { maxBodyBytes: PROXMOX_JSON_MAX_BYTES },
+  );
+  return mapGuestPowerStatus(payload);
+}
+
+export async function postProxmoxGuestPower(
+  ctx: ProxmoxClientContext,
+  node: string,
+  guestType: ProxmoxGuestType,
+  vmid: number,
+  action: ProxmoxGuestPowerAction,
+): Promise<void> {
+  await proxmoxFetch(
+    ctx.request,
+    ctx,
+    "POST",
+    proxmoxGuestPowerPath(node, guestType, vmid, action),
+  );
 }
 
 export async function testProxmoxConnection(

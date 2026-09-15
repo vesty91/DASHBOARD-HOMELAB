@@ -1,6 +1,7 @@
 import { IntegrationError, redactKnownSecretValues } from "@dashboard/integrations";
 import type {
   ProxmoxClusterDto,
+  ProxmoxGuestPowerStatus,
   ProxmoxGuestsDto,
   ProxmoxNodeDto,
   ProxmoxNodeStatus,
@@ -30,6 +31,17 @@ export function unwrapProxmoxData(value: unknown): unknown {
   const record = value as Record<string, unknown>;
   if (!("data" in record)) invalid("Proxmox JSON envelope is missing data");
   return record.data;
+}
+
+export function mapGuestPowerStatus(payload: unknown): ProxmoxGuestPowerStatus {
+  const data = unwrapProxmoxData(payload);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return "unknown";
+  const status = (data as Record<string, unknown>).status;
+  if (typeof status !== "string") return "unknown";
+  const normalized = status.trim().toLocaleLowerCase("und");
+  if (normalized === "running") return "running";
+  if (normalized === "stopped") return "stopped";
+  return "unknown";
 }
 
 function boundText(value: unknown, max: number): string | null {

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   IntegrationError,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   createIntegrationRegistry,
   type EncryptedSecretRow,
   type IntegrationRecord,
@@ -17,8 +19,15 @@ import { MemoryProxmoxRefreshFence } from "./refresh-fence";
 import { createProxmoxService } from "./service";
 
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
+const DOCKER_ID = "22222222-2222-4222-8222-222222222222";
 const KEY = Buffer.alloc(32, 9).toString("base64");
 const API_TOKEN = "root@pam!dashboard=abcDEF0123456789";
+const GUEST = {
+  integrationId: INTEGRATION_ID,
+  node: "pve1",
+  guestType: "qemu" as const,
+  vmid: 100,
+};
 
 const systemAdmin = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -35,6 +44,13 @@ function actor(permissions: readonly string[]) {
     },
   };
 }
+
+const powerActor = actor([
+  "integration.interact",
+  "proxmox.start",
+  "proxmox.shutdown",
+  "proxmox.reboot",
+]);
 
 function json(body: unknown, status = 200): SecureHttpResult {
   return { ok: true, status, body: Buffer.from(JSON.stringify(body)), latencyMs: 4 };
@@ -129,18 +145,50 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
   });
 }
 
+function guestHttp(
+  options: SecureHttpRequest,
+  state: { qemu?: string; lxc?: number | string; post?: number } = {},
+): SecureHttpResult {
+  const pathname = new URL(String(options.url)).pathname;
+  const method = (options.method ?? "GET").toUpperCase();
+  if (pathname.endsWith("/status/current")) {
+    const guestType = pathname.includes("/lxc/") ? "lxc" : "qemu";
+    const status =
+      guestType === "lxc"
+        ? typeof state.lxc === "string"
+          ? state.lxc
+          : "stopped"
+        : (state.qemu ?? "stopped");
+    return json({ data: { status, name: "secret-vm" } });
+  }
+  if (method === "POST" && /\/status\/(start|shutdown|reboot)$/u.test(pathname)) {
+    return json({ data: "UPID:pve1:000:qemu:100:root@pam:" }, state.post ?? 200);
+  }
+  return officialPayloads(options);
+}
+
 function serviceWith(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   store = createMemoryStore(),
+  extras: {
+    cache?: MemoryIntegrationCache;
+    actionRateLimiter?: MemorySafeActionRateLimiter;
+    inFlight?: MemorySafeActionInFlightGuard;
+    publish?: (integrationId: string) => Promise<void>;
+    refreshRateLimiter?: MemoryProxmoxRefreshRateLimiter;
+  } = {},
 ) {
   return createProxmoxService({
     store: store.store,
     registry: createIntegrationRegistry().register(proxmoxIntegrationDefinition),
-    cache: new MemoryIntegrationCache(),
+    cache: extras.cache ?? new MemoryIntegrationCache(),
     request,
-    refreshRateLimiter: new MemoryProxmoxRefreshRateLimiter(),
+    refreshRateLimiter: extras.refreshRateLimiter ?? new MemoryProxmoxRefreshRateLimiter(),
     refreshFence: new MemoryProxmoxRefreshFence(),
     overviewCoalescer: new MemoryProxmoxOverviewCoalescer(),
+    actionRateLimiter: extras.actionRateLimiter ?? new MemorySafeActionRateLimiter(),
+    inFlight: extras.inFlight ?? new MemorySafeActionInFlightGuard(),
+    ...(extras.publish ? { publish: extras.publish } : {}),
     keyring: store.keyring,
   });
 }
@@ -206,19 +254,202 @@ describe("createProxmoxService", () => {
   it("rate limits refresh", async () => {
     const limiter = new MemoryProxmoxRefreshRateLimiter(1, 60_000, () => 1_000);
     const store = createMemoryStore();
-    const service = createProxmoxService({
-      store: store.store,
-      registry: createIntegrationRegistry().register(proxmoxIntegrationDefinition),
-      cache: new MemoryIntegrationCache(),
-      request: async (options) => officialPayloads(options),
+    const service = serviceWith(async (options) => officialPayloads(options), store, {
       refreshRateLimiter: limiter,
-      refreshFence: new MemoryProxmoxRefreshFence(),
-      overviewCoalescer: new MemoryProxmoxOverviewCoalescer(),
-      keyring: store.keyring,
     });
     await service.refreshOverview(INTEGRATION_ID, systemAdmin);
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("starts QEMU and LXC guests on allowlisted POST paths", async () => {
+    const paths: string[] = [];
+    const service = serviceWith(async (options) => {
+      paths.push(`${options.method ?? "GET"} ${new URL(String(options.url)).pathname}`);
+      return guestHttp(options);
+    });
+    const qemu = await service.startGuest(GUEST, powerActor);
+    expect(qemu).toMatchObject({
+      status: "accepted",
+      action: "proxmox.start",
+      resourceId: "pve1-qemu-100",
+    });
+    const lxc = await service.startGuest({ ...GUEST, guestType: "lxc", vmid: 101 }, powerActor);
+    expect(lxc.status).toBe("accepted");
+    expect(paths).toContain("GET /api2/json/nodes/pve1/qemu/100/status/current");
+    expect(paths).toContain("POST /api2/json/nodes/pve1/qemu/100/status/start");
+    expect(paths).toContain("POST /api2/json/nodes/pve1/lxc/101/status/start");
+    expect(JSON.stringify(qemu)).not.toContain("UPID:");
+    expect(JSON.stringify(qemu)).not.toContain(API_TOKEN);
+    expect(JSON.stringify(qemu)).not.toContain("secret-vm");
+  });
+
+  it("treats already-running start and already-stopped shutdown as success without POST", async () => {
+    const runningPaths: string[] = [];
+    const running = serviceWith(async (options) => {
+      runningPaths.push(`${options.method ?? "GET"} ${new URL(String(options.url)).pathname}`);
+      return guestHttp(options, { qemu: "running" });
+    });
+    await expect(running.startGuest(GUEST, powerActor)).resolves.toMatchObject({
+      status: "success",
+    });
+    expect(runningPaths.some((path) => path.startsWith("POST"))).toBe(false);
+
+    const stoppedPaths: string[] = [];
+    const stopped = serviceWith(async (options) => {
+      stoppedPaths.push(`${options.method ?? "GET"} ${new URL(String(options.url)).pathname}`);
+      return guestHttp(options, { qemu: "stopped" });
+    });
+    await expect(stopped.shutdownGuest(GUEST, powerActor)).resolves.toMatchObject({
+      status: "success",
+    });
+    expect(stoppedPaths.some((path) => path.startsWith("POST"))).toBe(false);
+  });
+
+  it("maps stopped reboot to conflict and posts reboot when running", async () => {
+    const stopped = serviceWith(async (options) => guestHttp(options, { qemu: "stopped" }));
+    await expect(stopped.rebootGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    const running = serviceWith(async (options) => guestHttp(options, { qemu: "running" }));
+    await expect(running.rebootGuest(GUEST, powerActor)).resolves.toMatchObject({
+      status: "accepted",
+      action: "proxmox.reboot",
+    });
+  });
+
+  it("denies read-only, manage-only, and specialized permission without interact", async () => {
+    const service = serviceWith(async (options) => guestHttp(options));
+    await expect(
+      service.startGuest(GUEST, actor(["integration.use", "proxmox.read"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.startGuest(GUEST, actor(["integration.manage"]))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(
+      service.startGuest(GUEST, actor(["integration.use", "proxmox.start"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.shutdownGuest(GUEST, actor(["integration.interact", "proxmox.start"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects wrong integration type, malformed ids, and stale config", async () => {
+    const store = createMemoryStore([
+      {
+        id: DOCKER_ID,
+        type: "docker",
+        name: "Docker",
+        baseUrl: "http://127.0.0.1:2375/",
+        enabled: true,
+        config: {},
+        status: "unknown",
+        lastCheckedAt: null,
+        configRevision: 1,
+        createdBy: null,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      },
+    ]);
+    const service = serviceWith(async (options) => guestHttp(options), store);
+    await expect(
+      service.startGuest({ ...GUEST, integrationId: DOCKER_ID }, powerActor),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.startGuest({ ...GUEST, node: "pve/1" }, powerActor)).rejects.toMatchObject(
+      {
+        code: "VALIDATION_ERROR",
+      },
+    );
+    await expect(service.startGuest({ ...GUEST, vmid: 0 }, powerActor)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+    await expect(
+      service.startGuest({ ...GUEST, expectedConfigRevision: 9 }, powerActor),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("rate limits and blocks double-submit on the same guest action", async () => {
+    const limiter = new MemorySafeActionRateLimiter(1, 60_000, () => 1_000);
+    const limited = serviceWith(async (options) => guestHttp(options), createMemoryStore(), {
+      actionRateLimiter: limiter,
+    });
+    await limited.startGuest(GUEST, powerActor);
+    await expect(limited.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const inFlight = new MemorySafeActionInFlightGuard();
+    const hanging = serviceWith(
+      async (options) => {
+        const pathname = new URL(String(options.url)).pathname;
+        if (pathname.endsWith("/status/current")) await gate;
+        return guestHttp(options);
+      },
+      createMemoryStore(),
+      { inFlight },
+    );
+    const first = hanging.startGuest(GUEST, powerActor);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await expect(hanging.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    release?.();
+    await expect(first).resolves.toMatchObject({ status: "accepted" });
+  });
+
+  it("maps timeout, 401, 403 and 500 without leaking the token", async () => {
+    const timeout = serviceWith(async () => ({ ok: false, code: "TIMEOUT", latencyMs: 1 }));
+    await expect(timeout.startGuest(GUEST, powerActor)).rejects.toMatchObject({ code: "TIMEOUT" });
+    const unauthorized = serviceWith(async () => json({ message: `denied ${API_TOKEN}` }, 401));
+    await expect(unauthorized.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    try {
+      await unauthorized.startGuest(GUEST, powerActor);
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain(API_TOKEN);
+    }
+    const forbidden = serviceWith(async () => json({ data: null }, 403));
+    await expect(forbidden.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    const failed = serviceWith(async () => json({ data: null }, 500));
+    await expect(failed.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "INVALID_RESPONSE",
+    });
+  });
+
+  it("invalidates cache and publishes realtime only after a successful action", async () => {
+    const cache = new MemoryIntegrationCache();
+    let published = 0;
+    const service = serviceWith(async (options) => guestHttp(options), createMemoryStore(), {
+      cache,
+      publish: async () => {
+        published += 1;
+      },
+    });
+    await service.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cache.size).toBeGreaterThan(0);
+    await service.startGuest(GUEST, powerActor);
+    expect(cache.size).toBe(0);
+    expect(published).toBe(1);
+    const failing = serviceWith(
+      async () => json({ message: API_TOKEN }, 401),
+      createMemoryStore(),
+      {
+        publish: async () => {
+          published += 1;
+        },
+      },
+    );
+    await expect(failing.startGuest(GUEST, powerActor)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(published).toBe(1);
   });
 });

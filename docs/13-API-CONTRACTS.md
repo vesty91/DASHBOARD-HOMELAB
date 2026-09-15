@@ -412,20 +412,27 @@ Jamais exposés : jeton Bearer, PromQL dans l'URL, JSON Prometheus brut, labels 
 
 Routeur tRPC `proxmox` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                      | Permission                | Capability     | Notes                                                |
-| -------------------------- | ------------------------- | -------------- | ---------------------------------------------------- |
-| `proxmox.permissions`      | auth active               | —              | `canRead`, `canManage`                               |
-| `proxmox.integration.list` | use/manage + proxmox.read | —              | `{ id, name, enabled }[]`                            |
-| `proxmox.integration.get`  | use/manage + proxmox.read | —              | `{ id, name, enabled }`                              |
-| `proxmox.overview.get`     | use/manage + proxmox.read | `cluster.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `proxmox.overview.refresh` | use/manage + proxmox.read | `cluster.read` | 10 requêtes / min / acteur / intégration             |
+| Route                      | Permission                         | Capability        | Notes                                                                 |
+| -------------------------- | ---------------------------------- | ----------------- | --------------------------------------------------------------------- |
+| `proxmox.permissions`      | auth active                        | —                 | `canRead`, `canManage`, `canStart`, `canShutdown`, `canReboot`        |
+| `proxmox.integration.list` | use/manage + proxmox.read          | —                 | `{ id, name, enabled }[]`                                             |
+| `proxmox.integration.get`  | use/manage + proxmox.read          | —                 | `{ id, name, enabled }`                                               |
+| `proxmox.overview.get`     | use/manage + proxmox.read          | `cluster.read`    | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256                  |
+| `proxmox.overview.refresh` | use/manage + proxmox.read          | `cluster.read`    | 10 requêtes / min / acteur / intégration                              |
+| `proxmox.guests.start`     | interact/manage + proxmox.start    | `guests.start`    | POST allowlisté ; idempotent si déjà running ; DTO `SafeActionResult` |
+| `proxmox.guests.shutdown`  | interact/manage + proxmox.shutdown | `guests.shutdown` | Confirmation UI ; idempotent si déjà stopped                          |
+| `proxmox.guests.reboot`    | interact/manage + proxmox.reboot   | `guests.reboot`   | Confirmation UI ; `CONFLICT` si stopped                               |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections `version`,
 `cluster`, `nodes`, `guests`, `storage`. Auth : header `Authorization: PVEAPIToken=`.
 Jamais dans l'URL.
 
 Jamais exposés : jeton API, cookie `PVEAuthCookie`, noms de VM/CT, chemins storage,
-IP de nœuds, `baseUrl`, config.
+IP de nœuds, `baseUrl`, config, UPID de tâche, réponse brute.
+
+Input actions : `{ integrationId, node, guestType: qemu|lxc, vmid, expectedConfigRevision? }`.
+`vmid` entier 1–999999999. `node` segment d'hôte strict. Rate limit 10 / 60 s par
+`action:integrationId:actorId`. Audit succès uniquement.
 
 # Grafana API — Phase 18.2
 

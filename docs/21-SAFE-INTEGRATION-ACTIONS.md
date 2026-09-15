@@ -64,7 +64,14 @@ Docker `start` / `stop` / `restart` reste le cas d'usage production. Les
 adapters Phase 21 doivent réutiliser ce framework plutôt qu'une seconde
 architecture.
 
-## Hors scope de cette coupe (21.1)
+## Hors scope de 21.1
 
-Implémentation Proxmox / qBittorrent / ntfy / *arr / Seerr : PRs suivantes.
+Implémentation qBittorrent / ntfy / *arr / Seerr : PRs suivantes.
 Grafana et Custom API restent en lecture seule.
+
+## 21.2 Proxmox power
+
+Livré : `proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` sur QEMU et LXC
+via `POST /api2/json/nodes/{node}/{qemu|lxc}/{vmid}/status/{start|shutdown|reboot}`.
+GET `status/current` pour l'idempotence. Pas de force stop, destroy, snapshot,
+migration, clone, console ni config update.

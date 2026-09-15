@@ -48,4 +48,64 @@ describe("proxmox access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus a specialized Proxmox action permission", () => {
+    expect(
+      proxmoxPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }),
+    ).toMatchObject({
+      canStart: false,
+      canShutdown: false,
+      canReboot: false,
+    });
+    expect(
+      proxmoxPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.use", "proxmox.read", "proxmox.start"],
+        },
+      }).canStart,
+    ).toBe(false);
+    expect(
+      proxmoxPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "proxmox.start"],
+        },
+      }).canStart,
+    ).toBe(true);
+    expect(
+      proxmoxPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "proxmox.start"],
+        },
+      }).canShutdown,
+    ).toBe(false);
+    expect(() =>
+      assertProxmoxAccess(
+        {
+          userId: "u1",
+          subject: {
+            status: "active",
+            isSystemAdmin: false,
+            directPermissions: ["integration.interact", "proxmox.start"],
+          },
+        },
+        "reboot",
+      ),
+    ).toThrow(/Permission denied/);
+  });
 });

@@ -113,6 +113,8 @@ import {
 import {
   createIntegrationService,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   MemoryTestRateLimiter,
   secureRequest,
   type IntegrationActor,
@@ -157,6 +159,8 @@ const globalRuntime = globalThis as typeof globalThis & {
     proxmoxRefreshRateLimiter: MemoryProxmoxRefreshRateLimiter;
     proxmoxRefreshFence: MemoryProxmoxRefreshFence;
     proxmoxOverviewCoalescer: MemoryProxmoxOverviewCoalescer;
+    proxmoxActionRateLimiter: MemorySafeActionRateLimiter;
+    proxmoxActionInFlight: MemorySafeActionInFlightGuard;
     grafanaRefreshRateLimiter: MemoryGrafanaRefreshRateLimiter;
     grafanaRefreshFence: MemoryGrafanaRefreshFence;
     grafanaOverviewCoalescer: MemoryGrafanaOverviewCoalescer;
@@ -309,6 +313,8 @@ function integrationRuntime() {
     proxmoxRefreshRateLimiter: new MemoryProxmoxRefreshRateLimiter(),
     proxmoxRefreshFence: new MemoryProxmoxRefreshFence(),
     proxmoxOverviewCoalescer: new MemoryProxmoxOverviewCoalescer(),
+    proxmoxActionRateLimiter: new MemorySafeActionRateLimiter(),
+    proxmoxActionInFlight: new MemorySafeActionInFlightGuard(),
     grafanaRefreshRateLimiter: new MemoryGrafanaRefreshRateLimiter(),
     grafanaRefreshFence: new MemoryGrafanaRefreshFence(),
     grafanaOverviewCoalescer: new MemoryGrafanaOverviewCoalescer(),
@@ -424,6 +430,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.proxmoxRefreshRateLimiter,
     refreshFence: runtime.proxmoxRefreshFence,
     overviewCoalescer: runtime.proxmoxOverviewCoalescer,
+    actionRateLimiter: runtime.proxmoxActionRateLimiter,
+    inFlight: runtime.proxmoxActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "proxmox",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   const grafana = createGrafanaService({

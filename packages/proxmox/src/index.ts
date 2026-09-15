@@ -8,7 +8,9 @@ export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   PROXMOX_OVERVIEW_FAILURE_TTL_MS,
+  fetchProxmoxGuestPowerStatus,
   fetchProxmoxOverview,
+  postProxmoxGuestPower,
   testProxmoxConnection,
   proxmoxContextFromIntegration,
 } from "./client";
@@ -25,6 +27,7 @@ export {
   PROXMOX_RESOURCES_MAX,
   mapClusterResources,
   mapClusterStatus,
+  mapGuestPowerStatus,
   mapVersion,
   parseJsonValue,
   unwrapProxmoxData,
@@ -35,6 +38,19 @@ export {
   sectionReasonFromError,
   toIntegrationError,
 } from "./errors";
+export {
+  PROXMOX_VMID_MAX,
+  PROXMOX_VMID_MIN,
+  assertProxmoxGuestPowerAction,
+  assertProxmoxGuestType,
+  assertProxmoxNodeName,
+  assertProxmoxVmid,
+  isProxmoxGuestPowerPath,
+  isProxmoxGuestStatusCurrentPath,
+  proxmoxGuestPowerPath,
+  proxmoxGuestResourceId,
+  proxmoxGuestStatusCurrentPath,
+} from "./guest-path";
 export {
   PROXMOX_CLUSTER_RESOURCES_PATH,
   PROXMOX_CLUSTER_STATUS_PATH,
@@ -56,8 +72,10 @@ export {
 export {
   proxmoxApiTokenSchema,
   proxmoxConfigSchema,
+  proxmoxGuestActionInputSchema,
   proxmoxIntegrationInputSchema,
   proxmoxSecretSchema,
+  type ProxmoxGuestActionInput,
 } from "./schemas";
 export { createProxmoxService, type ProxmoxService, type ProxmoxServiceDeps } from "./service";
 export {
@@ -70,6 +88,9 @@ export {
 export type {
   ProxmoxActor,
   ProxmoxClusterDto,
+  ProxmoxGuestPowerAction,
+  ProxmoxGuestPowerStatus,
+  ProxmoxGuestType,
   ProxmoxGuestsDto,
   ProxmoxIntegrationMetadata,
   ProxmoxNodeDto,

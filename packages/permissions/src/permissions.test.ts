@@ -40,6 +40,9 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prometheus.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("uptime-kuma.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.start");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.shutdown");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.reboot");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("grafana.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("sonarr.read");
@@ -71,6 +74,9 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "seerr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "custom-api.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.start")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.shutdown")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.reboot")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
   });
   it("reserves extra group permission grants to active system admins", () => {

@@ -44,6 +44,7 @@ import type {
   ProxmoxIntegrationMetadata,
   ProxmoxNodeStatus,
   ProxmoxOverview,
+  ProxmoxPermissionsView,
   ProxmoxSectionReason,
 } from "@dashboard/proxmox";
 import type {
@@ -98,6 +99,7 @@ import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
 import { SonarrRefreshButton } from "../sonarr-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
+import { ProxmoxGuestActions } from "../proxmox-guest-actions";
 import { ProxmoxRefreshButton } from "../proxmox-refresh-button";
 import { immichUserError } from "../immich-error";
 import { ImmichRefreshButton } from "../immich-refresh-button";
@@ -1245,7 +1247,8 @@ async function ProxmoxOverviewPanel({
         <>
           <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
           <p className="ui-muted">
-            Les noms de VM et CT ne sont pas exposés. Lecture seule, sans mutation.
+            Les noms de VM et CT ne sont pas exposés. Les actions portent sur un nœud, un type et un
+            VMID saisis explicitement.
           </p>
           <section className="proxmox-summary">
             <h2>Cluster</h2>
@@ -1336,10 +1339,17 @@ async function ProxmoxIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: ProxmoxPermissionsView = await caller.proxmox.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="Proxmox VE" />
       <ProxmoxRefreshButton integrationId={id} />
+      <ProxmoxGuestActions
+        integrationId={id}
+        canStart={permissions.canStart}
+        canShutdown={permissions.canShutdown}
+        canReboot={permissions.canReboot}
+      />
       <Suspense fallback={<p className="ui-muted">Chargement de Proxmox…</p>}>
         <ProxmoxOverviewPanel id={id} caller={caller} />
       </Suspense>

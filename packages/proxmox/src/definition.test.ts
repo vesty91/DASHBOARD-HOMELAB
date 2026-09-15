@@ -3,9 +3,14 @@ import { proxmoxConfigSchema } from "./schemas";
 import { PROXMOX_INTEGRATION_ID, proxmoxIntegrationDefinition } from "./definition";
 
 describe("proxmox definition", () => {
-  it("is a read-only cluster adapter", () => {
+  it("declares cluster read and guest power capabilities", () => {
     expect(proxmoxIntegrationDefinition.id).toBe(PROXMOX_INTEGRATION_ID);
-    expect(proxmoxIntegrationDefinition.capabilities).toEqual(["cluster.read"]);
+    expect(proxmoxIntegrationDefinition.capabilities).toEqual([
+      "cluster.read",
+      "guests.start",
+      "guests.shutdown",
+      "guests.reboot",
+    ]);
     expect(proxmoxIntegrationDefinition.secretFields.map((field) => field.key)).toEqual([
       "apiToken",
     ]);

@@ -10,7 +10,8 @@ describe("proxmoxUserError", () => {
     );
     expect(proxmoxUserError({ code: "TLS_ERROR" })).toContain("TLS");
     expect(proxmoxUserError({ code: "UNREACHABLE" })).toBe("Le serveur Proxmox est injoignable.");
-    expect(proxmoxUserError({ code: "TOO_MANY_REQUESTS" })).toContain("actualisations");
+    expect(proxmoxUserError({ code: "TOO_MANY_REQUESTS" })).toContain("requêtes");
+    expect(proxmoxUserError({ code: "CONFLICT" })).toContain("conflit");
     expect(proxmoxUserError({ message: "denied root@pam!dashboard=secret" })).not.toContain(
       "root@pam!dashboard=secret",
     );

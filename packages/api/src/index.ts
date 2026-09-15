@@ -22,6 +22,7 @@ import {
 } from "@dashboard/apps";
 import {
   IntegrationError,
+  safeActionAuditMetadata,
   integrationCreateSchema,
   integrationSetSecretSchema,
   integrationUpdateSchema,
@@ -56,7 +57,11 @@ import {
 } from "@dashboard/custom-api";
 import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
 import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
-import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
+import {
+  proxmoxGuestActionInputSchema,
+  proxmoxIntegrationInputSchema,
+  type ProxmoxService,
+} from "@dashboard/proxmox";
 import { immichIntegrationInputSchema, type ImmichService } from "@dashboard/immich";
 import { jellyfinIntegrationInputSchema, type JellyfinService } from "@dashboard/jellyfin";
 import {
@@ -254,6 +259,21 @@ function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function proxmoxGuestAuditMetadata(
+  integrationId: string,
+  result: { action: string; resourceId: string; status: "success" | "accepted" | "failed" },
+): Record<string, unknown> {
+  return {
+    ...safeActionAuditMetadata({
+      integrationId,
+      integrationType: "proxmox",
+      action: result.action,
+      resourceId: result.resourceId,
+      result: result.status,
+    }),
+  };
 }
 
 async function emitAudit(ctx: ApiContext, event: AuditEventInput): Promise<void> {
@@ -749,6 +769,50 @@ export const proxmoxRouter = t.router({
       .mutation(({ ctx, input }) =>
         procedure(() => ctx.proxmox.refreshOverview(input.integrationId, ctx.actor)),
       ),
+  }),
+  guests: t.router({
+    start: t.procedure.input(proxmoxGuestActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.proxmox.startGuest(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "proxmox.start",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: proxmoxGuestAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+    shutdown: t.procedure.input(proxmoxGuestActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.proxmox.shutdownGuest(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "proxmox.shutdown",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: proxmoxGuestAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+    reboot: t.procedure.input(proxmoxGuestActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.proxmox.rebootGuest(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "proxmox.reboot",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: proxmoxGuestAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
   }),
 });
 export const grafanaRouter = t.router({
