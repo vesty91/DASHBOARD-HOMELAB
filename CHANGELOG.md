@@ -4,6 +4,27 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Le versioning suit [SemVer](https://semver.org/lang/fr/) à partir de 1.0.0.
 Voir ADR 0029.
 
+## [Unreleased]
+
+Actions d'intégration sûres (Phase 21). Sera publié en **1.1.0** (minor
+backward-compatible). Schéma et backup inchangés.
+
+### Ajouté
+
+- Framework `runSafeIntegrationAction` (RBAC conjonctif, POST allowlisté,
+  rate limit, audit, cache/realtime après succès).
+- Proxmox : start / shutdown / reboot (QEMU + LXC).
+- qBittorrent : pause / resume (hashs explicites, jamais `all`).
+- ntfy : publish (topic, message, titre, priorité, tags bornés).
+- Sonarr : `RefreshSeries` et `EpisodeSearch` (un ID).
+- Radarr : `RefreshMovie` et `MoviesSearch` (un `movieId`).
+- Seerr : approve / decline (un `requestId`).
+
+### Sécurité
+
+- Default deny : `*.read` et `integration.manage` seuls ne suffisent pas.
+- Prowlarr, Grafana et Custom API restent lecture seule / GET-only.
+
 ## [1.0.1] — 2026-09-15
 
 Post-v1 hardening (Phase 20). Schéma et backup inchangés.

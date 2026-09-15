@@ -416,5 +416,6 @@ Voir `docs/20-POST-V1-HARDENING.md`.
 
 # État Phase 21
 
-IN PROGRESS. Framework d'actions d'intégration allowlistées.
+COMPLETE. Actions d'intégration allowlistées (Proxmox, qBittorrent, ntfy,
+Sonarr, Radarr, Seerr). Prowlarr / Grafana / Custom API restent lecture seule.
 Pas de `0007`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.

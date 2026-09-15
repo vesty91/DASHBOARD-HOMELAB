@@ -389,22 +389,28 @@ Hors scope : Phase 21 (écritures d’intégrations), `0007`, déplacement de
 
 ## Phase 21 — Safe Integration Actions
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-But : actions ciblées et allowlistées sur certaines intégrations Phase 18
-(pattern Docker), pas un remote control générique.
+Livré :
 
-Livrables prévus :
+- framework commun (`runSafeIntegrationAction`) : RBAC conjonctif, POST
+  allowlisté, rate limit, audit succès, cache + realtime après succès ;
+- Proxmox : `start` / `shutdown` / `reboot` (QEMU + LXC) ;
+- qBittorrent : `pause` / `resume` (hashs explicites, jamais `all`) ;
+- ntfy : `publish` (topic/message/titre/priorité/tags bornés) ;
+- Sonarr : `RefreshSeries` + `EpisodeSearch` (un ID) ;
+- Radarr : `RefreshMovie` + `MoviesSearch` (un `movieId`) ;
+- Seerr : `approve` / `decline` (un `requestId`).
 
-- framework commun (RBAC conjonctif, POST allowlisté, rate limit, audit, cache) ;
-- Proxmox start / shutdown / reboot ;
-- qBittorrent pause / resume ;
-- ntfy publish ;
-- commandes Sonarr / Radarr ciblées non destructives ;
-- Seerr approve / decline si l’API officielle le permet.
+Prowlarr reste **read-only** (pas de mutation utile, ciblée et non destructive).
+Grafana reste **read-only**. Custom API reste **GET-only**.
 
-Hors scope : `0007`, Grafana write, Custom API POST/PUT/PATCH/DELETE, invoke
-arbitraire, Prowlarr write sauf justification, Phase 22.
+Schéma DB inchangé (`0000`–`0006`, pas de `0007`). Backup `formatVersion` 1 /
+`schemaVersion` 6.
+
+PRs : #53–#58. Tag `phase-21-complete`. Minor SemVer `1.1.0` (PR séparée).
+
+Hors scope : `0007`, invoke arbitraire, REST proxy, Phase 22.
 
 ## Règle
 
