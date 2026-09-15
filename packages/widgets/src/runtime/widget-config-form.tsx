@@ -11,6 +11,7 @@ import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
 import type { ProwlarrStatusDraftConfig } from "../prowlarr-status";
 import type { QbittorrentTransferDraftConfig } from "../qbittorrent-transfer";
 import type { RadarrOverviewDraftConfig } from "../radarr-overview";
+import type { SeerrRequestsDraftConfig } from "../seerr-requests";
 import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
 import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
@@ -30,6 +31,7 @@ import {
   type QbittorrentIntegrationOption,
 } from "./qbittorrent-transfer-form";
 import { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
+import { SeerrRequestsForm, type SeerrIntegrationOption } from "./seerr-requests-form";
 import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
@@ -49,6 +51,7 @@ export function WidgetConfigForm({
   prowlarrIntegrations,
   qbittorrentIntegrations,
   radarrIntegrations,
+  seerrIntegrations,
   sonarrIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
@@ -68,6 +71,7 @@ export function WidgetConfigForm({
   prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
   radarrIntegrations?: readonly RadarrIntegrationOption[];
+  seerrIntegrations?: readonly SeerrIntegrationOption[];
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
@@ -166,6 +170,15 @@ export function WidgetConfigForm({
           config={config as RadarrOverviewDraftConfig}
           onChange={onChange}
           integrations={radarrIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "seerr-requests":
+      return (
+        <SeerrRequestsForm
+          config={config as SeerrRequestsDraftConfig}
+          onChange={onChange}
+          integrations={seerrIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

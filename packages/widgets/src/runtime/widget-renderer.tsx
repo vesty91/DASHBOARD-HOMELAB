@@ -12,6 +12,7 @@ import type { ProxmoxResourcesView } from "../proxmox-resources";
 import type { ProwlarrStatusView } from "../prowlarr-status";
 import type { QbittorrentTransferView } from "../qbittorrent-transfer";
 import type { RadarrOverviewView } from "../radarr-overview";
+import type { SeerrRequestsView } from "../seerr-requests";
 import type { SonarrOverviewView } from "../sonarr-overview";
 import type { ServiceStatusView } from "../service-status";
 import type { UptimeKumaStatusView } from "../uptime-kuma-status";
@@ -31,6 +32,7 @@ import { ProxmoxResourcesWidget } from "./proxmox-resources-widget";
 import { ProwlarrStatusWidget } from "./prowlarr-status-widget";
 import { QbittorrentTransferWidget } from "./qbittorrent-transfer-widget";
 import { RadarrOverviewWidget } from "./radarr-overview-widget";
+import { SeerrRequestsWidget } from "./seerr-requests-widget";
 import { SonarrOverviewWidget } from "./sonarr-overview-widget";
 import { ServiceStatusWidget } from "./service-status-widget";
 import { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";
@@ -82,6 +84,7 @@ function ReadyWidget({
   prowlarrView,
   qbittorrentView,
   radarrView,
+  seerrView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -98,6 +101,7 @@ function ReadyWidget({
   prowlarrView: ProwlarrStatusView | undefined;
   qbittorrentView: QbittorrentTransferView | undefined;
   radarrView: RadarrOverviewView | undefined;
+  seerrView: SeerrRequestsView | undefined;
   sonarrView: SonarrOverviewView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
   serviceStatusView: ServiceStatusView | undefined;
@@ -128,6 +132,8 @@ function ReadyWidget({
       return <QbittorrentTransferWidget view={qbittorrentView} />;
     case "radarr-overview":
       return <RadarrOverviewWidget view={radarrView} />;
+    case "seerr-requests":
+      return <SeerrRequestsWidget view={seerrView} />;
     case "sonarr-overview":
       return <SonarrOverviewWidget view={sonarrView} />;
     case "proxmox-resources":
@@ -153,6 +159,7 @@ export function WidgetRenderer({
   prowlarrView,
   qbittorrentView,
   radarrView,
+  seerrView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -169,6 +176,7 @@ export function WidgetRenderer({
   prowlarrView?: ProwlarrStatusView;
   qbittorrentView?: QbittorrentTransferView;
   radarrView?: RadarrOverviewView;
+  seerrView?: SeerrRequestsView;
   sonarrView?: SonarrOverviewView;
   proxmoxView?: ProxmoxResourcesView;
   serviceStatusView?: ServiceStatusView;
@@ -193,6 +201,7 @@ export function WidgetRenderer({
           prowlarrView={prowlarrView}
           qbittorrentView={qbittorrentView}
           radarrView={radarrView}
+          seerrView={seerrView}
           sonarrView={sonarrView}
           proxmoxView={proxmoxView}
           serviceStatusView={serviceStatusView}

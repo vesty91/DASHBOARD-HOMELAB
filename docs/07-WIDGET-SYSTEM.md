@@ -173,6 +173,11 @@ actifs (downloading+uploading) et file. Même `router.refresh()` 10 s ; le
 navigateur ne contacte jamais l'API qBittorrent. Noms, hashs et magnets ne sont
 pas exposés.
 
+Phase 18.8 ajoute `seerr-requests` (`publicSafe=false`) : version et compteurs
+pending / approved / processing / available. Même `router.refresh()` 10 s ; le
+navigateur ne contacte jamais l'API Seerr. Titres, utilisateurs et ids TMDB ne
+sont pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -191,7 +196,8 @@ pas exposés.
 - Sonarr Overview (`sonarr-overview`, Phase 18.4) ;
 - Radarr Overview (`radarr-overview`, Phase 18.5) ;
 - Prowlarr Status (`prowlarr-status`, Phase 18.6) ;
-- qBittorrent Transfer (`qbittorrent-transfer`, Phase 18.7).
+- qBittorrent Transfer (`qbittorrent-transfer`, Phase 18.7) ;
+- Seerr Requests (`seerr-requests`, Phase 18.8).
 
 ## 11. Custom API widget
 

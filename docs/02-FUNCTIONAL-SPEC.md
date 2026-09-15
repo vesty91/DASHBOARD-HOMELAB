@@ -418,6 +418,19 @@ Lecture :
 Auth : `POST /api/v2/auth/login` en `application/x-www-form-urlencoded`. Cookie
 `SID` éphémère en mémoire uniquement. Pas de noms, hashs, magnets ni chemins.
 
+### Seerr
+
+Phase 18.8 : lecture via l'API officielle v1 (header `X-Api-Key` uniquement).
+Jellyseerr et Overseerr partagent cette API ; un seul type d'intégration `seerr`.
+
+Lecture :
+
+- version (`GET /api/v1/status`) ;
+- compteurs de demandes (`GET /api/v1/request/count`).
+
+Pas de mutation, pas d'approve/decline, pas de `apikey` en query. Titres,
+utilisateurs, e-mails et identifiants TMDB ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

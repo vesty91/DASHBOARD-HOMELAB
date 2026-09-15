@@ -20,6 +20,7 @@ import type {
   NtfyStatusView,
   ProwlarrStatusView,
   QbittorrentTransferView,
+  SeerrRequestsView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -40,6 +41,7 @@ import {
   ntfyStatusDraftConfig,
   prowlarrStatusDraftConfig,
   qbittorrentTransferDraftConfig,
+  seerrRequestsDraftConfig,
   radarrOverviewDraftConfig,
   sonarrOverviewDraftConfig,
   proxmoxResourcesDraftConfig,
@@ -57,6 +59,7 @@ import {
   type NtfyIntegrationOption,
   type ProwlarrIntegrationOption,
   type QbittorrentIntegrationOption,
+  type SeerrIntegrationOption,
   type RadarrIntegrationOption,
   type SonarrIntegrationOption,
   type ProxmoxIntegrationOption,
@@ -99,6 +102,8 @@ function defaultConfig(widgetType: string): unknown {
       return prowlarrStatusDraftConfig;
     case "qbittorrent-transfer":
       return qbittorrentTransferDraftConfig;
+    case "seerr-requests":
+      return seerrRequestsDraftConfig;
     case "radarr-overview":
       return radarrOverviewDraftConfig;
     case "sonarr-overview":
@@ -136,6 +141,8 @@ export function BoardEditor({
   prowlarrIntegrations = [],
   qbittorrentViews = {},
   qbittorrentIntegrations = [],
+  seerrViews = {},
+  seerrIntegrations = [],
   radarrViews = {},
   radarrIntegrations = [],
   sonarrViews = {},
@@ -173,6 +180,8 @@ export function BoardEditor({
   prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   qbittorrentViews?: Record<string, QbittorrentTransferView>;
   qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
+  seerrViews?: Record<string, SeerrRequestsView>;
+  seerrIntegrations?: readonly SeerrIntegrationOption[];
   radarrViews?: Record<string, RadarrOverviewView>;
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
@@ -204,6 +213,7 @@ export function BoardEditor({
   const [pendingNtfy, setPendingNtfy] = useState(false);
   const [pendingProwlarr, setPendingProwlarr] = useState(false);
   const [pendingQbittorrent, setPendingQbittorrent] = useState(false);
+  const [pendingSeerr, setPendingSeerr] = useState(false);
   const [pendingRadarr, setPendingRadarr] = useState(false);
   const [pendingSonarr, setPendingSonarr] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -284,6 +294,7 @@ export function BoardEditor({
     setPendingNtfy(false);
     setPendingProwlarr(false);
     setPendingQbittorrent(false);
+    setPendingSeerr(false);
     setPendingRadarr(false);
     setPendingSonarr(false);
     router.refresh();
@@ -356,6 +367,7 @@ export function BoardEditor({
     pendingNtfy ||
     pendingProwlarr ||
     pendingQbittorrent ||
+    pendingSeerr ||
     pendingRadarr ||
     pendingSonarr;
   const pendingWidgetType = pendingJellyfin
@@ -378,11 +390,13 @@ export function BoardEditor({
                     ? "prowlarr-status"
                     : pendingQbittorrent
                       ? "qbittorrent-transfer"
-                      : pendingRadarr
-                        ? "radarr-overview"
-                        : pendingSonarr
-                          ? "sonarr-overview"
-                          : "app-tile";
+                      : pendingSeerr
+                        ? "seerr-requests"
+                        : pendingRadarr
+                          ? "radarr-overview"
+                          : pendingSonarr
+                            ? "sonarr-overview"
+                            : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -403,11 +417,13 @@ export function BoardEditor({
                     ? prowlarrStatusDraftConfig
                     : pendingQbittorrent
                       ? qbittorrentTransferDraftConfig
-                      : pendingRadarr
-                        ? radarrOverviewDraftConfig
-                        : pendingSonarr
-                          ? sonarrOverviewDraftConfig
-                          : appTileDraftConfig;
+                      : pendingSeerr
+                        ? seerrRequestsDraftConfig
+                        : pendingRadarr
+                          ? radarrOverviewDraftConfig
+                          : pendingSonarr
+                            ? sonarrOverviewDraftConfig
+                            : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -428,11 +444,13 @@ export function BoardEditor({
                     ? prowlarrIntegrations.length === 0
                     : pendingQbittorrent
                       ? qbittorrentIntegrations.length === 0
-                      : pendingRadarr
-                        ? radarrIntegrations.length === 0
-                        : pendingSonarr
-                          ? sonarrIntegrations.length === 0
-                          : !canReadApps;
+                      : pendingSeerr
+                        ? seerrIntegrations.length === 0
+                        : pendingRadarr
+                          ? radarrIntegrations.length === 0
+                          : pendingSonarr
+                            ? sonarrIntegrations.length === 0
+                            : !canReadApps;
 
   return (
     <section>
@@ -483,6 +501,7 @@ export function BoardEditor({
                 ntfyIntegrations={ntfyIntegrations}
                 prowlarrIntegrations={prowlarrIntegrations}
                 qbittorrentIntegrations={qbittorrentIntegrations}
+                seerrIntegrations={seerrIntegrations}
                 radarrIntegrations={radarrIntegrations}
                 sonarrIntegrations={sonarrIntegrations}
               />
@@ -603,6 +622,11 @@ export function BoardEditor({
                           setPendingQbittorrent(true);
                           return;
                         }
+                        if (entry.id === "seerr-requests") {
+                          setDraftConfig(seerrRequestsDraftConfig);
+                          setPendingSeerr(true);
+                          return;
+                        }
                         if (entry.id === "radarr-overview") {
                           setDraftConfig(radarrOverviewDraftConfig);
                           setPendingRadarr(true);
@@ -673,6 +697,7 @@ export function BoardEditor({
                     {...(qbittorrentViews[entry.id]
                       ? { qbittorrentView: qbittorrentViews[entry.id] }
                       : {})}
+                    {...(seerrViews[entry.id] ? { seerrView: seerrViews[entry.id] } : {})}
                     {...(radarrViews[entry.id] ? { radarrView: radarrViews[entry.id] } : {})}
                     {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
                   />
@@ -732,6 +757,7 @@ export function BoardEditor({
             ntfyIntegrations={ntfyIntegrations}
             prowlarrIntegrations={prowlarrIntegrations}
             qbittorrentIntegrations={qbittorrentIntegrations}
+            seerrIntegrations={seerrIntegrations}
             radarrIntegrations={radarrIntegrations}
             sonarrIntegrations={sonarrIntegrations}
           />

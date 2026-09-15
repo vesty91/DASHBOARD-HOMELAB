@@ -29,6 +29,7 @@ import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
 import type { ProwlarrService } from "@dashboard/prowlarr";
 import type { QbittorrentService } from "@dashboard/qbittorrent";
+import type { SeerrService } from "@dashboard/seerr";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -314,6 +315,7 @@ export interface ServiceStatusRuntimeDeps {
   ntfy: NtfyService;
   prowlarr: ProwlarrService;
   qbittorrent: QbittorrentService;
+  seerr: SeerrService;
   radarr: RadarrService;
   sonarr: SonarrService;
   coalescer?: ServiceStatusCoalescer;
@@ -559,6 +561,26 @@ export function createDashboardServiceStatusService(
             transfer && torrents
               ? `${active} actifs · ${torrents.queued} en file`
               : "qBittorrent indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "seerr",
+      canRead: (actor) => deps.seerr.permissions(actor).canRead,
+      list: (actor) => deps.seerr.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.seerr.getOverview(integrationId, actor);
+        const counts = overview.counts.data;
+        return freezeItem({
+          id: `seerr:${integrationId}`,
+          name,
+          sourceType: "seerr",
+          integrationId,
+          status: mapOverviewStatus(overview.status),
+          detail: counts
+            ? `${counts.pending} en attente · ${counts.available} disponibles`
+            : "Seerr indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

@@ -23,6 +23,7 @@ import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
 import type { ProwlarrService } from "@dashboard/prowlarr";
 import type { QbittorrentService } from "@dashboard/qbittorrent";
+import type { SeerrService } from "@dashboard/seerr";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -51,6 +52,7 @@ const grafana = {} as GrafanaService;
 const ntfy = {} as NtfyService;
 const prowlarr = {} as ProwlarrService;
 const qbittorrent = {} as QbittorrentService;
+const seerr = {} as SeerrService;
 const radarr = {} as RadarrService;
 const sonarr = {} as SonarrService;
 const serviceStatus = {
@@ -77,6 +79,7 @@ function createCaller(
     | "ntfy"
     | "prowlarr"
     | "qbittorrent"
+    | "seerr"
     | "radarr"
     | "sonarr"
     | "serviceStatus"
@@ -99,6 +102,7 @@ function createCaller(
     ntfy?: NtfyService;
     prowlarr?: ProwlarrService;
     qbittorrent?: QbittorrentService;
+    seerr?: SeerrService;
     radarr?: RadarrService;
     sonarr?: SonarrService;
     serviceStatus?: ServiceStatusService;
@@ -123,6 +127,7 @@ function createCaller(
     ntfy,
     prowlarr,
     qbittorrent,
+    seerr,
     radarr,
     sonarr,
     serviceStatus,
@@ -1415,6 +1420,61 @@ describe("qbittorrent tRPC router", () => {
   });
 });
 
+describe("seerr tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000091";
+  const seerrActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "seerr.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    system: {
+      status: "available" as const,
+      data: { version: "2.5.0", compatibleProduct: "seerr-family" as const },
+    },
+    counts: {
+      status: "available" as const,
+      data: { pending: 2, approved: 5, processing: 1, available: 8, total: 16 },
+    },
+  };
+
+  it("returns a bounded overview DTO without secrets, titles or users", async () => {
+    const seerrService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        { id: integrationId, name: "Seerr Lab", enabled: true },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Seerr Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as SeerrService;
+    const caller = createCaller({
+      actor: seerrActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      seerr: seerrService,
+    });
+    const metadata = await caller.seerr.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "Seerr Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.seerr.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(
+      /X-Api-Key|apiKey|apikey|email|tmdb|title|requestedBy|Dune/u,
+    );
+  });
+});
+
 describe("radarr tRPC router", () => {
   const integrationId = "00000000-0000-4000-8000-000000000061";
   const radarrActor = {
@@ -1680,6 +1740,7 @@ describe("runtime and realtime tRPC", () => {
       ntfy: closed as unknown as NtfyService,
       prowlarr: closed as unknown as ProwlarrService,
       qbittorrent: closed as unknown as QbittorrentService,
+      seerr: closed as unknown as SeerrService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     });
@@ -1725,6 +1786,7 @@ describe("runtime and realtime tRPC", () => {
       ntfy: closed as unknown as NtfyService,
       prowlarr: closed as unknown as ProwlarrService,
       qbittorrent: closed as unknown as QbittorrentService,
+      seerr: closed as unknown as SeerrService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });

@@ -14,6 +14,7 @@ import type {
   NtfyStatusView,
   ProwlarrStatusView,
   QbittorrentTransferView,
+  SeerrRequestsView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -30,6 +31,7 @@ import type {
   NtfyIntegrationOption,
   ProwlarrIntegrationOption,
   QbittorrentIntegrationOption,
+  SeerrIntegrationOption,
   RadarrIntegrationOption,
   SonarrIntegrationOption,
   ProxmoxIntegrationOption,
@@ -64,6 +66,8 @@ export function BoardEditWorkspace({
   prowlarrIntegrations = [],
   qbittorrentViews = {},
   qbittorrentIntegrations = [],
+  seerrViews = {},
+  seerrIntegrations = [],
   radarrViews = {},
   radarrIntegrations = [],
   sonarrViews = {},
@@ -95,6 +99,8 @@ export function BoardEditWorkspace({
   prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   qbittorrentViews?: Record<string, QbittorrentTransferView>;
   qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
+  seerrViews?: Record<string, SeerrRequestsView>;
+  seerrIntegrations?: readonly SeerrIntegrationOption[];
   radarrViews?: Record<string, RadarrOverviewView>;
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
@@ -214,6 +220,8 @@ export function BoardEditWorkspace({
         prowlarrIntegrations={prowlarrIntegrations}
         qbittorrentViews={qbittorrentViews}
         qbittorrentIntegrations={qbittorrentIntegrations}
+        seerrViews={seerrViews}
+        seerrIntegrations={seerrIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

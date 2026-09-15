@@ -161,6 +161,18 @@ export {
   prometheusMetricDraftConfig,
 } from "./prometheus-metric";
 export type {
+  SeerrRequestsConfig,
+  SeerrRequestsDraftConfig,
+  SeerrRequestsView,
+} from "./seerr-requests";
+export {
+  SEERR_REQUESTS_UNSET_INTEGRATION_ID,
+  seerrRequestsConfigSchema,
+  seerrRequestsContract,
+  seerrRequestsDefaultConfig,
+  seerrRequestsDraftConfig,
+} from "./seerr-requests";
+export type {
   ServiceStatusCanonical,
   ServiceStatusConfig,
   ServiceStatusDisplayMode,

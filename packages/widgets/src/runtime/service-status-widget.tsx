@@ -25,6 +25,7 @@ const SOURCE_LABELS = {
   prowlarr: "Prowlarr",
   qbittorrent: "qBittorrent",
   radarr: "Radarr",
+  seerr: "Seerr",
   sonarr: "Sonarr",
 } as const;
 

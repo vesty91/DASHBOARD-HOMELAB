@@ -27,6 +27,7 @@ export function IntegrationForm({
   const showNtfyHelp = selectedType === "ntfy";
   const showProwlarrHelp = selectedType === "prowlarr";
   const showQbittorrentHelp = selectedType === "qbittorrent";
+  const showSeerrHelp = selectedType === "seerr";
   const showRadarrHelp = selectedType === "radarr";
   const showSonarrHelp = selectedType === "sonarr";
   const showTrustedCa =
@@ -42,6 +43,7 @@ export function IntegrationForm({
     showNtfyHelp ||
     showProwlarrHelp ||
     showQbittorrentHelp ||
+    showSeerrHelp ||
     showRadarrHelp ||
     showSonarrHelp;
   const timeoutMs =
@@ -103,11 +105,13 @@ export function IntegrationForm({
                                   ? "https://prowlarr.example:9696"
                                   : showQbittorrentHelp
                                     ? "https://qbittorrent.example:8080"
-                                    : showRadarrHelp
-                                      ? "https://radarr.example:7878"
-                                      : showSonarrHelp
-                                        ? "https://sonarr.example:8989"
-                                        : undefined
+                                    : showSeerrHelp
+                                      ? "https://seerr.example:5055"
+                                      : showRadarrHelp
+                                        ? "https://radarr.example:7878"
+                                        : showSonarrHelp
+                                          ? "https://sonarr.example:8989"
+                                          : undefined
           }
         />
       </Field>
@@ -187,6 +191,14 @@ export function IntegrationForm({
           Utilisez l&apos;URL HTTP(S) du serveur qBittorrent (origine uniquement, port 8080). Les
           identifiants se configurent ensuite comme secrets serveur et ne sont jamais envoyés au
           navigateur. Lecture seule : débits et compteurs de torrents. Aucun nom, hash ou magnet.
+        </Alert>
+      ) : null}
+      {showSeerrHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Seerr (origine uniquement). La clé API se configure
+          ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur. Lecture seule :
+          version et compteurs de demandes. Compatible Jellyseerr et Overseerr (même API v1). Aucun
+          titre, utilisateur ni identifiant TMDB.
         </Alert>
       ) : null}
       {showRadarrHelp ? (
@@ -287,13 +299,15 @@ export function IntegrationForm({
                               ? "Utilisez ce champ pour un Prowlarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                               : showQbittorrentHelp
                                 ? "Utilisez ce champ pour un qBittorrent HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                : showRadarrHelp
-                                  ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                  : showSonarrHelp
-                                    ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                    : showProxmoxHelp
-                                      ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                      : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                : showSeerrHelp
+                                  ? "Utilisez ce champ pour un Seerr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                  : showRadarrHelp
+                                    ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                    : showSonarrHelp
+                                      ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                      : showProxmoxHelp
+                                        ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                        : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea
