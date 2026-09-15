@@ -95,6 +95,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/web",
       "@dashboard/db",
       "@dashboard/widgets",
+      "@dashboard/automations",
       "next",
       "react",
       "drizzle-orm",

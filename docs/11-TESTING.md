@@ -277,6 +277,8 @@ d'action vers le navigateur.
 ## 22. Automations (Phase 22.1)
 
 `packages/automations` valide trigger/action allowlistés, JSON borné, clés
-sensibles interdites et revalidation live de l'owner. `packages/db` teste
+sensibles interdites et revalidation live de l'owner. Le moteur de
+conditions (`engine.test.ts`) couvre intervalle, cron UTC, match d'événement,
+status-transition, conditions, cooldown et anti-boucle. `packages/db` teste
 create/update CAS, owner SET NULL, historique conservé, upgrade 6 → 7
 (SQLite et PostgreSQL). Backup exporte `automation_rules` uniquement.
