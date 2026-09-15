@@ -1,10 +1,19 @@
 # Production Caddy in front of Compose `web`.
 # Set APP_URL to the same public origin (https://dashboard.example.com).
-# Caddy handles TLS. WebSocket upgrades are proxied automatically.
+# Caddy handles TLS. WebSocket upgrades for `/api/realtime/ws` are proxied to
+# realtime `/ws` (Next.js standalone rewrites do not complete the Upgrade).
 # The dashboard does not trust X-Forwarded-For for audit IPs (ADR 0003).
 
 {$DASHBOARD_HOST:dashboard.example.com} {
 	encode gzip zstd
+	handle /api/realtime/ws* {
+		uri strip_prefix /api/realtime
+		reverse_proxy realtime:3002 {
+			flush_interval -1
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
 	reverse_proxy web:3000 {
 		flush_interval -1
 		header_up Host {host}

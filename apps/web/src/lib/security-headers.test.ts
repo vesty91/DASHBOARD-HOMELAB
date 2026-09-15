@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyRuntimeSecurityHeaders,
   dashboardCsp,
   isSameAppOrigin,
   securityHeaders,
@@ -25,5 +26,17 @@ describe("HTTP security headers", () => {
       true,
     );
     expect(isSameAppOrigin("https://evil.example", "https://dashboard.example")).toBe(false);
+    const runtime = new Map<string, string>();
+    applyRuntimeSecurityHeaders(
+      { set: (name, value) => runtime.set(name, value) },
+      "https://dashboard.example",
+    );
+    expect(runtime.get("Strict-Transport-Security")).toBe("max-age=63072000; includeSubDomains");
+    runtime.clear();
+    applyRuntimeSecurityHeaders(
+      { set: (name, value) => runtime.set(name, value) },
+      "http://localhost:3000",
+    );
+    expect(runtime.size).toBe(0);
   });
 });

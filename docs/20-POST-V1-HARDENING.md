@@ -95,3 +95,30 @@ maintenance trop lourde pour le bénéfice, alors que les majors Node 24
 éliminent l’avertissement visé. Les tags git produit (`v1.0.0`,
 `phase-19-complete`, etc.) restent intouchables. Pas de publication `v1.0.1`
 dans cette PR.
+
+## 20.4 Smoke HTTPS / Caddy / realtime
+
+Commande : `pnpm test:production:https` (`scripts/https-proxy-smoke.mjs`).
+
+Topologie inchangée : `compose.yaml` + `compose.proxy.yaml` `--profile proxy`.
+Le Caddyfile de production (`deploy/Caddyfile`) reste ACME. Le smoke pointe
+`CADDYFILE` vers `deploy/Caddyfile.https-smoke` : même `reverse_proxy` web +
+WebSocket realtime, TLS fichier (openssl, SAN `IP:127.0.0.1`). Aucun ACME
+public. `compose.proxy.smoke.yaml` monte le répertoire de certificats.
+
+Origine locale : `APP_URL=https://127.0.0.1:18443` (ports smoke 18080/18443,
+pour ne pas collisionner avec 8080/8443 déjà utilisés sur un homelab).
+L’overlay Compose conserve les défauts documentés 8080/8443.
+Le client Node charge `cert.pem` comme CA et vérifie TLS
+(`rejectUnauthorized: true`). L’application ne désactive jamais la
+vérification TLS.
+
+Caddy route `/api/realtime/ws` vers `realtime:3002/ws` : le rewrite Next.js
+standalone ne termine pas l’Upgrade (constaté pendant ce smoke).
+
+HSTS : `next.config.ts` `headers()` est évalué au **build**. Les images
+GHCR n’ont pas `APP_URL=https` au bake. `apps/web/src/proxy.ts` (Next.js 16)
+ajoute `Strict-Transport-Security` lorsque `APP_URL` commence par `https:`.
+
+CI : job `containers`, après le smoke HTTP, `SKIP_BUILD=1` (images bake, pas
+un second `docker build`).

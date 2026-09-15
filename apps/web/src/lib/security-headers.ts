@@ -31,6 +31,17 @@ export function securityHeaders(appUrl: string): { key: string; value: string }[
   return headers;
 }
 
+export function applyRuntimeSecurityHeaders(
+  headers: { set(name: string, value: string): void },
+  appUrl: string,
+): void {
+  for (const header of securityHeaders(appUrl)) {
+    if (header.key === "Strict-Transport-Security") {
+      headers.set(header.key, header.value);
+    }
+  }
+}
+
 export function serverActionAllowedOrigins(appUrl: string): string[] {
   return [new URL(appUrl).host];
 }

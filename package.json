@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "turbo dev --filter=@dashboard/web",
     "build": "turbo build",
-    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && node --test scripts/write-release-bake.test.mjs scripts/lighthouse-budgets.test.mjs && turbo lint",
+    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && node --test scripts/write-release-bake.test.mjs scripts/lighthouse-budgets.test.mjs scripts/https-proxy-smoke.assertions.test.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "pnpm --filter @dashboard/web test:e2e",
@@ -20,6 +20,7 @@
     "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build",
     "bundle:runtime": "node scripts/bundle-runtime.mjs",
     "test:production": "node scripts/production-smoke.mjs",
+    "test:production:https": "node scripts/https-proxy-smoke.mjs",
     "test:lighthouse": "node scripts/lighthouse-ci.mjs"
   },
   "devDependencies": {

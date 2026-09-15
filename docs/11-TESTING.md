@@ -247,3 +247,12 @@ exerce Compose + health + onboarding HTTP + DB down. Backup v5/v6/v7 inchangé.
 `pnpm test:lighthouse` lance Chromium Playwright contre `next dev` SQLite et
 applique les budgets de `scripts/lighthouse-budgets.mjs`. Rapports dans
 `lighthouse-reports/` (gitignoré). Détail : `docs/20-POST-V1-HARDENING.md`.
+
+## 19. Smoke HTTPS reverse-proxy (Phase 20)
+
+`pnpm test:production:https` exerce Caddy devant web + realtime. Assertions :
+HTTPS, redirect HTTP→HTTPS, live/ready, CSP/HSTS, cookies `__Secure-` /
+session, `/api/realtime/ws` (426 puis 403 Origin invalide / 401 sans ticket),
+`/api/realtime/events` 401, tRPC Origin 403, DB down live 200 / ready 503.
+Certificats : openssl local (SAN IP), pas d’ACME. Caddy proxifie
+`/api/realtime/ws` vers realtime. Détail : `docs/20-POST-V1-HARDENING.md`.

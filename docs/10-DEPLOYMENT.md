@@ -28,14 +28,16 @@ pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient `latest` /
 
 ## 3. Fichiers
 
-| Fichier                   | Rôle                                        |
-| ------------------------- | ------------------------------------------- |
-| `compose.yaml`            | Stack production                            |
-| `compose.proxy.yaml`      | Overlay Caddy optionnel (`--profile proxy`) |
-| `deploy/Caddyfile`        | Exemple HTTPS + WebSocket/SSE               |
-| `.env.production.example` | Variables Compose sans secrets réels        |
-| `Dockerfile`              | Images multi-stage                          |
-| `docker-bake.hcl`         | Build local / CI                            |
+| Fichier                        | Rôle                                           |
+| ------------------------------ | ---------------------------------------------- |
+| `compose.yaml`                 | Stack production                               |
+| `compose.proxy.yaml`           | Overlay Caddy optionnel (`--profile proxy`)    |
+| `compose.proxy.smoke.yaml`     | Monte les certificats TLS du smoke HTTPS       |
+| `deploy/Caddyfile`             | Exemple HTTPS + WebSocket/SSE (ACME)           |
+| `deploy/Caddyfile.https-smoke` | Variante smoke : même proxy, TLS fichier local |
+| `.env.production.example`      | Variables Compose sans secrets réels           |
+| `Dockerfile`                   | Images multi-stage                             |
+| `docker-bake.hcl`              | Build local / CI                               |
 
 ## 4. Premier démarrage
 
@@ -151,12 +153,17 @@ Exemple Caddy : `deploy/Caddyfile`. Overlay :
 docker compose -f compose.yaml -f compose.proxy.yaml --profile proxy up
 ```
 
+`CADDYFILE` (défaut `./deploy/Caddyfile`) permet au smoke CI de monter
+`deploy/Caddyfile.https-smoke` sans changer le service proxy.
+
 Exigences :
 
 - TLS terminé sur le proxy
 - `APP_URL=https://<hôte-public>`
 - WebSocket : `Connection: Upgrade` + `Upgrade: websocket` vers
-  `/api/realtime/ws` (rewrite Next vers realtime `/ws`)
+  `/api/realtime/ws`. Caddy réécrit vers realtime `/ws`
+  (`uri strip_prefix /api/realtime`). Le rewrite Next.js standalone ne
+  termine pas l’Upgrade ; le proxy Caddy est le chemin production.
 - SSE : `/api/realtime/events` (proxy applicatif, `flush_interval -1`)
 - body limit suffisante pour un export backup
 
@@ -253,8 +260,28 @@ Vérifie `compose config`, build, migrate, live/ready, onboarding HTTP,
 non-root, absence de docker.sock, DB down → live 200 / ready 503, puis
 récupération.
 
-Le test reverse-proxy HTTPS complet n'est pas dans la CI unitaire : reproduire
-avec `compose.proxy.yaml` et `APP_URL` égal à l'origine Caddy.
+Le test reverse-proxy HTTPS CI : `pnpm test:production:https`.
+
+Il démarre la stack documentée (`compose.yaml` + `compose.proxy.yaml`
+`--profile proxy`) avec `deploy/Caddyfile.https-smoke` : même
+`reverse_proxy` que `deploy/Caddyfile` (web + WebSocket realtime),
+certificats **locaux** openssl (SAN IP). Aucun ACME public. Le client de
+smoke charge `cert.pem` et vérifie TLS (`rejectUnauthorized: true`).
+L’application ne désactive jamais la vérification TLS.
+
+Couverture : HTTPS, redirection HTTP→HTTPS vers `APP_URL`, `/health/live`
+et `/health/ready` derrière le proxy, headers (CSP, HSTS, nosniff),
+cookies session/`__Secure-` (HttpOnly / SameSite=Lax / Secure), rewrite
+WebSocket `/api/realtime/ws`, SSE `/api/realtime/events`, Origin invalide
+(tRPC + WebSocket), DB down → live 200 / ready 503.
+
+`SKIP_BUILD=1` réutilise les images déjà chargées (bake CI ou GHCR).
+Le smoke de release GHCR devra utiliser les tags publiés, pas un
+`docker build` local.
+
+```bash
+pnpm test:production:https
+```
 
 ## 16. Docker socket proxy
 
