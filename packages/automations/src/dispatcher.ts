@@ -18,6 +18,7 @@ export interface AutomationDispatchInput {
   actionType: AutomationActionType;
   actionConfigJson: Record<string, unknown>;
   triggerType: AutomationTriggerType;
+  ownerUserId?: string | null;
 }
 
 export interface AutomationActionDispatcher {

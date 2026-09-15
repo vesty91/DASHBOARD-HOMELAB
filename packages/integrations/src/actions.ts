@@ -40,6 +40,9 @@ export interface SafeActionAuditMetadata {
   readonly action: string;
   readonly resourceId: string;
   readonly result: SafeActionStatus;
+  readonly source?: "manual" | "automation";
+  readonly automationId?: string;
+  readonly runId?: string;
 }
 
 function isActive(actor: IntegrationActor): boolean {
@@ -107,24 +110,43 @@ export function createSafeActionResult(input: {
 export function safeActionAuditMetadata(input: SafeActionAuditMetadata): SafeActionAuditMetadata {
   assertSafeActionName(input.action);
   assertSafeResourceId(input.resourceId);
-  const payload = {
+  if (input.source === "automation") {
+    if (!input.automationId || !input.runId)
+      throw new IntegrationError(
+        "MISCONFIGURED",
+        "Automation audit requires automationId and runId",
+      );
+  }
+  const payload: Record<string, unknown> = {
     integrationId: input.integrationId,
     integrationType: input.integrationType,
     action: input.action,
     resourceId: input.resourceId,
     result: input.result,
   };
+  if (input.source) payload.source = input.source;
+  if (input.automationId) payload.automationId = input.automationId;
+  if (input.runId) payload.runId = input.runId;
   const redacted = redact(payload) as Record<string, unknown>;
   for (const key of Object.keys(redacted))
     if (isSensitiveKey(key))
       throw new IntegrationError("INTERNAL_ERROR", "Audit metadata contained a sensitive key");
-  return {
+  const result: SafeActionAuditMetadata = {
     integrationId: String(redacted.integrationId),
     integrationType: String(redacted.integrationType),
     action: String(redacted.action),
     resourceId: String(redacted.resourceId),
     result: input.result,
   };
+  if (input.source) {
+    return {
+      ...result,
+      source: input.source,
+      ...(input.automationId ? { automationId: String(redacted.automationId) } : {}),
+      ...(input.runId ? { runId: String(redacted.runId) } : {}),
+    };
+  }
+  return result;
 }
 
 export function throwFromExternalHttpStatus(status: number): never {

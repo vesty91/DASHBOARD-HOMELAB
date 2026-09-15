@@ -11,7 +11,17 @@ import {
   toAutomationSchedulerStore,
   type AutomationStore,
 } from "@dashboard/db";
+import {
+  createPostgresqlIntegrationStore,
+  createSqliteIntegrationStore,
+} from "@dashboard/db/integration-runtime";
+import {
+  createPostgresqlSecurityStore,
+  createSqliteSecurityStore,
+} from "@dashboard/db/security-runtime";
 import type { AutomationOwnerRecord, AutomationSchedulerStore } from "@dashboard/automations";
+import type { IntegrationStore } from "@dashboard/integrations";
+import type { AutomationAuditSink } from "./actions";
 import { createJobRecorder } from "./jobs";
 import type { JobRecorder } from "./server";
 
@@ -19,6 +29,8 @@ export interface WorkerPersistence {
   jobs: JobRecorder;
   automations: AutomationStore;
   schedulerStore: AutomationSchedulerStore;
+  integrationStore: IntegrationStore;
+  audit: AutomationAuditSink;
   loadOwner: (userId: string) => Promise<AutomationOwnerRecord | null>;
   close: () => Promise<void>;
 }
@@ -35,10 +47,17 @@ export function createWorkerPersistenceFromEnv(
     const client = createPostgresqlClient(config.DATABASE_URL);
     const automations = createPostgresqlAutomationStore(client);
     const auth = createPostgresqlAuthStore(client.pool);
+    const security = createPostgresqlSecurityStore(client.pool);
     return {
       jobs: createJobRecorder(createPostgresqlJobStore(client)),
       automations,
       schedulerStore: toAutomationSchedulerStore(automations),
+      integrationStore: createPostgresqlIntegrationStore(client.pool),
+      audit: {
+        async record(event) {
+          await security.recordAudit(event);
+        },
+      },
       async loadOwner(userId) {
         const subject = await auth.resolvePermissionSubject(userId);
         if (!subject) return null;
@@ -50,10 +69,17 @@ export function createWorkerPersistenceFromEnv(
   const client = createSqliteClient(config.DATABASE_URL);
   const automations = createSqliteAutomationStore(client);
   const auth = createSqliteAuthStore(client.sqlite);
+  const security = createSqliteSecurityStore(client.sqlite);
   return {
     jobs: createJobRecorder(createSqliteJobStore(client)),
     automations,
     schedulerStore: toAutomationSchedulerStore(automations),
+    integrationStore: createSqliteIntegrationStore(client.sqlite),
+    audit: {
+      async record(event) {
+        await security.recordAudit(event);
+      },
+    },
     async loadOwner(userId) {
       const subject = await auth.resolvePermissionSubject(userId);
       if (!subject) return null;
