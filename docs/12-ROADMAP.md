@@ -408,7 +408,7 @@ Grafana reste **read-only**. Custom API reste **GET-only**.
 Schéma DB inchangé (`0000`–`0006`, pas de `0007`). Backup `formatVersion` 1 /
 `schemaVersion` 6.
 
-PRs : #53–#58. Tag `phase-21-complete`. Minor SemVer `1.1.0` (PR séparée).
+PRs : #53–#59. Tag `phase-21-complete`. Minor `v1.1.0`.
 
 Hors scope : `0007`, invoke arbitraire, REST proxy, Phase 22.
 

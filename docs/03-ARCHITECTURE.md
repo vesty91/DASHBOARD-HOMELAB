@@ -418,4 +418,4 @@ Voir `docs/20-POST-V1-HARDENING.md`.
 
 COMPLETE. Actions d'intégration allowlistées (Proxmox, qBittorrent, ntfy,
 Sonarr, Radarr, Seerr). Prowlarr / Grafana / Custom API restent lecture seule.
-Pas de `0007`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
+Minor produit `1.1.0`. Pas de `0007`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
