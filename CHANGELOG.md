@@ -6,6 +6,11 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-09-16
+
+Automations & alerting (Phase 22). Minor backward-compatible.
+Migration `0007`, backup `schemaVersion` 7.
+
 ### Ajouté
 
 - Persistence des automations (Phase 22.1) : `automation_rules`,

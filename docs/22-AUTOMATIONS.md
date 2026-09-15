@@ -3,7 +3,7 @@
 Statut : **COMPLETE**.
 
 Phase 22. Migration `0007`. `schemaVersion` 7. Backup `formatVersion` 1.
-Tag `phase-22-complete`. Minor produit `v1.2.0` (release suivante).
+Tag `phase-22-complete`. Minor produit `v1.2.0`.
 
 Ce n'est **pas** un n8n / shell / eval / webhook proxy / REST proxy.
 

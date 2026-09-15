@@ -435,8 +435,8 @@ Livré :
 Migrations : `0000`–`0007` (SQLite + PostgreSQL). Pas de `0008`.
 Backup `formatVersion` 1 / `schemaVersion` 7.
 
-PRs : #61–#66. Tag `phase-22-complete`. Minor produit `v1.2.0` (release
-suivante).
+PRs : #61–#66 (+ #67/#68 close/format). Tag `phase-22-complete`. Minor
+produit `v1.2.0`.
 
 Hors scope : n8n générique, shell, eval, webhook/REST proxy, cron shell,
 Custom API write, Grafana/Prowlarr write.

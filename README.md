@@ -1,6 +1,6 @@
 # Homelab Dashboard
 
-Dashboard self-hosted pour homelab et NAS. Version **1.1.0**.
+Dashboard self-hosted pour homelab et NAS. Version **1.2.0**.
 
 Le produit centralise les boards, les applications, les widgets, les intégrations
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
@@ -21,12 +21,12 @@ docker compose -f compose.yaml config
 docker compose -f compose.yaml up --build
 ```
 
-Images GHCR (après publication du tag `v1.1.0`) :
+Images GHCR (après publication du tag `v1.2.0`) :
 
-`ghcr.io/vesty91/dashboard-homelab/{web,worker,realtime,migrate}:1.1.0`
+`ghcr.io/vesty91/dashboard-homelab/{web,worker,realtime,migrate}:1.2.0`
 
 Définir `DASHBOARD_IMAGE_PREFIX=ghcr.io/vesty91/dashboard-homelab` et
-`APP_VERSION=1.1.0`, puis `docker compose pull && docker compose up`.
+`APP_VERSION=1.2.0`, puis `docker compose pull && docker compose up`.
 
 ## Développement
 
