@@ -20,7 +20,12 @@ import {
 
 export const PROXMOX_INTEGRATION_ID = "proxmox";
 export const PROXMOX_INTEGRATION_VERSION = 1;
-export const PROXMOX_CAPABILITIES = ["cluster.read"] as const;
+export const PROXMOX_CAPABILITIES = [
+  "cluster.read",
+  "guests.start",
+  "guests.shutdown",
+  "guests.reboot",
+] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof ProxmoxError) return toIntegrationError(error).code;
@@ -40,7 +45,7 @@ export function createProxmoxIntegrationDefinition(): IntegrationDefinition<
     id: PROXMOX_INTEGRATION_ID,
     displayName: "Proxmox VE",
     version: PROXMOX_INTEGRATION_VERSION,
-    description: "Nœuds, VMs, CTs et stockage Proxmox VE via l'API officielle en lecture seule.",
+    description: "Nœuds, VMs, CTs et stockage Proxmox VE via l'API officielle.",
     configSchema: proxmoxConfigSchema,
     secretSchema: proxmoxSecretSchema,
     capabilities: PROXMOX_CAPABILITIES,

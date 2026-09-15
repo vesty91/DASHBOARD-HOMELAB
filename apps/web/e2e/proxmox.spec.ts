@@ -61,6 +61,11 @@ test("creates a Proxmox integration without leaking the API token from the brows
   await expect(page.getByRole("heading", { level: 1, name: "PVE Lab" })).toBeVisible();
   await expect(page.getByText("Proxmox VE", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Actions d'invité" })).toBeVisible();
+  await expect(page.getByLabel("Nœud")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Démarrer" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Arrêter" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Redémarrer" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|jeton API|Jeton API/i).first(),
   ).toBeVisible({ timeout: 30_000 });

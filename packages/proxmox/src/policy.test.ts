@@ -23,7 +23,7 @@ describe("proxmox policy", () => {
     ).toThrow(/query/i);
     expect(() =>
       assertProxmoxEndpointAllowed("POST", `https://pve.lab:8006${PROXMOX_VERSION_PATH}`),
-    ).toThrow(/method/i);
+    ).toThrow(/allowlist/i);
     expect(() =>
       assertProxmoxEndpointAllowed(
         "GET",
@@ -33,5 +33,54 @@ describe("proxmox policy", () => {
     expect(() =>
       assertProxmoxEndpointAllowed("GET", "https://pve.lab:8006/api2/extjs/cluster/resources"),
     ).toThrow(/allowlist/i);
+  });
+
+  it("allows guest status reads and power POSTs on the official paths only", () => {
+    assertProxmoxEndpointAllowed(
+      "GET",
+      "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/current",
+    );
+    assertProxmoxEndpointAllowed(
+      "POST",
+      "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/start",
+    );
+    assertProxmoxEndpointAllowed(
+      "POST",
+      "https://pve.lab:8006/api2/json/nodes/pve-2/lxc/101/status/shutdown",
+    );
+    assertProxmoxEndpointAllowed(
+      "POST",
+      "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/reboot",
+    );
+    expect(() =>
+      assertProxmoxEndpointAllowed(
+        "POST",
+        "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/stop",
+      ),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertProxmoxEndpointAllowed(
+        "POST",
+        "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/destroy",
+      ),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertProxmoxEndpointAllowed(
+        "GET",
+        "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/start",
+      ),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertProxmoxEndpointAllowed(
+        "DELETE",
+        "https://pve.lab:8006/api2/json/nodes/pve1/qemu/100/status/start",
+      ),
+    ).toThrow(/method/i);
+    expect(() =>
+      assertProxmoxEndpointAllowed(
+        "POST",
+        "https://pve.lab:8006/api2/json/nodes/../qemu/100/status/start",
+      ),
+    ).toThrow(/traversal|allowlist|Invalid/i);
   });
 });

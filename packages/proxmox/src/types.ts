@@ -2,7 +2,13 @@ import type { IntegrationActor } from "@dashboard/integrations";
 
 export type ProxmoxActor = IntegrationActor;
 
-export type ProxmoxHttpMethod = "GET";
+export type ProxmoxHttpMethod = "GET" | "POST";
+
+export type ProxmoxGuestType = "qemu" | "lxc";
+
+export type ProxmoxGuestPowerAction = "start" | "shutdown" | "reboot";
+
+export type ProxmoxGuestPowerStatus = "running" | "stopped" | "unknown";
 
 export type ProxmoxNodeStatus = "online" | "offline" | "unknown";
 
@@ -25,6 +31,9 @@ export type ProxmoxOverviewStatus = "available" | "degraded";
 export interface ProxmoxPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canStart: boolean;
+  readonly canShutdown: boolean;
+  readonly canReboot: boolean;
 }
 
 export interface ProxmoxIntegrationMetadata {

@@ -1,4 +1,5 @@
 import { IntegrationError } from "@dashboard/integrations";
+import { isProxmoxGuestPowerPath, isProxmoxGuestStatusCurrentPath } from "./guest-path";
 import type { ProxmoxHttpMethod } from "./types";
 
 export const PROXMOX_VERSION_PATH = "/api2/json/version";
@@ -77,17 +78,26 @@ export function assertProxmoxEndpointAllowed(method: string, url: string | URL):
   )
     reject("Proxmox path traversal is not allowed");
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod !== "GET") reject("Proxmox method is not allowed");
+  if (normalizedMethod !== "GET" && normalizedMethod !== "POST")
+    reject("Proxmox method is not allowed");
   const httpMethod = normalizedMethod as ProxmoxHttpMethod;
   const keys = uniqueQueryKeys(parsed);
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`Proxmox query parameter ${key} is not allowed`);
-  if (keys.length > 0) reject("Proxmox Phase 18 endpoints must not use query parameters");
+  if (keys.length > 0) reject("Proxmox endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
-      if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("Proxmox endpoint is not on the Phase 18 allowlist");
+      if (
+        ALLOWED_GET_PATHS.has(parsed.pathname) ||
+        isProxmoxGuestStatusCurrentPath(parsed.pathname)
+      )
+        return;
+      reject("Proxmox endpoint is not on the allowlist");
+      return;
+    case "POST":
+      if (isProxmoxGuestPowerPath(parsed.pathname)) return;
+      reject("Proxmox endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

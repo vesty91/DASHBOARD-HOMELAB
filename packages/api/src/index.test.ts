@@ -1207,6 +1207,73 @@ describe("proxmox tRPC router", () => {
     await expect(caller.proxmox.overview.get({ integrationId })).resolves.toEqual(overviewDto);
     expect(JSON.stringify(overviewDto)).not.toMatch(/PVEAPIToken|apiToken|ticket/u);
   });
+
+  it("audits guest power mutations without secrets or guest names", async () => {
+    const record = vi.fn(async () => undefined);
+    const actionDto = {
+      status: "accepted" as const,
+      action: "proxmox.start",
+      resourceId: "pve1-qemu-100",
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const proxmoxService = {
+      permissions: vi.fn(() => ({
+        canRead: true,
+        canManage: false,
+        canStart: true,
+        canShutdown: true,
+        canReboot: true,
+      })),
+      startGuest: vi.fn(async () => actionDto),
+      shutdownGuest: vi.fn(async () => ({ ...actionDto, action: "proxmox.shutdown" })),
+      rebootGuest: vi.fn(async () => ({ ...actionDto, action: "proxmox.reboot" })),
+    } as unknown as ProxmoxService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      proxmox: proxmoxService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    await expect(
+      caller.proxmox.guests.start({
+        integrationId,
+        node: "pve1",
+        guestType: "qemu",
+        vmid: 100,
+      }),
+    ).resolves.toEqual(actionDto);
+    await expect(
+      caller.proxmox.guests.start({
+        integrationId,
+        node: "pve1",
+        guestType: "qemu",
+        vmid: 0,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "proxmox.start",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "proxmox",
+          action: "proxmox.start",
+          resourceId: "pve1-qemu-100",
+          result: "accepted",
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(/PVEAPIToken|apiToken|secret-vm|UPID/u);
+  });
 });
 
 describe("grafana tRPC router", () => {

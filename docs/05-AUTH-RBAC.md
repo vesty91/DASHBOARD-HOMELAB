@@ -219,6 +219,11 @@ Phase 18 : lecture Proxmox exige (`integration.use` ou `integration.manage`) **e
 `/integrations/[id]` Proxmox : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `proxmox.read`.
 
+Phase 21 : start / shutdown / reboot QEMU ou LXC exigent
+(`integration.interact` ou `integration.manage`) **et** `proxmox.start` /
+`proxmox.shutdown` / `proxmox.reboot`. `proxmox.read` et `integration.manage`
+seuls sont insuffisants. Confirmation UI obligatoire pour shutdown et reboot.
+
 Phase 18.2 : lecture Grafana exige (`integration.use` ou `integration.manage`) **et**
 `grafana.read`. Cette conjonction suffit pour `grafana.integration.get` et
 `/integrations/[id]` Grafana : `integration.read` n'est pas requis. Le rôle `ADMIN` par
@@ -262,21 +267,24 @@ défaut **n'obtient pas** `custom-api.read`.
 Phase 21 : une action d'intégration exige (`integration.interact` ou
 `integration.manage`) **et** la permission spécialisée de l'action. `*.read` et
 `integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
-Les permissions d'action (hors Docker déjà livré) sont ajoutées dans les PRs
-suivantes, pas en 21.1.
+Les permissions d'action Proxmox (`proxmox.start`, `proxmox.shutdown`,
+`proxmox.reboot`) sont livrées en 21.2. qBittorrent / ntfy / *arr / Seerr
+suivent dans les PRs suivantes.
 
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
-`qbittorrent.read`, `seerr.read`, `custom-api.read`, `docker.*` ni
-`settings.manage`.
+`qbittorrent.read`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
+`proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
 ## 10. Audit
 
 Journal serveur `audit_logs` (Phase 15). Couvre login, OIDC, utilisateurs,
 groupes, permissions, intégrations, secrets (sans contenu), Docker, backup et
 sessions. Lecture `audit.read` avec pagination. Jamais de mot de passe, token,
-cookie ou clé API.
+cookie ou clé API. Les actions Proxmox réussies journalisent
+`proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` avec
+`{ integrationId, integrationType, action, resourceId, result }`.
 
 ## 11. Anti-bruteforce
 

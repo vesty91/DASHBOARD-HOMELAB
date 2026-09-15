@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,25 +17,38 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
+import type { Permission } from "@dashboard/permissions";
 import { assertProxmoxAccess, proxmoxPermissionsView } from "./access";
 import { overviewFailureCacheOperation, proxmoxOverviewCacheOperation } from "./cache-key";
 import {
   PROXMOX_OVERVIEW_FAILURE_TTL_MS,
+  fetchProxmoxGuestPowerStatus,
   fetchProxmoxOverview,
   overviewCacheTtl,
+  postProxmoxGuestPower,
   proxmoxContextFromIntegration,
   type ProxmoxClientContext,
 } from "./client";
 import { PROXMOX_INTEGRATION_ID } from "./definition";
 import { ProxmoxError, toIntegrationError } from "./errors";
+import {
+  assertProxmoxGuestType,
+  assertProxmoxNodeName,
+  assertProxmoxVmid,
+  proxmoxGuestResourceId,
+} from "./guest-path";
 import type { ProxmoxOverviewCoalescer } from "./overview-coalescer";
 import type { ProxmoxRefreshFence } from "./refresh-fence";
-import type { ProxmoxConfig, ProxmoxSecrets } from "./schemas";
+import type { ProxmoxConfig, ProxmoxGuestActionInput, ProxmoxSecrets } from "./schemas";
 import type {
   ProxmoxActor,
+  ProxmoxGuestPowerAction,
   ProxmoxIntegrationMetadata,
   ProxmoxOverview,
   ProxmoxPermissionsView,
@@ -48,8 +62,23 @@ export interface ProxmoxServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: ProxmoxRefreshFence;
   overviewCoalescer: ProxmoxOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
+
+const GUEST_ACTION_PERMISSION: Record<ProxmoxGuestPowerAction, Permission> = {
+  start: "proxmox.start",
+  shutdown: "proxmox.shutdown",
+  reboot: "proxmox.reboot",
+};
+
+const GUEST_ACTION_CAPABILITY: Record<ProxmoxGuestPowerAction, string> = {
+  start: "guests.start",
+  shutdown: "guests.shutdown",
+  reboot: "guests.reboot",
+};
 
 function timeoutFromConfig(config: JsonObject): number {
   const raw = config.timeoutMs;
@@ -237,6 +266,71 @@ export function createProxmoxService(deps: ProxmoxServiceDeps) {
     });
   }
 
+  async function runGuestPower(
+    action: ProxmoxGuestPowerAction,
+    input: ProxmoxGuestActionInput,
+    actor: ProxmoxActor,
+  ): Promise<SafeActionResult> {
+    assertProxmoxAccess(actor, action);
+    const node = assertProxmoxNodeName(input.node);
+    const guestType = assertProxmoxGuestType(input.guestType);
+    const vmid = assertProxmoxVmid(input.vmid);
+    const record = await deps.store.findById(input.integrationId);
+    if (!record) throw new IntegrationError("NOT_FOUND", "Définition Proxmox introuvable");
+    const resourceId = proxmoxGuestResourceId(node, guestType, vmid);
+    const publish = deps.publish;
+    return runSafeIntegrationAction({
+      actor,
+      action: `proxmox.${action}`,
+      actionPermissions: [GUEST_ACTION_PERMISSION[action]],
+      integrationId: record.id,
+      expectedType: PROXMOX_INTEGRATION_ID,
+      loadedType: record.type,
+      resourceId,
+      rateLimiter: deps.actionRateLimiter,
+      inFlight: deps.inFlight,
+      cache: deps.cache,
+      currentConfigRevision: record.configRevision,
+      ...(input.expectedConfigRevision === undefined
+        ? {}
+        : { expectedConfigRevision: input.expectedConfigRevision }),
+      ...(publish ? { publish: () => publish(record.id) } : {}),
+      execute: async () => {
+        const loaded = await loadContext(record.id, GUEST_ACTION_CAPABILITY[action]);
+        try {
+          const status = await fetchProxmoxGuestPowerStatus(loaded.ctx, node, guestType, vmid);
+          switch (action) {
+            case "start":
+              if (status === "running") {
+                deps.refreshFence.advance(record.id);
+                return "success";
+              }
+              break;
+            case "shutdown":
+              if (status === "stopped") {
+                deps.refreshFence.advance(record.id);
+                return "success";
+              }
+              break;
+            case "reboot":
+              if (status === "stopped")
+                throw new IntegrationError("CONFLICT", "Proxmox guest is not running");
+              break;
+            default: {
+              const _exhaustive: never = action;
+              throw new IntegrationError("INTERNAL_ERROR", String(_exhaustive));
+            }
+          }
+          await postProxmoxGuestPower(loaded.ctx, node, guestType, vmid, action);
+          deps.refreshFence.advance(record.id);
+          return "accepted";
+        } catch (error) {
+          throw normalizedRedactedError(error, loaded.secrets);
+        }
+      },
+    });
+  }
+
   return {
     permissions(actor: ProxmoxActor): ProxmoxPermissionsView {
       return proxmoxPermissionsView(actor);
@@ -278,6 +372,24 @@ export function createProxmoxService(deps: ProxmoxServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async startGuest(
+      input: ProxmoxGuestActionInput,
+      actor: ProxmoxActor,
+    ): Promise<SafeActionResult> {
+      return runGuestPower("start", input, actor);
+    },
+    async shutdownGuest(
+      input: ProxmoxGuestActionInput,
+      actor: ProxmoxActor,
+    ): Promise<SafeActionResult> {
+      return runGuestPower("shutdown", input, actor);
+    },
+    async rebootGuest(
+      input: ProxmoxGuestActionInput,
+      actor: ProxmoxActor,
+    ): Promise<SafeActionResult> {
+      return runGuestPower("reboot", input, actor);
     },
   };
 }

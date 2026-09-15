@@ -62,5 +62,14 @@ export const proxmoxIntegrationInputSchema = z.object({
   integrationId: z.uuid(),
 });
 
+export const proxmoxGuestActionInputSchema = z.object({
+  integrationId: z.uuid(),
+  node: z.string().min(1).max(63),
+  guestType: z.enum(["qemu", "lxc"]),
+  vmid: z.number().int().min(1).max(999_999_999),
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
 export type ProxmoxConfig = z.infer<typeof proxmoxConfigSchema>;
 export type ProxmoxSecrets = z.infer<typeof proxmoxSecretSchema>;
+export type ProxmoxGuestActionInput = z.infer<typeof proxmoxGuestActionInputSchema>;

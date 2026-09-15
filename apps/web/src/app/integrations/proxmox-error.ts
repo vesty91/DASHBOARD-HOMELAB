@@ -30,11 +30,15 @@ export function proxmoxUserError(error: unknown): string {
       return "Jeton API Proxmox invalide.";
     case "MISCONFIGURED":
       return "Configuration Proxmox invalide. Vérifiez l'URL, TLS et le jeton API.";
+    case "VALIDATION_ERROR":
+      return "Paramètres d'invité Proxmox invalides.";
     case "NOT_FOUND":
       return "Ressource Proxmox introuvable.";
+    case "CONFLICT":
+      return "Action Proxmox impossible : état ou configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations Proxmox. Réessayez dans une minute.";
+      return "Trop de requêtes Proxmox. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur Proxmox est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers Proxmox.";

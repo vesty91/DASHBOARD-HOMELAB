@@ -4,6 +4,7 @@ import {
   PROXMOX_RESOURCES_MAX,
   mapClusterResources,
   mapClusterStatus,
+  mapGuestPowerStatus,
   mapVersion,
   parseJsonValue,
 } from "./dto";
@@ -66,5 +67,17 @@ describe("proxmox dto", () => {
       }),
     ).toThrow(IntegrationError);
     expect(() => parseJsonValue("{")).toThrow(/invalid JSON/);
+  });
+
+  it("maps guest power status without exposing guest names", () => {
+    expect(mapGuestPowerStatus({ data: { status: "running", name: "secret-vm", vmid: 100 } })).toBe(
+      "running",
+    );
+    expect(mapGuestPowerStatus({ data: { status: "stopped" } })).toBe("stopped");
+    expect(mapGuestPowerStatus({ data: { status: "paused" } })).toBe("unknown");
+    const mapped = mapGuestPowerStatus({
+      data: { status: "running", name: "secret-vm" },
+    });
+    expect(JSON.stringify(mapped)).not.toContain("secret-vm");
   });
 });

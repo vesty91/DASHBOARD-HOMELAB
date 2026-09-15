@@ -170,7 +170,8 @@ export function IntegrationForm({
         <Alert>
           Utilisez l&apos;URL HTTP(S) du serveur Proxmox VE (origine uniquement, port 8006). Le
           jeton API se configure ensuite comme secret serveur et n&apos;est jamais envoyé au
-          navigateur. Lecture seule : version, cluster/status et cluster/resources.
+          navigateur. Lecture : version, cluster/status et cluster/resources. Actions allowlistées
+          start/shutdown/reboot sur QEMU/LXC, avec permissions dédiées.
         </Alert>
       ) : null}
       {showGrafanaHelp ? (

@@ -359,9 +359,11 @@ Statut : COMPLETE (Phase 18.1).
 
 Adapter `proxmox` composé dans `apps/web`. Transport HTTP(S) vers l'origine Proxmox VE.
 Auth token officielle (`Authorization: PVEAPIToken=<USER@REALM!TOKENID=SECRET>`).
-Lecture seule `GET /api2/json/version`, `GET /api2/json/cluster/status`,
-`GET /api2/json/cluster/resources`. Voir ADR 0020. Mutations VM/CT, snapshots,
-migrations, login ticket et proxy générique sont hors scope.
+Lecture : `GET /api2/json/version`, `GET /api2/json/cluster/status`,
+`GET /api2/json/cluster/resources`, et `GET /api2/json/nodes/{node}/{qemu|lxc}/{vmid}/status/current`
+pour l'idempotence des actions. Mutations allowlistées Phase 21 :
+`POST .../status/start|shutdown|reboot` uniquement (QEMU et LXC). Voir ADR 0020.
+Interdit : force stop, destroy, snapshots, migrations, login ticket, proxy générique.
 
 `proxmox.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 Proxmox (`integration.use|manage` + `proxmox.read`). `integration.read` n'est
@@ -369,9 +371,13 @@ pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
 `capabilities` et l'état des secrets d'un record `proxmox` sans
 `integration.manage`.
 
+Les actions d'invité exigent `integration.interact|manage` **et**
+`proxmox.start` / `proxmox.shutdown` / `proxmox.reboot`. Formulaire explicite
+(nœud, type, VMID) : les noms de VM/CT restent non exposés.
+
 Widget `proxmox-resources` : `publicSafe=false`. Refresh manuel 10/min. Cache
-overview 8 s (5 s si partiel). Jeton jamais renvoyé. Aucune mutation. Aucune
-fake data. Noms de VM/CT, chemins storage et IP de nœuds jamais exposés au
+overview 8 s (5 s si partiel). Jeton jamais renvoyé. Aucune mutation depuis le
+widget. Aucune fake data. Noms de VM/CT, chemins storage et IP de nœuds jamais exposés au
 widget.
 
 ## 18.2. Grafana

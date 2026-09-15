@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { IntegrationError } from "@dashboard/integrations";
 import {
+  fetchProxmoxGuestPowerStatus,
   fetchProxmoxOverview,
+  postProxmoxGuestPower,
   proxmoxContextFromIntegration,
   testProxmoxConnection,
 } from "./client";
@@ -141,5 +143,22 @@ describe("proxmox client", () => {
         })),
       ),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
+  it("reads guest status and posts power on allowlisted paths", async () => {
+    const request = vi.fn(async (options: SecureHttpRequest) => {
+      const url = new URL(String(options.url));
+      expect(url.toString()).not.toContain(API_TOKEN);
+      expect(url.search).toBe("");
+      if (url.pathname === "/api2/json/nodes/pve1/qemu/100/status/current")
+        return json({ data: { status: "stopped", name: "secret-vm" } });
+      expect(options.method).toBe("POST");
+      expect(url.pathname).toBe("/api2/json/nodes/pve1/qemu/100/status/start");
+      return json({ data: "UPID:pve1:000:qemu:100:root@pam:" });
+    });
+    const ctx = context(request);
+    await expect(fetchProxmoxGuestPowerStatus(ctx, "pve1", "qemu", 100)).resolves.toBe("stopped");
+    await postProxmoxGuestPower(ctx, "pve1", "qemu", 100, "start");
+    expect(request).toHaveBeenCalledTimes(2);
   });
 });
