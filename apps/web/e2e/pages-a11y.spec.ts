@@ -29,7 +29,7 @@ async function loginAdmin(page: Page) {
 test("main pages have no WCAG A/AA axe violations", async ({ page }) => {
   await loginAdmin(page);
 
-  for (const path of ["/", "/boards", "/apps", "/integrations", "/admin"]) {
+  for (const path of ["/", "/boards", "/apps", "/integrations", "/automations", "/admin"]) {
     await page.goto(path);
     await expect(page).not.toHaveURL(/\/login|\/forbidden/);
     await expectPageA11y(page);

@@ -62,6 +62,7 @@ export {
   nextScheduleRunAt,
   parseTriggerConfig,
   type AutomationEventType,
+  type AutomationStatusValue,
   type ParsedTriggerConfig,
   type ScheduleTriggerConfig,
 } from "./triggers";
@@ -73,6 +74,8 @@ export {
   CONDITION_MAX_NODES,
   evaluateCondition,
   parseConditionConfig,
+  type ConditionCompareOp,
+  type ConditionField,
   type ConditionNode,
 } from "./conditions";
 export {
@@ -115,3 +118,13 @@ export {
   type AutomationSchedulerOptions,
   type AutomationSchedulerStore,
 } from "./scheduler";
+export {
+  createAutomationService,
+  type AutomationActor,
+  type AutomationDryRunOutcome,
+  type AutomationDryRunResult,
+  type AutomationRuleStorePort,
+  type AutomationRuleView,
+  type AutomationRunView,
+  type AutomationService,
+} from "./service";

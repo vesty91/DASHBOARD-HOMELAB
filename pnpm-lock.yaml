@@ -72,6 +72,9 @@ importers:
       '@dashboard/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@dashboard/automations':
+        specifier: workspace:*
+        version: link:../../packages/automations
       '@dashboard/backup':
         specifier: workspace:*
         version: link:../../packages/backup
@@ -251,6 +254,9 @@ importers:
       '@dashboard/auth':
         specifier: workspace:*
         version: link:../auth
+      '@dashboard/automations':
+        specifier: workspace:*
+        version: link:../automations
       '@dashboard/backup':
         specifier: workspace:*
         version: link:../backup
