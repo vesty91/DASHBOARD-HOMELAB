@@ -9,6 +9,9 @@ import {
   type AutomationOwnerRecord,
 } from "@dashboard/automations";
 import { createConfiguredEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
+import type { IntegrationStore } from "@dashboard/integrations";
+import { createProductionAutomationDispatcher } from "./bootstrap-actions";
+import type { AutomationAuditSink } from "./actions";
 
 export interface JobRecorder {
   recordHeartbeat(input: {
@@ -31,6 +34,9 @@ export interface WorkerOptions {
     loadOwner?: (userId: string) => Promise<AutomationOwnerRecord | null>;
     dispatcher?: AutomationActionDispatcher;
     workerId?: string;
+    integrationStore?: IntegrationStore;
+    audit?: AutomationAuditSink;
+    secretEncryptionKey?: string;
   };
 }
 
@@ -65,6 +71,23 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
   let ticking = false;
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 0;
+  let dispatcher = options.automations?.dispatcher;
+  if (
+    !dispatcher &&
+    options.automations?.integrationStore &&
+    options.automations.loadOwner &&
+    options.automations.audit
+  ) {
+    dispatcher = createProductionAutomationDispatcher({
+      loadOwner: options.automations.loadOwner,
+      integrationStore: options.automations.integrationStore,
+      bus,
+      audit: options.automations.audit,
+      ...(options.automations.secretEncryptionKey
+        ? { secretEncryptionKey: options.automations.secretEncryptionKey }
+        : {}),
+    });
+  }
   const scheduler: AutomationScheduler | null = options.automations
     ? createAutomationScheduler({
         workerId:
@@ -72,7 +95,7 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
         store: options.automations.store,
         now,
         eventIngest: "live",
-        ...(options.automations.dispatcher ? { dispatcher: options.automations.dispatcher } : {}),
+        ...(dispatcher ? { dispatcher } : {}),
         ...(options.automations.loadOwner ? { loadOwner: options.automations.loadOwner } : {}),
       })
     : null;

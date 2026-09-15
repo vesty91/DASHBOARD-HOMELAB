@@ -285,3 +285,5 @@ create/update CAS, owner SET NULL, historique conservé, upgrade 6 → 7
 Le scheduler worker (`scheduler.test.ts`, leases SQLite/PostgreSQL) couvre
 le claim unique multi-replica, crash after claim, crash after dispatch
 (`unknown`, pas de retry), shutdown, Redis down, et échec DB transitoire.
+Le registry d'actions (`action-registry.test.ts`) refuse Proxmox/Seerr en
+automatique et revalide les permissions live avant `runSafeIntegrationAction`.

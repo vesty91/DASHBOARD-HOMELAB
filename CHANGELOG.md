@@ -15,6 +15,8 @@ Voir ADR 0029.
   cooldown et anti-boucle.
 - Scheduler worker at-most-once (Phase 22.3) : leases DB, `runKey`,
   pas de retry des mutations externes, `unknown` après crash.
+- Registry d'actions automation (Phase 22.4) : default-deny,
+  `runSafeIntegrationAction`, audit `source=automation`.
 - Permissions `automation.read` / `automation.manage` / `automation.run`
   (ADMIN default-deny).
 - Backup `schemaVersion` 7. Compat 5 → 6 → 7. Schéma 8+ rejeté.

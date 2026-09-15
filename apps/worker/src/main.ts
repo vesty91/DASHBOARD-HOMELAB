@@ -13,6 +13,11 @@ const worker = await startWorker({
         automations: {
           store: persistence.schedulerStore,
           loadOwner: persistence.loadOwner,
+          integrationStore: persistence.integrationStore,
+          audit: persistence.audit,
+          ...(process.env.SECRET_ENCRYPTION_KEY
+            ? { secretEncryptionKey: process.env.SECRET_ENCRYPTION_KEY }
+            : {}),
         },
       }
     : {}),

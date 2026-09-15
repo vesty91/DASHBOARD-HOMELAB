@@ -479,6 +479,7 @@ export class AutomationScheduler {
           actionType: input.rule.actionType,
           actionConfigJson: input.rule.actionConfigJson,
           triggerType: input.triggerType,
+          ownerUserId: input.rule.ownerUserId,
         });
       } catch {
         try {

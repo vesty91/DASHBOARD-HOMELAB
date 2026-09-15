@@ -276,4 +276,21 @@ describe("runSafeIntegrationAction", () => {
     });
     expect(JSON.stringify(metadata)).not.toMatch(/password|token|cookie|api[_-]?key/iu);
   });
+
+  it("tags automation audit metadata without secrets", () => {
+    const metadata = safeActionAuditMetadata({
+      integrationId: INTEGRATION_ID,
+      integrationType: "ntfy",
+      action: "ntfy.publish",
+      resourceId: "homelab",
+      result: "success",
+      source: "automation",
+      automationId: INTEGRATION_ID,
+      runId: INTEGRATION_ID,
+    });
+    expect(metadata.source).toBe("automation");
+    expect(metadata.automationId).toBe(INTEGRATION_ID);
+    expect(metadata.runId).toBe(INTEGRATION_ID);
+    expect(JSON.stringify(metadata)).not.toMatch(/password|token|cookie|api[_-]?key/iu);
+  });
 });
