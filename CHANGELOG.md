@@ -18,7 +18,8 @@ Première release stable. Schéma Drizzle 6, backup `formatVersion` 1 /
 - Intégrations lecture seule : Docker, Synology DSM, Jellyfin, Immich, Beszel,
   Uptime Kuma, Prometheus, Proxmox VE, Grafana, ntfy, Sonarr, Radarr, Prowlarr,
   qBittorrent, Seerr (Jellyseerr / Overseerr), Custom API.
-- Images Compose multi-target, health live/ready, pipeline GHCR `vX.Y.Z`.
+- Images Compose multi-target, health live/ready, pipeline GHCR `vX.Y.Z`
+  (tags HCL, pas une liste CSV dans `bake-action` `set`).
 
 ### Sécurité
 

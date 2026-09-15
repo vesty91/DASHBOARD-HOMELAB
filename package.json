@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "turbo dev --filter=@dashboard/web",
     "build": "turbo build",
-    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && turbo lint",
+    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && node --test scripts/write-release-bake.test.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "pnpm --filter @dashboard/web test:e2e",
