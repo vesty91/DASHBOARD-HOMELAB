@@ -4,6 +4,22 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Le versioning suit [SemVer](https://semver.org/lang/fr/) à partir de 1.0.0.
 Voir ADR 0029.
 
+## [Unreleased]
+
+Post-v1 hardening (Phase 20). Schéma et backup inchangés.
+
+### Sécurité
+
+- Next.js 16.3.5 (GHSA RCE 16.3.2).
+- `ws` 8.21.3.
+- HSTS appliqué au runtime si `APP_URL` est `https:`.
+
+### Qualité
+
+- Navigation clavier du board, axe WCAG 2A/2AA, Lighthouse CI.
+- Actions GitHub en runtime Node 24.
+- Smoke HTTPS reverse-proxy (Caddy) + WebSocket.
+
 ## [1.0.0] — 2026-09-15
 
 Première release stable. Schéma Drizzle 6, backup `formatVersion` 1 /

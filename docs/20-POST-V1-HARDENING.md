@@ -1,6 +1,25 @@
 # 20 — Post-v1 hardening
 
-Phase 20. Pas de `0007`. Pas de mutation d’intégration. Schéma et backup inchangés.
+Statut : **COMPLETE**.
+
+Phase 20. Pas de `0007`. Pas de mutation d’intégration. Schéma et backup
+inchangés (`schemaVersion` 6, backup `formatVersion` 1). Next.js **16.3.5**.
+Version produit toujours **1.0.0** jusqu’au tag patch `v1.0.1`.
+
+## Synthèse
+
+| Volet                 | Détail                                                                 |
+| --------------------- | ---------------------------------------------------------------------- |
+| Accessibilité clavier | Toolbar hors GridStack, flèches, `aria-live`, E2E clavier + ACL viewer |
+| Tests a11y            | `@axe-core/playwright` WCAG 2A/2AA, aucune règle désactivée            |
+| Lighthouse            | `pnpm test:lighthouse`, budgets perf ≥ 0.85 / a11y-BP-SEO ≥ 0.90       |
+| GitHub Actions        | runtimes Node 24 (`checkout@v5`, `setup-node@v5`, `bake-action@v7`, …) |
+| Supply-chain          | pinning majors `@vN` ; SBOM/provenance conservés                       |
+| Smoke HTTPS           | Caddy documenté, openssl local, WS `/api/realtime/ws`, Origin, DB down |
+| WebSocket proxy       | Caddy `strip_prefix` vers realtime `/ws`                               |
+| Dépendances           | Next 16.3.5, `ws` 8.21.3 ; warning Windows standalone documenté        |
+
+PRs : #46 (20.1), #47 (20.2), #48 (20.3), #49 (20.4), #50 (20.5).
 
 ## 20.1 Accessibilité clavier (board)
 
