@@ -1,6 +1,6 @@
 export function liveHealthBody() {
   return {
     status: "live" as const,
-    version: process.env.APP_VERSION?.trim() || "0.1.0",
+    version: process.env.APP_VERSION?.trim() || "1.0.0",
   };
 }

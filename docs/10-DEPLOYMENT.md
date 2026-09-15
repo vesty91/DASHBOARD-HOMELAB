@@ -14,8 +14,10 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative reste `0.1.0` tant qu'une release semver n'est pas
-coupée. Phase 17 ≠ v1.0.0.
+La version applicative est `1.0.0` (Phase 19). Les tags `phase-*` ne publient
+pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient `latest` /
+`X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement `:tag` et
+`:sha-*` (ADR 0029).
 
 ## 2. Prérequis
 
@@ -186,15 +188,16 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 ## 10. Upgrade
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
-2. Lire les notes de release. Migrations `0000`–`0006` sont immuables.
-   Phase 17 n'ajoute pas `0007`.
+2. Lire `CHANGELOG.md`. Migrations `0000`–`0006` sont immuables.
+   Phase 19 n'ajoute pas `0007` : l'upgrade 0.1.0 → 1.0.0 est un remplacement
+   d'images à schéma 6 constant.
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant.
 6. Rollback si nécessaire.
 
 Un backup schema v5 est encore accepté (upgrade in-memory vers v6).
-v6 accepté. v7+ rejeté.
+v6 accepté. v7+ rejeté. `appVersion` 0.1.0 dans une archive v5/v6 reste valide.
 
 ## 11. Rollback
 

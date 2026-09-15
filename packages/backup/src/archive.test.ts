@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BACKUP_APP_VERSION,
   BACKUP_FORMAT,
   BACKUP_SCHEMA_VERSION,
   BackupError,
@@ -68,7 +69,8 @@ function validTables() {
 describe("backup archive", () => {
   it("builds a versioned manifest with integrity hashes", () => {
     const archive = buildArchive(validTables(), "2026-09-14T12:00:00.000Z");
-    expect(archive.manifest.format).toBe(BACKUP_FORMAT);
+    expect(archive.manifest.appVersion).toBe(BACKUP_APP_VERSION);
+    expect(BACKUP_APP_VERSION).toBe("1.0.0");
     expect(archive.manifest.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(archive.manifest.databaseSchemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(archive.manifest.files[0]?.name).toBe("tables.json");

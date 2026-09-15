@@ -4,6 +4,7 @@ export { Button, IconButton } from "./button";
 export { Card, CardBody, CardFooter, CardHeader, CardTitle } from "./card";
 export { ConfirmDialog, Dialog } from "./dialog";
 export { DropdownItem, DropdownMenu } from "./dropdown-menu";
+export { attachModalFocusTrap } from "./focus-trap";
 export { EmptyState } from "./empty-state";
 export { Field, FormSection, Input, Select, Textarea } from "./form";
 export { PageContainer, PageHeader } from "./page";

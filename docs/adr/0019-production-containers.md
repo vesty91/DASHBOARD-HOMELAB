@@ -46,7 +46,7 @@ borné. Intégrations externes exclues. DTO `{ status, version }`.
 GHCR `ghcr.io/vesty91/dashboard-homelab/{web,worker,realtime,migrate}`.
 Publication uniquement sur tags semver `vX.Y.Z` (`latest`, `X.Y`, `X`, SHA).
 Les tags `phase-*` ne publient pas `latest`. PR : quality + build amd64.
-Pas de bump automatique vers v1.0.0.
+Pas de bump automatique vers v1.0.0 (la coupe 1.0.0 est ADR 0029 / Phase 19).
 
 ### 6. Backup path
 
