@@ -26,8 +26,8 @@ Les `package.json` des workspaces internes restent à `0.1.0`.
 ### 2. Tags Git
 
 - `phase-19-complete` et `v1.0.0` pointent le même commit de `main`.
-  Les tags GHCR sont une liste HCL (`scripts/write-release-bake.mjs`), pas une
-  chaîne CSV dans `bake-action` `set` (référence Docker invalide).
+Les tags GHCR sont une liste HCL (`scripts/write-release-bake.mjs`) lue depuis
+le workspace (`bake-action` `source: .`), pas une chaîne CSV dans `set`.
 - Un tag prerelease (`v1.0.1-rc.1`) publie uniquement `:tag` et `:sha-*`.
   Il ne déplace pas `latest`, `MAJOR` ni `MAJOR.MINOR`.
 
