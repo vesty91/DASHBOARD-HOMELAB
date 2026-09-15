@@ -32,9 +32,13 @@ export function radarrUserError(error: unknown): string {
       return "Configuration Radarr invalide. Vérifiez l'URL, TLS et la clé API.";
     case "NOT_FOUND":
       return "Ressource Radarr introuvable.";
+    case "VALIDATION_ERROR":
+      return "Paramètres Radarr invalides.";
+    case "CONFLICT":
+      return "Action Radarr impossible : configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations Radarr. Réessayez dans une minute.";
+      return "Trop de requêtes Radarr. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur Radarr est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers Radarr.";

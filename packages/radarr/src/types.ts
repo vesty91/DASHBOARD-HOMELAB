@@ -2,7 +2,7 @@ import type { IntegrationActor } from "@dashboard/integrations";
 
 export type RadarrActor = IntegrationActor;
 
-export type RadarrHttpMethod = "GET";
+export type RadarrHttpMethod = "GET" | "POST";
 
 export type RadarrSectionStatus = "available" | "degraded" | "unavailable";
 
@@ -23,6 +23,7 @@ export type RadarrOverviewStatus = "available" | "degraded";
 export interface RadarrPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canCommand: boolean;
 }
 
 export interface RadarrIntegrationMetadata {

@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,6 +17,9 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
@@ -24,15 +28,27 @@ import { sonarrOverviewCacheOperation, overviewFailureCacheOperation } from "./c
 import {
   SONARR_OVERVIEW_FAILURE_TTL_MS,
   fetchSonarrOverview,
+  postSonarrCommand,
   sonarrContextFromIntegration,
   overviewCacheTtl,
   type SonarrClientContext,
 } from "./client";
+import {
+  sonarrCommandResourceId,
+  sonarrEpisodeSearchCommand,
+  sonarrRefreshSeriesCommand,
+  type SonarrQueuedCommand,
+} from "./command";
 import { SONARR_INTEGRATION_ID } from "./definition";
 import { SonarrError, toIntegrationError } from "./errors";
 import type { SonarrOverviewCoalescer } from "./overview-coalescer";
 import type { SonarrRefreshFence } from "./refresh-fence";
-import type { SonarrConfig, SonarrSecrets } from "./schemas";
+import type {
+  SonarrConfig,
+  SonarrRefreshSeriesInput,
+  SonarrSearchEpisodeInput,
+  SonarrSecrets,
+} from "./schemas";
 import type {
   SonarrActor,
   SonarrIntegrationMetadata,
@@ -48,6 +64,9 @@ export interface SonarrServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: SonarrRefreshFence;
   overviewCoalescer: SonarrOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -237,6 +256,45 @@ export function createSonarrService(deps: SonarrServiceDeps) {
     });
   }
 
+  async function queueCommand(
+    input: { integrationId: string; expectedConfigRevision?: number | undefined },
+    actor: SonarrActor,
+    action: "sonarr.refresh-series" | "sonarr.search-episode",
+    command: SonarrQueuedCommand,
+  ): Promise<SafeActionResult> {
+    assertSonarrAccess(actor, "command");
+    const record = await deps.store.findById(input.integrationId);
+    if (!record) throw new IntegrationError("NOT_FOUND", "Définition Sonarr introuvable");
+    const realtime = deps.publish;
+    return runSafeIntegrationAction({
+      actor,
+      action,
+      actionPermissions: ["sonarr.command"],
+      integrationId: record.id,
+      expectedType: SONARR_INTEGRATION_ID,
+      loadedType: record.type,
+      resourceId: sonarrCommandResourceId(command),
+      rateLimiter: deps.actionRateLimiter,
+      inFlight: deps.inFlight,
+      cache: deps.cache,
+      currentConfigRevision: record.configRevision,
+      ...(input.expectedConfigRevision === undefined
+        ? {}
+        : { expectedConfigRevision: input.expectedConfigRevision }),
+      ...(realtime ? { publish: () => realtime(record.id) } : {}),
+      execute: async () => {
+        const loaded = await loadContext(record.id, "command.queue");
+        try {
+          await postSonarrCommand(loaded.ctx, command);
+          deps.refreshFence.advance(record.id);
+          return "accepted";
+        } catch (error) {
+          throw normalizedRedactedError(error, loaded.secrets);
+        }
+      },
+    });
+  }
+
   return {
     permissions(actor: SonarrActor): SonarrPermissionsView {
       return sonarrPermissionsView(actor);
@@ -278,6 +336,28 @@ export function createSonarrService(deps: SonarrServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async refreshSeries(
+      input: SonarrRefreshSeriesInput,
+      actor: SonarrActor,
+    ): Promise<SafeActionResult> {
+      return queueCommand(
+        input,
+        actor,
+        "sonarr.refresh-series",
+        sonarrRefreshSeriesCommand(input.seriesId),
+      );
+    },
+    async searchEpisode(
+      input: SonarrSearchEpisodeInput,
+      actor: SonarrActor,
+    ): Promise<SafeActionResult> {
+      return queueCommand(
+        input,
+        actor,
+        "sonarr.search-episode",
+        sonarrEpisodeSearchCommand(input.episodeId),
+      );
     },
   };
 }

@@ -19,12 +19,13 @@ describe("sonarr policy", () => {
     );
   });
 
-  it("allows only the read-only Sonarr endpoints", () => {
+  it("allows documented GET probes and POST command", () => {
     assertSonarrEndpointAllowed("GET", `https://sonarr.lab:8989${SONARR_SYSTEM_STATUS_PATH}`);
     assertSonarrEndpointAllowed("GET", `https://sonarr.lab:8989${SONARR_HEALTH_PATH}`);
     assertSonarrEndpointAllowed("GET", `https://sonarr.lab:8989${SONARR_QUEUE_STATUS_PATH}`);
     assertSonarrEndpointAllowed("GET", `https://sonarr.lab:8989${SONARR_SERIES_PATH}`);
     assertSonarrEndpointAllowed("GET", `https://sonarr.lab:8989${SONARR_DISKSPACE_PATH}`);
+    assertSonarrEndpointAllowed("POST", "https://sonarr.lab:8989/api/v3/command");
     expect(() =>
       assertSonarrEndpointAllowed(
         "GET",
@@ -39,10 +40,13 @@ describe("sonarr policy", () => {
     ).toThrow(/query parameters/i);
     expect(() =>
       assertSonarrEndpointAllowed("POST", `https://sonarr.lab:8989${SONARR_SYSTEM_STATUS_PATH}`),
-    ).toThrow(/method/i);
+    ).toThrow(/allowlist/i);
     expect(() =>
       assertSonarrEndpointAllowed("GET", "https://sonarr.lab:8989/api/v3/command"),
     ).toThrow(/allowlist/i);
+    expect(() =>
+      assertSonarrEndpointAllowed("PUT", "https://sonarr.lab:8989/api/v3/command"),
+    ).toThrow(/method/i);
     expect(() =>
       assertSonarrEndpointAllowed(
         "GET",

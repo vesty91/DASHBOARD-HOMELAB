@@ -1,5 +1,8 @@
 import { IntegrationError } from "@dashboard/integrations";
+import { RADARR_COMMAND_PATH, isRadarrCommandPath } from "./command";
 import type { RadarrHttpMethod } from "./types";
+
+export { RADARR_COMMAND_PATH };
 
 export const RADARR_SYSTEM_STATUS_PATH = "/api/v3/system/status";
 export const RADARR_HEALTH_PATH = "/api/v3/health";
@@ -81,17 +84,21 @@ export function assertRadarrEndpointAllowed(method: string, url: string | URL): 
   )
     reject("Radarr path traversal is not allowed");
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod !== "GET") reject("Radarr method is not allowed");
+  if (normalizedMethod !== "GET" && normalizedMethod !== "POST")
+    reject("Radarr method is not allowed");
   const httpMethod = normalizedMethod as RadarrHttpMethod;
   const keys = uniqueQueryKeys(parsed);
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`Radarr query parameter ${key} is not allowed`);
+  if (keys.length > 0) reject("Radarr endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
       if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("Radarr endpoint is not on the Phase 18 allowlist");
-      if (keys.length > 0) reject("Radarr Phase 18 endpoints must not use query parameters");
+        reject("Radarr endpoint is not on the allowlist");
+      return;
+    case "POST":
+      if (!isRadarrCommandPath(parsed.pathname)) reject("Radarr endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

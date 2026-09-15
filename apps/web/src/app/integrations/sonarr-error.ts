@@ -32,9 +32,13 @@ export function sonarrUserError(error: unknown): string {
       return "Configuration Sonarr invalide. Vérifiez l'URL, TLS et la clé API.";
     case "NOT_FOUND":
       return "Ressource Sonarr introuvable.";
+    case "VALIDATION_ERROR":
+      return "Paramètres Sonarr invalides.";
+    case "CONFLICT":
+      return "Action Sonarr impossible : configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations Sonarr. Réessayez dans une minute.";
+      return "Trop de requêtes Sonarr. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur Sonarr est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers Sonarr.";

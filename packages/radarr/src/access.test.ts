@@ -48,4 +48,27 @@ describe("radarr access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus radarr.command", () => {
+    expect(
+      radarrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }).canCommand,
+    ).toBe(false);
+    expect(
+      radarrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "radarr.command"],
+        },
+      }).canCommand,
+    ).toBe(true);
+  });
 });

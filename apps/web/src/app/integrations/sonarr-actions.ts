@@ -16,3 +16,31 @@ export async function refreshSonarrOverviewAction(
     return toSonarrActionOutcome(error);
   }
 }
+
+export async function refreshSonarrSeriesAction(input: {
+  integrationId: string;
+  seriesId: number;
+}): Promise<SonarrActionOutcome> {
+  try {
+    await (await getBoardCaller()).sonarr.series.refresh(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toSonarrActionOutcome(error);
+  }
+}
+
+export async function searchSonarrEpisodeAction(input: {
+  integrationId: string;
+  episodeId: number;
+}): Promise<SonarrActionOutcome> {
+  try {
+    await (await getBoardCaller()).sonarr.episodes.search(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toSonarrActionOutcome(error);
+  }
+}

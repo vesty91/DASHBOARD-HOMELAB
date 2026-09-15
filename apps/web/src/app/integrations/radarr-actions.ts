@@ -16,3 +16,31 @@ export async function refreshRadarrOverviewAction(
     return toRadarrActionOutcome(error);
   }
 }
+
+export async function refreshRadarrMovieAction(input: {
+  integrationId: string;
+  movieId: number;
+}): Promise<RadarrActionOutcome> {
+  try {
+    await (await getBoardCaller()).radarr.movies.refresh(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toRadarrActionOutcome(error);
+  }
+}
+
+export async function searchRadarrMovieAction(input: {
+  integrationId: string;
+  movieId: number;
+}): Promise<RadarrActionOutcome> {
+  try {
+    await (await getBoardCaller()).radarr.movies.search(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toRadarrActionOutcome(error);
+  }
+}

@@ -39,11 +39,13 @@ import type {
 import type {
   RadarrIntegrationMetadata,
   RadarrOverview,
+  RadarrPermissionsView,
   RadarrSectionReason,
 } from "@dashboard/radarr";
 import type {
   SonarrIntegrationMetadata,
   SonarrOverview,
+  SonarrPermissionsView,
   SonarrSectionReason,
 } from "@dashboard/sonarr";
 import type {
@@ -103,8 +105,10 @@ import { SeerrRefreshButton } from "../seerr-refresh-button";
 import { customApiUserError } from "../custom-api-error";
 import { CustomApiRefreshButton } from "../custom-api-refresh-button";
 import { radarrUserError } from "../radarr-error";
+import { RadarrCommandForm } from "../radarr-command-form";
 import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
+import { SonarrCommandForm } from "../sonarr-command-form";
 import { SonarrRefreshButton } from "../sonarr-refresh-button";
 import { proxmoxUserError } from "../proxmox-error";
 import { ProxmoxGuestActions } from "../proxmox-guest-actions";
@@ -2188,7 +2192,8 @@ async function RadarrOverviewPanel({
         <>
           <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
           <p className="ui-muted">
-            Compteurs uniquement. Aucun titre de film, aucun chemin, aucune mutation. Lecture seule.
+            Compteurs uniquement. Aucun titre de film, aucun chemin. Les commandes passent par le
+            formulaire d&apos;intégration.
           </p>
           <section className="radarr-system">
             <h2>Système</h2>
@@ -2265,10 +2270,12 @@ async function RadarrIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: RadarrPermissionsView = await caller.radarr.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="Radarr" />
       <RadarrRefreshButton integrationId={id} />
+      <RadarrCommandForm integrationId={id} canCommand={permissions.canCommand} />
       <Suspense fallback={<p className="ui-muted">Chargement de Radarr…</p>}>
         <RadarrOverviewPanel id={id} caller={caller} />
       </Suspense>
@@ -2335,8 +2342,8 @@ async function SonarrOverviewPanel({
         <>
           <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
           <p className="ui-muted">
-            Compteurs uniquement. Aucun titre de série, aucun chemin, aucune mutation. Lecture
-            seule.
+            Compteurs uniquement. Aucun titre de série, aucun chemin. Les commandes passent par le
+            formulaire d&apos;intégration.
           </p>
           <section className="sonarr-system">
             <h2>Système</h2>
@@ -2413,10 +2420,12 @@ async function SonarrIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: SonarrPermissionsView = await caller.sonarr.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="Sonarr" />
       <SonarrRefreshButton integrationId={id} />
+      <SonarrCommandForm integrationId={id} canCommand={permissions.canCommand} />
       <Suspense fallback={<p className="ui-muted">Chargement de Sonarr…</p>}>
         <SonarrOverviewPanel id={id} caller={caller} />
       </Suspense>

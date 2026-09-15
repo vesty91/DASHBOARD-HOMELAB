@@ -13,7 +13,7 @@ Toute mutation externe passe par `runSafeIntegrationAction`
 1. Session authentifiée (`UNAUTHORIZED` sinon).
 2. `integration.interact` **ou** `integration.manage`.
 3. Permission **spécialisée** explicite (`docker.start`, `proxmox.start`,
-   `qbittorrent.pause`, `ntfy.publish`, …).
+   `qbittorrent.pause`, `ntfy.publish`, `sonarr.command`, `radarr.command`, …).
 4. Type d'intégration attendu.
 5. Entrées Zod / IDs bornés.
 6. Méthode **POST** uniquement ; chemin construit puis **allowlist exacte**.
@@ -67,7 +67,7 @@ architecture.
 
 ## Hors scope de 21.1
 
-Implémentation *arr / Seerr : PRs suivantes.
+Implémentation Seerr : PR suivante.
 Grafana et Custom API restent en lecture seule.
 
 ## 21.2 Proxmox power
@@ -92,3 +92,20 @@ pas de réservés `v1`/`metrics`/…). Message ≤ 4096, titre ≤ 120, priorit�
 `min|low|default|high|max`, tags ≤ 5. Headers allowlistés uniquement. Pas
 d'Actions HTTP, Click, Attach, Email, Delay. Audit : topic, priorité,
 `messageLength` — jamais le corps.
+
+## 21.5 Sonarr / Radarr / Prowlarr
+
+Livré Sonarr : `RefreshSeries` (seriesId requis) et `EpisodeSearch` (un
+episodeId) via `POST /api/v3/command`. Permission `sonarr.command`. Audit :
+`sonarr.refresh-series` / `sonarr.search-episode`.
+
+Livré Radarr : `RefreshMovie` et `MoviesSearch` avec un seul `movieId`.
+Permission `radarr.command`. Audit : `radarr.refresh-movie` /
+`radarr.search-movie`.
+
+Rejeté : SeriesSearch, SeasonSearch, RssSync, DownloadedEpisodesScan, rename,
+delete series/movie, settings, commandes globales sans ID.
+
+Prowlarr : **reste read-only**. Les mutations officielles (CRUD indexeurs,
+`/api/v1/search`, `RssSync`, test-all) ne sont ni ciblées, ni non destructives
+de façon utile pour le dashboard. Pas de mutation forcée.

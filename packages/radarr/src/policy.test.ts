@@ -19,12 +19,13 @@ describe("radarr policy", () => {
     );
   });
 
-  it("allows only the read-only Radarr endpoints", () => {
+  it("allows documented GET probes and POST command", () => {
     assertRadarrEndpointAllowed("GET", `https://radarr.lab:7878${RADARR_SYSTEM_STATUS_PATH}`);
     assertRadarrEndpointAllowed("GET", `https://radarr.lab:7878${RADARR_HEALTH_PATH}`);
     assertRadarrEndpointAllowed("GET", `https://radarr.lab:7878${RADARR_QUEUE_STATUS_PATH}`);
     assertRadarrEndpointAllowed("GET", `https://radarr.lab:7878${RADARR_MOVIE_PATH}`);
     assertRadarrEndpointAllowed("GET", `https://radarr.lab:7878${RADARR_DISKSPACE_PATH}`);
+    assertRadarrEndpointAllowed("POST", "https://radarr.lab:7878/api/v3/command");
     expect(() =>
       assertRadarrEndpointAllowed(
         "GET",
@@ -39,10 +40,13 @@ describe("radarr policy", () => {
     ).toThrow(/query parameters/i);
     expect(() =>
       assertRadarrEndpointAllowed("POST", `https://radarr.lab:7878${RADARR_SYSTEM_STATUS_PATH}`),
-    ).toThrow(/method/i);
+    ).toThrow(/allowlist/i);
     expect(() =>
       assertRadarrEndpointAllowed("GET", "https://radarr.lab:7878/api/v3/command"),
     ).toThrow(/allowlist/i);
+    expect(() =>
+      assertRadarrEndpointAllowed("PUT", "https://radarr.lab:7878/api/v3/command"),
+    ).toThrow(/method/i);
     expect(() =>
       assertRadarrEndpointAllowed(
         "GET",

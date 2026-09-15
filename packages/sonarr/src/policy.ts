@@ -1,5 +1,8 @@
 import { IntegrationError } from "@dashboard/integrations";
+import { SONARR_COMMAND_PATH, isSonarrCommandPath } from "./command";
 import type { SonarrHttpMethod } from "./types";
+
+export { SONARR_COMMAND_PATH };
 
 export const SONARR_SYSTEM_STATUS_PATH = "/api/v3/system/status";
 export const SONARR_HEALTH_PATH = "/api/v3/health";
@@ -81,17 +84,21 @@ export function assertSonarrEndpointAllowed(method: string, url: string | URL): 
   )
     reject("Sonarr path traversal is not allowed");
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod !== "GET") reject("Sonarr method is not allowed");
+  if (normalizedMethod !== "GET" && normalizedMethod !== "POST")
+    reject("Sonarr method is not allowed");
   const httpMethod = normalizedMethod as SonarrHttpMethod;
   const keys = uniqueQueryKeys(parsed);
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`Sonarr query parameter ${key} is not allowed`);
+  if (keys.length > 0) reject("Sonarr endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
       if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("Sonarr endpoint is not on the Phase 18 allowlist");
-      if (keys.length > 0) reject("Sonarr Phase 18 endpoints must not use query parameters");
+        reject("Sonarr endpoint is not on the allowlist");
+      return;
+    case "POST":
+      if (!isSonarrCommandPath(parsed.pathname)) reject("Sonarr endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

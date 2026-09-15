@@ -243,10 +243,20 @@ Phase 18.4 : lecture Sonarr exige (`integration.use` ou `integration.manage`) **
 `/integrations/[id]` Sonarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `sonarr.read`.
 
+Phase 21 : commandes Sonarr ciblées exigent (`integration.interact` ou
+`integration.manage`) **et** `sonarr.command`. `sonarr.read` et
+`integration.manage` seuls sont insuffisants. `RefreshSeries` (seriesId requis)
+et `EpisodeSearch` (un episodeId). Pas de SeriesSearch, RssSync, delete.
+
 Phase 18.5 : lecture Radarr exige (`integration.use` ou `integration.manage`) **et**
 `radarr.read`. Cette conjonction suffit pour `radarr.integration.get` et
 `/integrations/[id]` Radarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `radarr.read`.
+
+Phase 21 : commandes Radarr ciblées exigent (`integration.interact` ou
+`integration.manage`) **et** `radarr.command`. `radarr.read` et
+`integration.manage` seuls sont insuffisants. `RefreshMovie` / `MoviesSearch`
+avec un seul `movieId`. Pas de rename, delete, collections.
 
 Phase 18.6 : lecture Prowlarr exige (`integration.use` ou `integration.manage`) **et**
 `prowlarr.read`. Cette conjonction suffit pour `prowlarr.integration.get` et
@@ -278,11 +288,13 @@ Phase 21 : une action d'intégration exige (`integration.interact` ou
 `integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 Les permissions d'action Proxmox (`proxmox.start`, `proxmox.shutdown`,
 `proxmox.reboot`), qBittorrent (`qbittorrent.pause`, `qbittorrent.resume`) et
-ntfy (`ntfy.publish`) sont livrées. *arr / Seerr suivent dans les PRs suivantes.
+ntfy (`ntfy.publish`), Sonarr (`sonarr.command`) et Radarr (`radarr.command`)
+sont livrées. Prowlarr reste en lecture seule. Seerr suit dans la PR suivante.
 
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
+`grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `sonarr.command`, `radarr.read`,
+`radarr.command`, `prowlarr.read`,
 `qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
@@ -297,7 +309,10 @@ cookie ou clé API. Les actions Proxmox réussies journalisent
 qBittorrent réussies journalisent `qbittorrent.pause` / `qbittorrent.resume`
 avec le même DTO (hash ou identifiant de lot, jamais le nom du torrent). Les
 publications ntfy réussies journalisent `ntfy.publish` avec topic (`resourceId`),
-`priority`, `messageLength` et `result` — jamais le corps du message.
+`priority`, `messageLength` et `result` — jamais le corps du message. Les
+commandes *arr réussies journalisent `sonarr.refresh-series` /
+`sonarr.search-episode` / `radarr.refresh-movie` / `radarr.search-movie` avec
+l'identifiant de ressource (jamais le titre).
 
 ## 11. Anti-bruteforce
 

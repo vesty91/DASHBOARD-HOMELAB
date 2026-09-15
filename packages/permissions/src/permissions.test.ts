@@ -47,7 +47,9 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.publish");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("sonarr.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("sonarr.command");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("radarr.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("radarr.command");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prowlarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("qbittorrent.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("qbittorrent.pause");
@@ -73,7 +75,9 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "ntfy.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "ntfy.publish")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "sonarr.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "sonarr.command")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "radarr.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "radarr.command")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "prowlarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.pause")).toBe(true);

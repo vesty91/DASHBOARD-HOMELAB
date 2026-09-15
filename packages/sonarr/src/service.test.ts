@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   IntegrationError,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   createIntegrationRegistry,
   type EncryptedSecretRow,
   type IntegrationRecord,
@@ -120,12 +122,17 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
     return json([{ type: "error", message: "Indexer failed at /data/tv" }]);
   if (pathname === "/api/v3/queue/status") return json({ totalCount: 4, count: 2 });
   if (pathname === "/api/v3/series") return json([{ title: "Secret Show", path: "/data/tv" }]);
+  if (request.method === "POST" && pathname === "/api/v3/command")
+    return json({ id: 99, name: "RefreshSeries", series: { title: "Secret Show" } }, 201);
   return json([{ path: "/data", label: "tv", freeSpace: 100, totalSpace: 400 }]);
 }
 
 function serviceWith(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   store = createMemoryStore(),
+  extra: {
+    actionRateLimiter?: MemorySafeActionRateLimiter;
+  } = {},
 ) {
   return createSonarrService({
     store: store.store,
@@ -135,6 +142,8 @@ function serviceWith(
     refreshRateLimiter: new MemorySonarrRefreshRateLimiter(),
     refreshFence: new MemorySonarrRefreshFence(),
     overviewCoalescer: new MemorySonarrOverviewCoalescer(),
+    actionRateLimiter: extra.actionRateLimiter ?? new MemorySafeActionRateLimiter(),
+    inFlight: new MemorySafeActionInFlightGuard(),
     keyring: store.keyring,
   });
 }
@@ -219,11 +228,111 @@ describe("createSonarrService", () => {
       refreshRateLimiter: limiter,
       refreshFence: new MemorySonarrRefreshFence(),
       overviewCoalescer: new MemorySonarrOverviewCoalescer(),
+      actionRateLimiter: new MemorySafeActionRateLimiter(),
+      inFlight: new MemorySafeActionInFlightGuard(),
       keyring: store.keyring,
     });
     await service.refreshOverview(INTEGRATION_ID, systemAdmin);
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("queues RefreshSeries without returning titles or the API key", async () => {
+    const bodies: string[] = [];
+    const commandActor = actor(["integration.interact", "sonarr.command"]);
+    const service = serviceWith(async (options) => {
+      if (options.body) bodies.push(options.body);
+      expect(options.method === "POST" ? new URL(String(options.url)).search : "").toBe(
+        options.method === "POST" ? "" : "",
+      );
+      return officialPayloads(options);
+    });
+    const result = await service.refreshSeries(
+      { integrationId: INTEGRATION_ID, seriesId: 12 },
+      commandActor,
+    );
+    expect(result).toMatchObject({
+      status: "accepted",
+      action: "sonarr.refresh-series",
+      resourceId: "series:12",
+    });
+    expect(bodies[0]).toBe('{"name":"RefreshSeries","seriesId":12}');
+    expect(JSON.stringify(result)).not.toContain("Secret Show");
+    expect(JSON.stringify(result)).not.toContain(API_KEY);
+  });
+
+  it("queues EpisodeSearch and denies read-only, manage-only, and command without interact", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    const result = await service.searchEpisode(
+      { integrationId: INTEGRATION_ID, episodeId: 34 },
+      actor(["integration.interact", "sonarr.command"]),
+    );
+    expect(result.action).toBe("sonarr.search-episode");
+    expect(result.resourceId).toBe("episode:34");
+    await expect(
+      service.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 12 },
+        actor(["integration.use", "sonarr.read"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 12 },
+        actor(["integration.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 12 },
+        actor(["integration.use", "sonarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects invalid ids, stale config, rate limits and maps 401 without leaking secrets", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    await expect(
+      service.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 0 },
+        actor(["integration.interact", "sonarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(
+      service.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 12, expectedConfigRevision: 9 },
+        actor(["integration.interact", "sonarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const limiter = new MemorySafeActionRateLimiter(1, 60_000, () => 1_000);
+    const limited = serviceWith(async (options) => officialPayloads(options), createMemoryStore(), {
+      actionRateLimiter: limiter,
+    });
+    await limited.refreshSeries(
+      { integrationId: INTEGRATION_ID, seriesId: 12 },
+      actor(["integration.interact", "sonarr.command"]),
+    );
+    await expect(
+      limited.refreshSeries(
+        { integrationId: INTEGRATION_ID, seriesId: 12 },
+        actor(["integration.interact", "sonarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    const unauthorized = serviceWith(async () => json({ error: API_KEY }, 401));
+    await expect(
+      unauthorized.searchEpisode(
+        { integrationId: INTEGRATION_ID, episodeId: 34 },
+        actor(["integration.interact", "sonarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    try {
+      await unauthorized.searchEpisode(
+        { integrationId: INTEGRATION_ID, episodeId: 34 },
+        actor(["integration.interact", "sonarr.command"]),
+      );
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain(API_KEY);
+      expect(JSON.stringify(error)).not.toContain("Secret Show");
+    }
   });
 });

@@ -19,10 +19,12 @@ import type { RadarrConfig, RadarrSecrets } from "./schemas";
 import {
   RADARR_JSON_MAX_BYTES,
   RADARR_LIST_MAX_BYTES,
+  radarrCommand,
   radarrFetch,
   type RadarrRequestFn,
   type RadarrTransportContext,
 } from "./transport";
+import type { RadarrQueuedCommand } from "./command";
 import type {
   RadarrDiskSpaceDto,
   RadarrHealthDto,
@@ -215,4 +217,11 @@ export async function fetchRadarrOverview(ctx: RadarrClientContext): Promise<Rad
     movie,
     diskSpace,
   };
+}
+
+export async function postRadarrCommand(
+  ctx: RadarrClientContext,
+  command: RadarrQueuedCommand,
+): Promise<void> {
+  await radarrCommand(ctx.request, ctx, command);
 }

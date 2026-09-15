@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sonarrConfigSchema, sonarrSecretSchema } from "./schemas";
+import { sonarrConfigSchema, sonarrRefreshSeriesInputSchema, sonarrSecretSchema } from "./schemas";
 
 describe("sonarr schemas", () => {
   it("accepts a valid origin config and rejects malformed API keys", () => {
@@ -15,5 +15,20 @@ describe("sonarr schemas", () => {
     expect(() => sonarrSecretSchema.parse({ apiKey: "bad\nkey" })).toThrow(/visible ASCII/);
     expect(() => sonarrSecretSchema.parse({ apiKey: "" })).toThrow();
     expect(() => sonarrSecretSchema.parse({})).toThrow();
+  });
+
+  it("accepts a single positive series id and rejects zero", () => {
+    expect(
+      sonarrRefreshSeriesInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        seriesId: 12,
+      }),
+    ).toMatchObject({ seriesId: 12 });
+    expect(() =>
+      sonarrRefreshSeriesInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        seriesId: 0,
+      }),
+    ).toThrow();
   });
 });
