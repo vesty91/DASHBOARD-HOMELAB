@@ -267,3 +267,9 @@ standalone path length documenté, non « corrigé » par un hack de build.
 `packages/integrations/src/actions.test.ts` couvre RBAC conjonctif, type
 d'intégration, IDs, rate limit, double-submit, timeout, HTTP 401/403/500,
 config stale, audit allowlist, invalidation cache et signal realtime.
+
+Adapters : `packages/proxmox`, `packages/qbittorrent`, `packages/ntfy`,
+`packages/sonarr`, `packages/radarr`, `packages/seerr` (service + policy +
+command/request builders). Prowlarr, Grafana et Custom API restent GET-only
+(`method !== "GET"` rejeté). E2E : pages d'intégration sans fuite d'URL
+d'action vers le navigateur.

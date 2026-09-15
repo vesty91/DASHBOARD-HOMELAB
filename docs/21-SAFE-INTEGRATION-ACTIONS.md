@@ -1,6 +1,10 @@
 # 21 — Safe integration actions
 
+Statut : **COMPLETE**.
+
 Phase 21. Pas de `0007`. Schéma 6 / backup `formatVersion` 1 inchangés.
+PRs #53 (framework), #54 (Proxmox), #55 (qBittorrent), #56 (ntfy), #57 (*arr),
+#58 (Seerr).
 
 Ce n'est **pas** un proxy d'administration générique : pas d'invoke arbitraire,
 pas de REST proxy, pas de POST libre, pas de shell.
@@ -120,3 +124,18 @@ enum `approve|decline`). Permission `seerr.request.manage`. Audit :
 ni notes. Confirmation UI pour decline. Pas de retry, pending, delete, POST
 `/api/v1/request`, ni gestion d'utilisateurs. Widget `seerr-requests` reste
 read-only.
+
+## Tableau livré
+
+| Intégration | Actions                      | Permissions                               | Hors scope                       |
+| ----------- | ---------------------------- | ----------------------------------------- | -------------------------------- |
+| Framework   | `runSafeIntegrationAction`   | conjonctif + spécialisée                  | invoke / REST proxy              |
+| Proxmox     | start, shutdown, reboot      | `proxmox.start` / `.shutdown` / `.reboot` | destroy, force stop, console     |
+| qBittorrent | pause, resume                | `qbittorrent.pause` / `.resume`           | `all`, delete, add               |
+| ntfy        | publish                      | `ntfy.publish`                            | Click, Attach, Actions HTTP      |
+| Sonarr      | RefreshSeries, EpisodeSearch | `sonarr.command`                          | SeriesSearch, delete, settings   |
+| Radarr      | RefreshMovie, MoviesSearch   | `radarr.command`                          | search globale, delete, settings |
+| Seerr       | approve, decline             | `seerr.request.manage`                    | delete, users, retry             |
+| Prowlarr    | —                            | `prowlarr.read`                           | toute mutation                   |
+| Grafana     | —                            | `grafana.read`                            | save, alerts, datasources        |
+| Custom API  | GET-only                     | `custom-api.read`                         | POST / PUT / PATCH / DELETE      |

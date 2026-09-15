@@ -603,7 +603,7 @@ Pour chaque adapter :
 
 ## 21. Actions sûres
 
-Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy, 21.5 *arr, 21.6 Seerr).
+Statut : COMPLETE (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy, 21.5 *arr, 21.6 Seerr).
 
 Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
 Default deny. POST allowlisté. Rate limit par acteur / intégration / action.
