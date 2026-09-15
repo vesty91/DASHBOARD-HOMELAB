@@ -259,6 +259,12 @@ Phase 18.9 : lecture API personnalisée exige (`integration.use` ou `integration
 `/integrations/[id]` Custom API : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `custom-api.read`.
 
+Phase 21 : une action d'intégration exige (`integration.interact` ou
+`integration.manage`) **et** la permission spécialisée de l'action. `*.read` et
+`integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
+Les permissions d'action (hors Docker déjà livré) sont ajoutées dans les PRs
+suivantes, pas en 21.1.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,

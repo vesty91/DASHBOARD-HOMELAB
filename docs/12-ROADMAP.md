@@ -387,6 +387,25 @@ PRs : #46–#51. Tag `phase-20-complete`. Patch `v1.0.1`.
 Hors scope : Phase 21 (écritures d’intégrations), `0007`, déplacement de
 `v1.0.0`.
 
+## Phase 21 — Safe Integration Actions
+
+Statut : **IN PROGRESS**.
+
+But : actions ciblées et allowlistées sur certaines intégrations Phase 18
+(pattern Docker), pas un remote control générique.
+
+Livrables prévus :
+
+- framework commun (RBAC conjonctif, POST allowlisté, rate limit, audit, cache) ;
+- Proxmox start / shutdown / reboot ;
+- qBittorrent pause / resume ;
+- ntfy publish ;
+- commandes Sonarr / Radarr ciblées non destructives ;
+- Seerr approve / decline si l’API officielle le permet.
+
+Hors scope : `0007`, Grafana write, Custom API POST/PUT/PATCH/DELETE, invoke
+arbitraire, Prowlarr write sauf justification, Phase 22.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

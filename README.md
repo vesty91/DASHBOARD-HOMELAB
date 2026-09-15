@@ -43,15 +43,16 @@ SQLite en local. PostgreSQL en production. Migrations `0000`–`0006` immuables.
 
 ## Documentation
 
-| Sujet             | Fichier                                       |
-| ----------------- | --------------------------------------------- |
-| Déploiement       | `docs/10-DEPLOYMENT.md`                       |
-| Sécurité / RBAC   | `docs/09-SECURITY.md`, `docs/05-AUTH-RBAC.md` |
-| Intégrations      | `docs/08-INTEGRATION-SYSTEM.md`               |
-| Contrats API      | `docs/13-API-CONTRACTS.md`                    |
-| Roadmap           | `docs/12-ROADMAP.md`                          |
-| Hardening post-v1 | `docs/20-POST-V1-HARDENING.md`                |
-| Notes de version  | `CHANGELOG.md`                                |
-| Semver            | `docs/adr/0029-semver-and-v1-release.md`      |
+| Sujet               | Fichier                                       |
+| ------------------- | --------------------------------------------- |
+| Déploiement         | `docs/10-DEPLOYMENT.md`                       |
+| Sécurité / RBAC     | `docs/09-SECURITY.md`, `docs/05-AUTH-RBAC.md` |
+| Intégrations        | `docs/08-INTEGRATION-SYSTEM.md`               |
+| Contrats API        | `docs/13-API-CONTRACTS.md`                    |
+| Roadmap             | `docs/12-ROADMAP.md`                          |
+| Hardening post-v1   | `docs/20-POST-V1-HARDENING.md`                |
+| Actions intégration | `docs/21-SAFE-INTEGRATION-ACTIONS.md`         |
+| Notes de version    | `CHANGELOG.md`                                |
+| Semver              | `docs/adr/0029-semver-and-v1-release.md`      |
 
 `AGENTS.md` s’applique à toute modification du dépôt.

@@ -575,3 +575,12 @@ Pour chaque adapter :
 - partial response ;
 - version unsupported ;
 - permission.
+
+## 21. Actions sûres
+
+Statut : IN PROGRESS (Phase 21.1 — framework).
+
+Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
+Default deny. POST allowlisté. Rate limit par acteur / intégration / action.
+DTO `{ status, action, resourceId, occurredAt }`. Pas de proxy générique.
+Détail : `docs/21-SAFE-INTEGRATION-ACTIONS.md`.

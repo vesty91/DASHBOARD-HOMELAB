@@ -261,3 +261,9 @@ Certificats : openssl local (SAN IP), pas d’ACME. Caddy proxifie
 
 Next.js **16.3.5** (patches GHSA RCE 16.3.2). `ws` **8.21.3**. Warning Windows
 standalone path length documenté, non « corrigé » par un hack de build.
+
+## 21. Actions d'intégration (Phase 21)
+
+`packages/integrations/src/actions.test.ts` couvre RBAC conjonctif, type
+d'intégration, IDs, rate limit, double-submit, timeout, HTTP 401/403/500,
+config stale, audit allowlist, invalidation cache et signal realtime.

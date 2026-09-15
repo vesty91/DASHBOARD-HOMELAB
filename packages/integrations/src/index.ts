@@ -63,6 +63,45 @@ export {
   type IntegrationService,
   type IntegrationServiceDeps,
 } from "./service";
+export {
+  SAFE_ACTION_STATUSES,
+  SAFE_ACTION_NAME_PATTERN,
+  SAFE_RESOURCE_ID_PATTERN,
+  assertExpectedIntegrationType,
+  assertFreshConfigRevision,
+  assertSafeIntegrationActionAccess,
+  assertSafeActionName,
+  assertSafeResourceId,
+  createSafeActionResult,
+  runSafeIntegrationAction,
+  safeActionAuditMetadata,
+  safeActionBaseInputSchema,
+  safeActionResultSchema,
+  throwFromExternalHttpStatus,
+  type SafeActionAuditMetadata,
+  type SafeActionResult,
+  type SafeActionStatus,
+  type RunSafeIntegrationActionInput,
+} from "./actions";
+export {
+  SAFE_ACTION_HTTP_METHODS,
+  assertAllowlistedRequest,
+  assertSafeActionHttpMethod,
+  assertSafePathSegment,
+  joinAllowlistedPath,
+  type AllowlistedHttpRequest,
+  type SafeActionHttpMethod,
+} from "./action-policy";
+export {
+  SAFE_ACTION_RATE_LIMIT,
+  SAFE_ACTION_RATE_WINDOW_MS,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
+  safeActionInFlightKey,
+  safeActionRateKey,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+} from "./action-rate-limiter";
 export type {
   ConfigFieldMeta,
   ConnectionResult,
