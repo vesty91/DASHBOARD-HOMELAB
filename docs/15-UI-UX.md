@@ -112,7 +112,12 @@ création de groupes et n'accède pas à ce formulaire.
 - clavier ;
 - focus ;
 - aria labels ;
-- drag avec alternative clavier autant que possible ;
+- drag GridStack conservé, avec alternative clavier explicite en édition :
+  - Tabulation jusqu'au widget ;
+  - barre d'actions `Configurer`, `Déplacer`, `Redimensionner`, `Supprimer` hors grille ;
+  - raccourcis `m` / `r` puis flèches, Échap pour quitter ;
+  - boutons `Configurer` / `Supprimer` conservés dans la carte widget (souris) ;
+  - annonces `aria-live` (colonne / ligne, largeur / hauteur) ;
 - contrastes WCAG raisonnables.
 
 ## 12. Icônes
