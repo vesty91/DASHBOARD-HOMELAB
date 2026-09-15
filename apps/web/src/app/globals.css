@@ -14,7 +14,7 @@
   --muted-foreground: #97a3b6;
   --accent: #4f7dff;
   --accent-hover: #6b93ff;
-  --accent-foreground: #f7f9ff;
+  --accent-foreground: #071433;
   --success: #3dbe7a;
   --success-foreground: #d9f7e6;
   --warning: #e2a336;
@@ -1347,6 +1347,30 @@ button[aria-pressed="true"] {
   min-height: 1.75rem;
   padding: 0 0.55rem;
   font-size: 0.75rem;
+}
+
+.board-keyboard-hint {
+  margin: 0 0 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.board-widget-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.grid-stack-item:has(> .grid-stack-item-content[data-selected="true"]) > .grid-stack-item-content,
+.grid-stack-item-content[data-selected="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.grid-stack-item-content[data-keyboard-mode="move"],
+.grid-stack-item-content[data-keyboard-mode="resize"] {
+  outline-width: 3px;
 }
 
 .board-read-grid {

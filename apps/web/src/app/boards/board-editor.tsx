@@ -4,10 +4,11 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type KeyboardEvent,
   type MutableRefObject,
   type SetStateAction,
 } from "react";
-import type { BoardSnapshot } from "@dashboard/boards";
+import { clampWidgetSize, type BoardSnapshot } from "@dashboard/boards";
 import type {
   AppTileView,
   BeszelHostsView,
@@ -77,6 +78,14 @@ import {
   updateBoardItemAction,
 } from "./actions";
 import type { createBoardMutationCoordinator } from "./mutation-coordinator";
+import {
+  describeKeyboardPlacement,
+  isKeyboardArrowKey,
+  keyboardHint,
+  nextKeyboardPlacement,
+  type BoardKeyboardMode,
+  type KeyboardArrowKey,
+} from "./board-keyboard";
 
 function defaultConfig(widgetType: string): unknown {
   switch (widgetType) {
@@ -207,8 +216,18 @@ export function BoardEditor({
   setMutationError: Dispatch<SetStateAction<string | null>>;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const catalogToggleRef = useRef<HTMLButtonElement>(null);
+  const gridRef = useRef<GridStack | null>(null);
+  const persistLayoutRef = useRef<() => void>(() => undefined);
   const [breakpoint, setBreakpoint] = useState("desktop");
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [keyboardMode, setKeyboardMode] = useState<BoardKeyboardMode | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const selectedItemIdRef = useRef(selectedItemId);
+  const keyboardModeRef = useRef(keyboardMode);
+  selectedItemIdRef.current = selectedItemId;
+  keyboardModeRef.current = keyboardMode;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftConfig, setDraftConfig] = useState<unknown>(null);
@@ -246,24 +265,32 @@ export function BoardEditor({
       },
       root.current,
     )!;
-    const persist = (_event: Event, nodes: GridStackNode[]) => {
+    const persistFromNodes = (nodes: GridStackNode[]) => {
       if (conflictRef.current) return;
+      const items = nodes
+        .filter((node) => node.el?.dataset.itemId)
+        .map((node) => ({
+          itemId: node.el!.dataset.itemId!,
+          x: node.x ?? 0,
+          y: node.y ?? 0,
+          w: node.w ?? 1,
+          h: node.h ?? 1,
+        }));
+      if (items.length === 0) return;
       setStatus("Modifications en attente");
       coordinator.scheduleLayout({
         layoutId,
-        items: nodes
-          .filter((node) => node.el?.dataset.itemId)
-          .map((node) => ({
-            itemId: node.el!.dataset.itemId!,
-            x: node.x ?? 0,
-            y: node.y ?? 0,
-            w: node.w ?? 1,
-            h: node.h ?? 1,
-          })),
+        items,
       });
     };
-    grid.on("change", persist);
+    persistLayoutRef.current = () => persistFromNodes(grid.engine.nodes);
+    gridRef.current = grid;
+    grid.on("change", (_event, nodes) => persistFromNodes(nodes));
+    root.current.dataset.gridReady = "true";
     return () => {
+      persistLayoutRef.current = () => undefined;
+      gridRef.current = null;
+      if (root.current) delete root.current.dataset.gridReady;
       void coordinator.flushLayout();
       grid.destroy(false);
     };
@@ -358,10 +385,133 @@ export function BoardEditor({
     setGridEpoch((value) => value + 1);
     setStatus("Sauvegardé");
     setDeleteId(null);
+    setSelectedItemId((currentId) => (currentId === itemId ? null : currentId));
+    setKeyboardMode(null);
+    setAnnouncement("Widget supprimé");
     router.refresh();
+    window.setTimeout(() => {
+      const remaining = root.current?.querySelector<HTMLElement>(".grid-stack-item-content");
+      if (remaining) remaining.focus();
+      else catalogToggleRef.current?.focus();
+    }, 0);
   };
 
   const placements = current.placements.filter((placement) => placement.layoutId === active.id);
+  const applyKeyboardPlacement = (
+    itemId: string,
+    mode: BoardKeyboardMode,
+    key: KeyboardArrowKey,
+  ) => {
+    if (conflictRef.current) return;
+    const grid = gridRef.current;
+    const itemEl = root.current?.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
+    if (!grid || !(itemEl instanceof HTMLElement)) return;
+    const node =
+      grid.engine.nodes.find((entry) => entry.el === itemEl) ??
+      grid.engine.nodes.find((entry) => entry.el?.dataset.itemId === itemId);
+    if (!node?.el) return;
+    const currentPlacement = {
+      x: node.x ?? 0,
+      y: node.y ?? 0,
+      w: node.w ?? 1,
+      h: node.h ?? 1,
+    };
+    const item = current.items.find((entry) => entry.id === itemId);
+    const definition = catalog.find((entry) => entry.id === item?.widgetType);
+    const placement = placements.find((entry) => entry.itemId === itemId);
+    const size = definition
+      ? clampWidgetSize(
+          {
+            defaultSize: definition.defaultSize,
+            minSize: definition.minSize,
+            maxSize: definition.maxSize,
+          },
+          active.columns,
+        )
+      : { minW: 1, minH: 1, maxW: active.columns, maxH: 24 };
+    const next = nextKeyboardPlacement(
+      currentPlacement,
+      {
+        columns: active.columns,
+        minW: placement?.minW ?? size.minW,
+        minH: placement?.minH ?? size.minH,
+        maxW: placement?.maxW ?? size.maxW,
+        maxH: placement?.maxH ?? size.maxH,
+      },
+      mode,
+      key,
+    );
+    if (!next) {
+      setAnnouncement(mode === "move" ? "Déplacement impossible" : "Redimensionnement impossible");
+      return;
+    }
+    grid.update(node.el, next);
+    persistLayoutRef.current();
+    setAnnouncement(describeKeyboardPlacement(next, mode));
+  };
+  const openItemEditor = (itemId: string) => {
+    const item = current.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    setEditingId(item.id);
+    setDraftTitle(item.title ?? "");
+    setDraftConfig(item.config ?? defaultConfig(item.widgetType));
+  };
+  const activateKeyboardMode = (itemId: string, mode: BoardKeyboardMode) => {
+    selectedItemIdRef.current = itemId;
+    keyboardModeRef.current = mode;
+    setSelectedItemId(itemId);
+    setKeyboardMode(mode);
+    switch (mode) {
+      case "move":
+        setAnnouncement("Mode déplacement. Utilisez les flèches.");
+        break;
+      case "resize":
+        setAnnouncement("Mode redimensionnement. Utilisez les flèches.");
+        break;
+      default: {
+        const exhaustive: never = mode;
+        return exhaustive;
+      }
+    }
+    window.requestAnimationFrame(() => {
+      root.current
+        ?.querySelector<HTMLElement>(
+          `[data-item-id="${CSS.escape(itemId)}"] .grid-stack-item-content`,
+        )
+        ?.focus();
+    });
+  };
+  const handleGridKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (editingId || deleteId || conflict) return;
+    const activeMode = keyboardModeRef.current;
+    const activeItemId = selectedItemIdRef.current;
+    if (event.key === "Escape") {
+      if (activeMode) {
+        event.preventDefault();
+        keyboardModeRef.current = null;
+        setKeyboardMode(null);
+        setAnnouncement("Mode clavier désactivé");
+      }
+      return;
+    }
+    if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select")) {
+      return;
+    }
+    if (!activeItemId) return;
+    if (event.key === "m" || event.key === "M") {
+      event.preventDefault();
+      activateKeyboardMode(activeItemId, "move");
+      return;
+    }
+    if (event.key === "r" || event.key === "R") {
+      event.preventDefault();
+      activateKeyboardMode(activeItemId, "resize");
+      return;
+    }
+    if (!activeMode || !isKeyboardArrowKey(event.key)) return;
+    event.preventDefault();
+    applyKeyboardPlacement(activeItemId, activeMode, event.key);
+  };
   const editing = current.items.find((item) => item.id === editingId);
   const isPublic = current.board.visibility === "public";
   const selectedAppId =
@@ -472,7 +622,7 @@ export function BoardEditor({
                               : !canReadApps;
 
   return (
-    <section>
+    <section onKeyDown={handleGridKeyDown}>
       <div className="board-edit-toolbar">
         <nav aria-label="Layouts">
           <button
@@ -490,10 +640,51 @@ export function BoardEditor({
             Mobile
           </button>
         </nav>
-        <button type="button" onClick={() => setCatalogOpen((value) => !value)}>
+        <button
+          type="button"
+          ref={catalogToggleRef}
+          onClick={() => setCatalogOpen((value) => !value)}
+        >
           Ajouter un widget
         </button>
       </div>
+      <p className={selectedItemId ? "board-keyboard-hint" : "sr-only"} id="board-keyboard-hint">
+        {keyboardHint(keyboardMode, Boolean(selectedItemId))}
+      </p>
+      <div className="sr-only" aria-live="polite" aria-atomic="true" id="board-keyboard-live">
+        {announcement}
+      </div>
+      {selectedItemId ? (
+        <div
+          role="toolbar"
+          className="board-widget-toolbar"
+          aria-label="Actions du widget sélectionné"
+          aria-controls={`board-widget-${selectedItemId}`}
+        >
+          <button type="button" onClick={() => openItemEditor(selectedItemId)}>
+            Configurer
+          </button>
+          <button
+            type="button"
+            aria-pressed={keyboardMode === "move"}
+            aria-keyshortcuts="m"
+            onClick={() => activateKeyboardMode(selectedItemId, "move")}
+          >
+            Déplacer
+          </button>
+          <button
+            type="button"
+            aria-pressed={keyboardMode === "resize"}
+            aria-keyshortcuts="r"
+            onClick={() => activateKeyboardMode(selectedItemId, "resize")}
+          >
+            Redimensionner
+          </button>
+          <button type="button" onClick={() => setDeleteId(selectedItemId)}>
+            Supprimer
+          </button>
+        </div>
+      ) : null}
       {catalogOpen && (
         <section aria-label="Catalogue de widgets">
           {pendingAppTile || pendingIntegration ? (
@@ -679,13 +870,24 @@ export function BoardEditor({
           )}
         </section>
       )}
-      <div className="grid-stack board-editing" ref={root} key={`${active.id}-${gridEpoch}`}>
+      <div
+        className="grid-stack board-editing"
+        ref={root}
+        key={`${active.id}-${gridEpoch}`}
+        role="region"
+        aria-label="Disposition du board"
+        aria-describedby="board-keyboard-hint"
+      >
         {placements.map((placement) => {
           const entry = current.items.find((item) => item.id === placement.itemId);
+          const selected = selectedItemId === placement.itemId;
+          const itemMode = selected ? keyboardMode : null;
+          const itemLabel = entry?.title ?? entry?.widgetType ?? "item";
           return (
             <div
               className="grid-stack-item"
               key={placement.id}
+              id={`board-widget-${placement.itemId}`}
               data-item-id={placement.itemId}
               gs-x={placement.x}
               gs-y={placement.y}
@@ -699,7 +901,21 @@ export function BoardEditor({
               <div
                 className="grid-stack-item-content"
                 tabIndex={0}
-                aria-label={`Déplacer ou redimensionner ${entry?.title ?? entry?.widgetType ?? "item"}`}
+                data-selected={selected ? "true" : undefined}
+                data-keyboard-mode={itemMode ?? undefined}
+                aria-grabbed={itemMode === "move" ? true : undefined}
+                aria-keyshortcuts={
+                  itemMode === "move" || itemMode === "resize"
+                    ? "ArrowLeft ArrowRight ArrowUp ArrowDown Escape"
+                    : "m r"
+                }
+                aria-label={`Widget ${itemLabel}, colonne ${placement.x + 1}, ligne ${placement.y + 1}`}
+                aria-describedby="board-keyboard-hint"
+                onFocus={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  selectedItemIdRef.current = placement.itemId;
+                  setSelectedItemId(placement.itemId);
+                }}
               >
                 {entry ? (
                   <WidgetRenderer
@@ -737,9 +953,7 @@ export function BoardEditor({
                     type="button"
                     onClick={() => {
                       if (!entry) return;
-                      setEditingId(entry.id);
-                      setDraftTitle(entry.title ?? "");
-                      setDraftConfig(entry.config ?? defaultConfig(entry.widgetType));
+                      openItemEditor(entry.id);
                     }}
                   >
                     Configurer
