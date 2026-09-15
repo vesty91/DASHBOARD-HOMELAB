@@ -26,6 +26,7 @@ packages/
   grafana/
   ntfy/
   prowlarr/
+  qbittorrent/
   radarr/
   sonarr/
   permissions/

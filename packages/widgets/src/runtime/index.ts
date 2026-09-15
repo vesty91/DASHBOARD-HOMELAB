@@ -18,6 +18,11 @@ export { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 export { NtfyStatusWidget } from "./ntfy-status-widget";
 export { ProwlarrStatusForm, type ProwlarrIntegrationOption } from "./prowlarr-status-form";
 export { ProwlarrStatusWidget } from "./prowlarr-status-widget";
+export {
+  QbittorrentTransferForm,
+  type QbittorrentIntegrationOption,
+} from "./qbittorrent-transfer-form";
+export { QbittorrentTransferWidget } from "./qbittorrent-transfer-widget";
 export { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 export { RadarrOverviewWidget } from "./radarr-overview-widget";
 export { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";

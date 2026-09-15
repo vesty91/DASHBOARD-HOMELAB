@@ -193,6 +193,31 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Santé 1 erreurs · 2 avertissements")).toBeTruthy();
   });
 
+  it("renders a qBittorrent transfer widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "qbt-1",
+          widgetType: "qbittorrent-transfer",
+          widgetVersion: 1,
+          title: "qBittorrent",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        qbittorrentView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          downloadSpeedBps: 1024,
+          uploadSpeedBps: 256,
+          active: 2,
+          queued: 3,
+        }}
+      />,
+    );
+    expect(screen.getByText("2 actifs · 3 en file")).toBeTruthy();
+  });
+
   it("renders a Radarr overview widget from a ready view", () => {
     render(
       <WidgetRenderer

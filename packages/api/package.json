@@ -24,6 +24,7 @@
     "@dashboard/grafana": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
     "@dashboard/prowlarr": "workspace:*",
+    "@dashboard/qbittorrent": "workspace:*",
     "@dashboard/radarr": "workspace:*",
     "@dashboard/sonarr": "workspace:*",
     "@dashboard/apps": "workspace:*",

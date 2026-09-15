@@ -168,6 +168,11 @@ erreurs/avertissements. Même `router.refresh()` 10 s ; le navigateur ne
 contacte jamais l'API Prowlarr. Noms d'indexeurs, URLs et secrets ne sont pas
 exposés.
 
+Phase 18.7 ajoute `qbittorrent-transfer` (`publicSafe=false`) : débits down/up,
+actifs (downloading+uploading) et file. Même `router.refresh()` 10 s ; le
+navigateur ne contacte jamais l'API qBittorrent. Noms, hashs et magnets ne sont
+pas exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -185,7 +190,8 @@ exposés.
 - ntfy Status (`ntfy-status`, Phase 18.3) ;
 - Sonarr Overview (`sonarr-overview`, Phase 18.4) ;
 - Radarr Overview (`radarr-overview`, Phase 18.5) ;
-- Prowlarr Status (`prowlarr-status`, Phase 18.6).
+- Prowlarr Status (`prowlarr-status`, Phase 18.6) ;
+- qBittorrent Transfer (`qbittorrent-transfer`, Phase 18.7).
 
 ## 11. Custom API widget
 

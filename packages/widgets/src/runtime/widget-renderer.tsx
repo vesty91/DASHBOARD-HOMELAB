@@ -10,6 +10,7 @@ import type { GrafanaStatusView } from "../grafana-status";
 import type { NtfyStatusView } from "../ntfy-status";
 import type { ProxmoxResourcesView } from "../proxmox-resources";
 import type { ProwlarrStatusView } from "../prowlarr-status";
+import type { QbittorrentTransferView } from "../qbittorrent-transfer";
 import type { RadarrOverviewView } from "../radarr-overview";
 import type { SonarrOverviewView } from "../sonarr-overview";
 import type { ServiceStatusView } from "../service-status";
@@ -28,6 +29,7 @@ import { GrafanaStatusWidget } from "./grafana-status-widget";
 import { NtfyStatusWidget } from "./ntfy-status-widget";
 import { ProxmoxResourcesWidget } from "./proxmox-resources-widget";
 import { ProwlarrStatusWidget } from "./prowlarr-status-widget";
+import { QbittorrentTransferWidget } from "./qbittorrent-transfer-widget";
 import { RadarrOverviewWidget } from "./radarr-overview-widget";
 import { SonarrOverviewWidget } from "./sonarr-overview-widget";
 import { ServiceStatusWidget } from "./service-status-widget";
@@ -78,6 +80,7 @@ function ReadyWidget({
   grafanaView,
   ntfyView,
   prowlarrView,
+  qbittorrentView,
   radarrView,
   sonarrView,
   proxmoxView,
@@ -93,6 +96,7 @@ function ReadyWidget({
   grafanaView: GrafanaStatusView | undefined;
   ntfyView: NtfyStatusView | undefined;
   prowlarrView: ProwlarrStatusView | undefined;
+  qbittorrentView: QbittorrentTransferView | undefined;
   radarrView: RadarrOverviewView | undefined;
   sonarrView: SonarrOverviewView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
@@ -120,6 +124,8 @@ function ReadyWidget({
       return <NtfyStatusWidget view={ntfyView} />;
     case "prowlarr-status":
       return <ProwlarrStatusWidget view={prowlarrView} />;
+    case "qbittorrent-transfer":
+      return <QbittorrentTransferWidget view={qbittorrentView} />;
     case "radarr-overview":
       return <RadarrOverviewWidget view={radarrView} />;
     case "sonarr-overview":
@@ -145,6 +151,7 @@ export function WidgetRenderer({
   grafanaView,
   ntfyView,
   prowlarrView,
+  qbittorrentView,
   radarrView,
   sonarrView,
   proxmoxView,
@@ -160,6 +167,7 @@ export function WidgetRenderer({
   grafanaView?: GrafanaStatusView;
   ntfyView?: NtfyStatusView;
   prowlarrView?: ProwlarrStatusView;
+  qbittorrentView?: QbittorrentTransferView;
   radarrView?: RadarrOverviewView;
   sonarrView?: SonarrOverviewView;
   proxmoxView?: ProxmoxResourcesView;
@@ -183,6 +191,7 @@ export function WidgetRenderer({
           grafanaView={grafanaView}
           ntfyView={ntfyView}
           prowlarrView={prowlarrView}
+          qbittorrentView={qbittorrentView}
           radarrView={radarrView}
           sonarrView={sonarrView}
           proxmoxView={proxmoxView}

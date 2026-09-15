@@ -22,6 +22,7 @@ export const SERVICE_SOURCE_TYPES = [
   "grafana",
   "ntfy",
   "prowlarr",
+  "qbittorrent",
   "radarr",
   "sonarr",
 ] as const;

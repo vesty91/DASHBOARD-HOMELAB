@@ -841,6 +841,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("prowlarr.example");
   });
 
+  it("redacts qBittorrent generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "qbittorrent",
+        displayName: "qBittorrent",
+      },
+    ]);
+    const qbittorrent = await service.create(
+      {
+        type: "qbittorrent",
+        name: "qBittorrent",
+        baseUrl: "https://qbittorrent.example:8080",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(qbittorrent.id, reader);
+    expect(restricted).toMatchObject({
+      id: qbittorrent.id,
+      type: "qbittorrent",
+      name: "qBittorrent",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("qbittorrent.example");
+  });
+
   it("redacts Radarr generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

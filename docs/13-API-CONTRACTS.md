@@ -523,6 +523,25 @@ Jamais exposés : clé API, noms d'indexeurs, URLs, `startupPath`, `appData`,
 `isAdmin`, `message` de santé, `wikiUrl`, catégories, `/api/v1/search`,
 `/api/v1/command`, `baseUrl`, config.
 
+# qBittorrent API — Phase 18.7
+
+Routeur tRPC `qbittorrent` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                          | Permission                    | Capability    | Notes                                                |
+| ------------------------------ | ----------------------------- | ------------- | ---------------------------------------------------- |
+| `qbittorrent.permissions`      | auth active                   | —             | `canRead`, `canManage`                               |
+| `qbittorrent.integration.list` | use/manage + qbittorrent.read | —             | `{ id, name, enabled }[]`                            |
+| `qbittorrent.integration.get`  | use/manage + qbittorrent.read | —             | `{ id, name, enabled }`                              |
+| `qbittorrent.overview.get`     | use/manage + qbittorrent.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `qbittorrent.overview.refresh` | use/manage + qbittorrent.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
+`version`, `transfer`, `torrents`. Auth : cookie `SID` éphémère après
+`POST /api/v2/auth/login`. Jamais `SID`/`password` dans l'URL, le cache ou le DTO.
+
+Jamais exposés : cookie `SID`, mot de passe, noms de torrents, hashs, magnets,
+`save_path`, trackers, fichiers, `baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -582,7 +601,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma/proxmox/grafana/ntfy/prowlarr/radarr/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox/grafana/ntfy/prowlarr/qbittorrent/radarr/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

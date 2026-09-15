@@ -71,6 +71,18 @@ export {
   prowlarrStatusDraftConfig,
 } from "./prowlarr-status";
 export type {
+  QbittorrentTransferConfig,
+  QbittorrentTransferDraftConfig,
+  QbittorrentTransferView,
+} from "./qbittorrent-transfer";
+export {
+  QBITTORRENT_TRANSFER_UNSET_INTEGRATION_ID,
+  qbittorrentTransferConfigSchema,
+  qbittorrentTransferContract,
+  qbittorrentTransferDefaultConfig,
+  qbittorrentTransferDraftConfig,
+} from "./qbittorrent-transfer";
+export type {
   RadarrOverviewConfig,
   RadarrOverviewDraftConfig,
   RadarrOverviewView,

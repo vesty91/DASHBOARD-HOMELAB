@@ -13,6 +13,7 @@ import type {
   GrafanaStatusView,
   NtfyStatusView,
   ProwlarrStatusView,
+  QbittorrentTransferView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -35,6 +36,7 @@ export function ResponsiveBoardReadGrid({
   grafanaViews = {},
   ntfyViews = {},
   prowlarrViews = {},
+  qbittorrentViews = {},
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
@@ -50,6 +52,7 @@ export function ResponsiveBoardReadGrid({
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
   prowlarrViews?: Record<string, ProwlarrStatusView>;
+  qbittorrentViews?: Record<string, QbittorrentTransferView>;
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
@@ -66,6 +69,7 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(grafanaViews) ||
     shouldPollJellyfinBoard(ntfyViews) ||
     shouldPollJellyfinBoard(prowlarrViews) ||
+    shouldPollJellyfinBoard(qbittorrentViews) ||
     shouldPollJellyfinBoard(radarrViews) ||
     shouldPollJellyfinBoard(sonarrViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
@@ -110,6 +114,7 @@ export function ResponsiveBoardReadGrid({
       grafanaViews={grafanaViews}
       ntfyViews={ntfyViews}
       prowlarrViews={prowlarrViews}
+      qbittorrentViews={qbittorrentViews}
       radarrViews={radarrViews}
       sonarrViews={sonarrViews}
       serviceStatusViews={serviceStatusViews}

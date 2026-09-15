@@ -483,6 +483,27 @@ fake data. Noms d'indexeurs, URLs, `apiKey`, mot de passe, catégories et
 messages de santé jamais exposés. Un 403/404 sur `/api/v1/indexerstatus` rend
 la section `unavailable` (pas de zéros inventés).
 
+## 18.7. qBittorrent
+
+Statut : IN PROGRESS (Phase 18.7).
+
+Adapter `qbittorrent` composé dans `apps/web`. Transport HTTP(S) vers l'origine
+qBittorrent. Auth cookie de session (`POST /api/v2/auth/login`, cookie `SID`
+éphémère). Lecture seule `GET /api/v2/app/version`, `GET /api/v2/transfer/info`,
+`GET /api/v2/torrents/info`. Voir ADR 0026. GET login, `apikey`/`password`/`sid`
+en query et mutations torrent sont hors scope.
+
+`qbittorrent.integration.get` expose uniquement `{ id, name, enabled }` aux
+lecteurs qBittorrent (`integration.use|manage` + `qbittorrent.read`).
+`integration.read` n'est pas requis. `integration.list` / `integration.get`
+omettent `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record
+`qbittorrent` sans `integration.manage`.
+
+Widget `qbittorrent-transfer` : `publicSafe=false`. Refresh manuel 10/min. Cache
+overview 8 s (5 s si partiel). Cookie `SID` et mot de passe jamais renvoyés.
+Aucune mutation. Aucune fake data. Noms, hashs, magnets, chemins et trackers
+jamais exposés.
+
 ## 19. Service status
 
 Agrégateur interne read-only, pas une nouvelle intégration externe.
@@ -490,10 +511,11 @@ Agrégateur interne read-only, pas une nouvelle intégration externe.
 `serviceStatus.list` / `serviceStatus.catalog` assemblent un DTO canonique
 (`up` / `degraded` / `down` / `unknown` / `paused` / `maintenance`) à partir des
 sources déjà disponibles : apps health, Docker, Synology, Jellyfin, Immich,
-Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr, Prowlarr. Le filtrage est serveur-side via les permissions
+Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr, Prowlarr, qBittorrent. Le filtrage est serveur-side via les permissions
 spécialisées (`app.read`, `docker.read`, `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `uptime-kuma.read`, `prometheus.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`). Un DTO
+`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
+`qbittorrent.read`). Un DTO
 générique `integration.list` n'est jamais utilisé pour construire ce widget.
 
 Widget `service-status` : `publicSafe=false`. Config bornée (`selectedSources`,

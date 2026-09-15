@@ -28,6 +28,7 @@ import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
 import type { ProwlarrService } from "@dashboard/prowlarr";
+import type { QbittorrentService } from "@dashboard/qbittorrent";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -312,6 +313,7 @@ export interface ServiceStatusRuntimeDeps {
   grafana: GrafanaService;
   ntfy: NtfyService;
   prowlarr: ProwlarrService;
+  qbittorrent: QbittorrentService;
   radarr: RadarrService;
   sonarr: SonarrService;
   coalescer?: ServiceStatusCoalescer;
@@ -534,6 +536,29 @@ export function createDashboardServiceStatusService(
           detail: indexer
             ? `${indexer.count} indexeurs${health ? ` · ${health.error} erreurs` : ""}`
             : "Prowlarr indisponible",
+          updatedAt: overview.fetchedAt,
+        });
+      },
+    }),
+    overviewCollector({
+      sourceType: "qbittorrent",
+      canRead: (actor) => deps.qbittorrent.permissions(actor).canRead,
+      list: (actor) => deps.qbittorrent.listIntegrations(actor),
+      async collectOne(integrationId, actor, name) {
+        const overview = await deps.qbittorrent.getOverview(integrationId, actor);
+        const transfer = overview.transfer.data;
+        const torrents = overview.torrents.data;
+        const active = torrents === null ? null : torrents.downloading + torrents.uploading;
+        return freezeItem({
+          id: `qbittorrent:${integrationId}`,
+          name,
+          sourceType: "qbittorrent",
+          integrationId,
+          status: mapOverviewStatus(overview.status),
+          detail:
+            transfer && torrents
+              ? `${active} actifs · ${torrents.queued} en file`
+              : "qBittorrent indisponible",
           updatedAt: overview.fetchedAt,
         });
       },

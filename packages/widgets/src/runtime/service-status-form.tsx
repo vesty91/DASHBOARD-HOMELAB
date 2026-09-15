@@ -25,6 +25,7 @@ const SOURCE_LABELS: Record<ServiceStatusSourceType, string> = {
   grafana: "Grafana",
   ntfy: "ntfy",
   prowlarr: "Prowlarr",
+  qbittorrent: "qBittorrent",
   radarr: "Radarr",
   sonarr: "Sonarr",
 };

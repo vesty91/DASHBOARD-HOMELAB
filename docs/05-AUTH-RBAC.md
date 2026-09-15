@@ -244,9 +244,15 @@ Phase 18.6 : lecture Prowlarr exige (`integration.use` ou `integration.manage`) 
 `/integrations/[id]` Prowlarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `prowlarr.read`.
 
+Phase 18.7 : lecture qBittorrent exige (`integration.use` ou `integration.manage`) **et**
+`qbittorrent.read`. Cette conjonction suffit pour `qbittorrent.integration.get` et
+`/integrations/[id]` qBittorrent : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `qbittorrent.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`, `docker.*` ni
+`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
+`qbittorrent.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit
