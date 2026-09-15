@@ -30,3 +30,16 @@ Permissions : `automation.read` / `automation.manage` / `automation.run`.
 `ADMIN` ne les reçoit pas. `SYSTEM_ADMIN` : catalogue.
 
 Backup : schéma 7. Restore 5 → 6 → 7 et 6 → 7. Schéma 8+ rejeté.
+
+## 22.2 Triggers et conditions
+
+IN PROGRESS côté scheduler (22.3). Moteur déclaratif livré :
+
+- schedule : `interval` (minimum 1 minute) et cron 5 champs **UTC** ;
+- event : `integration.status.changed`, `integration.data.changed`, `job.failed` ;
+- status-transition : `from` / `to` sur `integration.status.changed` + `lastObservedStatus` ;
+- conditions : `eq` `neq` `lt` `lte` `gt` `gte` `contains` `and` `or` ;
+- champs fermés par trigger ;
+- cooldown + skip si `causationAutomationId` = automationId.
+
+Pas d'eval, pas de JS, pas de cron shell, pas d'événements `board.*`.

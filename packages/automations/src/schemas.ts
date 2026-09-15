@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AutomationError } from "./errors";
 import { assertSafeAutomationJson, assertSafeOptionalAutomationJson } from "./json";
+import { parseAutomationTriggerAndCondition } from "./evaluate";
 import {
   AUTOMATION_ACTION_TYPES,
   AUTOMATION_COOLDOWN_MAX_SECONDS,
@@ -102,6 +103,11 @@ export function parseAutomationRuleCreate(input: unknown): AutomationRuleCreateI
   const parsed = parseOrThrow(automationRuleCreateSchema, input, "Invalid automation rule");
   assertSafeAutomationJson(parsed.triggerConfigJson, "triggerConfigJson");
   assertSafeOptionalAutomationJson(parsed.conditionConfigJson ?? null, "conditionConfigJson");
+  parseAutomationTriggerAndCondition(
+    parsed.triggerType,
+    parsed.triggerConfigJson,
+    parsed.conditionConfigJson ?? null,
+  );
   const actionConfig = assertSafeAutomationJson(parsed.actionConfigJson, "actionConfigJson");
   const integrationId = actionConfig.integrationId;
   if (typeof integrationId !== "string" || !z.uuid().safeParse(integrationId).success)
@@ -115,6 +121,22 @@ export function parseAutomationRuleUpdate(input: unknown): AutomationRuleUpdateI
     assertSafeAutomationJson(parsed.triggerConfigJson, "triggerConfigJson");
   if (parsed.conditionConfigJson !== undefined)
     assertSafeOptionalAutomationJson(parsed.conditionConfigJson, "conditionConfigJson");
+  if (
+    parsed.triggerType !== undefined ||
+    parsed.triggerConfigJson !== undefined ||
+    parsed.conditionConfigJson !== undefined
+  ) {
+    if (!parsed.triggerType || !parsed.triggerConfigJson)
+      throw new AutomationError(
+        "VALIDATION_ERROR",
+        "triggerType and triggerConfigJson are required to update trigger or condition",
+      );
+    parseAutomationTriggerAndCondition(
+      parsed.triggerType,
+      parsed.triggerConfigJson,
+      parsed.conditionConfigJson ?? null,
+    );
+  }
   if (parsed.actionConfigJson) {
     const actionConfig = assertSafeAutomationJson(parsed.actionConfigJson, "actionConfigJson");
     const integrationId = actionConfig.integrationId;

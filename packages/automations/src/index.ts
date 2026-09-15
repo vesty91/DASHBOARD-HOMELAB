@@ -38,3 +38,30 @@ export {
   type AutomationOwnerRecord,
 } from "./access";
 export { assertSafeAutomationJson, assertSafeOptionalAutomationJson } from "./json";
+export {
+  AUTOMATION_EVENT_TYPES,
+  AUTOMATION_MAX_INTERVAL_MINUTES,
+  AUTOMATION_MIN_INTERVAL_MINUTES,
+  AUTOMATION_STATUS_VALUES,
+  nextScheduleRunAt,
+  parseTriggerConfig,
+  type AutomationEventType,
+  type ParsedTriggerConfig,
+  type ScheduleTriggerConfig,
+} from "./triggers";
+export {
+  CONDITION_COMPARE_OPS,
+  CONDITION_FIELDS,
+  CONDITION_LOGIC_OPS,
+  CONDITION_MAX_DEPTH,
+  CONDITION_MAX_NODES,
+  evaluateCondition,
+  parseConditionConfig,
+  type ConditionNode,
+} from "./conditions";
+export {
+  evaluateAutomationTrigger,
+  parseAutomationTriggerAndCondition,
+  type TriggerEvaluation,
+  type TriggerSkipReason,
+} from "./evaluate";
