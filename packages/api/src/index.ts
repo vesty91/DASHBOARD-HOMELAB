@@ -57,7 +57,11 @@ import {
   qbittorrentTorrentActionInputSchema,
   type QbittorrentService,
 } from "@dashboard/qbittorrent";
-import { seerrIntegrationInputSchema, type SeerrService } from "@dashboard/seerr";
+import {
+  seerrIntegrationInputSchema,
+  seerrRequestActionInputSchema,
+  type SeerrService,
+} from "@dashboard/seerr";
 import {
   customApiIntegrationInputSchema,
   customApiValueInputSchema,
@@ -277,6 +281,21 @@ function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function seerrRequestAuditMetadata(
+  integrationId: string,
+  result: { action: string; resourceId: string; status: "success" | "accepted" | "failed" },
+): Record<string, unknown> {
+  return {
+    ...safeActionAuditMetadata({
+      integrationId,
+      integrationType: "seerr",
+      action: result.action,
+      resourceId: result.resourceId,
+      result: result.status,
+    }),
+  };
 }
 
 function arrCommandAuditMetadata(
@@ -1044,6 +1063,36 @@ export const seerrRouter = t.router({
       .mutation(({ ctx, input }) =>
         procedure(() => ctx.seerr.refreshOverview(input.integrationId, ctx.actor)),
       ),
+  }),
+  requests: t.router({
+    approve: t.procedure.input(seerrRequestActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.seerr.approveRequest(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "seerr.approve",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: seerrRequestAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+    decline: t.procedure.input(seerrRequestActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.seerr.declineRequest(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "seerr.decline",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: seerrRequestAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
   }),
 });
 export const customApiRouter = t.router({

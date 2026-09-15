@@ -6,9 +6,11 @@ import type { SeerrConfig, SeerrSecrets } from "./schemas";
 import {
   SEERR_JSON_MAX_BYTES,
   seerrFetch,
+  seerrRequestStatus,
   type SeerrRequestFn,
   type SeerrTransportContext,
 } from "./transport";
+import type { SeerrRequestAction } from "./request-action";
 import type {
   SeerrCountsDto,
   SeerrOverview,
@@ -142,4 +144,12 @@ export async function fetchSeerrOverview(ctx: SeerrClientContext): Promise<Seerr
     system,
     counts,
   };
+}
+
+export async function postSeerrRequestAction(
+  ctx: SeerrClientContext,
+  requestId: number,
+  action: SeerrRequestAction,
+): Promise<void> {
+  await seerrRequestStatus(ctx.request, ctx, requestId, action);
 }

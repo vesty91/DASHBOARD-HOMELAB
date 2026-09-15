@@ -13,7 +13,8 @@ Toute mutation externe passe par `runSafeIntegrationAction`
 1. Session authentifiée (`UNAUTHORIZED` sinon).
 2. `integration.interact` **ou** `integration.manage`.
 3. Permission **spécialisée** explicite (`docker.start`, `proxmox.start`,
-   `qbittorrent.pause`, `ntfy.publish`, `sonarr.command`, `radarr.command`, …).
+   `qbittorrent.pause`, `ntfy.publish`, `sonarr.command`, `radarr.command`,
+   `seerr.request.manage`, …).
 4. Type d'intégration attendu.
 5. Entrées Zod / IDs bornés.
 6. Méthode **POST** uniquement ; chemin construit puis **allowlist exacte**.
@@ -65,10 +66,10 @@ Docker `start` / `stop` / `restart` reste le cas d'usage production. Les
 adapters Phase 21 doivent réutiliser ce framework plutôt qu'une seconde
 architecture.
 
-## Hors scope de 21.1
+## Hors scope
 
-Implémentation Seerr : PR suivante.
-Grafana et Custom API restent en lecture seule.
+Grafana et Custom API restent en lecture seule. Custom API : GET-only, jamais
+POST/PUT/PATCH/DELETE.
 
 ## 21.2 Proxmox power
 
@@ -109,3 +110,13 @@ delete series/movie, settings, commandes globales sans ID.
 Prowlarr : **reste read-only**. Les mutations officielles (CRUD indexeurs,
 `/api/v1/search`, `RssSync`, test-all) ne sont ni ciblées, ni non destructives
 de façon utile pour le dashboard. Pas de mutation forcée.
+
+## 21.6 Seerr request actions
+
+Livré : `POST /api/v1/request/{id}/approve` et
+`POST /api/v1/request/{id}/decline` (OpenAPI officielle Seerr/Jellyseerr,
+enum `approve|decline`). Permission `seerr.request.manage`. Audit :
+`seerr.approve` / `seerr.decline` avec `request:{id}` — jamais e-mail, username
+ni notes. Confirmation UI pour decline. Pas de retry, pending, delete, POST
+`/api/v1/request`, ni gestion d'utilisateurs. Widget `seerr-requests` reste
+read-only.

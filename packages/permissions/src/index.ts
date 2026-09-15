@@ -52,6 +52,7 @@ export const PERMISSIONS = [
   "qbittorrent.pause",
   "qbittorrent.resume",
   "seerr.read",
+  "seerr.request.manage",
   "custom-api.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];

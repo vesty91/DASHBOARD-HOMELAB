@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,6 +17,9 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
@@ -24,6 +28,7 @@ import { seerrOverviewCacheOperation, overviewFailureCacheOperation } from "./ca
 import {
   SEERR_OVERVIEW_FAILURE_TTL_MS,
   fetchSeerrOverview,
+  postSeerrRequestAction,
   seerrContextFromIntegration,
   overviewCacheTtl,
   type SeerrClientContext,
@@ -32,7 +37,12 @@ import { SEERR_INTEGRATION_ID } from "./definition";
 import { SeerrError, toIntegrationError } from "./errors";
 import type { SeerrOverviewCoalescer } from "./overview-coalescer";
 import type { SeerrRefreshFence } from "./refresh-fence";
-import type { SeerrConfig, SeerrSecrets } from "./schemas";
+import {
+  seerrRequestAuditAction,
+  seerrRequestResourceId,
+  type SeerrRequestAction,
+} from "./request-action";
+import type { SeerrConfig, SeerrRequestActionInput, SeerrSecrets } from "./schemas";
 import type {
   SeerrActor,
   SeerrIntegrationMetadata,
@@ -48,6 +58,9 @@ export interface SeerrServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: SeerrRefreshFence;
   overviewCoalescer: SeerrOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -233,6 +246,44 @@ export function createSeerrService(deps: SeerrServiceDeps) {
     });
   }
 
+  async function runRequestAction(
+    input: SeerrRequestActionInput,
+    actor: SeerrActor,
+    action: SeerrRequestAction,
+  ): Promise<SafeActionResult> {
+    assertSeerrAccess(actor, "request");
+    const record = await deps.store.findById(input.integrationId);
+    if (!record) throw new IntegrationError("NOT_FOUND", "Définition Seerr introuvable");
+    const realtime = deps.publish;
+    return runSafeIntegrationAction({
+      actor,
+      action: seerrRequestAuditAction(action),
+      actionPermissions: ["seerr.request.manage"],
+      integrationId: record.id,
+      expectedType: SEERR_INTEGRATION_ID,
+      loadedType: record.type,
+      resourceId: seerrRequestResourceId(input.requestId),
+      rateLimiter: deps.actionRateLimiter,
+      inFlight: deps.inFlight,
+      cache: deps.cache,
+      currentConfigRevision: record.configRevision,
+      ...(input.expectedConfigRevision === undefined
+        ? {}
+        : { expectedConfigRevision: input.expectedConfigRevision }),
+      ...(realtime ? { publish: () => realtime(record.id) } : {}),
+      execute: async () => {
+        const loaded = await loadContext(record.id, "requests.manage");
+        try {
+          await postSeerrRequestAction(loaded.ctx, input.requestId, action);
+          deps.refreshFence.advance(record.id);
+          return "success";
+        } catch (error) {
+          throw normalizedRedactedError(error, loaded.secrets);
+        }
+      },
+    });
+  }
+
   return {
     permissions(actor: SeerrActor): SeerrPermissionsView {
       return seerrPermissionsView(actor);
@@ -274,6 +325,18 @@ export function createSeerrService(deps: SeerrServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async approveRequest(
+      input: SeerrRequestActionInput,
+      actor: SeerrActor,
+    ): Promise<SafeActionResult> {
+      return runRequestAction(input, actor, "approve");
+    },
+    async declineRequest(
+      input: SeerrRequestActionInput,
+      actor: SeerrActor,
+    ): Promise<SafeActionResult> {
+      return runRequestAction(input, actor, "decline");
     },
   };
 }

@@ -9,6 +9,7 @@ export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   fetchSeerrOverview,
+  postSeerrRequestAction,
   seerrContextFromIntegration,
   testSeerrConnection,
 } from "./client";
@@ -45,13 +46,32 @@ export {
   type SeerrRefreshFence,
 } from "./refresh-fence";
 export {
+  SEERR_REQUEST_ACTIONS,
+  SEERR_REQUEST_ID_MAX,
+  assertSeerrRequestAction,
+  assertSeerrRequestId,
+  isSeerrRequestActionPath,
+  seerrRequestActionPath,
+  seerrRequestAuditAction,
+  seerrRequestResourceId,
+  type SeerrRequestAction,
+} from "./request-action";
+export {
   seerrApiKeySchema,
   seerrConfigSchema,
   seerrIntegrationInputSchema,
+  seerrRequestActionInputSchema,
   seerrSecretSchema,
+  type SeerrRequestActionInput,
 } from "./schemas";
 export { createSeerrService, type SeerrService, type SeerrServiceDeps } from "./service";
-export { SEERR_JSON_MAX_BYTES, buildSeerrUrl, seerrAuthHeaders, seerrFetch } from "./transport";
+export {
+  SEERR_JSON_MAX_BYTES,
+  buildSeerrUrl,
+  seerrAuthHeaders,
+  seerrFetch,
+  seerrRequestStatus,
+} from "./transport";
 export type {
   SeerrActor,
   SeerrCountsDto,

@@ -278,6 +278,11 @@ Phase 18.8 : lecture Seerr exige (`integration.use` ou `integration.manage`) **e
 `/integrations/[id]` Seerr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `seerr.read`.
 
+Phase 21 : approve / decline d'une demande ciblée exigent (`integration.interact`
+ou `integration.manage`) **et** `seerr.request.manage`. `seerr.read` et
+`integration.manage` seuls sont insuffisants. Confirmation UI obligatoire pour
+decline. Pas de retry, delete, création de demande, ni gestion d'utilisateurs.
+
 Phase 18.9 : lecture API personnalisée exige (`integration.use` ou `integration.manage`) **et**
 `custom-api.read`. Cette conjonction suffit pour `customApi.integration.get` et
 `/integrations/[id]` Custom API : `integration.read` n'est pas requis. Le rôle `ADMIN` par
@@ -288,14 +293,15 @@ Phase 21 : une action d'intégration exige (`integration.interact` ou
 `integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 Les permissions d'action Proxmox (`proxmox.start`, `proxmox.shutdown`,
 `proxmox.reboot`), qBittorrent (`qbittorrent.pause`, `qbittorrent.resume`) et
-ntfy (`ntfy.publish`), Sonarr (`sonarr.command`) et Radarr (`radarr.command`)
-sont livrées. Prowlarr reste en lecture seule. Seerr suit dans la PR suivante.
+ntfy (`ntfy.publish`), Sonarr (`sonarr.command`), Radarr (`radarr.command`) et
+Seerr (`seerr.request.manage`)
+sont livrées. Prowlarr reste en lecture seule.
 
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `sonarr.command`, `radarr.read`,
 `radarr.command`, `prowlarr.read`,
-`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
+`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `seerr.request.manage`, `custom-api.read`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
 ## 10. Audit
@@ -312,7 +318,9 @@ publications ntfy réussies journalisent `ntfy.publish` avec topic (`resourceId`
 `priority`, `messageLength` et `result` — jamais le corps du message. Les
 commandes *arr réussies journalisent `sonarr.refresh-series` /
 `sonarr.search-episode` / `radarr.refresh-movie` / `radarr.search-movie` avec
-l'identifiant de ressource (jamais le titre).
+l'identifiant de ressource (jamais le titre). Les approve/decline Seerr réussis
+journalisent `seerr.approve` / `seerr.decline` avec `request:{id}` — jamais e-mail,
+username ni notes.
 
 ## 11. Anti-bruteforce
 

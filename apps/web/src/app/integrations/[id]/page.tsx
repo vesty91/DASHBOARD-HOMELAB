@@ -30,7 +30,12 @@ import type {
   QbittorrentPermissionsView,
   QbittorrentSectionReason,
 } from "@dashboard/qbittorrent";
-import type { SeerrIntegrationMetadata, SeerrOverview, SeerrSectionReason } from "@dashboard/seerr";
+import type {
+  SeerrIntegrationMetadata,
+  SeerrOverview,
+  SeerrPermissionsView,
+  SeerrSectionReason,
+} from "@dashboard/seerr";
 import type {
   CustomApiIntegrationMetadata,
   CustomApiOverview,
@@ -102,6 +107,7 @@ import { QbittorrentRefreshButton } from "../qbittorrent-refresh-button";
 import { QbittorrentTorrentActions } from "../qbittorrent-torrent-actions";
 import { seerrUserError } from "../seerr-error";
 import { SeerrRefreshButton } from "../seerr-refresh-button";
+import { SeerrRequestForm } from "../seerr-request-form";
 import { customApiUserError } from "../custom-api-error";
 import { CustomApiRefreshButton } from "../custom-api-refresh-button";
 import { radarrUserError } from "../radarr-error";
@@ -2011,10 +2017,12 @@ async function SeerrIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: SeerrPermissionsView = await caller.seerr.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="Seerr" />
       <SeerrRefreshButton integrationId={id} />
+      <SeerrRequestForm integrationId={id} canManageRequests={permissions.canManageRequests} />
       <Suspense fallback={<p className="ui-muted">Chargement de Seerr…</p>}>
         <SeerrOverviewPanel id={id} caller={caller} />
       </Suspense>

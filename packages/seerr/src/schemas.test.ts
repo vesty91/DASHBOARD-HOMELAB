@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seerrConfigSchema, seerrSecretSchema } from "./schemas";
+import { seerrConfigSchema, seerrRequestActionInputSchema, seerrSecretSchema } from "./schemas";
 
 describe("seerr schemas", () => {
   it("accepts a valid origin config and rejects malformed API keys", () => {
@@ -15,5 +15,20 @@ describe("seerr schemas", () => {
     expect(() => seerrSecretSchema.parse({ apiKey: "bad\nkey" })).toThrow(/visible ASCII/);
     expect(() => seerrSecretSchema.parse({ apiKey: "" })).toThrow();
     expect(() => seerrSecretSchema.parse({})).toThrow();
+  });
+
+  it("accepts a single positive request id and rejects zero", () => {
+    expect(
+      seerrRequestActionInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        requestId: 12,
+      }),
+    ).toMatchObject({ requestId: 12 });
+    expect(() =>
+      seerrRequestActionInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        requestId: 0,
+      }),
+    ).toThrow();
   });
 });

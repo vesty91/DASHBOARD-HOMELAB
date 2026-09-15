@@ -16,3 +16,31 @@ export async function refreshSeerrOverviewAction(
     return toSeerrActionOutcome(error);
   }
 }
+
+export async function approveSeerrRequestAction(input: {
+  integrationId: string;
+  requestId: number;
+}): Promise<SeerrActionOutcome> {
+  try {
+    await (await getBoardCaller()).seerr.requests.approve(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toSeerrActionOutcome(error);
+  }
+}
+
+export async function declineSeerrRequestAction(input: {
+  integrationId: string;
+  requestId: number;
+}): Promise<SeerrActionOutcome> {
+  try {
+    await (await getBoardCaller()).seerr.requests.decline(input);
+    revalidatePath(`/integrations/${input.integrationId}`);
+    revalidatePath("/boards");
+    return { ok: true };
+  } catch (error) {
+    return toSeerrActionOutcome(error);
+  }
+}

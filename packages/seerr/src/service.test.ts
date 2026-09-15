@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   IntegrationError,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   createIntegrationRegistry,
   type EncryptedSecretRow,
   type IntegrationRecord,
@@ -120,6 +122,14 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
       commitTag: "abc123",
       updateAvailable: false,
     });
+  if (request.method === "POST")
+    return json({
+      id: 12,
+      status: 2,
+      requestedBy: { email: "user@example.com", displayName: "Secret User" },
+      media: { tmdbId: 337401, title: "Dune" },
+      notes: "please add 4k privately",
+    });
   return json({
     pending: 2,
     approved: 5,
@@ -135,6 +145,9 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
 function serviceWith(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   store = createMemoryStore(),
+  extra: {
+    actionRateLimiter?: MemorySafeActionRateLimiter;
+  } = {},
 ) {
   return createSeerrService({
     store: store.store,
@@ -144,6 +157,8 @@ function serviceWith(
     refreshRateLimiter: new MemorySeerrRefreshRateLimiter(),
     refreshFence: new MemorySeerrRefreshFence(),
     overviewCoalescer: new MemorySeerrOverviewCoalescer(),
+    actionRateLimiter: extra.actionRateLimiter ?? new MemorySafeActionRateLimiter(),
+    inFlight: new MemorySafeActionInFlightGuard(),
     keyring: store.keyring,
   });
 }
@@ -229,11 +244,112 @@ describe("createSeerrService", () => {
       refreshRateLimiter: limiter,
       refreshFence: new MemorySeerrRefreshFence(),
       overviewCoalescer: new MemorySeerrOverviewCoalescer(),
+      actionRateLimiter: new MemorySafeActionRateLimiter(),
+      inFlight: new MemorySafeActionInFlightGuard(),
       keyring: store.keyring,
     });
     await service.refreshOverview(INTEGRATION_ID, systemAdmin);
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("approves a request without returning users, titles or the API key", async () => {
+    const paths: string[] = [];
+    const service = serviceWith(async (options) => {
+      paths.push(new URL(String(options.url)).pathname);
+      expect(options.method).toBe("POST");
+      expect(options.body).toBeUndefined();
+      expect(new URL(String(options.url)).search).toBe("");
+      return officialPayloads(options);
+    });
+    const result = await service.approveRequest(
+      { integrationId: INTEGRATION_ID, requestId: 12 },
+      actor(["integration.interact", "seerr.request.manage"]),
+    );
+    expect(result).toMatchObject({
+      status: "success",
+      action: "seerr.approve",
+      resourceId: "request:12",
+    });
+    expect(paths[0]).toBe("/api/v1/request/12/approve");
+    expect(JSON.stringify(result)).not.toContain("user@example.com");
+    expect(JSON.stringify(result)).not.toContain("Secret User");
+    expect(JSON.stringify(result)).not.toContain("Dune");
+    expect(JSON.stringify(result)).not.toContain(API_KEY);
+  });
+
+  it("declines a request and denies read-only, manage-only, and manage without interact", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    const result = await service.declineRequest(
+      { integrationId: INTEGRATION_ID, requestId: 12 },
+      actor(["integration.interact", "seerr.request.manage"]),
+    );
+    expect(result.action).toBe("seerr.decline");
+    expect(result.resourceId).toBe("request:12");
+    await expect(
+      service.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.use", "seerr.read"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.use", "seerr.request.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects invalid ids, stale config, rate limits and maps 401 without leaking secrets", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    await expect(
+      service.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 0 },
+        actor(["integration.interact", "seerr.request.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(
+      service.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12, expectedConfigRevision: 9 },
+        actor(["integration.interact", "seerr.request.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const limiter = new MemorySafeActionRateLimiter(1, 60_000, () => 1_000);
+    const limited = serviceWith(async (options) => officialPayloads(options), createMemoryStore(), {
+      actionRateLimiter: limiter,
+    });
+    await limited.approveRequest(
+      { integrationId: INTEGRATION_ID, requestId: 12 },
+      actor(["integration.interact", "seerr.request.manage"]),
+    );
+    await expect(
+      limited.approveRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.interact", "seerr.request.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    const unauthorized = serviceWith(async () => json({ message: `denied ${API_KEY} Dune` }, 401));
+    await expect(
+      unauthorized.declineRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.interact", "seerr.request.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    try {
+      await unauthorized.declineRequest(
+        { integrationId: INTEGRATION_ID, requestId: 12 },
+        actor(["integration.interact", "seerr.request.manage"]),
+      );
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain(API_KEY);
+      expect(JSON.stringify(error)).not.toContain("Dune");
+    }
   });
 });

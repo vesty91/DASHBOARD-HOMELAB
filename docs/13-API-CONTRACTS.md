@@ -566,20 +566,23 @@ n'acceptent que des hashs hex 40/64, max 8, jamais `all`.
 
 Routeur tRPC `seerr` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                    | Permission              | Capability    | Notes                                                |
-| ------------------------ | ----------------------- | ------------- | ---------------------------------------------------- |
-| `seerr.permissions`      | auth active             | —             | `canRead`, `canManage`                               |
-| `seerr.integration.list` | use/manage + seerr.read | —             | `{ id, name, enabled }[]`                            |
-| `seerr.integration.get`  | use/manage + seerr.read | —             | `{ id, name, enabled }`                              |
-| `seerr.overview.get`     | use/manage + seerr.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `seerr.overview.refresh` | use/manage + seerr.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| Route                    | Permission                             | Capability        | Notes                                                |
+| ------------------------ | -------------------------------------- | ----------------- | ---------------------------------------------------- |
+| `seerr.permissions`      | auth active                            | —                 | `canRead`, `canManage`, `canManageRequests`          |
+| `seerr.integration.list` | use/manage + seerr.read                | —                 | `{ id, name, enabled }[]`                            |
+| `seerr.integration.get`  | use/manage + seerr.read                | —                 | `{ id, name, enabled }`                              |
+| `seerr.overview.get`     | use/manage + seerr.read                | `status.read`     | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `seerr.overview.refresh` | use/manage + seerr.read                | `status.read`     | 10 requêtes / min / acteur / intégration             |
+| `seerr.requests.approve` | interact/manage + seerr.request.manage | `requests.manage` | POST `/api/v1/request/{id}/approve` ; un requestId   |
+| `seerr.requests.decline` | interact/manage + seerr.request.manage | `requests.manage` | POST `/api/v1/request/{id}/decline` ; un requestId   |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 `system`, `counts`. Auth : header `X-Api-Key` uniquement. Jamais `apikey` dans
 l'URL. API officielle v1 (Jellyseerr / Overseerr compatibles).
 
 Jamais exposés : clé API, titres, utilisateurs, e-mails, ids TMDB, listes de
-demandes, approve/decline, `baseUrl`, config.
+demandes, `baseUrl`, config. Approve/decline retournent uniquement le DTO
+d'action sûre.
 
 # Custom API API — Phase 18.9
 
