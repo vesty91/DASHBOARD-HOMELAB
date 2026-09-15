@@ -211,6 +211,24 @@ importers:
       '@dashboard/events':
         specifier: workspace:*
         version: link:../../packages/events
+      '@dashboard/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
+      '@dashboard/ntfy':
+        specifier: workspace:*
+        version: link:../../packages/ntfy
+      '@dashboard/qbittorrent':
+        specifier: workspace:*
+        version: link:../../packages/qbittorrent
+      '@dashboard/radarr':
+        specifier: workspace:*
+        version: link:../../packages/radarr
+      '@dashboard/secrets':
+        specifier: workspace:*
+        version: link:../../packages/secrets
+      '@dashboard/sonarr':
+        specifier: workspace:*
+        version: link:../../packages/sonarr
       tsx:
         specifier: 4.23.13
         version: 4.23.13

@@ -7,7 +7,7 @@ const shared = {
   target: "node24",
   packages: "bundle",
   legalComments: "none",
-  external: ["pg", "pg-native"],
+  external: ["pg", "pg-native", "argon2"],
   banner: {
     js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
   },

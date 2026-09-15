@@ -14,6 +14,12 @@
     "@dashboard/automations": "workspace:*",
     "@dashboard/db": "workspace:*",
     "@dashboard/events": "workspace:*",
+    "@dashboard/integrations": "workspace:*",
+    "@dashboard/ntfy": "workspace:*",
+    "@dashboard/qbittorrent": "workspace:*",
+    "@dashboard/radarr": "workspace:*",
+    "@dashboard/secrets": "workspace:*",
+    "@dashboard/sonarr": "workspace:*",
     "tsx": "4.23.13"
   },
   "devDependencies": {

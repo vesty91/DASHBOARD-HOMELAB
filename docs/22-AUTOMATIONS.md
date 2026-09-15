@@ -1,6 +1,6 @@
 # 22 — Automations & alerting
 
-Statut : **IN PROGRESS** (22.3 scheduler).
+Statut : **IN PROGRESS** (22.4 actions).
 
 Phase 22. Migration `0007`. `schemaVersion` 7. Backup `formatVersion` 1.
 
@@ -33,7 +33,7 @@ Backup : schéma 7. Restore 5 → 6 → 7 et 6 → 7. Schéma 8+ rejeté.
 
 ## 22.2 Triggers et conditions
 
-IN PROGRESS côté scheduler (22.3). Moteur déclaratif livré :
+Moteur déclaratif livré :
 
 - schedule : `interval` (minimum 1 minute) et cron 5 champs **UTC** ;
 - event : `integration.status.changed`, `integration.data.changed`, `job.failed` ;
@@ -57,5 +57,19 @@ Le moteur tourne dans `apps/worker` (pas de daemon séparé).
 - Redis down : le schedule DB continue, ingest events `degraded` ;
 - `/health/ready` expose `automationScheduler` sans configs ni secrets.
 
-Le dispatcher 22.3 est `ACTION_NOT_WIRED` (skip, aucun side effect externe).
-22.4 branchera `runSafeIntegrationAction`.
+Le dispatcher réutilise `runSafeIntegrationAction` (22.4).
+Les actions hors registry restent `MANUAL_ONLY`.
+
+## 22.4 Safe automation actions
+
+Registry fermé. Default deny pour toute nouvelle action.
+
+Automation-allowed : `ntfy.publish`, `qbittorrent.pause` / `resume`,
+`sonarr.refresh-series` / `search-episode`, `radarr.refresh-movie` /
+`search-movie`.
+
+Manual-only : Proxmox start/shutdown/reboot, Seerr approve/decline.
+
+Chaque run revalide owner + `automation.run` + permission spécialisée via
+`runSafeIntegrationAction`. Audit `source=automation` avec `automationId` /
+`runId`. Pas de snapshot de privilèges.

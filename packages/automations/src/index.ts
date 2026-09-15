@@ -39,6 +39,20 @@ export {
 } from "./access";
 export { assertSafeAutomationJson, assertSafeOptionalAutomationJson } from "./json";
 export {
+  assertAutomationActionAllowed,
+  getAutomationActionPolicy,
+  isAutomationAllowedAction,
+  listAutomationAllowedActions,
+  type AutomationActionPolicy,
+  type AutomationActionRiskLevel,
+} from "./action-registry";
+export {
+  automationActionAuditMetadata,
+  createSafeAutomationDispatcher,
+  type AutomationDispatchInputWithOwner,
+  type SafeAutomationActionExecutor,
+} from "./safe-dispatch";
+export {
   AUTOMATION_EVENT_TYPES,
   AUTOMATION_MAX_INTERVAL_MINUTES,
   AUTOMATION_MIN_INTERVAL_MINUTES,
