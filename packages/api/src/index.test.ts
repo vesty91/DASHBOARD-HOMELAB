@@ -1462,7 +1462,12 @@ describe("qbittorrent tRPC router", () => {
 
   it("returns a bounded overview DTO without SID, password or torrent names", async () => {
     const qbittorrentService = {
-      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      permissions: vi.fn(() => ({
+        canRead: true,
+        canManage: false,
+        canPause: false,
+        canResume: false,
+      })),
       listIntegrations: vi.fn(async () => [
         { id: integrationId, name: "qBittorrent Lab", enabled: true },
       ]),
@@ -1488,6 +1493,64 @@ describe("qbittorrent tRPC router", () => {
     await expect(caller.qbittorrent.overview.get({ integrationId })).resolves.toEqual(overviewDto);
     expect(JSON.stringify(overviewDto)).not.toMatch(
       /SID|password|username|magnet|hash|save_path|tracker|Secret/u,
+    );
+  });
+
+  it("audits torrent pause and resume without names, SID or password", async () => {
+    const record = vi.fn(async () => undefined);
+    const hash = "8c212779b4abde7c6bc608063a0d008b7e40ce32";
+    const actionDto = {
+      status: "accepted" as const,
+      action: "qbittorrent.pause",
+      resourceId: hash,
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const qbittorrentService = {
+      permissions: vi.fn(() => ({
+        canRead: true,
+        canManage: false,
+        canPause: true,
+        canResume: true,
+      })),
+      pauseTorrents: vi.fn(async () => actionDto),
+      resumeTorrents: vi.fn(async () => ({ ...actionDto, action: "qbittorrent.resume" })),
+    } as unknown as QbittorrentService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      qbittorrent: qbittorrentService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    await expect(
+      caller.qbittorrent.torrents.pause({ integrationId, hashes: [hash] }),
+    ).resolves.toEqual(actionDto);
+    await expect(
+      caller.qbittorrent.torrents.pause({ integrationId, hashes: ["all"] }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "qbittorrent.pause",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "qbittorrent",
+          action: "qbittorrent.pause",
+          resourceId: hash,
+          result: "accepted",
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(
+      /SID|password|username|Secret\.Movie|magnet|save_path/u,
     );
   });
 });

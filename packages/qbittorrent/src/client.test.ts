@@ -6,6 +6,7 @@ import {
 } from "@dashboard/integrations";
 import {
   fetchQbittorrentOverview,
+  postQbittorrentTorrentAction,
   qbittorrentContextFromIntegration,
   testQbittorrentConnection,
 } from "./client";
@@ -214,5 +215,28 @@ describe("qbittorrent client", () => {
       reason: "timeout",
     });
     expect(overview.version.data?.version).toBe("v4.6.5");
+  });
+
+  it("posts hashes in the form body and falls back from v5 stop to v4 pause", async () => {
+    const hash = "8c212779b4abde7c6bc608063a0d008b7e40ce32";
+    const paths: string[] = [];
+    const request = vi.fn(async (options: SecureHttpRequest) => {
+      const url = new URL(String(options.url));
+      paths.push(url.pathname);
+      expect(url.search).toBe("");
+      expect(url.toString()).not.toContain(hash);
+      if (url.pathname === "/api/v2/torrents/stop") {
+        expect(options.method).toBe("POST");
+        expect(options.body).toBe(new URLSearchParams({ hashes: hash }).toString());
+        expect(options.body).not.toContain("all");
+        return text("Not Found", 404);
+      }
+      if (url.pathname === "/api/v2/torrents/pause") return text("Ok.");
+      return officialPayloads(options);
+    });
+    await postQbittorrentTorrentAction(context(request), "pause", [hash]);
+    expect(paths).toContain("/api/v2/torrents/stop");
+    expect(paths).toContain("/api/v2/torrents/pause");
+    expect(paths).toContain("/api/v2/auth/logout");
   });
 });

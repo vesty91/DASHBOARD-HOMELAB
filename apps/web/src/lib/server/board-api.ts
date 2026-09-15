@@ -173,6 +173,8 @@ const globalRuntime = globalThis as typeof globalThis & {
     qbittorrentRefreshRateLimiter: MemoryQbittorrentRefreshRateLimiter;
     qbittorrentRefreshFence: MemoryQbittorrentRefreshFence;
     qbittorrentOverviewCoalescer: MemoryQbittorrentOverviewCoalescer;
+    qbittorrentActionRateLimiter: MemorySafeActionRateLimiter;
+    qbittorrentActionInFlight: MemorySafeActionInFlightGuard;
     seerrRefreshRateLimiter: MemorySeerrRefreshRateLimiter;
     seerrRefreshFence: MemorySeerrRefreshFence;
     seerrOverviewCoalescer: MemorySeerrOverviewCoalescer;
@@ -327,6 +329,8 @@ function integrationRuntime() {
     qbittorrentRefreshRateLimiter: new MemoryQbittorrentRefreshRateLimiter(),
     qbittorrentRefreshFence: new MemoryQbittorrentRefreshFence(),
     qbittorrentOverviewCoalescer: new MemoryQbittorrentOverviewCoalescer(),
+    qbittorrentActionRateLimiter: new MemorySafeActionRateLimiter(),
+    qbittorrentActionInFlight: new MemorySafeActionInFlightGuard(),
     seerrRefreshRateLimiter: new MemorySeerrRefreshRateLimiter(),
     seerrRefreshFence: new MemorySeerrRefreshFence(),
     seerrOverviewCoalescer: new MemorySeerrOverviewCoalescer(),
@@ -479,6 +483,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.qbittorrentRefreshRateLimiter,
     refreshFence: runtime.qbittorrentRefreshFence,
     overviewCoalescer: runtime.qbittorrentOverviewCoalescer,
+    actionRateLimiter: runtime.qbittorrentActionRateLimiter,
+    inFlight: runtime.qbittorrentActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "qbittorrent",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   const seerr = createSeerrService({

@@ -86,6 +86,10 @@ test("creates a qBittorrent integration without leaking SID or password from the
   await expect(page.getByRole("heading", { level: 1, name: "qBittorrent Lab" })).toBeVisible();
   await expect(page.getByText("qBittorrent", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Actions torrents" })).toBeVisible();
+  await expect(page.getByLabel("Hashs")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mettre en pause" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reprendre" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|identifiants|Identifiants/i).first(),
   ).toBeVisible({ timeout: 30_000 });

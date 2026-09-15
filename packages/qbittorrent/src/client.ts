@@ -2,10 +2,15 @@ import { IntegrationError, type IntegrationClientContext } from "@dashboard/inte
 import { isQbittorrentLoginOk, mapTorrents, mapTransfer, mapVersion, parseJsonValue } from "./dto";
 import { QbittorrentError, sectionReasonFromError, toIntegrationError } from "./errors";
 import {
+  QBITTORRENT_TORRENTS_PAUSE_PATH,
+  QBITTORRENT_TORRENTS_RESUME_PATH,
+  QBITTORRENT_TORRENTS_START_PATH,
+  QBITTORRENT_TORRENTS_STOP_PATH,
   QBITTORRENT_TORRENTS_PATH,
   QBITTORRENT_TRANSFER_PATH,
   QBITTORRENT_VERSION_PATH,
 } from "./policy";
+import { qbittorrentHashesFormBody } from "./hashes";
 import type { QbittorrentConfig, QbittorrentSecrets } from "./schemas";
 import { parseQbittorrentSid } from "./sid";
 import {
@@ -15,6 +20,7 @@ import {
   qbittorrentFetch,
   qbittorrentLogin,
   qbittorrentLogout,
+  qbittorrentPostForm,
   type QbittorrentRequestFn,
   type QbittorrentTransportContext,
 } from "./transport";
@@ -179,6 +185,29 @@ function throwFromSectionReason(reason: QbittorrentSectionReason): never {
       throw new IntegrationError("INVALID_RESPONSE", String(_exhaustive));
     }
   }
+}
+
+export async function postQbittorrentTorrentAction(
+  ctx: QbittorrentClientContext,
+  action: "pause" | "resume",
+  hashes: readonly string[],
+): Promise<void> {
+  const primary =
+    action === "pause" ? QBITTORRENT_TORRENTS_STOP_PATH : QBITTORRENT_TORRENTS_START_PATH;
+  const fallback =
+    action === "pause" ? QBITTORRENT_TORRENTS_PAUSE_PATH : QBITTORRENT_TORRENTS_RESUME_PATH;
+  const body = qbittorrentHashesFormBody(hashes);
+  await withSession(ctx, async (sid) => {
+    try {
+      await qbittorrentPostForm(ctx.request, ctx, primary, sid, body);
+    } catch (error) {
+      const notFound =
+        (error instanceof QbittorrentError && error.kind === "NOT_FOUND") ||
+        (error instanceof IntegrationError && error.code === "NOT_FOUND");
+      if (!notFound) throw error;
+      await qbittorrentPostForm(ctx.request, ctx, fallback, sid, body);
+    }
+  });
 }
 
 export async function fetchQbittorrentOverview(

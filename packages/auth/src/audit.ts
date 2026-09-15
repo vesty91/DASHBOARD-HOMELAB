@@ -22,6 +22,8 @@ export const AUDIT_ACTIONS = [
   "proxmox.start",
   "proxmox.shutdown",
   "proxmox.reboot",
+  "qbittorrent.pause",
+  "qbittorrent.resume",
   "backup.export",
   "backup.validate",
   "backup.restore",

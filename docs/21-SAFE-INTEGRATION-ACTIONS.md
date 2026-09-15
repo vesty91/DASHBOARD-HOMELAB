@@ -12,7 +12,8 @@ Toute mutation externe passe par `runSafeIntegrationAction`
 
 1. Session authentifiée (`UNAUTHORIZED` sinon).
 2. `integration.interact` **ou** `integration.manage`.
-3. Permission **spécialisée** explicite (`docker.start`, plus tard `proxmox.start`, …).
+3. Permission **spécialisée** explicite (`docker.start`, `proxmox.start`,
+   `qbittorrent.pause`, …).
 4. Type d'intégration attendu.
 5. Entrées Zod / IDs bornés.
 6. Méthode **POST** uniquement ; chemin construit puis **allowlist exacte**.
@@ -66,7 +67,7 @@ architecture.
 
 ## Hors scope de 21.1
 
-Implémentation qBittorrent / ntfy / *arr / Seerr : PRs suivantes.
+Implémentation ntfy / *arr / Seerr : PRs suivantes.
 Grafana et Custom API restent en lecture seule.
 
 ## 21.2 Proxmox power
@@ -75,3 +76,11 @@ Livré : `proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` sur QEMU et LXC
 via `POST /api2/json/nodes/{node}/{qemu|lxc}/{vmid}/status/{start|shutdown|reboot}`.
 GET `status/current` pour l'idempotence. Pas de force stop, destroy, snapshot,
 migration, clone, console ni config update.
+
+## 21.3 qBittorrent pause / resume
+
+Livré : `qbittorrent.pause` / `qbittorrent.resume` sur des hashs explicites
+(1–8, hex 40 ou 64). `POST /api/v2/torrents/stop` et `/start` (WebUI v5) avec
+repli `/pause` et `/resume` (v4) si 404. Hashes dans le corps form-urlencoded,
+jamais en query, jamais `all`. Widget `qbittorrent-transfer` inchangé (lecture
+seule). Pas de delete, add, recheck, rename, preferences.

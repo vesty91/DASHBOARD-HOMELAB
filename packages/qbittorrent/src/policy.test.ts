@@ -3,6 +3,10 @@ import {
   QBITTORRENT_LOGIN_PATH,
   QBITTORRENT_LOGOUT_PATH,
   QBITTORRENT_TORRENTS_PATH,
+  QBITTORRENT_TORRENTS_PAUSE_PATH,
+  QBITTORRENT_TORRENTS_RESUME_PATH,
+  QBITTORRENT_TORRENTS_START_PATH,
+  QBITTORRENT_TORRENTS_STOP_PATH,
   QBITTORRENT_TRANSFER_PATH,
   QBITTORRENT_VERSION_PATH,
   assertQbittorrentBaseUrl,
@@ -23,7 +27,7 @@ describe("qbittorrent policy", () => {
     ).toThrow(/query or fragment/i);
   });
 
-  it("allows only the Phase 18 qBittorrent endpoints", () => {
+  it("allows only the documented qBittorrent endpoints", () => {
     assertQbittorrentEndpointAllowed(
       "POST",
       `https://qbittorrent.lab:8080${QBITTORRENT_LOGIN_PATH}`,
@@ -43,6 +47,22 @@ describe("qbittorrent policy", () => {
     assertQbittorrentEndpointAllowed(
       "GET",
       `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_PATH}`,
+    );
+    assertQbittorrentEndpointAllowed(
+      "POST",
+      `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_STOP_PATH}`,
+    );
+    assertQbittorrentEndpointAllowed(
+      "POST",
+      `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_START_PATH}`,
+    );
+    assertQbittorrentEndpointAllowed(
+      "POST",
+      `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_PAUSE_PATH}`,
+    );
+    assertQbittorrentEndpointAllowed(
+      "POST",
+      `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_RESUME_PATH}`,
     );
     expect(() =>
       assertQbittorrentEndpointAllowed(
@@ -65,6 +85,18 @@ describe("qbittorrent policy", () => {
     expect(() =>
       assertQbittorrentEndpointAllowed("POST", "https://qbittorrent.lab:8080/api/v2/torrents/add"),
     ).toThrow(/allowlist/i);
+    expect(() =>
+      assertQbittorrentEndpointAllowed(
+        "POST",
+        "https://qbittorrent.lab:8080/api/v2/torrents/delete",
+      ),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertQbittorrentEndpointAllowed(
+        "POST",
+        `https://qbittorrent.lab:8080${QBITTORRENT_TORRENTS_STOP_PATH}?hashes=all`,
+      ),
+    ).toThrow(/query parameters/i);
     expect(() =>
       assertQbittorrentEndpointAllowed("GET", "https://qbittorrent.lab:8080/api/v2/sync/maindata"),
     ).toThrow(/allowlist/i);

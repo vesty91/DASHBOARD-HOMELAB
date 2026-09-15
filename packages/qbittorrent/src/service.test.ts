@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   IntegrationError,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   createIntegrationRegistry,
   type EncryptedSecretRow,
   type IntegrationRecord,
@@ -18,17 +20,20 @@ import { MemoryQbittorrentRefreshFence } from "./refresh-fence";
 import { createQbittorrentService } from "./service";
 
 const INTEGRATION_ID = "11111111-1111-4111-8111-111111111111";
+const DOCKER_ID = "22222222-2222-4222-8222-222222222222";
 const KEY = Buffer.alloc(32, 9).toString("base64");
 const USERNAME = "admin";
 const PASSWORD = "correct-horse-battery-staple";
 const SID = "QB-SID-SUPER-SECRET-001";
+const HASH = "8c212779b4abde7c6bc608063a0d008b7e40ce32";
+const ACTION = { integrationId: INTEGRATION_ID, hashes: [HASH] };
 
 const systemAdmin = {
   userId: "00000000-0000-4000-8000-000000000001",
   subject: { status: "active" as const, isSystemAdmin: true },
 };
 
-function actor(permissions: readonly string[]) {
+function actorFor(permissions: readonly string[]) {
   return {
     userId: "00000000-0000-4000-8000-000000000099",
     subject: {
@@ -38,6 +43,8 @@ function actor(permissions: readonly string[]) {
     },
   };
 }
+
+const torrentActor = actorFor(["integration.interact", "qbittorrent.pause", "qbittorrent.resume"]);
 
 function text(body: string, status = 200, setCookie?: readonly string[]): SecureHttpResult {
   return {
@@ -53,7 +60,7 @@ function json(body: unknown, status = 200): SecureHttpResult {
   return { ok: true, status, body: Buffer.from(JSON.stringify(body)), latencyMs: 4 };
 }
 
-function createMemoryStore(): {
+function createMemoryStore(extra: IntegrationRecord[] = []): {
   store: IntegrationStore;
   keyring: SecretKeyring;
 } {
@@ -73,7 +80,10 @@ function createMemoryStore(): {
     createdAt: new Date(0),
     updatedAt: new Date(0),
   };
-  const rows = new Map<string, IntegrationRecord>([[row.id, row]]);
+  const rows = new Map<string, IntegrationRecord>([
+    [row.id, row],
+    ...extra.map((item) => [item.id, item] as const),
+  ]);
   const secrets: EncryptedSecretRow[] = [
     {
       key: "username",
@@ -139,21 +149,37 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
   if (pathname === "/api/v2/app/version") return text(`v4.6.5-${PASSWORD}`);
   if (pathname === "/api/v2/transfer/info")
     return json({ dl_info_speed: 100, up_info_speed: 20, connection_status: "firewalled" });
+  if (
+    pathname === "/api/v2/torrents/stop" ||
+    pathname === "/api/v2/torrents/start" ||
+    pathname === "/api/v2/torrents/pause" ||
+    pathname === "/api/v2/torrents/resume"
+  )
+    return text("Ok.");
   return json([{ name: "Secret.Movie", hash: SID, state: "downloading" }]);
 }
 
 function serviceWith(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   store = createMemoryStore(),
+  extras: {
+    cache?: MemoryIntegrationCache;
+    actionRateLimiter?: MemorySafeActionRateLimiter;
+    inFlight?: MemorySafeActionInFlightGuard;
+    publish?: (integrationId: string) => Promise<void>;
+  } = {},
 ) {
   return createQbittorrentService({
     store: store.store,
     registry: createIntegrationRegistry().register(qbittorrentIntegrationDefinition),
-    cache: new MemoryIntegrationCache(),
+    cache: extras.cache ?? new MemoryIntegrationCache(),
     request,
     refreshRateLimiter: new MemoryQbittorrentRefreshRateLimiter(),
     refreshFence: new MemoryQbittorrentRefreshFence(),
     overviewCoalescer: new MemoryQbittorrentOverviewCoalescer(),
+    actionRateLimiter: extras.actionRateLimiter ?? new MemorySafeActionRateLimiter(),
+    inFlight: extras.inFlight ?? new MemorySafeActionInFlightGuard(),
+    ...(extras.publish ? { publish: extras.publish } : {}),
     keyring: store.keyring,
   });
 }
@@ -188,15 +214,15 @@ describe("createQbittorrentService", () => {
   it("requires integration.use and qbittorrent.read together", async () => {
     const service = serviceWith(async (options) => officialPayloads(options));
     await expect(
-      service.getOverview(INTEGRATION_ID, actor(["qbittorrent.read"])),
+      service.getOverview(INTEGRATION_ID, actorFor(["qbittorrent.read"])),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
     await expect(
-      service.getOverview(INTEGRATION_ID, actor(["integration.use"])),
+      service.getOverview(INTEGRATION_ID, actorFor(["integration.use"])),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(
-      service.getOverview(INTEGRATION_ID, actor(DEFAULT_ROLE_PERMISSIONS.ADMIN)),
+      service.getOverview(INTEGRATION_ID, actorFor(DEFAULT_ROLE_PERMISSIONS.ADMIN)),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
@@ -250,11 +276,199 @@ describe("createQbittorrentService", () => {
       refreshRateLimiter: limiter,
       refreshFence: new MemoryQbittorrentRefreshFence(),
       overviewCoalescer: new MemoryQbittorrentOverviewCoalescer(),
+      actionRateLimiter: new MemorySafeActionRateLimiter(),
+      inFlight: new MemorySafeActionInFlightGuard(),
       keyring: store.keyring,
     });
     await service.refreshOverview(INTEGRATION_ID, systemAdmin);
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("pauses and resumes selected hashes via v5 stop/start without listing names", async () => {
+    const paths: string[] = [];
+    const bodies: string[] = [];
+    const service = serviceWith(async (options) => {
+      const pathname = new URL(String(options.url)).pathname;
+      paths.push(`${options.method ?? "GET"} ${pathname}`);
+      if (options.body) bodies.push(String(options.body));
+      expect(new URL(String(options.url)).search).toBe("");
+      return officialPayloads(options);
+    });
+    await expect(service.pauseTorrents(ACTION, torrentActor)).resolves.toMatchObject({
+      status: "accepted",
+      action: "qbittorrent.pause",
+      resourceId: HASH,
+    });
+    await expect(service.resumeTorrents(ACTION, torrentActor)).resolves.toMatchObject({
+      status: "accepted",
+      action: "qbittorrent.resume",
+      resourceId: HASH,
+    });
+    expect(paths).toContain("POST /api/v2/torrents/stop");
+    expect(paths).toContain("POST /api/v2/torrents/start");
+    expect(bodies.some((body) => body.includes(`hashes=${HASH}`))).toBe(true);
+    expect(bodies.join("\n")).not.toContain("all");
+    expect(bodies.join("\n")).not.toContain("Secret.Movie");
+  });
+
+  it("falls back to v4 pause/resume when v5 endpoints are missing", async () => {
+    const paths: string[] = [];
+    const service = serviceWith(async (options) => {
+      const pathname = new URL(String(options.url)).pathname;
+      paths.push(pathname);
+      if (pathname === "/api/v2/torrents/stop" || pathname === "/api/v2/torrents/start")
+        return text("Not Found", 404);
+      return officialPayloads(options);
+    });
+    await service.pauseTorrents(ACTION, torrentActor);
+    await service.resumeTorrents(ACTION, torrentActor);
+    expect(paths).toContain("/api/v2/torrents/pause");
+    expect(paths).toContain("/api/v2/torrents/resume");
+  });
+
+  it("denies read-only, manage-only, and specialized permission without interact", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    await expect(
+      service.pauseTorrents(ACTION, actorFor(["integration.use", "qbittorrent.read"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.pauseTorrents(ACTION, actorFor(["integration.manage"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.pauseTorrents(ACTION, actorFor(["integration.use", "qbittorrent.pause"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.resumeTorrents(ACTION, actorFor(["integration.interact", "qbittorrent.pause"])),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects wrong integration type, malformed hashes, all, and stale config", async () => {
+    const store = createMemoryStore([
+      {
+        id: DOCKER_ID,
+        type: "docker",
+        name: "Docker",
+        baseUrl: "http://127.0.0.1:2375/",
+        enabled: true,
+        config: {},
+        status: "unknown",
+        lastCheckedAt: null,
+        configRevision: 1,
+        createdBy: null,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      },
+    ]);
+    const service = serviceWith(async (options) => officialPayloads(options), store);
+    await expect(
+      service.pauseTorrents({ ...ACTION, integrationId: DOCKER_ID }, torrentActor),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.pauseTorrents({ ...ACTION, hashes: ["all"] }, torrentActor),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(
+      service.pauseTorrents({ ...ACTION, hashes: ["not-a-hash"] }, torrentActor),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(
+      service.pauseTorrents({ ...ACTION, expectedConfigRevision: 9 }, torrentActor),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("rate limits and blocks double-submit on the same torrent action", async () => {
+    const limiter = new MemorySafeActionRateLimiter(1, 60_000, () => 1_000);
+    const limited = serviceWith(async (options) => officialPayloads(options), createMemoryStore(), {
+      actionRateLimiter: limiter,
+    });
+    await limited.pauseTorrents(ACTION, torrentActor);
+    await expect(limited.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const inFlight = new MemorySafeActionInFlightGuard();
+    const hanging = serviceWith(
+      async (options) => {
+        const pathname = new URL(String(options.url)).pathname;
+        if (pathname === "/api/v2/torrents/stop") await gate;
+        return officialPayloads(options);
+      },
+      createMemoryStore(),
+      { inFlight },
+    );
+    const first = hanging.pauseTorrents(ACTION, torrentActor);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await expect(hanging.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    release?.();
+    await expect(first).resolves.toMatchObject({ status: "accepted" });
+  });
+
+  it("maps timeout, 401, 403 and 500 without leaking the password or SID", async () => {
+    const timeout = serviceWith(async (options) => {
+      const pathname = new URL(String(options.url)).pathname;
+      if (pathname === "/api/v2/auth/login") return officialPayloads(options);
+      return { ok: false, code: "TIMEOUT", latencyMs: 1 };
+    });
+    await expect(timeout.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "TIMEOUT",
+    });
+    const unauthorized = serviceWith(async () => text(`denied ${PASSWORD} ${SID}`, 401));
+    await expect(unauthorized.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    try {
+      await unauthorized.pauseTorrents(ACTION, torrentActor);
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain(PASSWORD);
+      expect(JSON.stringify(error)).not.toContain(SID);
+    }
+    const forbidden = serviceWith(async (options) => {
+      const pathname = new URL(String(options.url)).pathname;
+      if (pathname === "/api/v2/auth/login") return officialPayloads(options);
+      return text("denied", 403);
+    });
+    await expect(forbidden.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    const failed = serviceWith(async (options) => {
+      const pathname = new URL(String(options.url)).pathname;
+      if (pathname === "/api/v2/auth/login") return officialPayloads(options);
+      if (pathname === "/api/v2/auth/logout") return officialPayloads(options);
+      return text("boom", 500);
+    });
+    await expect(failed.pauseTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "INVALID_RESPONSE",
+    });
+  });
+
+  it("invalidates cache and publishes realtime only after a successful action", async () => {
+    const cache = new MemoryIntegrationCache();
+    let published = 0;
+    const service = serviceWith(async (options) => officialPayloads(options), createMemoryStore(), {
+      cache,
+      publish: async () => {
+        published += 1;
+      },
+    });
+    await service.getOverview(INTEGRATION_ID, systemAdmin);
+    expect(cache.size).toBeGreaterThan(0);
+    await service.pauseTorrents(ACTION, torrentActor);
+    expect(cache.size).toBe(0);
+    expect(published).toBe(1);
+    const failing = serviceWith(async () => text(`denied ${PASSWORD}`, 401), createMemoryStore(), {
+      publish: async () => {
+        published += 1;
+      },
+    });
+    await expect(failing.resumeTorrents(ACTION, torrentActor)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(published).toBe(1);
   });
 });

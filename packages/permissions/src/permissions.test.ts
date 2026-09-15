@@ -49,6 +49,8 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("radarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prowlarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("qbittorrent.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("qbittorrent.pause");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("qbittorrent.resume");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("seerr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("custom-api.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
@@ -72,6 +74,8 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "radarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "prowlarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.pause")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "qbittorrent.resume")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "seerr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "custom-api.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.start")).toBe(true);

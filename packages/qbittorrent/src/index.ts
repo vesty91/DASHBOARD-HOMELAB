@@ -9,6 +9,7 @@ export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   fetchQbittorrentOverview,
+  postQbittorrentTorrentAction,
   qbittorrentContextFromIntegration,
   testQbittorrentConnection,
 } from "./client";
@@ -40,11 +41,21 @@ export {
   QBITTORRENT_LOGIN_PATH,
   QBITTORRENT_LOGOUT_PATH,
   QBITTORRENT_TORRENTS_PATH,
+  QBITTORRENT_TORRENTS_PAUSE_PATH,
+  QBITTORRENT_TORRENTS_RESUME_PATH,
+  QBITTORRENT_TORRENTS_START_PATH,
+  QBITTORRENT_TORRENTS_STOP_PATH,
   QBITTORRENT_TRANSFER_PATH,
   QBITTORRENT_VERSION_PATH,
   assertQbittorrentBaseUrl,
   assertQbittorrentEndpointAllowed,
 } from "./policy";
+export {
+  QBITTORRENT_HASH_MAX,
+  normalizeQbittorrentHashes,
+  qbittorrentHashesFormBody,
+  qbittorrentHashesResourceId,
+} from "./hashes";
 export {
   QBITTORRENT_OVERVIEW_COALESCER_MAX_IN_FLIGHT,
   MemoryQbittorrentOverviewCoalescer,
@@ -64,7 +75,10 @@ export {
   qbittorrentIntegrationInputSchema,
   qbittorrentPasswordSchema,
   qbittorrentSecretSchema,
+  qbittorrentTorrentActionInputSchema,
+  qbittorrentTorrentHashSchema,
   qbittorrentUsernameSchema,
+  type QbittorrentTorrentActionInput,
 } from "./schemas";
 export {
   createQbittorrentService,
@@ -81,6 +95,7 @@ export {
   qbittorrentLogin,
   qbittorrentLoginBody,
   qbittorrentLogout,
+  qbittorrentPostForm,
 } from "./transport";
 export type {
   QbittorrentActor,

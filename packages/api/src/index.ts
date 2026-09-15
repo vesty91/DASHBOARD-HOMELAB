@@ -48,7 +48,11 @@ import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashb
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
 import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
 import { prowlarrIntegrationInputSchema, type ProwlarrService } from "@dashboard/prowlarr";
-import { qbittorrentIntegrationInputSchema, type QbittorrentService } from "@dashboard/qbittorrent";
+import {
+  qbittorrentIntegrationInputSchema,
+  qbittorrentTorrentActionInputSchema,
+  type QbittorrentService,
+} from "@dashboard/qbittorrent";
 import { seerrIntegrationInputSchema, type SeerrService } from "@dashboard/seerr";
 import {
   customApiIntegrationInputSchema,
@@ -259,6 +263,21 @@ function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function qbittorrentTorrentAuditMetadata(
+  integrationId: string,
+  result: { action: string; resourceId: string; status: "success" | "accepted" | "failed" },
+): Record<string, unknown> {
+  return {
+    ...safeActionAuditMetadata({
+      integrationId,
+      integrationType: "qbittorrent",
+      action: result.action,
+      resourceId: result.resourceId,
+      result: result.status,
+    }),
+  };
 }
 
 function proxmoxGuestAuditMetadata(
@@ -907,6 +926,36 @@ export const qbittorrentRouter = t.router({
       .mutation(({ ctx, input }) =>
         procedure(() => ctx.qbittorrent.refreshOverview(input.integrationId, ctx.actor)),
       ),
+  }),
+  torrents: t.router({
+    pause: t.procedure.input(qbittorrentTorrentActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.qbittorrent.pauseTorrents(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "qbittorrent.pause",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: qbittorrentTorrentAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+    resume: t.procedure.input(qbittorrentTorrentActionInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.qbittorrent.resumeTorrents(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "qbittorrent.resume",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: qbittorrentTorrentAuditMetadata(input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
   }),
 });
 export const seerrRouter = t.router({

@@ -22,6 +22,7 @@ import type {
 import type {
   QbittorrentIntegrationMetadata,
   QbittorrentOverview,
+  QbittorrentPermissionsView,
   QbittorrentSectionReason,
 } from "@dashboard/qbittorrent";
 import type { SeerrIntegrationMetadata, SeerrOverview, SeerrSectionReason } from "@dashboard/seerr";
@@ -90,6 +91,7 @@ import { prowlarrUserError } from "../prowlarr-error";
 import { ProwlarrRefreshButton } from "../prowlarr-refresh-button";
 import { qbittorrentUserError } from "../qbittorrent-error";
 import { QbittorrentRefreshButton } from "../qbittorrent-refresh-button";
+import { QbittorrentTorrentActions } from "../qbittorrent-torrent-actions";
 import { seerrUserError } from "../seerr-error";
 import { SeerrRefreshButton } from "../seerr-refresh-button";
 import { customApiUserError } from "../custom-api-error";
@@ -1822,7 +1824,8 @@ async function QbittorrentOverviewPanel({
         <>
           <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
           <p className="ui-muted">
-            Compteurs uniquement. Aucun nom de torrent, aucun hash, aucun magnet. Lecture seule.
+            Compteurs uniquement. Aucun nom de torrent n&apos;est listé. Les actions pause/reprise
+            se font par hash saisi.
           </p>
           <section className="qbittorrent-version">
             <h2>Version</h2>
@@ -1878,10 +1881,16 @@ async function QbittorrentIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: QbittorrentPermissionsView = await caller.qbittorrent.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="qBittorrent" />
       <QbittorrentRefreshButton integrationId={id} />
+      <QbittorrentTorrentActions
+        integrationId={id}
+        canPause={permissions.canPause}
+        canResume={permissions.canResume}
+      />
       <Suspense fallback={<p className="ui-muted">Chargement de qBittorrent…</p>}>
         <QbittorrentOverviewPanel id={id} caller={caller} />
       </Suspense>

@@ -21,7 +21,11 @@ import {
 
 export const QBITTORRENT_INTEGRATION_ID = "qbittorrent";
 export const QBITTORRENT_INTEGRATION_VERSION = 1;
-export const QBITTORRENT_CAPABILITIES = ["status.read"] as const;
+export const QBITTORRENT_CAPABILITIES = [
+  "status.read",
+  "torrents.pause",
+  "torrents.resume",
+] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof QbittorrentError) return toIntegrationError(error).code;
@@ -42,7 +46,7 @@ export function createQbittorrentIntegrationDefinition(): IntegrationDefinition<
     displayName: "qBittorrent",
     version: QBITTORRENT_INTEGRATION_VERSION,
     description:
-      "Débits et compteurs de torrents qBittorrent via l'API WebUI officielle v2 en lecture seule.",
+      "Débits, compteurs et pause/reprise ciblés de torrents qBittorrent via l'API WebUI officielle v2.",
     configSchema: qbittorrentConfigSchema,
     secretSchema: qbittorrentSecretSchema,
     capabilities: QBITTORRENT_CAPABILITIES,

@@ -495,9 +495,12 @@ Statut : COMPLETE (Phase 18.7).
 
 Adapter `qbittorrent` composé dans `apps/web`. Transport HTTP(S) vers l'origine
 qBittorrent. Auth cookie de session (`POST /api/v2/auth/login`, cookie `SID`
-éphémère). Lecture seule `GET /api/v2/app/version`, `GET /api/v2/transfer/info`,
-`GET /api/v2/torrents/info`. Voir ADR 0026. GET login, `apikey`/`password`/`sid`
-en query et mutations torrent sont hors scope.
+éphémère). Lecture `GET /api/v2/app/version`, `GET /api/v2/transfer/info`,
+`GET /api/v2/torrents/info`. Mutations ciblées Phase 21 : `POST /api/v2/torrents/stop`
+et `/start` (qBittorrent 5) avec repli `/pause` et `/resume` (v4) sur 404.
+Hashes en corps `application/x-www-form-urlencoded` uniquement, jamais en query,
+jamais `all`, max 8. Voir ADR 0026. GET login et `apikey`/`password`/`sid` en
+query restent interdits. Delete, add, preferences et rename restent hors scope.
 
 `qbittorrent.integration.get` expose uniquement `{ id, name, enabled }` aux
 lecteurs qBittorrent (`integration.use|manage` + `qbittorrent.read`).
@@ -507,8 +510,9 @@ omettent `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record
 
 Widget `qbittorrent-transfer` : `publicSafe=false`. Refresh manuel 10/min. Cache
 overview 8 s (5 s si partiel). Cookie `SID` et mot de passe jamais renvoyés.
-Aucune mutation. Aucune fake data. Noms, hashs, magnets, chemins et trackers
-jamais exposés.
+Le widget `qbittorrent-transfer` reste en lecture seule (compteurs). Pause/resume
+passent par le formulaire d'intégration (hash explicite). Aucune fake data. Noms,
+magnets, chemins et trackers jamais exposés.
 
 ## 18.8. Seerr
 
@@ -584,7 +588,7 @@ Pour chaque adapter :
 
 ## 21. Actions sûres
 
-Statut : IN PROGRESS (Phase 21.1 — framework).
+Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent).
 
 Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
 Default deny. POST allowlisté. Rate limit par acteur / intégration / action.

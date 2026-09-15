@@ -32,11 +32,13 @@ Uniquement :
 - `GET /api/v2/app/version` (texte brut, 64 caractères, secrets redactés)
 - `GET /api/v2/transfer/info` (vitesses uniquement)
 - `GET /api/v2/torrents/info` (compteurs d'état uniquement, cap 2000)
+- `POST /api/v2/torrents/stop` / `/start` (v5) et `/pause` / `/resume` (v4),
+  hashes en corps uniquement (Phase 21.3)
 
 Aucun paramètre de query. `maxRetries: 0`, `maxRedirects: 0`.
 
-Interdit : GET login, `apikey`/`password`/`sid` en query, POST hors login/logout,
-iframe, proxy générique.
+Interdit : GET login, `apikey`/`password`/`sid` en query, POST hors allowlist,
+iframe, proxy générique, `hashes=all`.
 
 ### 3. Cookie de session éphémère
 
@@ -70,3 +72,20 @@ ne l'obtient pas. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
 
 8 s si complet, 5 s si partiel, failures 15 s. Coalescer + fence. Refresh 10/min.
 Le SID n'entre jamais dans la clé ni le payload de cache.
+
+## Amendement Phase 21.3
+
+Les mutations torrent restent **allowlistées et ciblées** :
+
+- `POST /api/v2/torrents/stop` et `/start` (qBittorrent 5.0 WebUI)
+- repli `POST /api/v2/torrents/pause` et `/resume` (v4) uniquement si le
+  endpoint v5 répond 404
+- corps `hashes=` via `URLSearchParams`, jamais en query, jamais `all`, max 8
+  hashs hex 40 ou 64
+
+Permissions : `qbittorrent.pause` et `qbittorrent.resume` en conjonction de
+`integration.interact|manage`. `qbittorrent.read` et `integration.manage` seuls
+ne suffisent pas.
+
+Toujours interdit : delete, add, set location, rename, recheck, reannounce,
+preferences, category/tracker mutation, proxy générique.

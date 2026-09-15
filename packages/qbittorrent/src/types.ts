@@ -28,6 +28,8 @@ export type QbittorrentTorrentBucket =
 export interface QbittorrentPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canPause: boolean;
+  readonly canResume: boolean;
 }
 
 export interface QbittorrentIntegrationMetadata {

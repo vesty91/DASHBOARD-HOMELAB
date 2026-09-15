@@ -48,4 +48,60 @@ describe("qbittorrent access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus the specialized pause or resume permission", () => {
+    expect(
+      qbittorrentPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }),
+    ).toEqual({ canRead: false, canManage: true, canPause: false, canResume: false });
+    expect(
+      qbittorrentPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.use", "qbittorrent.pause"],
+        },
+      }).canPause,
+    ).toBe(false);
+    expect(
+      qbittorrentPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "qbittorrent.pause"],
+        },
+      }).canPause,
+    ).toBe(true);
+    expect(
+      qbittorrentPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "qbittorrent.resume"],
+        },
+      }).canResume,
+    ).toBe(true);
+    expect(() =>
+      assertQbittorrentAccess(
+        {
+          userId: "u1",
+          subject: {
+            status: "active",
+            isSystemAdmin: false,
+            directPermissions: ["integration.interact", "qbittorrent.read"],
+          },
+        },
+        "pause",
+      ),
+    ).toThrow(/Permission denied/);
+  });
 });

@@ -254,6 +254,11 @@ Phase 18.7 : lecture qBittorrent exige (`integration.use` ou `integration.manage
 `/integrations/[id]` qBittorrent : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `qbittorrent.read`.
 
+Phase 21 : pause / resume de torrents ciblés exigent (`integration.interact` ou
+`integration.manage`) **et** `qbittorrent.pause` / `qbittorrent.resume`.
+`qbittorrent.read` et `integration.manage` seuls sont insuffisants. Confirmation UI
+obligatoire pour pause. Pas d'action `all`.
+
 Phase 18.8 : lecture Seerr exige (`integration.use` ou `integration.manage`) **et**
 `seerr.read`. Cette conjonction suffit pour `seerr.integration.get` et
 `/integrations/[id]` Seerr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
@@ -268,13 +273,13 @@ Phase 21 : une action d'intégration exige (`integration.interact` ou
 `integration.manage`) **et** la permission spécialisée de l'action. `*.read` et
 `integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 Les permissions d'action Proxmox (`proxmox.start`, `proxmox.shutdown`,
-`proxmox.reboot`) sont livrées en 21.2. qBittorrent / ntfy / *arr / Seerr
-suivent dans les PRs suivantes.
+`proxmox.reboot`) et qBittorrent (`qbittorrent.pause`, `qbittorrent.resume`)
+sont livrées. ntfy / *arr / Seerr suivent dans les PRs suivantes.
 
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
-`qbittorrent.read`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
+`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
 ## 10. Audit
@@ -284,7 +289,9 @@ groupes, permissions, intégrations, secrets (sans contenu), Docker, backup et
 sessions. Lecture `audit.read` avec pagination. Jamais de mot de passe, token,
 cookie ou clé API. Les actions Proxmox réussies journalisent
 `proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` avec
-`{ integrationId, integrationType, action, resourceId, result }`.
+`{ integrationId, integrationType, action, resourceId, result }`. Les actions
+qBittorrent réussies journalisent `qbittorrent.pause` / `qbittorrent.resume`
+avec le même DTO (hash ou identifiant de lot, jamais le nom du torrent).
 
 ## 11. Anti-bruteforce
 
