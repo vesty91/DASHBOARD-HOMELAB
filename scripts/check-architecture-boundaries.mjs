@@ -22,6 +22,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -48,6 +49,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
       "next",
       "react",
       "drizzle-orm",
@@ -95,6 +97,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -116,6 +119,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -137,6 +141,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -158,6 +163,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -179,6 +185,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -200,6 +207,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -221,6 +229,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -242,6 +251,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -263,6 +273,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -284,6 +295,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/ntfy",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -305,6 +317,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/grafana",
       "@dashboard/sonarr",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -326,6 +339,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/grafana",
       "@dashboard/ntfy",
       "@dashboard/radarr",
+      "@dashboard/prowlarr",
     ]),
   ],
   [
@@ -347,6 +361,29 @@ const forbiddenDependencies = new Map([
       "@dashboard/grafana",
       "@dashboard/ntfy",
       "@dashboard/sonarr",
+      "@dashboard/prowlarr",
+    ]),
+  ],
+  [
+    "packages/prowlarr/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
+      "@dashboard/jellyfin",
+      "@dashboard/immich",
+      "@dashboard/beszel",
+      "@dashboard/prometheus",
+      "@dashboard/uptime-kuma",
+      "@dashboard/proxmox",
+      "@dashboard/grafana",
+      "@dashboard/ntfy",
+      "@dashboard/sonarr",
+      "@dashboard/radarr",
     ]),
   ],
 ]);

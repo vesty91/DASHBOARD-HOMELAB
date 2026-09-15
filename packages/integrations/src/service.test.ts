@@ -807,6 +807,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("grafana.example");
   });
 
+  it("redacts Prowlarr generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "prowlarr",
+        displayName: "Prowlarr",
+      },
+    ]);
+    const prowlarr = await service.create(
+      {
+        type: "prowlarr",
+        name: "Prowlarr",
+        baseUrl: "https://prowlarr.example:9696",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(prowlarr.id, reader);
+    expect(restricted).toMatchObject({
+      id: prowlarr.id,
+      type: "prowlarr",
+      name: "Prowlarr",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("prowlarr.example");
+  });
+
   it("redacts Radarr generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

@@ -13,6 +13,7 @@ export const SERVICE_STATUS_SOURCE_TYPES = [
   "proxmox",
   "grafana",
   "ntfy",
+  "prowlarr",
   "radarr",
   "sonarr",
 ] as const;
@@ -40,7 +41,7 @@ function uniqueInOrder<T>(values: readonly T[]): T[] {
 }
 
 export const SERVICE_STATUS_ID_PATTERN =
-  /^(app|docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus|proxmox|grafana|ntfy|radarr|sonarr):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?::[a-f0-9]{64})?$/iu;
+  /^(app|docker|synology|jellyfin|immich|beszel|uptime-kuma|prometheus|proxmox|grafana|ntfy|prowlarr|radarr|sonarr):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?::[a-f0-9]{64})?$/iu;
 
 export const serviceStatusConfigSchema = z.object({
   selectedSources: z

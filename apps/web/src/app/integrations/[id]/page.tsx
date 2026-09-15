@@ -15,6 +15,11 @@ import type {
 } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyOverview, NtfySectionReason } from "@dashboard/ntfy";
 import type {
+  ProwlarrIntegrationMetadata,
+  ProwlarrOverview,
+  ProwlarrSectionReason,
+} from "@dashboard/prowlarr";
+import type {
   RadarrIntegrationMetadata,
   RadarrOverview,
   RadarrSectionReason,
@@ -69,6 +74,8 @@ import { grafanaUserError } from "../grafana-error";
 import { GrafanaRefreshButton } from "../grafana-refresh-button";
 import { ntfyUserError } from "../ntfy-error";
 import { NtfyRefreshButton } from "../ntfy-refresh-button";
+import { prowlarrUserError } from "../prowlarr-error";
+import { ProwlarrRefreshButton } from "../prowlarr-refresh-button";
 import { radarrUserError } from "../radarr-error";
 import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
@@ -105,6 +112,7 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "proxmox" ||
     integration.type === "grafana" ||
     integration.type === "ntfy" ||
+    integration.type === "prowlarr" ||
     integration.type === "radarr" ||
     integration.type === "sonarr"
   )
@@ -1559,6 +1567,144 @@ async function NtfyOverviewPanel({
   );
 }
 
+function prowlarrReasonLabel(reason: ProwlarrSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Prowlarr indisponible.";
+    case "permission-denied":
+      return "Permission Prowlarr insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Prowlarr.";
+    case "invalid-response":
+      return "Réponse Prowlarr invalide.";
+    case "unauthorized":
+      return "Clé API Prowlarr invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Prowlarr.";
+    case "dns":
+      return "Le serveur Prowlarr est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Prowlarr.";
+    case "unreachable":
+      return "Le serveur Prowlarr est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Prowlarr indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function ProwlarrOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: ProwlarrOverview | null = null;
+  try {
+    overview = await caller.prowlarr.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = prowlarrUserError(caught);
+  }
+  const system = overview?.system.data;
+  const health = overview?.health.data;
+  const indexer = overview?.indexer.data;
+  const indexerStatus = overview?.indexerStatus.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue Prowlarr partielle : certaines sections sont indisponibles.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Aucun nom d&apos;indexeur, aucune URL, aucune mutation. Lecture
+            seule.
+          </p>
+          <section className="prowlarr-system">
+            <h2>Système</h2>
+            {overview.system.status === "unavailable" ? (
+              <Alert tone="warning">{prowlarrReasonLabel(overview.system.reason)}</Alert>
+            ) : null}
+            <p>Version {system?.version ?? "Indisponible"}</p>
+            {system?.appName ? <p className="ui-muted">{system.appName}</p> : null}
+          </section>
+          <section className="prowlarr-indexer">
+            <h2>Indexeurs</h2>
+            {overview.indexer.status === "unavailable" ? (
+              <Alert tone="warning">{prowlarrReasonLabel(overview.indexer.reason)}</Alert>
+            ) : null}
+            <p>
+              {indexer
+                ? `${indexer.count} indexeurs · ${indexer.enabledCount} actifs`
+                : "Indexeurs indisponibles."}
+            </p>
+          </section>
+          <section className="prowlarr-indexerstatus">
+            <h2>Statuts</h2>
+            {overview.indexerStatus.status === "unavailable" ? (
+              <Alert tone="warning">{prowlarrReasonLabel(overview.indexerStatus.reason)}</Alert>
+            ) : null}
+            <p>
+              {indexerStatus
+                ? `${indexerStatus.count} statuts`
+                : "Statuts indexeurs indisponibles."}
+            </p>
+          </section>
+          <section className="prowlarr-health">
+            <h2>Santé</h2>
+            {overview.health.status === "unavailable" ? (
+              <Alert tone="warning">{prowlarrReasonLabel(overview.health.reason)}</Alert>
+            ) : null}
+            <p>
+              {health
+                ? `${health.error} erreurs · ${health.warning} avertissements`
+                : "Santé indisponible."}
+            </p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function ProwlarrIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: ProwlarrIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Prowlarr" />
+        <Alert tone="warning">Cette intégration Prowlarr est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Prowlarr" />
+      <ProwlarrRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Prowlarr…</p>}>
+        <ProwlarrOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function radarrReasonLabel(reason: RadarrSectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -2048,6 +2194,8 @@ export default async function IntegrationDetailPage({
         return <GrafanaIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "ntfy":
         return <NtfyIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "prowlarr":
+        return <ProwlarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "radarr":
         return <RadarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "sonarr":

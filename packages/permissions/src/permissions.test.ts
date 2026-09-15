@@ -31,7 +31,7 @@ describe("permission resolver", () => {
       ),
     ).toBe(false);
   });
-  it("does not grant Docker, Synology, Jellyfin, Immich, Beszel, Prometheus, Uptime Kuma, Proxmox, Grafana, ntfy, Sonarr or Radarr permissions to the default ADMIN role", () => {
+  it("does not grant Docker, Synology, Jellyfin, Immich, Beszel, Prometheus, Uptime Kuma, Proxmox, Grafana, ntfy, Sonarr, Radarr or Prowlarr permissions to the default ADMIN role", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("docker.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("synology.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("jellyfin.read");
@@ -44,6 +44,7 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("sonarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("radarr.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prowlarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");
@@ -63,6 +64,7 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "ntfy.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "sonarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "radarr.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "prowlarr.read")).toBe(true);
     expect(hasPermission({ status: "disabled", isSystemAdmin: true }, "backup.manage")).toBe(false);
   });
   it("reserves extra group permission grants to active system admins", () => {

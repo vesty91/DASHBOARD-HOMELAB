@@ -18,6 +18,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  ProwlarrStatusView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -36,6 +37,7 @@ import {
   uptimeKumaStatusDraftConfig,
   grafanaStatusDraftConfig,
   ntfyStatusDraftConfig,
+  prowlarrStatusDraftConfig,
   radarrOverviewDraftConfig,
   sonarrOverviewDraftConfig,
   proxmoxResourcesDraftConfig,
@@ -51,6 +53,7 @@ import {
   type UptimeKumaIntegrationOption,
   type GrafanaIntegrationOption,
   type NtfyIntegrationOption,
+  type ProwlarrIntegrationOption,
   type RadarrIntegrationOption,
   type SonarrIntegrationOption,
   type ProxmoxIntegrationOption,
@@ -89,6 +92,8 @@ function defaultConfig(widgetType: string): unknown {
       return grafanaStatusDraftConfig;
     case "ntfy-status":
       return ntfyStatusDraftConfig;
+    case "prowlarr-status":
+      return prowlarrStatusDraftConfig;
     case "radarr-overview":
       return radarrOverviewDraftConfig;
     case "sonarr-overview":
@@ -122,6 +127,8 @@ export function BoardEditor({
   grafanaIntegrations = [],
   ntfyViews = {},
   ntfyIntegrations = [],
+  prowlarrViews = {},
+  prowlarrIntegrations = [],
   radarrViews = {},
   radarrIntegrations = [],
   sonarrViews = {},
@@ -155,6 +162,8 @@ export function BoardEditor({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyViews?: Record<string, NtfyStatusView>;
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  prowlarrViews?: Record<string, ProwlarrStatusView>;
+  prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   radarrViews?: Record<string, RadarrOverviewView>;
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
@@ -184,6 +193,7 @@ export function BoardEditor({
   const [pendingProxmox, setPendingProxmox] = useState(false);
   const [pendingGrafana, setPendingGrafana] = useState(false);
   const [pendingNtfy, setPendingNtfy] = useState(false);
+  const [pendingProwlarr, setPendingProwlarr] = useState(false);
   const [pendingRadarr, setPendingRadarr] = useState(false);
   const [pendingSonarr, setPendingSonarr] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -262,6 +272,7 @@ export function BoardEditor({
     setPendingProxmox(false);
     setPendingGrafana(false);
     setPendingNtfy(false);
+    setPendingProwlarr(false);
     setPendingRadarr(false);
     setPendingSonarr(false);
     router.refresh();
@@ -332,6 +343,7 @@ export function BoardEditor({
     pendingProxmox ||
     pendingGrafana ||
     pendingNtfy ||
+    pendingProwlarr ||
     pendingRadarr ||
     pendingSonarr;
   const pendingWidgetType = pendingJellyfin
@@ -350,11 +362,13 @@ export function BoardEditor({
                 ? "grafana-status"
                 : pendingNtfy
                   ? "ntfy-status"
-                  : pendingRadarr
-                    ? "radarr-overview"
-                    : pendingSonarr
-                      ? "sonarr-overview"
-                      : "app-tile";
+                  : pendingProwlarr
+                    ? "prowlarr-status"
+                    : pendingRadarr
+                      ? "radarr-overview"
+                      : pendingSonarr
+                        ? "sonarr-overview"
+                        : "app-tile";
   const pendingDraftConfig = pendingJellyfin
     ? jellyfinSessionsDraftConfig
     : pendingImmich
@@ -371,11 +385,13 @@ export function BoardEditor({
                 ? grafanaStatusDraftConfig
                 : pendingNtfy
                   ? ntfyStatusDraftConfig
-                  : pendingRadarr
-                    ? radarrOverviewDraftConfig
-                    : pendingSonarr
-                      ? sonarrOverviewDraftConfig
-                      : appTileDraftConfig;
+                  : pendingProwlarr
+                    ? prowlarrStatusDraftConfig
+                    : pendingRadarr
+                      ? radarrOverviewDraftConfig
+                      : pendingSonarr
+                        ? sonarrOverviewDraftConfig
+                        : appTileDraftConfig;
   const pendingPermissionDenied = pendingJellyfin
     ? jellyfinIntegrations.length === 0
     : pendingImmich
@@ -392,11 +408,13 @@ export function BoardEditor({
                 ? grafanaIntegrations.length === 0
                 : pendingNtfy
                   ? ntfyIntegrations.length === 0
-                  : pendingRadarr
-                    ? radarrIntegrations.length === 0
-                    : pendingSonarr
-                      ? sonarrIntegrations.length === 0
-                      : !canReadApps;
+                  : pendingProwlarr
+                    ? prowlarrIntegrations.length === 0
+                    : pendingRadarr
+                      ? radarrIntegrations.length === 0
+                      : pendingSonarr
+                        ? sonarrIntegrations.length === 0
+                        : !canReadApps;
 
   return (
     <section>
@@ -445,6 +463,7 @@ export function BoardEditor({
                 proxmoxIntegrations={proxmoxIntegrations}
                 grafanaIntegrations={grafanaIntegrations}
                 ntfyIntegrations={ntfyIntegrations}
+                prowlarrIntegrations={prowlarrIntegrations}
                 radarrIntegrations={radarrIntegrations}
                 sonarrIntegrations={sonarrIntegrations}
               />
@@ -479,6 +498,7 @@ export function BoardEditor({
                   setPendingProxmox(false);
                   setPendingGrafana(false);
                   setPendingNtfy(false);
+                  setPendingProwlarr(false);
                   setPendingRadarr(false);
                   setPendingSonarr(false);
                 }}
@@ -553,6 +573,11 @@ export function BoardEditor({
                           setPendingNtfy(true);
                           return;
                         }
+                        if (entry.id === "prowlarr-status") {
+                          setDraftConfig(prowlarrStatusDraftConfig);
+                          setPendingProwlarr(true);
+                          return;
+                        }
                         if (entry.id === "radarr-overview") {
                           setDraftConfig(radarrOverviewDraftConfig);
                           setPendingRadarr(true);
@@ -619,6 +644,7 @@ export function BoardEditor({
                     {...(proxmoxViews[entry.id] ? { proxmoxView: proxmoxViews[entry.id] } : {})}
                     {...(grafanaViews[entry.id] ? { grafanaView: grafanaViews[entry.id] } : {})}
                     {...(ntfyViews[entry.id] ? { ntfyView: ntfyViews[entry.id] } : {})}
+                    {...(prowlarrViews[entry.id] ? { prowlarrView: prowlarrViews[entry.id] } : {})}
                     {...(radarrViews[entry.id] ? { radarrView: radarrViews[entry.id] } : {})}
                     {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
                   />
@@ -676,6 +702,7 @@ export function BoardEditor({
             proxmoxIntegrations={proxmoxIntegrations}
             grafanaIntegrations={grafanaIntegrations}
             ntfyIntegrations={ntfyIntegrations}
+            prowlarrIntegrations={prowlarrIntegrations}
             radarrIntegrations={radarrIntegrations}
             sonarrIntegrations={sonarrIntegrations}
           />

@@ -21,6 +21,7 @@ import type { PrometheusService } from "@dashboard/prometheus";
 import type { UptimeKumaService } from "@dashboard/uptime-kuma";
 import type { GrafanaService } from "@dashboard/grafana";
 import type { NtfyService } from "@dashboard/ntfy";
+import type { ProwlarrService } from "@dashboard/prowlarr";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -47,6 +48,7 @@ const uptimeKuma = {} as UptimeKumaService;
 const proxmox = {} as ProxmoxService;
 const grafana = {} as GrafanaService;
 const ntfy = {} as NtfyService;
+const prowlarr = {} as ProwlarrService;
 const radarr = {} as RadarrService;
 const sonarr = {} as SonarrService;
 const serviceStatus = {
@@ -71,6 +73,7 @@ function createCaller(
     | "proxmox"
     | "grafana"
     | "ntfy"
+    | "prowlarr"
     | "radarr"
     | "sonarr"
     | "serviceStatus"
@@ -91,6 +94,7 @@ function createCaller(
     proxmox?: ProxmoxService;
     grafana?: GrafanaService;
     ntfy?: NtfyService;
+    prowlarr?: ProwlarrService;
     radarr?: RadarrService;
     sonarr?: SonarrService;
     serviceStatus?: ServiceStatusService;
@@ -113,6 +117,7 @@ function createCaller(
     proxmox,
     grafana,
     ntfy,
+    prowlarr,
     radarr,
     sonarr,
     serviceStatus,
@@ -1298,6 +1303,57 @@ describe("ntfy tRPC router", () => {
   });
 });
 
+describe("prowlarr tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000071";
+  const prowlarrActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "prowlarr.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    system: { status: "available" as const, data: { version: "1.32.2.4987" } },
+    health: { status: "available" as const, data: { error: 0, warning: 1, notice: 0, other: 0 } },
+    indexer: { status: "available" as const, data: { count: 12, enabledCount: 8 } },
+    indexerStatus: { status: "available" as const, data: { count: 3 } },
+  };
+
+  it("returns a bounded overview DTO without secrets or indexer names", async () => {
+    const prowlarrService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        { id: integrationId, name: "Prowlarr Lab", enabled: true },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Prowlarr Lab",
+        enabled: true,
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+    } as unknown as ProwlarrService;
+    const caller = createCaller({
+      actor: prowlarrActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      prowlarr: prowlarrService,
+    });
+    const metadata = await caller.prowlarr.integration.get({ integrationId });
+    expect(metadata).toEqual({ id: integrationId, name: "Prowlarr Lab", enabled: true });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.prowlarr.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    expect(JSON.stringify(overviewDto)).not.toMatch(
+      /X-Api-Key|apiKey|apikey|startupPath|appData|isAdmin|name|password|categories|wikiUrl/u,
+    );
+  });
+});
+
 describe("radarr tRPC router", () => {
   const integrationId = "00000000-0000-4000-8000-000000000061";
   const radarrActor = {
@@ -1561,6 +1617,7 @@ describe("runtime and realtime tRPC", () => {
       proxmox: closed as unknown as ProxmoxService,
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
+      prowlarr: closed as unknown as ProwlarrService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     });
@@ -1604,6 +1661,7 @@ describe("runtime and realtime tRPC", () => {
       proxmox: closed as unknown as ProxmoxService,
       grafana: closed as unknown as GrafanaService,
       ntfy: closed as unknown as NtfyService,
+      prowlarr: closed as unknown as ProwlarrService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });

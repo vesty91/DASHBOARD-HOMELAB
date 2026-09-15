@@ -59,6 +59,18 @@ export {
   ntfyStatusDraftConfig,
 } from "./ntfy-status";
 export type {
+  ProwlarrStatusConfig,
+  ProwlarrStatusDraftConfig,
+  ProwlarrStatusView,
+} from "./prowlarr-status";
+export {
+  PROWLARR_STATUS_UNSET_INTEGRATION_ID,
+  prowlarrStatusConfigSchema,
+  prowlarrStatusContract,
+  prowlarrStatusDefaultConfig,
+  prowlarrStatusDraftConfig,
+} from "./prowlarr-status";
+export type {
   RadarrOverviewConfig,
   RadarrOverviewDraftConfig,
   RadarrOverviewView,

@@ -25,6 +25,7 @@ packages/
   proxmox/
   grafana/
   ntfy/
+  prowlarr/
   radarr/
   sonarr/
   permissions/

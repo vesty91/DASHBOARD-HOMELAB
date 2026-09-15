@@ -239,9 +239,14 @@ Phase 18.5 : lecture Radarr exige (`integration.use` ou `integration.manage`) **
 `/integrations/[id]` Radarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `radarr.read`.
 
+Phase 18.6 : lecture Prowlarr exige (`integration.use` ou `integration.manage`) **et**
+`prowlarr.read`. Cette conjonction suffit pour `prowlarr.integration.get` et
+`/integrations/[id]` Prowlarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `prowlarr.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `docker.*` ni
+`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

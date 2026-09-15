@@ -162,6 +162,12 @@ films, file `totalCount`, santé erreurs/avertissements. Même
 `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API Radarr. Titres
 et chemins ne sont pas exposés.
 
+Phase 18.6 ajoute `prowlarr-status` (`publicSafe=false`) : version, nombre
+d'indexeurs (`count` / `enabledCount`), nombre de statuts, santé
+erreurs/avertissements. Même `router.refresh()` 10 s ; le navigateur ne
+contacte jamais l'API Prowlarr. Noms d'indexeurs, URLs et secrets ne sont pas
+exposés.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -178,7 +184,8 @@ et chemins ne sont pas exposés.
 - Grafana Status (`grafana-status`, Phase 18.2) ;
 - ntfy Status (`ntfy-status`, Phase 18.3) ;
 - Sonarr Overview (`sonarr-overview`, Phase 18.4) ;
-- Radarr Overview (`radarr-overview`, Phase 18.5).
+- Radarr Overview (`radarr-overview`, Phase 18.5) ;
+- Prowlarr Status (`prowlarr-status`, Phase 18.6).
 
 ## 11. Custom API widget
 

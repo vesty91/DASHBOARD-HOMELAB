@@ -8,6 +8,7 @@ import type { PrometheusMetricDraftConfig } from "../prometheus-metric";
 import type { GrafanaStatusDraftConfig } from "../grafana-status";
 import type { NtfyStatusDraftConfig } from "../ntfy-status";
 import type { ProxmoxResourcesDraftConfig } from "../proxmox-resources";
+import type { ProwlarrStatusDraftConfig } from "../prowlarr-status";
 import type { RadarrOverviewDraftConfig } from "../radarr-overview";
 import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
 import type { ServiceStatusDraftConfig } from "../service-status";
@@ -22,6 +23,7 @@ import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./promet
 import { GrafanaStatusForm, type GrafanaIntegrationOption } from "./grafana-status-form";
 import { NtfyStatusForm, type NtfyIntegrationOption } from "./ntfy-status-form";
 import { ProxmoxResourcesForm, type ProxmoxIntegrationOption } from "./proxmox-resources-form";
+import { ProwlarrStatusForm, type ProwlarrIntegrationOption } from "./prowlarr-status-form";
 import { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
@@ -39,6 +41,7 @@ export function WidgetConfigForm({
   prometheusIntegrations,
   grafanaIntegrations,
   ntfyIntegrations,
+  prowlarrIntegrations,
   radarrIntegrations,
   sonarrIntegrations,
   proxmoxIntegrations,
@@ -56,6 +59,7 @@ export function WidgetConfigForm({
   prometheusIntegrations?: readonly PrometheusIntegrationOption[];
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
@@ -128,6 +132,15 @@ export function WidgetConfigForm({
           config={config as NtfyStatusDraftConfig}
           onChange={onChange}
           integrations={ntfyIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "prowlarr-status":
+      return (
+        <ProwlarrStatusForm
+          config={config as ProwlarrStatusDraftConfig}
+          onChange={onChange}
+          integrations={prowlarrIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );
