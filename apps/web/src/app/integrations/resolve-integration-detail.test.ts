@@ -135,6 +135,15 @@ const seerrDenied = {
   },
 };
 
+const customApiDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("custom-api unused");
+    },
+  },
+};
+
 const radarrDenied = {
   permissions: async () => ({ canRead: false as const }),
   integration: {
@@ -175,6 +184,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -218,6 +228,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -265,6 +276,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -312,6 +324,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -359,6 +372,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -406,6 +420,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -453,6 +468,7 @@ describe("resolveIntegrationDetail", () => {
       },
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -500,6 +516,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -547,6 +564,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -557,6 +575,56 @@ describe("resolveIntegrationDetail", () => {
         id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
         name: "Seerr Lab",
         enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Custom API reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("ffffffff-ffff-4fff-8fff-ffffffffffff", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
+      ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
+      qbittorrent: qbittorrentDenied,
+      seerr: seerrDenied,
+      customApi: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            name: "API Lab",
+            enabled: true,
+            endpoints: [{ key: "status", label: "Status", path: "/status" }],
+          }),
+        },
+      },
+      radarr: radarrDenied,
+      sonarr: sonarrDenied,
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "custom-api",
+      metadata: {
+        id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        name: "API Lab",
+        enabled: true,
+        endpoints: [{ key: "status", label: "Status", path: "/status" }],
       },
     });
     expect(integrationGet).not.toHaveBeenCalled();
@@ -585,6 +653,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -632,6 +701,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: {
         permissions: async () => ({ canRead: true }),
@@ -688,6 +758,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -731,6 +802,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -872,6 +944,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      customApi: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Custom API introuvable",
+            });
+          },
+        },
+      },
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -922,6 +1005,7 @@ describe("resolveIntegrationDetail", () => {
         prowlarr: prowlarrDenied,
         qbittorrent: qbittorrentDenied,
         seerr: seerrDenied,
+        customApi: customApiDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {
@@ -977,6 +1061,7 @@ describe("resolveIntegrationDetail", () => {
       prowlarr: prowlarrDenied,
       qbittorrent: qbittorrentDenied,
       seerr: seerrDenied,
+      customApi: customApiDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: async () => genericIntegration() },
@@ -1009,6 +1094,7 @@ describe("resolveIntegrationDetail", () => {
         prowlarr: prowlarrDenied,
         qbittorrent: qbittorrentDenied,
         seerr: seerrDenied,
+        customApi: customApiDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {

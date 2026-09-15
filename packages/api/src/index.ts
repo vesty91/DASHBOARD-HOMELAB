@@ -49,6 +49,11 @@ import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
 import { prowlarrIntegrationInputSchema, type ProwlarrService } from "@dashboard/prowlarr";
 import { qbittorrentIntegrationInputSchema, type QbittorrentService } from "@dashboard/qbittorrent";
 import { seerrIntegrationInputSchema, type SeerrService } from "@dashboard/seerr";
+import {
+  customApiIntegrationInputSchema,
+  customApiValueInputSchema,
+  type CustomApiService,
+} from "@dashboard/custom-api";
 import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
 import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
@@ -112,6 +117,7 @@ export interface ApiContext {
   prowlarr: ProwlarrService;
   qbittorrent: QbittorrentService;
   seerr: SeerrService;
+  customApi: CustomApiService;
   radarr: RadarrService;
   sonarr: SonarrService;
   serviceStatus: ServiceStatusService;
@@ -862,6 +868,39 @@ export const seerrRouter = t.router({
       ),
   }),
 });
+export const customApiRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.customApi.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) =>
+      procedure(() => ctx.customApi.listIntegrations(ctx.actor)),
+    ),
+    get: t.procedure
+      .input(customApiIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.customApi.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(customApiIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.customApi.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(customApiIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.customApi.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+  value: t.router({
+    get: t.procedure
+      .input(customApiValueInputSchema)
+      .query(({ ctx, input }) => procedure(() => ctx.customApi.getValue(input, ctx.actor))),
+    refresh: t.procedure
+      .input(customApiValueInputSchema)
+      .mutation(({ ctx, input }) => procedure(() => ctx.customApi.refreshValue(input, ctx.actor))),
+  }),
+});
 export const radarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.radarr.permissions(ctx.actor)),
   integration: t.router({
@@ -1220,6 +1259,7 @@ export const dashboardRouter = t.router({
   prowlarr: prowlarrRouter,
   qbittorrent: qbittorrentRouter,
   seerr: seerrRouter,
+  customApi: customApiRouter,
   radarr: radarrRouter,
   sonarr: sonarrRouter,
   serviceStatus: serviceStatusRouter,

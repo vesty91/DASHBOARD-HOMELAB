@@ -16,6 +16,7 @@ import { resolveNtfyStatusViews } from "../resolve-ntfy-status";
 import { resolveProwlarrStatusViews } from "../resolve-prowlarr-status";
 import { resolveQbittorrentTransferViews } from "../resolve-qbittorrent-transfer";
 import { resolveSeerrRequestsViews } from "../resolve-seerr-requests";
+import { resolveCustomApiValueViews } from "../resolve-custom-api-value";
 import { resolveRadarrOverviewViews } from "../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../resolve-proxmox-resources";
@@ -54,6 +55,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     prowlarrViews,
     qbittorrentViews,
     seerrViews,
+    customApiViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -71,6 +73,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveProwlarrStatusViews(snapshot, caller),
     resolveQbittorrentTransferViews(snapshot, caller),
     resolveSeerrRequestsViews(snapshot, caller),
+    resolveCustomApiValueViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -105,6 +108,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         prowlarrViews={prowlarrViews}
         qbittorrentViews={qbittorrentViews}
         seerrViews={seerrViews}
+        customApiViews={customApiViews}
         radarrViews={radarrViews}
         sonarrViews={sonarrViews}
         serviceStatusViews={serviceStatusViews}

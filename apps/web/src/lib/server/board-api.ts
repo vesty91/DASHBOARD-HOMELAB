@@ -58,6 +58,12 @@ import {
   MemorySeerrRefreshRateLimiter,
 } from "@dashboard/seerr";
 import {
+  createCustomApiService,
+  MemoryCustomApiOverviewCoalescer,
+  MemoryCustomApiRefreshFence,
+  MemoryCustomApiRefreshRateLimiter,
+} from "@dashboard/custom-api";
+import {
   createRadarrService,
   MemoryRadarrOverviewCoalescer,
   MemoryRadarrRefreshFence,
@@ -166,6 +172,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     seerrRefreshRateLimiter: MemorySeerrRefreshRateLimiter;
     seerrRefreshFence: MemorySeerrRefreshFence;
     seerrOverviewCoalescer: MemorySeerrOverviewCoalescer;
+    customApiRefreshRateLimiter: MemoryCustomApiRefreshRateLimiter;
+    customApiRefreshFence: MemoryCustomApiRefreshFence;
+    customApiOverviewCoalescer: MemoryCustomApiOverviewCoalescer;
     radarrRefreshRateLimiter: MemoryRadarrRefreshRateLimiter;
     radarrRefreshFence: MemoryRadarrRefreshFence;
     radarrOverviewCoalescer: MemoryRadarrOverviewCoalescer;
@@ -315,6 +324,9 @@ function integrationRuntime() {
     seerrRefreshRateLimiter: new MemorySeerrRefreshRateLimiter(),
     seerrRefreshFence: new MemorySeerrRefreshFence(),
     seerrOverviewCoalescer: new MemorySeerrOverviewCoalescer(),
+    customApiRefreshRateLimiter: new MemoryCustomApiRefreshRateLimiter(),
+    customApiRefreshFence: new MemoryCustomApiRefreshFence(),
+    customApiOverviewCoalescer: new MemoryCustomApiOverviewCoalescer(),
     radarrRefreshRateLimiter: new MemoryRadarrRefreshRateLimiter(),
     radarrRefreshFence: new MemoryRadarrRefreshFence(),
     radarrOverviewCoalescer: new MemoryRadarrOverviewCoalescer(),
@@ -464,6 +476,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.seerrOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const customApi = createCustomApiService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.customApiRefreshRateLimiter,
+    refreshFence: runtime.customApiRefreshFence,
+    overviewCoalescer: runtime.customApiOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   const radarr = createRadarrService({
     store: database.integrationStore,
     registry: runtime.registry,
@@ -496,6 +518,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(prowlarr, "prowlarr");
   attachDataChangedEvents(qbittorrent, "qbittorrent");
   attachDataChangedEvents(seerr, "seerr");
+  attachDataChangedEvents(customApi, "custom-api");
   attachDataChangedEvents(radarr, "radarr");
   attachDataChangedEvents(sonarr, "sonarr");
   return {
@@ -527,6 +550,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     prowlarr,
     qbittorrent,
     seerr,
+    customApi,
     radarr,
     sonarr,
     serviceStatus: createDashboardServiceStatusService({

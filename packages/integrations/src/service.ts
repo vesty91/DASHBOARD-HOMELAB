@@ -140,6 +140,7 @@ async function toDto(
       record.type === "qbittorrent" ||
       record.type === "radarr" ||
       record.type === "seerr" ||
+      record.type === "custom-api" ||
       record.type === "sonarr") &&
     !canSeeRestrictedIntegrationDetails(actor)
   ) {

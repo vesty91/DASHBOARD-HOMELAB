@@ -63,6 +63,7 @@ describe("widget registry", () => {
       "beszel-hosts",
       "bookmarks",
       "clock",
+      "custom-api-value",
       "grafana-status",
       "immich-stats",
       "jellyfin-sessions",
@@ -87,6 +88,7 @@ describe("widget registry", () => {
     expect(registry.get("qbittorrent-transfer")?.publicSafe).toBe(false);
     expect(registry.get("radarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("seerr-requests")?.publicSafe).toBe(false);
+    expect(registry.get("custom-api-value")?.publicSafe).toBe(false);
     expect(registry.get("sonarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);
     expect(registry.get("uptime-kuma-status")?.publicSafe).toBe(false);

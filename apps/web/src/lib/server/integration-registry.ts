@@ -10,6 +10,7 @@ import { proxmoxIntegrationDefinition } from "@dashboard/proxmox";
 import { prowlarrIntegrationDefinition } from "@dashboard/prowlarr";
 import { qbittorrentIntegrationDefinition } from "@dashboard/qbittorrent";
 import { seerrIntegrationDefinition } from "@dashboard/seerr";
+import { customApiIntegrationDefinition } from "@dashboard/custom-api";
 import { radarrIntegrationDefinition } from "@dashboard/radarr";
 import { sonarrIntegrationDefinition } from "@dashboard/sonarr";
 import { synologyIntegrationDefinition } from "@dashboard/synology";
@@ -28,6 +29,7 @@ export function createApplicationIntegrationRegistry() {
     .register(prowlarrIntegrationDefinition)
     .register(qbittorrentIntegrationDefinition)
     .register(seerrIntegrationDefinition)
+    .register(customApiIntegrationDefinition)
     .register(radarrIntegrationDefinition)
     .register(sonarrIntegrationDefinition)
     .register(synologyIntegrationDefinition)

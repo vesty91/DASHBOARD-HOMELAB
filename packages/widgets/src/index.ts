@@ -14,6 +14,18 @@ export {
   bookmarksDefaultConfig,
 } from "./bookmarks";
 export { builtInWidgetRegistry, createBuiltInWidgetRegistry } from "./built-in";
+export type {
+  CustomApiValueConfig,
+  CustomApiValueDraftConfig,
+  CustomApiValueView,
+} from "./custom-api-value";
+export {
+  CUSTOM_API_VALUE_UNSET_INTEGRATION_ID,
+  customApiValueConfigSchema,
+  customApiValueContract,
+  customApiValueDefaultConfig,
+  customApiValueDraftConfig,
+} from "./custom-api-value";
 export type { ClockConfig } from "./clock";
 export {
   clockConfigSchema,

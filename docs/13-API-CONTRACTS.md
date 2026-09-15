@@ -561,6 +561,28 @@ l'URL. API officielle v1 (Jellyseerr / Overseerr compatibles).
 Jamais exposés : clé API, titres, utilisateurs, e-mails, ids TMDB, listes de
 demandes, approve/decline, `baseUrl`, config.
 
+# Custom API API — Phase 18.9
+
+Routeur tRPC `customApi` (aucun generic invoke). Input overview : `integrationId`
+UUID. Input value : `integrationId`, `endpointKey`, `jsonPath`, `display`.
+
+| Route                        | Permission                   | Capability    | Notes                                                |
+| ---------------------------- | ---------------------------- | ------------- | ---------------------------------------------------- |
+| `customApi.permissions`      | auth active                  | —             | `canRead`, `canManage`                               |
+| `customApi.integration.list` | use/manage + custom-api.read | —             | `{ id, name, enabled, endpoints }[]`                 |
+| `customApi.integration.get`  | use/manage + custom-api.read | —             | `{ id, name, enabled, endpoints }`                   |
+| `customApi.overview.get`     | use/manage + custom-api.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `customApi.overview.refresh` | use/manage + custom-api.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| `customApi.value.get`        | use/manage + custom-api.read | `status.read` | JSONPath borné ; DTO `text`/`number`/`badge`/`list`  |
+| `customApi.value.refresh`    | use/manage + custom-api.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, section
+`probe`, `endpoints` (sans `path`). Auth optionnelle Bearer et/ou en-tête de clé
+API allowlisté. GET uniquement. Jamais de query secret.
+
+Jamais exposés : `bearerToken`, `apiKey`, JSON brut, HTML, URL widget, `baseUrl`,
+config, chemins hors allowlist.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.

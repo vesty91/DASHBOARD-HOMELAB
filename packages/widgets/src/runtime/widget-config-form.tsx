@@ -1,6 +1,7 @@
 "use client";
 import type { AppTileDraftConfig } from "../app-tile";
 import type { ClockConfig } from "../clock";
+import type { CustomApiValueDraftConfig } from "../custom-api-value";
 import type { BeszelHostsDraftConfig } from "../beszel-hosts";
 import type { ImmichStatsDraftConfig } from "../immich-stats";
 import type { JellyfinSessionsDraftConfig } from "../jellyfin-sessions";
@@ -19,6 +20,7 @@ import { AppTileForm, type AppOption } from "./app-tile-form";
 import { BeszelHostsForm, type BeszelIntegrationOption } from "./beszel-hosts-form";
 import { BookmarksForm, type BookmarksDraftConfig } from "./bookmarks-form";
 import { ClockForm } from "./clock-form";
+import { CustomApiValueForm, type CustomApiIntegrationOption } from "./custom-api-value-form";
 import { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";
 import { JellyfinSessionsForm, type JellyfinIntegrationOption } from "./jellyfin-sessions-form";
 import { PrometheusMetricForm, type PrometheusIntegrationOption } from "./prometheus-metric-form";
@@ -52,6 +54,7 @@ export function WidgetConfigForm({
   qbittorrentIntegrations,
   radarrIntegrations,
   seerrIntegrations,
+  customApiIntegrations,
   sonarrIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
@@ -72,6 +75,7 @@ export function WidgetConfigForm({
   qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   seerrIntegrations?: readonly SeerrIntegrationOption[];
+  customApiIntegrations?: readonly CustomApiIntegrationOption[];
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
@@ -179,6 +183,15 @@ export function WidgetConfigForm({
           config={config as SeerrRequestsDraftConfig}
           onChange={onChange}
           integrations={seerrIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "custom-api-value":
+      return (
+        <CustomApiValueForm
+          config={config as CustomApiValueDraftConfig}
+          onChange={onChange}
+          integrations={customApiIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

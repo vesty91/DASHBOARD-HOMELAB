@@ -26,6 +26,11 @@ import type {
 } from "@dashboard/qbittorrent";
 import type { SeerrIntegrationMetadata, SeerrOverview, SeerrSectionReason } from "@dashboard/seerr";
 import type {
+  CustomApiIntegrationMetadata,
+  CustomApiOverview,
+  CustomApiSectionReason,
+} from "@dashboard/custom-api";
+import type {
   RadarrIntegrationMetadata,
   RadarrOverview,
   RadarrSectionReason,
@@ -86,6 +91,8 @@ import { qbittorrentUserError } from "../qbittorrent-error";
 import { QbittorrentRefreshButton } from "../qbittorrent-refresh-button";
 import { seerrUserError } from "../seerr-error";
 import { SeerrRefreshButton } from "../seerr-refresh-button";
+import { customApiUserError } from "../custom-api-error";
+import { CustomApiRefreshButton } from "../custom-api-refresh-button";
 import { radarrUserError } from "../radarr-error";
 import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
@@ -125,6 +132,7 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "prowlarr" ||
     integration.type === "qbittorrent" ||
     integration.type === "seerr" ||
+    integration.type === "custom-api" ||
     integration.type === "radarr" ||
     integration.type === "sonarr"
   )
@@ -1985,6 +1993,117 @@ async function SeerrIntegrationDetail({
   );
 }
 
+function customApiReasonLabel(reason: CustomApiSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API personnalisée indisponible.";
+    case "permission-denied":
+      return "Permission API personnalisée insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers l'API personnalisée.";
+    case "invalid-response":
+      return "Réponse de l'API personnalisée invalide.";
+    case "unauthorized":
+      return "Identifiants de l'API personnalisée invalides.";
+    case "rate-limited":
+      return "Trop d'actualisations de l'API personnalisée.";
+    case "dns":
+      return "Le serveur de l'API personnalisée est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers l'API personnalisée.";
+    case "unreachable":
+      return "Le serveur de l'API personnalisée est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section API personnalisée indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function CustomApiOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: CustomApiOverview | null = null;
+  try {
+    overview = await caller.customApi.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = customApiUserError(caught);
+  }
+  const probe = overview?.probe.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">
+          Vue API personnalisée partielle : la sonde JSON est indisponible.
+        </Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            GET JSON borné vers les endpoints allowlistés. Aucun corps brut, aucun secret, aucun
+            chemin hors allowlist.
+          </p>
+          <section className="custom-api-probe">
+            <h2>Sonde</h2>
+            {overview.probe.status === "unavailable" ? (
+              <Alert tone="warning">{customApiReasonLabel(overview.probe.reason)}</Alert>
+            ) : null}
+            <p>{probe ? `Endpoint ${probe.endpointKey} · JSON valide` : "Sonde indisponible."}</p>
+          </section>
+          <section className="custom-api-endpoints">
+            <h2>Endpoints autorisés</h2>
+            <ul>
+              {overview.endpoints.map((endpoint) => (
+                <li key={endpoint.key}>
+                  {endpoint.label} ({endpoint.key})
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function CustomApiIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: CustomApiIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="API personnalisée" />
+        <Alert tone="warning">Cette intégration API personnalisée est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="API personnalisée" />
+      <CustomApiRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de l'API personnalisée…</p>}>
+        <CustomApiOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function radarrReasonLabel(reason: RadarrSectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -2480,6 +2599,8 @@ export default async function IntegrationDetailPage({
         return <QbittorrentIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "seerr":
         return <SeerrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "custom-api":
+        return <CustomApiIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "radarr":
         return <RadarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "sonarr":

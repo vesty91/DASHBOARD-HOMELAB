@@ -53,6 +53,7 @@ export default async function IntegrationsPage({
       prowlarrPermissions,
       qbittorrentPermissions,
       seerrPermissions,
+      customApiPermissions,
       radarrPermissions,
       sonarrPermissions,
     ] = await Promise.all([
@@ -73,6 +74,7 @@ export default async function IntegrationsPage({
       caller.prowlarr.permissions(),
       caller.qbittorrent.permissions(),
       caller.seerr.permissions(),
+      caller.customApi.permissions(),
       caller.radarr.permissions(),
       caller.sonarr.permissions(),
     ]);
@@ -99,7 +101,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr, Prowlarr, qBittorrent ou Seerr."
+                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr, Prowlarr, qBittorrent, Seerr ou une API personnalisée."
             }
           />
         ) : (
@@ -142,6 +144,7 @@ export default async function IntegrationsPage({
                   (integration.type === "prowlarr" && prowlarrPermissions.canRead) ||
                   (integration.type === "qbittorrent" && qbittorrentPermissions.canRead) ||
                   (integration.type === "seerr" && seerrPermissions.canRead) ||
+                  (integration.type === "custom-api" && customApiPermissions.canRead) ||
                   (integration.type === "radarr" && radarrPermissions.canRead) ||
                   (integration.type === "sonarr" && sonarrPermissions.canRead) ? (
                     <Link

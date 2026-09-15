@@ -16,6 +16,7 @@ import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
 import { resolveProwlarrStatusViews } from "../../resolve-prowlarr-status";
 import { resolveQbittorrentTransferViews } from "../../resolve-qbittorrent-transfer";
 import { resolveSeerrRequestsViews } from "../../resolve-seerr-requests";
+import { resolveCustomApiValueViews } from "../../resolve-custom-api-value";
 import { resolveRadarrOverviewViews } from "../../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
@@ -49,6 +50,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     prowlarrViews,
     qbittorrentViews,
     seerrViews,
+    customApiViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -65,6 +67,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveProwlarrStatusViews(snapshot, caller),
     resolveQbittorrentTransferViews(snapshot, caller),
     resolveSeerrRequestsViews(snapshot, caller),
+    resolveCustomApiValueViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -187,6 +190,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let customApiIntegrations: Awaited<ReturnType<typeof caller.customApi.integration.list>> = [];
+  try {
+    customApiIntegrations = await caller.customApi.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let radarrIntegrations: Awaited<ReturnType<typeof caller.radarr.integration.list>> = [];
   try {
     radarrIntegrations = await caller.radarr.integration.list();
@@ -254,6 +267,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         qbittorrentIntegrations={qbittorrentIntegrations}
         seerrViews={seerrViews}
         seerrIntegrations={seerrIntegrations}
+        customApiViews={customApiViews}
+        customApiIntegrations={customApiIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

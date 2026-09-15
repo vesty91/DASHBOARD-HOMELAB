@@ -7,10 +7,11 @@ describe("application integration registry", () => {
     expect(createProductionIntegrationRegistry().list()).toEqual([]);
   });
 
-  it("registers Beszel, Docker, Grafana, Immich, Jellyfin, ntfy, Prometheus, Proxmox, Prowlarr, qBittorrent, Radarr, Seerr, Sonarr, Synology and Uptime Kuma in the application composition", () => {
+  it("registers Beszel, Docker, Grafana, Immich, Jellyfin, ntfy, Prometheus, Proxmox, Prowlarr, qBittorrent, Radarr, Seerr, Custom API, Sonarr, Synology and Uptime Kuma in the application composition", () => {
     const registry = createApplicationIntegrationRegistry();
     expect(registry.list().map((item) => item.id)).toEqual([
       "beszel",
+      "custom-api",
       "docker",
       "grafana",
       "immich",
@@ -56,6 +57,13 @@ describe("application integration registry", () => {
     expect(registry.get("qbittorrent")?.secretFields.every((field) => field.required)).toBe(true);
     expect(registry.get("seerr")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("seerr")?.secretFields[0]?.required).toBe(true);
+    expect(registry.get("custom-api")?.secretFields.map((field) => field.key)).toEqual([
+      "bearerToken",
+      "apiKey",
+    ]);
+    expect(
+      registry.get("custom-api")?.secretFields.every((field) => field.required === false),
+    ).toBe(true);
     expect(registry.get("radarr")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);
     expect(registry.get("radarr")?.secretFields[0]?.required).toBe(true);
     expect(registry.get("sonarr")?.secretFields.map((field) => field.key)).toEqual(["apiKey"]);

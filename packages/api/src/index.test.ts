@@ -24,6 +24,7 @@ import type { NtfyService } from "@dashboard/ntfy";
 import type { ProwlarrService } from "@dashboard/prowlarr";
 import type { QbittorrentService } from "@dashboard/qbittorrent";
 import type { SeerrService } from "@dashboard/seerr";
+import type { CustomApiService } from "@dashboard/custom-api";
 import type { RadarrService } from "@dashboard/radarr";
 import type { SonarrService } from "@dashboard/sonarr";
 import type { ProxmoxService } from "@dashboard/proxmox";
@@ -53,6 +54,7 @@ const ntfy = {} as NtfyService;
 const prowlarr = {} as ProwlarrService;
 const qbittorrent = {} as QbittorrentService;
 const seerr = {} as SeerrService;
+const customApi = {} as CustomApiService;
 const radarr = {} as RadarrService;
 const sonarr = {} as SonarrService;
 const serviceStatus = {
@@ -80,6 +82,7 @@ function createCaller(
     | "prowlarr"
     | "qbittorrent"
     | "seerr"
+    | "customApi"
     | "radarr"
     | "sonarr"
     | "serviceStatus"
@@ -103,6 +106,7 @@ function createCaller(
     prowlarr?: ProwlarrService;
     qbittorrent?: QbittorrentService;
     seerr?: SeerrService;
+    customApi?: CustomApiService;
     radarr?: RadarrService;
     sonarr?: SonarrService;
     serviceStatus?: ServiceStatusService;
@@ -128,6 +132,7 @@ function createCaller(
     prowlarr,
     qbittorrent,
     seerr,
+    customApi,
     radarr,
     sonarr,
     serviceStatus,
@@ -1475,6 +1480,86 @@ describe("seerr tRPC router", () => {
   });
 });
 
+describe("customApi tRPC router", () => {
+  const integrationId = "00000000-0000-4000-8000-000000000092";
+  const customApiActor = {
+    userId: actor.userId,
+    subject: {
+      status: "active" as const,
+      isSystemAdmin: false,
+      directPermissions: ["integration.use", "custom-api.read"],
+    },
+  };
+  const overviewDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    probe: {
+      status: "available" as const,
+      data: { endpointKey: "status", json: true as const },
+    },
+    endpoints: [{ key: "status", label: "Status" }],
+  };
+  const valueDto = {
+    status: "available" as const,
+    fetchedAt: "2026-09-15T00:00:00.000Z",
+    endpointKey: "status",
+    value: {
+      status: "available" as const,
+      data: { display: "text" as const, text: "ok" },
+    },
+  };
+
+  it("returns a bounded value DTO without secrets or raw JSON payload", async () => {
+    const customApiService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false })),
+      listIntegrations: vi.fn(async () => [
+        {
+          id: integrationId,
+          name: "Custom API Lab",
+          enabled: true,
+          endpoints: [{ key: "status", label: "Status", path: "/status" }],
+        },
+      ]),
+      getIntegrationMetadata: vi.fn(async () => ({
+        id: integrationId,
+        name: "Custom API Lab",
+        enabled: true,
+        endpoints: [{ key: "status", label: "Status", path: "/status" }],
+      })),
+      getOverview: vi.fn(async () => overviewDto),
+      refreshOverview: vi.fn(async () => overviewDto),
+      getValue: vi.fn(async () => valueDto),
+      refreshValue: vi.fn(async () => valueDto),
+    } as unknown as CustomApiService;
+    const caller = createCaller({
+      actor: customApiActor,
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      customApi: customApiService,
+    });
+    const metadata = await caller.customApi.integration.get({ integrationId });
+    expect(metadata).toEqual({
+      id: integrationId,
+      name: "Custom API Lab",
+      enabled: true,
+      endpoints: [{ key: "status", label: "Status", path: "/status" }],
+    });
+    expect(metadata).not.toHaveProperty("baseUrl");
+    await expect(caller.customApi.overview.get({ integrationId })).resolves.toEqual(overviewDto);
+    await expect(
+      caller.customApi.value.get({
+        integrationId,
+        endpointKey: "status",
+        jsonPath: "data.value",
+        display: "text",
+      }),
+    ).resolves.toEqual(valueDto);
+    expect(JSON.stringify(valueDto)).not.toMatch(/Authorization|Bearer|apiKey|X-Api-Key/u);
+  });
+});
+
 describe("radarr tRPC router", () => {
   const integrationId = "00000000-0000-4000-8000-000000000061";
   const radarrActor = {
@@ -1741,6 +1826,7 @@ describe("runtime and realtime tRPC", () => {
       prowlarr: closed as unknown as ProwlarrService,
       qbittorrent: closed as unknown as QbittorrentService,
       seerr: closed as unknown as SeerrService,
+      customApi: closed as unknown as CustomApiService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     });
@@ -1787,6 +1873,7 @@ describe("runtime and realtime tRPC", () => {
       prowlarr: closed as unknown as ProwlarrService,
       qbittorrent: closed as unknown as QbittorrentService,
       seerr: closed as unknown as SeerrService,
+      customApi: closed as unknown as CustomApiService,
       radarr: closed as unknown as RadarrService,
       sonarr: closed as unknown as SonarrService,
     }).realtime.ticket({ runtime: true, boardIds: [boardA] });

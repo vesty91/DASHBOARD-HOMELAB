@@ -29,6 +29,7 @@ packages/
   qbittorrent/
   radarr/
   seerr/
+  custom-api/
   sonarr/
   permissions/
   secrets/
