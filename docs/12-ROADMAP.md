@@ -365,6 +365,28 @@ Livrables :
 Hors scope : migration `0007`, mutations d’intégrations Phase 18, bump des
 `package.json` internes.
 
+## Phase 20 — Post-V1 Hardening & Quality
+
+Statut : **COMPLETE**.
+
+Livrables :
+
+- accessibilité clavier GridStack (sans remplacer le moteur souris) ;
+- axe Playwright WCAG 2A/2AA sur les pages principales ;
+- Lighthouse CI + budgets (perf ≥ 0.85, a11y / best-practices / SEO ≥ 0.90) ;
+- GitHub Actions Node 24, pinning majors, SBOM/provenance inchangés ;
+- smoke HTTPS Caddy + WebSocket realtime + headers + DB down ;
+- audit dépendances : Next.js **16.3.5**, `ws` **8.21.3** ;
+- warning Windows standalone path length documenté (pas un hack de build).
+
+Schéma DB inchangé (`0000`–`0006`, pas de `0007`). Backup `formatVersion` 1 /
+`schemaVersion` 6. Pas de mutations d’intégrations (Phase 21).
+
+PRs : #46–#50. Tag `phase-20-complete`. Patch `v1.0.1` ensuite (SemVer).
+
+Hors scope : Phase 21 (écritures d’intégrations), `0007`, déplacement de
+`v1.0.0`.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.
