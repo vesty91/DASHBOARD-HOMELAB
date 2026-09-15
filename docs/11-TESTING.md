@@ -282,3 +282,6 @@ conditions (`engine.test.ts`) couvre intervalle, cron UTC, match d'événement,
 status-transition, conditions, cooldown et anti-boucle. `packages/db` teste
 create/update CAS, owner SET NULL, historique conservé, upgrade 6 → 7
 (SQLite et PostgreSQL). Backup exporte `automation_rules` uniquement.
+Le scheduler worker (`scheduler.test.ts`, leases SQLite/PostgreSQL) couvre
+le claim unique multi-replica, crash after claim, crash after dispatch
+(`unknown`, pas de retry), shutdown, Redis down, et échec DB transitoire.

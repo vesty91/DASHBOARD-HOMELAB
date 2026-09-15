@@ -17,9 +17,9 @@ export class DatabaseError extends Error {
     this.name = "DatabaseError";
   }
 }
-export function normalizeDatabaseError(error: unknown): DatabaseError {
+export function normalizeDatabaseError(error: unknown, depth = 0): DatabaseError {
   if (error instanceof DatabaseError) return error;
-  const candidate = error as { code?: unknown; message?: unknown };
+  const candidate = error as { code?: unknown; message?: unknown; cause?: unknown };
   const code = typeof candidate.code === "string" ? candidate.code : "";
   const message = typeof candidate.message === "string" ? candidate.message : "";
   if (
@@ -38,6 +38,10 @@ export function normalizeDatabaseError(error: unknown): DatabaseError {
     });
   if (["ECONNREFUSED", "57P01", "57P03"].includes(code))
     return new DatabaseError("DB_UNAVAILABLE", "The database is unavailable", { cause: error });
+  if (depth < 5 && candidate.cause) {
+    const nested = normalizeDatabaseError(candidate.cause, depth + 1);
+    if (nested.code !== "UNKNOWN_DB_ERROR") return nested;
+  }
   return new DatabaseError("UNKNOWN_DB_ERROR", "An unexpected database error occurred", {
     cause: error,
   });

@@ -422,5 +422,6 @@ Minor produit `1.1.0`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 
 # État Phase 22
 
-IN PROGRESS. Persistence automations (`0007`, schema 7). Pas d'eval, pas de
+IN PROGRESS. Persistence automations (`0007`, schema 7). Scheduler worker
+at-most-once (leases, `runKey`, pas de retry side-effect). Pas d'eval, pas de
 proxy HTTP arbitraire. Voir `docs/22-AUTOMATIONS.md`.

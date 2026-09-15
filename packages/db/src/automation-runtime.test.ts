@@ -89,6 +89,8 @@ describe("SQLite automation persistence", () => {
       });
       expect(enabled.enabled).toBe(true);
       expect(enabled.lastEnabledAt).toBeInstanceOf(Date);
+      const runtime = await store.getRuntime(created.id);
+      expect(runtime?.nextRunAt).toBeNull();
       const run = await store.recordRun({
         automationId: created.id,
         runKey: `${created.id}:event:1`,
@@ -159,6 +161,67 @@ describe("SQLite automation persistence", () => {
       await expect(
         store.create({ ...base, actionConfigJson: { topic: "x" } }),
       ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    } finally {
+      client.close();
+    }
+  });
+});
+
+describe("SQLite automation leases", () => {
+  it("seeds nextRunAt on enable and lets only one lease win", async () => {
+    const { client, owner, store } = await setup();
+    try {
+      const created = await store.create({
+        name: "Interval ping",
+        ownerUserId: owner.id,
+        triggerType: "schedule",
+        triggerConfigJson: { everyMinutes: 15 },
+        actionType: "ntfy.publish",
+        actionConfigJson: actionConfig(randomUUID()),
+      });
+      const enabled = await store.setEnabled(created.id, {
+        expectedConfigRevision: 1,
+        enabled: true,
+      });
+      expect(enabled.enabled).toBe(true);
+      const runtime = await store.getRuntime(created.id);
+      expect(runtime?.nextRunAt).toBeInstanceOf(Date);
+      const now = new Date();
+      const leaseUntil = new Date(now.getTime() + 60_000);
+      const [first, second] = await Promise.all([
+        store.claimLease({
+          automationId: created.id,
+          workerId: "w-a",
+          now,
+          leaseUntil,
+        }),
+        store.claimLease({
+          automationId: created.id,
+          workerId: "w-b",
+          now,
+          leaseUntil,
+        }),
+      ]);
+      expect([first, second].filter(Boolean)).toHaveLength(1);
+      const duplicate = await store.tryInsertRun({
+        automationId: created.id,
+        runKey: `${created.id}:sch:${now.getTime()}`,
+        triggerType: "schedule",
+        status: "running",
+        startedAt: now,
+        actionType: "ntfy.publish",
+      });
+      expect(duplicate.created).toBe(true);
+      const again = await store.tryInsertRun({
+        automationId: created.id,
+        runKey: `${created.id}:sch:${now.getTime()}`,
+        triggerType: "schedule",
+        status: "running",
+        startedAt: now,
+        actionType: "ntfy.publish",
+      });
+      expect(again.created).toBe(false);
+      expect(again.run.id).toBe(duplicate.run.id);
     } finally {
       client.close();
     }

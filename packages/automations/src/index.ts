@@ -65,3 +65,29 @@ export {
   type TriggerEvaluation,
   type TriggerSkipReason,
 } from "./evaluate";
+export { buildEventRunKey, buildScheduleRunKey } from "./run-key";
+export {
+  unwiredAutomationDispatcher,
+  type AutomationActionDispatcher,
+  type AutomationDispatchInput,
+  type AutomationDispatchResult,
+  type AutomationDispatchStatus,
+} from "./dispatcher";
+export {
+  AUTOMATION_LEASE_MS,
+  AUTOMATION_SCHEDULER_MAX_ACTIONS_PER_MINUTE,
+  AUTOMATION_SCHEDULER_MAX_IN_FLIGHT,
+  AUTOMATION_SCHEDULER_SCAN_LIMIT,
+  AutomationScheduler,
+  createAutomationScheduler,
+  skipReasonErrorCode,
+  type AutomationEventIngestStatus,
+  type AutomationRuleSnapshot,
+  type AutomationRunInsertInput,
+  type AutomationRunSnapshot,
+  type AutomationRuntimeSnapshot,
+  type AutomationSchedulerHealth,
+  type AutomationSchedulerHealthStatus,
+  type AutomationSchedulerOptions,
+  type AutomationSchedulerStore,
+} from "./scheduler";

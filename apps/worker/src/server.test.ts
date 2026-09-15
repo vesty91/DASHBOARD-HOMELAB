@@ -27,6 +27,12 @@ describe("worker heartbeat", () => {
         status: "ready",
         lastHeartbeatAt: "2026-09-13T00:00:00.000Z",
         lastErrorCode: null,
+        automationScheduler: {
+          status: "off",
+          lastTickAt: null,
+          inFlight: 0,
+          eventIngest: "off",
+        },
       });
       expect(received).toEqual([
         {
@@ -53,7 +59,11 @@ describe("worker heartbeat", () => {
     try {
       const ready = await readJson(`http://127.0.0.1:${worker.port()}/health/ready`);
       expect(ready.status).toBe(503);
-      expect(ready.body).toMatchObject({ status: "not-ready", lastErrorCode: "INTERNAL_ERROR" });
+      expect(ready.body).toMatchObject({
+        status: "not-ready",
+        lastErrorCode: "INTERNAL_ERROR",
+        automationScheduler: { status: "off", eventIngest: "off" },
+      });
     } finally {
       await worker.close();
     }
@@ -95,5 +105,74 @@ describe("worker heartbeat", () => {
     expect(() => workerOptionsFromEnv({ REDIS_URL: "https://example.test" })).toThrow(
       "INVALID_REDIS_URL",
     );
+  });
+});
+
+describe("worker automation scheduler", () => {
+  it("ticks the scheduler even when Redis publish fails, without leaking configs", async () => {
+    let listed = 0;
+    const bus = {
+      publish: async () => {
+        throw new Error("REDIS_DOWN");
+      },
+      subscribe: () => () => undefined,
+      close: async () => undefined,
+    };
+    const worker = await startWorker({
+      bus,
+      intervalMs: 5_000,
+      now: () => new Date("2026-09-15T12:00:00.000Z"),
+      automations: {
+        workerId: "test-worker",
+        store: {
+          async getRule() {
+            return null;
+          },
+          async getRuntime() {
+            return null;
+          },
+          async listDueScheduleIds() {
+            listed += 1;
+            return [];
+          },
+          async listUnscheduledScheduleIds() {
+            return [];
+          },
+          async listEnabledEventRuleIds() {
+            return [];
+          },
+          async claimLease() {
+            return false;
+          },
+          async releaseLease() {
+            return;
+          },
+          async updateRuntime() {
+            return;
+          },
+          async tryInsertRun() {
+            throw new Error("not used");
+          },
+          async finishRun() {
+            return;
+          },
+          async markStaleRunsUnknown() {
+            return 0;
+          },
+        },
+      },
+    });
+    try {
+      const ready = await readJson(`http://127.0.0.1:${worker.port()}/health/ready`);
+      expect(ready.status).toBe(503);
+      expect(listed).toBeGreaterThan(0);
+      expect(ready.body).toMatchObject({
+        lastErrorCode: "INTERNAL_ERROR",
+        automationScheduler: { eventIngest: "degraded" },
+      });
+      expect(JSON.stringify(ready.body)).not.toMatch(/test-worker|ntfy.publish|ownerUserId/u);
+    } finally {
+      await worker.close();
+    }
   });
 });

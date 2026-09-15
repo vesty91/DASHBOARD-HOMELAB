@@ -719,6 +719,22 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       await expect(
         store.update(created.id, { expectedConfigRevision: 1, name: "stale" }),
       ).rejects.toMatchObject({ code: "CONFLICT" });
+      const schedule = await store.create({
+        name: "Interval ping",
+        ownerUserId: owner.id,
+        triggerType: "schedule",
+        triggerConfigJson: { everyMinutes: 15 },
+        actionType: "ntfy.publish",
+        actionConfigJson: { integrationId: randomUUID(), topic: "homelab" },
+      });
+      await store.setEnabled(schedule.id, { expectedConfigRevision: 1, enabled: true });
+      const now = new Date();
+      const leaseUntil = new Date(now.getTime() + 60_000);
+      const claims = await Promise.all([
+        store.claimLease({ automationId: schedule.id, workerId: "w-a", now, leaseUntil }),
+        store.claimLease({ automationId: schedule.id, workerId: "w-b", now, leaseUntil }),
+      ]);
+      expect(claims.filter(Boolean)).toHaveLength(1);
     } finally {
       await client.close();
     }

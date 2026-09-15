@@ -1,13 +1,21 @@
 import { workerOptionsFromEnv } from "./env";
-import { createJobRecorderFromEnv } from "./jobs";
+import { createWorkerPersistenceFromEnv } from "./database";
 import { startWorker } from "./server";
 import { bindProcessShutdown } from "./shutdown";
 
 const options = workerOptionsFromEnv(process.env);
-const jobs = createJobRecorderFromEnv(process.env);
+const persistence = createWorkerPersistenceFromEnv(process.env);
 const worker = await startWorker({
   ...options,
-  ...(jobs ? { jobs: jobs.recorder } : {}),
+  ...(persistence
+    ? {
+        jobs: persistence.jobs,
+        automations: {
+          store: persistence.schedulerStore,
+          loadOwner: persistence.loadOwner,
+        },
+      }
+    : {}),
 });
 
 console.log(
@@ -22,5 +30,5 @@ console.log(
 
 bindProcessShutdown(async () => {
   await worker.close();
-  if (jobs) await jobs.close();
+  if (persistence) await persistence.close();
 });

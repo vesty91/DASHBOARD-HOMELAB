@@ -1,6 +1,6 @@
 # 22 — Automations & alerting
 
-Statut : **IN PROGRESS** (22.1 persistence).
+Statut : **IN PROGRESS** (22.3 scheduler).
 
 Phase 22. Migration `0007`. `schemaVersion` 7. Backup `formatVersion` 1.
 
@@ -43,3 +43,19 @@ IN PROGRESS côté scheduler (22.3). Moteur déclaratif livré :
 - cooldown + skip si `causationAutomationId` = automationId.
 
 Pas d'eval, pas de JS, pas de cron shell, pas d'événements `board.*`.
+
+## 22.3 Scheduler worker
+
+Le moteur tourne dans `apps/worker` (pas de daemon séparé).
+
+- scan borné (100) et concurrence 4 ;
+- lease DB CAS, TTL 60 s, replicas multiples ;
+- `runKey` unique ; claim du run **avant** dispatch ;
+- at-most-once : pas de retry automatique des side effects ;
+- crash après claim / dispatch → `unknown` ;
+- SIGTERM : stop claiming, drain borné, release lease ;
+- Redis down : le schedule DB continue, ingest events `degraded` ;
+- `/health/ready` expose `automationScheduler` sans configs ni secrets.
+
+Le dispatcher 22.3 est `ACTION_NOT_WIRED` (skip, aucun side effect externe).
+22.4 branchera `runSafeIntegrationAction`.
