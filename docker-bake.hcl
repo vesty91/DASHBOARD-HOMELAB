@@ -1,5 +1,5 @@
 variable "APP_VERSION" {
-  default = "1.0.0"
+  default = "1.0.1"
 }
 
 variable "REGISTRY" {

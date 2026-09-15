@@ -4,7 +4,8 @@ Statut : **COMPLETE**.
 
 Phase 20. Pas de `0007`. Pas de mutation d’intégration. Schéma et backup
 inchangés (`schemaVersion` 6, backup `formatVersion` 1). Next.js **16.3.5**.
-Version produit toujours **1.0.0** jusqu’au tag patch `v1.0.1`.
+Version produit **1.0.1** (tag `v1.0.1`). `phase-20-complete` pointe le merge
+de clôture docs, avant le bump patch.
 
 ## Synthèse
 

@@ -40,13 +40,13 @@ services:
       dockerfile: Dockerfile
       target: migrate
       args:
-        APP_VERSION: ${APP_VERSION:-1.0.0}
-    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/migrate:${APP_VERSION:-1.0.0}
+        APP_VERSION: ${APP_VERSION:-1.0.1}
+    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/migrate:${APP_VERSION:-1.0.1}
     restart: "no"
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgresql://${POSTGRES_USER:-dashboard}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dashboard}
-      APP_VERSION: ${APP_VERSION:-1.0.0}
+      APP_VERSION: ${APP_VERSION:-1.0.1}
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,13 +66,13 @@ services:
       dockerfile: Dockerfile
       target: web
       args:
-        APP_VERSION: ${APP_VERSION:-1.0.0}
-    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/web:${APP_VERSION:-1.0.0}
+        APP_VERSION: ${APP_VERSION:-1.0.1}
+    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/web:${APP_VERSION:-1.0.1}
     restart: unless-stopped
     stop_grace_period: 15s
     environment:
       NODE_ENV: production
-      APP_VERSION: ${APP_VERSION:-1.0.0}
+      APP_VERSION: ${APP_VERSION:-1.0.1}
       APP_URL: ${APP_URL:?APP_URL is required}
       NEXTAUTH_URL: ${APP_URL:?APP_URL is required}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
@@ -122,13 +122,13 @@ services:
       dockerfile: Dockerfile
       target: worker
       args:
-        APP_VERSION: ${APP_VERSION:-1.0.0}
-    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/worker:${APP_VERSION:-1.0.0}
+        APP_VERSION: ${APP_VERSION:-1.0.1}
+    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/worker:${APP_VERSION:-1.0.1}
     restart: unless-stopped
     stop_grace_period: 15s
     environment:
       NODE_ENV: production
-      APP_VERSION: ${APP_VERSION:-1.0.0}
+      APP_VERSION: ${APP_VERSION:-1.0.1}
       DB_DRIVER: postgres
       DATABASE_URL: postgresql://${POSTGRES_USER:-dashboard}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dashboard}
       REDIS_URL: redis://redis:6379
@@ -170,13 +170,13 @@ services:
       dockerfile: Dockerfile
       target: realtime
       args:
-        APP_VERSION: ${APP_VERSION:-1.0.0}
-    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/realtime:${APP_VERSION:-1.0.0}
+        APP_VERSION: ${APP_VERSION:-1.0.1}
+    image: ${DASHBOARD_IMAGE_PREFIX:-dashboard-homelab}/realtime:${APP_VERSION:-1.0.1}
     restart: unless-stopped
     stop_grace_period: 15s
     environment:
       NODE_ENV: production
-      APP_VERSION: ${APP_VERSION:-1.0.0}
+      APP_VERSION: ${APP_VERSION:-1.0.1}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
       APP_URL: ${APP_URL:?APP_URL is required}
       REDIS_URL: redis://redis:6379

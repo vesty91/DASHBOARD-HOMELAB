@@ -4,7 +4,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Le versioning suit [SemVer](https://semver.org/lang/fr/) à partir de 1.0.0.
 Voir ADR 0029.
 
-## [Unreleased]
+## [1.0.1] — 2026-09-15
 
 Post-v1 hardening (Phase 20). Schéma et backup inchangés.
 

@@ -382,7 +382,7 @@ Livrables :
 Schéma DB inchangé (`0000`–`0006`, pas de `0007`). Backup `formatVersion` 1 /
 `schemaVersion` 6. Pas de mutations d’intégrations (Phase 21).
 
-PRs : #46–#50. Tag `phase-20-complete`. Patch `v1.0.1` ensuite (SemVer).
+PRs : #46–#51. Tag `phase-20-complete`. Patch `v1.0.1`.
 
 Hors scope : Phase 21 (écritures d’intégrations), `0007`, déplacement de
 `v1.0.0`.
