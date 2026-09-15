@@ -52,6 +52,12 @@ import {
   MemoryQbittorrentRefreshRateLimiter,
 } from "@dashboard/qbittorrent";
 import {
+  createSeerrService,
+  MemorySeerrOverviewCoalescer,
+  MemorySeerrRefreshFence,
+  MemorySeerrRefreshRateLimiter,
+} from "@dashboard/seerr";
+import {
   createRadarrService,
   MemoryRadarrOverviewCoalescer,
   MemoryRadarrRefreshFence,
@@ -157,6 +163,9 @@ const globalRuntime = globalThis as typeof globalThis & {
     qbittorrentRefreshRateLimiter: MemoryQbittorrentRefreshRateLimiter;
     qbittorrentRefreshFence: MemoryQbittorrentRefreshFence;
     qbittorrentOverviewCoalescer: MemoryQbittorrentOverviewCoalescer;
+    seerrRefreshRateLimiter: MemorySeerrRefreshRateLimiter;
+    seerrRefreshFence: MemorySeerrRefreshFence;
+    seerrOverviewCoalescer: MemorySeerrOverviewCoalescer;
     radarrRefreshRateLimiter: MemoryRadarrRefreshRateLimiter;
     radarrRefreshFence: MemoryRadarrRefreshFence;
     radarrOverviewCoalescer: MemoryRadarrOverviewCoalescer;
@@ -303,6 +312,9 @@ function integrationRuntime() {
     qbittorrentRefreshRateLimiter: new MemoryQbittorrentRefreshRateLimiter(),
     qbittorrentRefreshFence: new MemoryQbittorrentRefreshFence(),
     qbittorrentOverviewCoalescer: new MemoryQbittorrentOverviewCoalescer(),
+    seerrRefreshRateLimiter: new MemorySeerrRefreshRateLimiter(),
+    seerrRefreshFence: new MemorySeerrRefreshFence(),
+    seerrOverviewCoalescer: new MemorySeerrOverviewCoalescer(),
     radarrRefreshRateLimiter: new MemoryRadarrRefreshRateLimiter(),
     radarrRefreshFence: new MemoryRadarrRefreshFence(),
     radarrOverviewCoalescer: new MemoryRadarrOverviewCoalescer(),
@@ -442,6 +454,16 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     overviewCoalescer: runtime.qbittorrentOverviewCoalescer,
     ...(keyring ? { keyring } : {}),
   });
+  const seerr = createSeerrService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    request: secureRequest,
+    refreshRateLimiter: runtime.seerrRefreshRateLimiter,
+    refreshFence: runtime.seerrRefreshFence,
+    overviewCoalescer: runtime.seerrOverviewCoalescer,
+    ...(keyring ? { keyring } : {}),
+  });
   const radarr = createRadarrService({
     store: database.integrationStore,
     registry: runtime.registry,
@@ -473,6 +495,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(ntfy, "ntfy");
   attachDataChangedEvents(prowlarr, "prowlarr");
   attachDataChangedEvents(qbittorrent, "qbittorrent");
+  attachDataChangedEvents(seerr, "seerr");
   attachDataChangedEvents(radarr, "radarr");
   attachDataChangedEvents(sonarr, "sonarr");
   return {
@@ -503,6 +526,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     ntfy,
     prowlarr,
     qbittorrent,
+    seerr,
     radarr,
     sonarr,
     serviceStatus: createDashboardServiceStatusService({
@@ -519,6 +543,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       ntfy,
       prowlarr,
       qbittorrent,
+      seerr,
       radarr,
       sonarr,
       coalescer: runtime.serviceStatusCoalescer,

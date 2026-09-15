@@ -15,6 +15,7 @@ import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
 import { resolveProwlarrStatusViews } from "../../resolve-prowlarr-status";
 import { resolveQbittorrentTransferViews } from "../../resolve-qbittorrent-transfer";
+import { resolveSeerrRequestsViews } from "../../resolve-seerr-requests";
 import { resolveRadarrOverviewViews } from "../../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
@@ -47,6 +48,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ntfyViews,
     prowlarrViews,
     qbittorrentViews,
+    seerrViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -62,6 +64,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveNtfyStatusViews(snapshot, caller),
     resolveProwlarrStatusViews(snapshot, caller),
     resolveQbittorrentTransferViews(snapshot, caller),
+    resolveSeerrRequestsViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -174,6 +177,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let seerrIntegrations: Awaited<ReturnType<typeof caller.seerr.integration.list>> = [];
+  try {
+    seerrIntegrations = await caller.seerr.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let radarrIntegrations: Awaited<ReturnType<typeof caller.radarr.integration.list>> = [];
   try {
     radarrIntegrations = await caller.radarr.integration.list();
@@ -239,6 +252,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         prowlarrIntegrations={prowlarrIntegrations}
         qbittorrentViews={qbittorrentViews}
         qbittorrentIntegrations={qbittorrentIntegrations}
+        seerrViews={seerrViews}
+        seerrIntegrations={seerrIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

@@ -48,6 +48,7 @@ import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/g
 import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
 import { prowlarrIntegrationInputSchema, type ProwlarrService } from "@dashboard/prowlarr";
 import { qbittorrentIntegrationInputSchema, type QbittorrentService } from "@dashboard/qbittorrent";
+import { seerrIntegrationInputSchema, type SeerrService } from "@dashboard/seerr";
 import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
 import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
 import { proxmoxIntegrationInputSchema, type ProxmoxService } from "@dashboard/proxmox";
@@ -110,6 +111,7 @@ export interface ApiContext {
   ntfy: NtfyService;
   prowlarr: ProwlarrService;
   qbittorrent: QbittorrentService;
+  seerr: SeerrService;
   radarr: RadarrService;
   sonarr: SonarrService;
   serviceStatus: ServiceStatusService;
@@ -837,6 +839,29 @@ export const qbittorrentRouter = t.router({
       ),
   }),
 });
+export const seerrRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.seerr.permissions(ctx.actor)),
+  integration: t.router({
+    list: t.procedure.query(({ ctx }) => procedure(() => ctx.seerr.listIntegrations(ctx.actor))),
+    get: t.procedure
+      .input(seerrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.seerr.getIntegrationMetadata(input.integrationId, ctx.actor)),
+      ),
+  }),
+  overview: t.router({
+    get: t.procedure
+      .input(seerrIntegrationInputSchema)
+      .query(({ ctx, input }) =>
+        procedure(() => ctx.seerr.getOverview(input.integrationId, ctx.actor)),
+      ),
+    refresh: t.procedure
+      .input(seerrIntegrationInputSchema)
+      .mutation(({ ctx, input }) =>
+        procedure(() => ctx.seerr.refreshOverview(input.integrationId, ctx.actor)),
+      ),
+  }),
+});
 export const radarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.radarr.permissions(ctx.actor)),
   integration: t.router({
@@ -1194,6 +1219,7 @@ export const dashboardRouter = t.router({
   ntfy: ntfyRouter,
   prowlarr: prowlarrRouter,
   qbittorrent: qbittorrentRouter,
+  seerr: seerrRouter,
   radarr: radarrRouter,
   sonarr: sonarrRouter,
   serviceStatus: serviceStatusRouter,

@@ -24,6 +24,7 @@ import type {
   QbittorrentOverview,
   QbittorrentSectionReason,
 } from "@dashboard/qbittorrent";
+import type { SeerrIntegrationMetadata, SeerrOverview, SeerrSectionReason } from "@dashboard/seerr";
 import type {
   RadarrIntegrationMetadata,
   RadarrOverview,
@@ -83,6 +84,8 @@ import { prowlarrUserError } from "../prowlarr-error";
 import { ProwlarrRefreshButton } from "../prowlarr-refresh-button";
 import { qbittorrentUserError } from "../qbittorrent-error";
 import { QbittorrentRefreshButton } from "../qbittorrent-refresh-button";
+import { seerrUserError } from "../seerr-error";
+import { SeerrRefreshButton } from "../seerr-refresh-button";
 import { radarrUserError } from "../radarr-error";
 import { RadarrRefreshButton } from "../radarr-refresh-button";
 import { sonarrUserError } from "../sonarr-error";
@@ -121,6 +124,7 @@ function GenericIntegrationDetail({ integration }: { integration: IntegrationDto
     integration.type === "ntfy" ||
     integration.type === "prowlarr" ||
     integration.type === "qbittorrent" ||
+    integration.type === "seerr" ||
     integration.type === "radarr" ||
     integration.type === "sonarr"
   )
@@ -1867,6 +1871,120 @@ async function QbittorrentIntegrationDetail({
   );
 }
 
+function seerrReasonLabel(reason: SeerrSectionReason | undefined): string {
+  switch (reason) {
+    case "api-unavailable":
+      return "API Seerr indisponible.";
+    case "permission-denied":
+      return "Permission Seerr insuffisante.";
+    case "timeout":
+      return "Délai dépassé vers Seerr.";
+    case "invalid-response":
+      return "Réponse Seerr invalide.";
+    case "unauthorized":
+      return "Clé API Seerr invalide.";
+    case "rate-limited":
+      return "Trop d'actualisations Seerr.";
+    case "dns":
+      return "Le serveur Seerr est injoignable (DNS).";
+    case "tls":
+      return "Erreur TLS vers Seerr.";
+    case "unreachable":
+      return "Le serveur Seerr est injoignable.";
+    case "unknown":
+    case undefined:
+      return "Section Seerr indisponible.";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+async function SeerrOverviewPanel({
+  id,
+  caller,
+}: {
+  id: string;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  let error: string | null = null;
+  let overview: SeerrOverview | null = null;
+  try {
+    overview = await caller.seerr.overview.get({ integrationId: id });
+  } catch (caught) {
+    error = seerrUserError(caught);
+  }
+  const system = overview?.system.data;
+  const counts = overview?.counts.data;
+  return (
+    <>
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {overview?.status === "degraded" ? (
+        <Alert tone="warning">Vue Seerr partielle : certaines sections sont indisponibles.</Alert>
+      ) : null}
+      {overview ? (
+        <>
+          <p className="ui-muted">Actualisé {overview.fetchedAt}</p>
+          <p className="ui-muted">
+            Compteurs uniquement. Aucun titre, utilisateur, e-mail ni identifiant TMDB. Lecture
+            seule.
+          </p>
+          <section className="seerr-system">
+            <h2>Système</h2>
+            {overview.system.status === "unavailable" ? (
+              <Alert tone="warning">{seerrReasonLabel(overview.system.reason)}</Alert>
+            ) : null}
+            <p>Version {system?.version ?? "Indisponible"}</p>
+            {system?.compatibleProduct ? (
+              <p className="ui-muted">Famille Seerr / Jellyseerr / Overseerr</p>
+            ) : null}
+          </section>
+          <section className="seerr-counts">
+            <h2>Demandes</h2>
+            {overview.counts.status === "unavailable" ? (
+              <Alert tone="warning">{seerrReasonLabel(overview.counts.reason)}</Alert>
+            ) : null}
+            <p>
+              {counts
+                ? `${counts.pending} en attente · ${counts.approved} approuvées · ${counts.processing} en cours · ${counts.available} disponibles`
+                : "Compteurs indisponibles."}
+            </p>
+          </section>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+async function SeerrIntegrationDetail({
+  id,
+  metadata,
+  caller,
+}: {
+  id: string;
+  metadata: SeerrIntegrationMetadata;
+  caller: Awaited<ReturnType<typeof getBoardCaller>>;
+}) {
+  if (!metadata.enabled) {
+    return (
+      <PageContainer>
+        <PageHeader title={metadata.name} description="Seerr" />
+        <Alert tone="warning">Cette intégration Seerr est désactivée.</Alert>
+      </PageContainer>
+    );
+  }
+  return (
+    <PageContainer>
+      <PageHeader title={metadata.name} description="Seerr" />
+      <SeerrRefreshButton integrationId={id} />
+      <Suspense fallback={<p className="ui-muted">Chargement de Seerr…</p>}>
+        <SeerrOverviewPanel id={id} caller={caller} />
+      </Suspense>
+    </PageContainer>
+  );
+}
+
 function radarrReasonLabel(reason: RadarrSectionReason | undefined): string {
   switch (reason) {
     case "api-unavailable":
@@ -2360,6 +2478,8 @@ export default async function IntegrationDetailPage({
         return <ProwlarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "qbittorrent":
         return <QbittorrentIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
+      case "seerr":
+        return <SeerrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "radarr":
         return <RadarrIntegrationDetail id={id} metadata={detail.metadata} caller={caller} />;
       case "sonarr":

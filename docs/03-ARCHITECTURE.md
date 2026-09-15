@@ -28,6 +28,7 @@ packages/
   prowlarr/
   qbittorrent/
   radarr/
+  seerr/
   sonarr/
   permissions/
   secrets/

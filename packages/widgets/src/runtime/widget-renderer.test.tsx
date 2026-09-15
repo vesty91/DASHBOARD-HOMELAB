@@ -193,6 +193,35 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Santé 1 erreurs · 2 avertissements")).toBeTruthy();
   });
 
+  it("renders a Seerr requests widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "seerr-1",
+          widgetType: "seerr-requests",
+          widgetVersion: 1,
+          title: "Seerr",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        seerrView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          version: "2.5.0",
+          pending: 2,
+          approved: 5,
+          processing: 1,
+          available: 8,
+        }}
+      />,
+    );
+    expect(screen.getByText("Version 2.5.0")).toBeTruthy();
+    expect(
+      screen.getByText("2 en attente · 5 approuvées · 1 en cours · 8 disponibles"),
+    ).toBeTruthy();
+  });
+
   it("renders a qBittorrent transfer widget from a ready view", () => {
     render(
       <WidgetRenderer

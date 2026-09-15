@@ -17,6 +17,7 @@ import type {
   QbittorrentIntegrationMetadata,
   QbittorrentPermissionsView,
 } from "@dashboard/qbittorrent";
+import type { SeerrIntegrationMetadata, SeerrPermissionsView } from "@dashboard/seerr";
 import type { RadarrIntegrationMetadata, RadarrPermissionsView } from "@dashboard/radarr";
 import type { SonarrIntegrationMetadata, SonarrPermissionsView } from "@dashboard/sonarr";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
@@ -45,6 +46,7 @@ export type IntegrationDetailResolution =
   | { kind: "ntfy"; metadata: NtfyIntegrationMetadata }
   | { kind: "prowlarr"; metadata: ProwlarrIntegrationMetadata }
   | { kind: "qbittorrent"; metadata: QbittorrentIntegrationMetadata }
+  | { kind: "seerr"; metadata: SeerrIntegrationMetadata }
   | { kind: "radarr"; metadata: RadarrIntegrationMetadata }
   | { kind: "sonarr"; metadata: SonarrIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
@@ -120,6 +122,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<QbittorrentPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<QbittorrentIntegrationMetadata>;
+    };
+  };
+  seerr: {
+    permissions: () => Promise<Pick<SeerrPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<SeerrIntegrationMetadata>;
     };
   };
   radarr: {
@@ -247,6 +255,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.qbittorrent.integration.get({ integrationId: id });
       return { kind: "qbittorrent", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const seerrPermissions = await caller.seerr.permissions();
+  if (seerrPermissions.canRead) {
+    try {
+      const metadata = await caller.seerr.integration.get({ integrationId: id });
+      return { kind: "seerr", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

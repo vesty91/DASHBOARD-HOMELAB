@@ -542,6 +542,25 @@ DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 Jamais exposés : cookie `SID`, mot de passe, noms de torrents, hashs, magnets,
 `save_path`, trackers, fichiers, `baseUrl`, config.
 
+# Seerr API — Phase 18.8
+
+Routeur tRPC `seerr` (aucun generic invoke). Input : `integrationId` UUID.
+
+| Route                    | Permission              | Capability    | Notes                                                |
+| ------------------------ | ----------------------- | ------------- | ---------------------------------------------------- |
+| `seerr.permissions`      | auth active             | —             | `canRead`, `canManage`                               |
+| `seerr.integration.list` | use/manage + seerr.read | —             | `{ id, name, enabled }[]`                            |
+| `seerr.integration.get`  | use/manage + seerr.read | —             | `{ id, name, enabled }`                              |
+| `seerr.overview.get`     | use/manage + seerr.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `seerr.overview.refresh` | use/manage + seerr.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+
+DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
+`system`, `counts`. Auth : header `X-Api-Key` uniquement. Jamais `apikey` dans
+l'URL. API officielle v1 (Jellyseerr / Overseerr compatibles).
+
+Jamais exposés : clé API, titres, utilisateurs, e-mails, ids TMDB, listes de
+demandes, approve/decline, `baseUrl`, config.
+
 # Service Status API — Phase 12
 
 Agrégateur interne. Aucun generic invoke. Aucun appel navigateur vers les services.
@@ -601,7 +620,7 @@ relais SSE sans exposer `REALTIME_URL` au navigateur.
 
 Un board `public` n'autorise pas le stream realtime. `runtime` exige `settings.read`.
 Les intégrations spécialisées réutilisent docker/synology/jellyfin/immich/beszel/prometheus/
-uptime-kuma/proxmox/grafana/ntfy/prowlarr/qbittorrent/radarr/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
+uptime-kuma/proxmox/grafana/ntfy/prowlarr/qbittorrent/radarr/seerr/sonarr `*.read` + `integration.use` ; `integration.read` ne donne pas accès aux types
 spécialisés.
 
 | Route       | Permission      | Notes                                                                                             |

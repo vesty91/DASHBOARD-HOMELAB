@@ -69,6 +69,7 @@ describe("service status collectors", () => {
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      seerr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
@@ -125,6 +126,7 @@ describe("service status collectors", () => {
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      seerr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });
@@ -182,6 +184,7 @@ describe("service status collectors", () => {
       ntfy: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       prowlarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       qbittorrent: { permissions: () => ({ canRead: false, canManage: false }) } as never,
+      seerr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       radarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
       sonarr: { permissions: () => ({ canRead: false, canManage: false }) } as never,
     });

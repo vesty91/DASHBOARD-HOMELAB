@@ -12,6 +12,7 @@ import { prowlarrStatusContract } from "./prowlarr-status";
 import { qbittorrentTransferContract } from "./qbittorrent-transfer";
 import { radarrOverviewContract } from "./radarr-overview";
 import { sonarrOverviewContract } from "./sonarr-overview";
+import { seerrRequestsContract } from "./seerr-requests";
 import { serviceStatusContract } from "./service-status";
 import { uptimeKumaStatusContract } from "./uptime-kuma-status";
 import { createWidgetRegistry, type WidgetRegistry } from "./registry";
@@ -33,6 +34,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(radarrOverviewContract)
     .register(sonarrOverviewContract)
     .register(serviceStatusContract)
+    .register(seerrRequestsContract)
     .register(uptimeKumaStatusContract)
     .freeze();
 }

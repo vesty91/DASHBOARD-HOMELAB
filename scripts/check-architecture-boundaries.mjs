@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const forbiddenDependencies = new Map([
-  ["packages/db/package.json", new Set(["@dashboard/web", "@dashboard/widgets"])],
+  [
+    "packages/db/package.json",
+    new Set(["@dashboard/web", "@dashboard/widgets", "@dashboard/seerr"]),
+  ],
   [
     "packages/integrations/package.json",
     new Set([
@@ -24,13 +27,24 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
     "packages/secrets/package.json",
-    new Set(["@dashboard/web", "next", "drizzle-orm", "@dashboard/db", "@dashboard/integrations"]),
+    new Set([
+      "@dashboard/web",
+      "next",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/integrations",
+      "@dashboard/seerr",
+    ]),
   ],
-  ["packages/apps/package.json", new Set(["@dashboard/web", "next", "drizzle-orm"])],
+  [
+    "packages/apps/package.json",
+    new Set(["@dashboard/web", "next", "drizzle-orm", "@dashboard/seerr"]),
+  ],
   [
     "packages/app-library/package.json",
     new Set([
@@ -52,13 +66,17 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
       "next",
       "react",
       "drizzle-orm",
     ]),
   ],
-  ["packages/monitoring/package.json", new Set(["@dashboard/web", "next"])],
-  ["packages/shared/package.json", new Set(["@dashboard/db", "@dashboard/widgets", "next"])],
+  ["packages/monitoring/package.json", new Set(["@dashboard/web", "next", "@dashboard/seerr"])],
+  [
+    "packages/shared/package.json",
+    new Set(["@dashboard/db", "@dashboard/widgets", "next", "@dashboard/seerr"]),
+  ],
   [
     "packages/events/package.json",
     new Set([
@@ -68,6 +86,7 @@ const forbiddenDependencies = new Map([
       "next",
       "react",
       "drizzle-orm",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -80,6 +99,7 @@ const forbiddenDependencies = new Map([
       "next",
       "react",
       "drizzle-orm",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -101,6 +121,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -124,6 +145,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -147,6 +169,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -170,6 +193,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -193,6 +217,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -216,6 +241,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -239,6 +265,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -262,6 +289,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -285,6 +313,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -308,6 +337,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -331,6 +361,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -354,6 +385,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/radarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -377,6 +409,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/sonarr",
       "@dashboard/prowlarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -400,6 +433,7 @@ const forbiddenDependencies = new Map([
       "@dashboard/sonarr",
       "@dashboard/radarr",
       "@dashboard/qbittorrent",
+      "@dashboard/seerr",
     ]),
   ],
   [
@@ -423,6 +457,31 @@ const forbiddenDependencies = new Map([
       "@dashboard/sonarr",
       "@dashboard/radarr",
       "@dashboard/prowlarr",
+      "@dashboard/seerr",
+    ]),
+  ],
+  [
+    "packages/seerr/package.json",
+    new Set([
+      "@dashboard/web",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/db",
+      "@dashboard/docker",
+      "@dashboard/synology",
+      "@dashboard/jellyfin",
+      "@dashboard/immich",
+      "@dashboard/beszel",
+      "@dashboard/prometheus",
+      "@dashboard/uptime-kuma",
+      "@dashboard/proxmox",
+      "@dashboard/grafana",
+      "@dashboard/ntfy",
+      "@dashboard/sonarr",
+      "@dashboard/radarr",
+      "@dashboard/prowlarr",
+      "@dashboard/qbittorrent",
     ]),
   ],
 ]);

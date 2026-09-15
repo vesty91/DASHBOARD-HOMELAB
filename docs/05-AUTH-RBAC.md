@@ -249,10 +249,15 @@ Phase 18.7 : lecture qBittorrent exige (`integration.use` ou `integration.manage
 `/integrations/[id]` qBittorrent : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `qbittorrent.read`.
 
+Phase 18.8 : lecture Seerr exige (`integration.use` ou `integration.manage`) **et**
+`seerr.read`. Cette conjonction suffit pour `seerr.integration.get` et
+`/integrations/[id]` Seerr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
+défaut **n'obtient pas** `seerr.read`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
-`qbittorrent.read`, `docker.*` ni
+`qbittorrent.read`, `seerr.read`, `docker.*` ni
 `settings.manage`.
 
 ## 10. Audit

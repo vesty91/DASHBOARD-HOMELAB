@@ -25,6 +25,8 @@ export {
 export { QbittorrentTransferWidget } from "./qbittorrent-transfer-widget";
 export { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 export { RadarrOverviewWidget } from "./radarr-overview-widget";
+export { SeerrRequestsForm, type SeerrIntegrationOption } from "./seerr-requests-form";
+export { SeerrRequestsWidget } from "./seerr-requests-widget";
 export { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
 export { SonarrOverviewWidget } from "./sonarr-overview-widget";
 export { ImmichStatsForm, type ImmichIntegrationOption } from "./immich-stats-form";

@@ -875,6 +875,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("qbittorrent.example");
   });
 
+  it("redacts Seerr generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "seerr",
+        displayName: "Seerr",
+      },
+    ]);
+    const seerr = await service.create(
+      {
+        type: "seerr",
+        name: "Seerr",
+        baseUrl: "https://seerr.example:5055",
+        enabled: true,
+        config: { path: "/health", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(seerr.id, reader);
+    expect(restricted).toMatchObject({
+      id: seerr.id,
+      type: "seerr",
+      name: "Seerr",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("seerr.example");
+  });
+
   it("redacts Radarr generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

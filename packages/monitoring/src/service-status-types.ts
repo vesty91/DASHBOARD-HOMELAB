@@ -24,6 +24,7 @@ export const SERVICE_SOURCE_TYPES = [
   "prowlarr",
   "qbittorrent",
   "radarr",
+  "seerr",
   "sonarr",
 ] as const;
 
