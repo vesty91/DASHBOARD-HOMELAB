@@ -12,15 +12,17 @@ function hasAny(actor: IntegrationActor, permissions: readonly Permission[]): bo
 }
 
 export function sonarrPermissionsView(actor: IntegrationActor): SonarrPermissionsView {
-  if (!isActive(actor)) return { canRead: false, canManage: false };
+  if (!isActive(actor)) return { canRead: false, canManage: false, canCommand: false };
   const integrationUse = hasAny(actor, ["integration.use", "integration.manage"]);
+  const integrationInteract = hasAny(actor, ["integration.interact", "integration.manage"]);
   return {
     canRead: integrationUse && hasAny(actor, ["sonarr.read"]),
     canManage: hasAny(actor, ["integration.manage"]),
+    canCommand: integrationInteract && hasAny(actor, ["sonarr.command"]),
   };
 }
 
-export type SonarrAccessKind = "read" | "manage";
+export type SonarrAccessKind = "read" | "manage" | "command";
 
 export function assertSonarrAccess(actor: IntegrationActor, kind: SonarrAccessKind): void {
   if (!isActive(actor)) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
@@ -31,6 +33,9 @@ export function assertSonarrAccess(actor: IntegrationActor, kind: SonarrAccessKi
       return;
     case "manage":
       if (!view.canManage) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "command":
+      if (!view.canCommand) throw new IntegrationError("FORBIDDEN", "Permission denied");
       return;
     default: {
       const _exhaustive: never = kind;

@@ -62,7 +62,11 @@ test("creates a Radarr integration without leaking the API key from the browser"
   await expect(page).toHaveURL(/\/integrations\/[0-9a-f-]{36}$/i);
   await expect(page.getByRole("heading", { level: 1, name: "Radarr Lab" })).toBeVisible();
   await expect(page.getByText("Radarr", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualiser", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Commandes" })).toBeVisible();
+  await expect(page.getByLabel("ID film")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualiser le film" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Rechercher le film" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|clé API|Clé API/i).first(),
   ).toBeVisible({ timeout: 30_000 });

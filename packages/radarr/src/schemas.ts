@@ -58,5 +58,21 @@ export const radarrIntegrationInputSchema = z.object({
   integrationId: z.uuid(),
 });
 
+const radarrResourceIdSchema = z.number().int().positive().max(2_147_483_647);
+
+export const radarrRefreshMovieInputSchema = z.object({
+  integrationId: z.uuid(),
+  movieId: radarrResourceIdSchema,
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
+export const radarrSearchMovieInputSchema = z.object({
+  integrationId: z.uuid(),
+  movieId: radarrResourceIdSchema,
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
 export type RadarrConfig = z.infer<typeof radarrConfigSchema>;
 export type RadarrSecrets = z.infer<typeof radarrSecretSchema>;
+export type RadarrRefreshMovieInput = z.infer<typeof radarrRefreshMovieInputSchema>;
+export type RadarrSearchMovieInput = z.infer<typeof radarrSearchMovieInputSchema>;

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   IntegrationError,
   MemoryIntegrationCache,
+  MemorySafeActionInFlightGuard,
+  MemorySafeActionRateLimiter,
   createIntegrationRegistry,
   type EncryptedSecretRow,
   type IntegrationRecord,
@@ -120,12 +122,17 @@ function officialPayloads(request: SecureHttpRequest): SecureHttpResult {
     return json([{ type: "error", message: "Indexer failed at /data/movies" }]);
   if (pathname === "/api/v3/queue/status") return json({ totalCount: 4, count: 2 });
   if (pathname === "/api/v3/movie") return json([{ title: "Secret Movie", path: "/data/movies" }]);
+  if (request.method === "POST" && pathname === "/api/v3/command")
+    return json({ id: 99, name: "RefreshMovie", movie: { title: "Secret Movie" } }, 201);
   return json([{ path: "/data", label: "tv", freeSpace: 100, totalSpace: 400 }]);
 }
 
 function serviceWith(
   request: (options: SecureHttpRequest) => Promise<SecureHttpResult>,
   store = createMemoryStore(),
+  extra: {
+    actionRateLimiter?: MemorySafeActionRateLimiter;
+  } = {},
 ) {
   return createRadarrService({
     store: store.store,
@@ -135,6 +142,8 @@ function serviceWith(
     refreshRateLimiter: new MemoryRadarrRefreshRateLimiter(),
     refreshFence: new MemoryRadarrRefreshFence(),
     overviewCoalescer: new MemoryRadarrOverviewCoalescer(),
+    actionRateLimiter: extra.actionRateLimiter ?? new MemorySafeActionRateLimiter(),
+    inFlight: new MemorySafeActionInFlightGuard(),
     keyring: store.keyring,
   });
 }
@@ -219,11 +228,108 @@ describe("createRadarrService", () => {
       refreshRateLimiter: limiter,
       refreshFence: new MemoryRadarrRefreshFence(),
       overviewCoalescer: new MemoryRadarrOverviewCoalescer(),
+      actionRateLimiter: new MemorySafeActionRateLimiter(),
+      inFlight: new MemorySafeActionInFlightGuard(),
       keyring: store.keyring,
     });
     await service.refreshOverview(INTEGRATION_ID, systemAdmin);
     await expect(service.refreshOverview(INTEGRATION_ID, systemAdmin)).rejects.toBeInstanceOf(
       IntegrationError,
     );
+  });
+
+  it("queues RefreshMovie without returning titles or the API key", async () => {
+    const bodies: string[] = [];
+    const commandActor = actor(["integration.interact", "radarr.command"]);
+    const service = serviceWith(async (options) => {
+      if (options.body) bodies.push(options.body);
+      return officialPayloads(options);
+    });
+    const result = await service.refreshMovie(
+      { integrationId: INTEGRATION_ID, movieId: 20 },
+      commandActor,
+    );
+    expect(result).toMatchObject({
+      status: "accepted",
+      action: "radarr.refresh-movie",
+      resourceId: "movie:20",
+    });
+    expect(bodies[0]).toBe('{"name":"RefreshMovie","movieIds":[20]}');
+    expect(JSON.stringify(result)).not.toContain("Secret Movie");
+    expect(JSON.stringify(result)).not.toContain(API_KEY);
+  });
+
+  it("queues MoviesSearch and denies read-only, manage-only, and command without interact", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    const result = await service.searchMovie(
+      { integrationId: INTEGRATION_ID, movieId: 42 },
+      actor(["integration.interact", "radarr.command"]),
+    );
+    expect(result.action).toBe("radarr.search-movie");
+    expect(result.resourceId).toBe("search:42");
+    await expect(
+      service.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 20 },
+        actor(["integration.use", "radarr.read"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 20 },
+        actor(["integration.manage"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 20 },
+        actor(["integration.use", "radarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("rejects invalid ids, stale config, rate limits and maps 401 without leaking secrets", async () => {
+    const service = serviceWith(async (options) => officialPayloads(options));
+    await expect(
+      service.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 0 },
+        actor(["integration.interact", "radarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    await expect(
+      service.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 20, expectedConfigRevision: 9 },
+        actor(["integration.interact", "radarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const limiter = new MemorySafeActionRateLimiter(1, 60_000, () => 1_000);
+    const limited = serviceWith(async (options) => officialPayloads(options), createMemoryStore(), {
+      actionRateLimiter: limiter,
+    });
+    await limited.refreshMovie(
+      { integrationId: INTEGRATION_ID, movieId: 20 },
+      actor(["integration.interact", "radarr.command"]),
+    );
+    await expect(
+      limited.refreshMovie(
+        { integrationId: INTEGRATION_ID, movieId: 20 },
+        actor(["integration.interact", "radarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    const unauthorized = serviceWith(async () => json({ error: API_KEY }, 401));
+    await expect(
+      unauthorized.searchMovie(
+        { integrationId: INTEGRATION_ID, movieId: 42 },
+        actor(["integration.interact", "radarr.command"]),
+      ),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    try {
+      await unauthorized.searchMovie(
+        { integrationId: INTEGRATION_ID, movieId: 42 },
+        actor(["integration.interact", "radarr.command"]),
+      );
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain(API_KEY);
+      expect(JSON.stringify(error)).not.toContain("Secret Movie");
+    }
   });
 });

@@ -71,3 +71,10 @@ l'obtient pas. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
 ### 6. Cache
 
 8 s si complet, 5 s si partiel, failures 15 s. Coalescer + fence. Refresh 10/min.
+
+## Amendement Phase 21.5
+
+Prowlarr **reste read-only**. Les écritures officielles (CRUD indexeurs,
+`POST /api/v1/search`, `POST /api/v1/command`, test-all) ne sont pas des
+actions ciblées non destructives utiles au dashboard. Aucune mutation n'est
+ajoutée pour cocher une case.

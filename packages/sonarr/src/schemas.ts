@@ -58,5 +58,21 @@ export const sonarrIntegrationInputSchema = z.object({
   integrationId: z.uuid(),
 });
 
+const sonarrResourceIdSchema = z.number().int().positive().max(2_147_483_647);
+
+export const sonarrRefreshSeriesInputSchema = z.object({
+  integrationId: z.uuid(),
+  seriesId: sonarrResourceIdSchema,
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
+export const sonarrSearchEpisodeInputSchema = z.object({
+  integrationId: z.uuid(),
+  episodeId: sonarrResourceIdSchema,
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
 export type SonarrConfig = z.infer<typeof sonarrConfigSchema>;
 export type SonarrSecrets = z.infer<typeof sonarrSecretSchema>;
+export type SonarrRefreshSeriesInput = z.infer<typeof sonarrRefreshSeriesInputSchema>;
+export type SonarrSearchEpisodeInput = z.infer<typeof sonarrSearchEpisodeInputSchema>;

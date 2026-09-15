@@ -62,7 +62,12 @@ test("creates a Sonarr integration without leaking the API key from the browser"
   await expect(page).toHaveURL(/\/integrations\/[0-9a-f-]{36}$/i);
   await expect(page.getByRole("heading", { level: 1, name: "Sonarr Lab" })).toBeVisible();
   await expect(page.getByText("Sonarr", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualiser", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Commandes" })).toBeVisible();
+  await expect(page.getByLabel("ID série")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualiser la série" })).toBeVisible();
+  await expect(page.getByLabel("ID épisode")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Rechercher l'épisode" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|clé API|Clé API/i).first(),
   ).toBeVisible({ timeout: 30_000 });

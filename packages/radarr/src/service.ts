@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,6 +17,9 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
@@ -24,15 +28,27 @@ import { radarrOverviewCacheOperation, overviewFailureCacheOperation } from "./c
 import {
   RADARR_OVERVIEW_FAILURE_TTL_MS,
   fetchRadarrOverview,
+  postRadarrCommand,
   radarrContextFromIntegration,
   overviewCacheTtl,
   type RadarrClientContext,
 } from "./client";
+import {
+  radarrCommandResourceId,
+  radarrMoviesSearchCommand,
+  radarrRefreshMovieCommand,
+  type RadarrQueuedCommand,
+} from "./command";
 import { RADARR_INTEGRATION_ID } from "./definition";
 import { RadarrError, toIntegrationError } from "./errors";
 import type { RadarrOverviewCoalescer } from "./overview-coalescer";
 import type { RadarrRefreshFence } from "./refresh-fence";
-import type { RadarrConfig, RadarrSecrets } from "./schemas";
+import type {
+  RadarrConfig,
+  RadarrRefreshMovieInput,
+  RadarrSearchMovieInput,
+  RadarrSecrets,
+} from "./schemas";
 import type {
   RadarrActor,
   RadarrIntegrationMetadata,
@@ -48,6 +64,9 @@ export interface RadarrServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: RadarrRefreshFence;
   overviewCoalescer: RadarrOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -237,6 +256,45 @@ export function createRadarrService(deps: RadarrServiceDeps) {
     });
   }
 
+  async function queueCommand(
+    input: { integrationId: string; expectedConfigRevision?: number | undefined },
+    actor: RadarrActor,
+    action: "radarr.refresh-movie" | "radarr.search-movie",
+    command: RadarrQueuedCommand,
+  ): Promise<SafeActionResult> {
+    assertRadarrAccess(actor, "command");
+    const record = await deps.store.findById(input.integrationId);
+    if (!record) throw new IntegrationError("NOT_FOUND", "Définition Radarr introuvable");
+    const realtime = deps.publish;
+    return runSafeIntegrationAction({
+      actor,
+      action,
+      actionPermissions: ["radarr.command"],
+      integrationId: record.id,
+      expectedType: RADARR_INTEGRATION_ID,
+      loadedType: record.type,
+      resourceId: radarrCommandResourceId(command),
+      rateLimiter: deps.actionRateLimiter,
+      inFlight: deps.inFlight,
+      cache: deps.cache,
+      currentConfigRevision: record.configRevision,
+      ...(input.expectedConfigRevision === undefined
+        ? {}
+        : { expectedConfigRevision: input.expectedConfigRevision }),
+      ...(realtime ? { publish: () => realtime(record.id) } : {}),
+      execute: async () => {
+        const loaded = await loadContext(record.id, "command.queue");
+        try {
+          await postRadarrCommand(loaded.ctx, command);
+          deps.refreshFence.advance(record.id);
+          return "accepted";
+        } catch (error) {
+          throw normalizedRedactedError(error, loaded.secrets);
+        }
+      },
+    });
+  }
+
   return {
     permissions(actor: RadarrActor): RadarrPermissionsView {
       return radarrPermissionsView(actor);
@@ -278,6 +336,28 @@ export function createRadarrService(deps: RadarrServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async refreshMovie(
+      input: RadarrRefreshMovieInput,
+      actor: RadarrActor,
+    ): Promise<SafeActionResult> {
+      return queueCommand(
+        input,
+        actor,
+        "radarr.refresh-movie",
+        radarrRefreshMovieCommand(input.movieId),
+      );
+    },
+    async searchMovie(
+      input: RadarrSearchMovieInput,
+      actor: RadarrActor,
+    ): Promise<SafeActionResult> {
+      return queueCommand(
+        input,
+        actor,
+        "radarr.search-movie",
+        radarrMoviesSearchCommand(input.movieId),
+      );
     },
   };
 }

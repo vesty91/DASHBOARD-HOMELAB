@@ -20,7 +20,7 @@ import {
 
 export const RADARR_INTEGRATION_ID = "radarr";
 export const RADARR_INTEGRATION_VERSION = 1;
-export const RADARR_CAPABILITIES = ["status.read"] as const;
+export const RADARR_CAPABILITIES = ["status.read", "command.queue"] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof RadarrError) return toIntegrationError(error).code;
@@ -41,7 +41,7 @@ export function createRadarrIntegrationDefinition(): IntegrationDefinition<
     displayName: "Radarr",
     version: RADARR_INTEGRATION_VERSION,
     description:
-      "Version, films, file d'attente et santé Radarr via l'API officielle v3 en lecture seule.",
+      "Version, films, file d'attente Radarr et commandes ciblées (refresh film, recherche film) via l'API officielle v3.",
     configSchema: radarrConfigSchema,
     secretSchema: radarrSecretSchema,
     capabilities: RADARR_CAPABILITIES,

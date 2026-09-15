@@ -8,7 +8,10 @@ describe("radarrUserError", () => {
     expect(radarrUserError({ code: "DNS_ERROR" })).toBe("Le serveur Radarr est injoignable (DNS).");
     expect(radarrUserError({ code: "TLS_ERROR" })).toContain("TLS");
     expect(radarrUserError({ code: "UNREACHABLE" })).toBe("Le serveur Radarr est injoignable.");
-    expect(radarrUserError({ code: "TOO_MANY_REQUESTS" })).toContain("actualisations");
+    expect(radarrUserError({ code: "TOO_MANY_REQUESTS" })).toContain("requêtes");
+    expect(radarrUserError({ code: "CONFLICT" })).toContain("conflit");
+    expect(radarrUserError({ code: "VALIDATION_ERROR" })).toContain("invalides");
+    expect(radarrUserError({ code: "RATE_LIMITED" })).toContain("requêtes");
     expect(radarrUserError({ message: "denied notareal-radarr-apikey-0123456789" })).not.toContain(
       "notareal-radarr-apikey-0123456789",
     );

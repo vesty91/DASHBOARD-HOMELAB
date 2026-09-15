@@ -480,40 +480,44 @@ dans l'audit (seulement `messageLength`).
 
 Routeur tRPC `sonarr` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                     | Permission               | Capability    | Notes                                                |
-| ------------------------- | ------------------------ | ------------- | ---------------------------------------------------- |
-| `sonarr.permissions`      | auth active              | —             | `canRead`, `canManage`                               |
-| `sonarr.integration.list` | use/manage + sonarr.read | —             | `{ id, name, enabled }[]`                            |
-| `sonarr.integration.get`  | use/manage + sonarr.read | —             | `{ id, name, enabled }`                              |
-| `sonarr.overview.get`     | use/manage + sonarr.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `sonarr.overview.refresh` | use/manage + sonarr.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| Route                     | Permission                       | Capability      | Notes                                                    |
+| ------------------------- | -------------------------------- | --------------- | -------------------------------------------------------- |
+| `sonarr.permissions`      | auth active                      | —               | `canRead`, `canManage`, `canCommand`                     |
+| `sonarr.integration.list` | use/manage + sonarr.read         | —               | `{ id, name, enabled }[]`                                |
+| `sonarr.integration.get`  | use/manage + sonarr.read         | —               | `{ id, name, enabled }`                                  |
+| `sonarr.overview.get`     | use/manage + sonarr.read         | `status.read`   | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256     |
+| `sonarr.overview.refresh` | use/manage + sonarr.read         | `status.read`   | 10 requêtes / min / acteur / intégration                 |
+| `sonarr.series.refresh`   | interact/manage + sonarr.command | `command.queue` | POST `/api/v3/command` `RefreshSeries` ; seriesId requis |
+| `sonarr.episodes.search`  | interact/manage + sonarr.command | `command.queue` | POST `/api/v3/command` `EpisodeSearch` ; un episodeId    |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 `system`, `health`, `queue`, `series`, `diskSpace`. Auth : header `X-Api-Key`
 uniquement. Jamais `apikey` dans l'URL.
 
 Jamais exposés : clé API, titres de séries, chemins, `startupPath`, `appData`,
-`message` de santé, `wikiUrl`, `path`/`label` disque, `/api/v3/command`,
+`message` de santé, `wikiUrl`, `path`/`label` disque, JSON de commande brut,
 `baseUrl`, config.
 
 # Radarr API — Phase 18.5
 
 Routeur tRPC `radarr` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                     | Permission               | Capability    | Notes                                                |
-| ------------------------- | ------------------------ | ------------- | ---------------------------------------------------- |
-| `radarr.permissions`      | auth active              | —             | `canRead`, `canManage`                               |
-| `radarr.integration.list` | use/manage + radarr.read | —             | `{ id, name, enabled }[]`                            |
-| `radarr.integration.get`  | use/manage + radarr.read | —             | `{ id, name, enabled }`                              |
-| `radarr.overview.get`     | use/manage + radarr.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `radarr.overview.refresh` | use/manage + radarr.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| Route                     | Permission                       | Capability      | Notes                                                |
+| ------------------------- | -------------------------------- | --------------- | ---------------------------------------------------- |
+| `radarr.permissions`      | auth active                      | —               | `canRead`, `canManage`, `canCommand`                 |
+| `radarr.integration.list` | use/manage + radarr.read         | —               | `{ id, name, enabled }[]`                            |
+| `radarr.integration.get`  | use/manage + radarr.read         | —               | `{ id, name, enabled }`                              |
+| `radarr.overview.get`     | use/manage + radarr.read         | `status.read`   | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
+| `radarr.overview.refresh` | use/manage + radarr.read         | `status.read`   | 10 requêtes / min / acteur / intégration             |
+| `radarr.movies.refresh`   | interact/manage + radarr.command | `command.queue` | POST `/api/v3/command` `RefreshMovie` ; un movieId   |
+| `radarr.movies.search`    | interact/manage + radarr.command | `command.queue` | POST `/api/v3/command` `MoviesSearch` ; un movieId   |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 `system`, `health`, `queue`, `movie`, `diskSpace`. Auth : header `X-Api-Key`
 uniquement. Jamais `apikey` dans l'URL.
 
 Jamais exposés : clé API, titres de films, chemins, `startupPath`, `appData`,
-`message` de santé, `wikiUrl`, `path`/`label` disque, `/api/v3/command`,
+`message` de santé, `wikiUrl`, `path`/`label` disque, JSON de commande brut,
 `baseUrl`, config.
 
 # Prowlarr API — Phase 18.6

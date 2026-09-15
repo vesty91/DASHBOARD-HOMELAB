@@ -1795,6 +1795,52 @@ describe("radarr tRPC router", () => {
       /X-Api-Key|apiKey|apikey|startupPath|rootFolderPath|title|wikiUrl|folder/u,
     );
   });
+
+  it("audits movie refresh without titles or the API key", async () => {
+    const record = vi.fn(async () => undefined);
+    const actionDto = {
+      status: "accepted" as const,
+      action: "radarr.refresh-movie",
+      resourceId: "movie:20",
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const radarrService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false, canCommand: true })),
+      refreshMovie: vi.fn(async () => actionDto),
+    } as unknown as RadarrService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      radarr: radarrService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    await expect(caller.radarr.movies.refresh({ integrationId, movieId: 20 })).resolves.toEqual(
+      actionDto,
+    );
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "radarr.refresh-movie",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "radarr",
+          action: "radarr.refresh-movie",
+          resourceId: "movie:20",
+          result: "accepted",
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(/Secret Movie|apiKey|X-Api-Key/u);
+  });
 });
 
 describe("sonarr tRPC router", () => {
@@ -1846,6 +1892,52 @@ describe("sonarr tRPC router", () => {
     expect(JSON.stringify(overviewDto)).not.toMatch(
       /X-Api-Key|apiKey|apikey|startupPath|rootFolderPath|title|wikiUrl/u,
     );
+  });
+
+  it("audits episode search without titles or the API key", async () => {
+    const record = vi.fn(async () => undefined);
+    const actionDto = {
+      status: "accepted" as const,
+      action: "sonarr.search-episode",
+      resourceId: "episode:34",
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const sonarrService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false, canCommand: true })),
+      searchEpisode: vi.fn(async () => actionDto),
+    } as unknown as SonarrService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      sonarr: sonarrService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    await expect(caller.sonarr.episodes.search({ integrationId, episodeId: 34 })).resolves.toEqual(
+      actionDto,
+    );
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "sonarr.search-episode",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "sonarr",
+          action: "sonarr.search-episode",
+          resourceId: "episode:34",
+          result: "accepted",
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(/Secret Show|apiKey|X-Api-Key/u);
   });
 });
 

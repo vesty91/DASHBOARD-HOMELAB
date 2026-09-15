@@ -9,6 +9,7 @@ export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   fetchSonarrOverview,
+  postSonarrCommand,
   sonarrContextFromIntegration,
   testSonarrConnection,
 } from "./client";
@@ -20,6 +21,16 @@ export {
   createSonarrIntegrationDefinition,
   sonarrIntegrationDefinition,
 } from "./definition";
+export {
+  SONARR_RESOURCE_ID_MAX,
+  assertSonarrResourceId,
+  isSonarrCommandPath,
+  serializeSonarrCommand,
+  sonarrCommandResourceId,
+  sonarrEpisodeSearchCommand,
+  sonarrRefreshSeriesCommand,
+  type SonarrQueuedCommand,
+} from "./command";
 export {
   SONARR_DISKSPACE_MAX,
   SONARR_HEALTH_MAX,
@@ -38,6 +49,7 @@ export {
   toIntegrationError,
 } from "./errors";
 export {
+  SONARR_COMMAND_PATH,
   SONARR_DISKSPACE_PATH,
   SONARR_HEALTH_PATH,
   SONARR_QUEUE_STATUS_PATH,
@@ -61,7 +73,11 @@ export {
   sonarrApiKeySchema,
   sonarrConfigSchema,
   sonarrIntegrationInputSchema,
+  sonarrRefreshSeriesInputSchema,
+  sonarrSearchEpisodeInputSchema,
   sonarrSecretSchema,
+  type SonarrRefreshSeriesInput,
+  type SonarrSearchEpisodeInput,
 } from "./schemas";
 export { createSonarrService, type SonarrService, type SonarrServiceDeps } from "./service";
 export {
@@ -69,6 +85,7 @@ export {
   SONARR_LIST_MAX_BYTES,
   buildSonarrUrl,
   sonarrAuthHeaders,
+  sonarrCommand,
   sonarrFetch,
 } from "./transport";
 export type {

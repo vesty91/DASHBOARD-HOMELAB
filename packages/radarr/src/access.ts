@@ -12,15 +12,17 @@ function hasAny(actor: IntegrationActor, permissions: readonly Permission[]): bo
 }
 
 export function radarrPermissionsView(actor: IntegrationActor): RadarrPermissionsView {
-  if (!isActive(actor)) return { canRead: false, canManage: false };
+  if (!isActive(actor)) return { canRead: false, canManage: false, canCommand: false };
   const integrationUse = hasAny(actor, ["integration.use", "integration.manage"]);
+  const integrationInteract = hasAny(actor, ["integration.interact", "integration.manage"]);
   return {
     canRead: integrationUse && hasAny(actor, ["radarr.read"]),
     canManage: hasAny(actor, ["integration.manage"]),
+    canCommand: integrationInteract && hasAny(actor, ["radarr.command"]),
   };
 }
 
-export type RadarrAccessKind = "read" | "manage";
+export type RadarrAccessKind = "read" | "manage" | "command";
 
 export function assertRadarrAccess(actor: IntegrationActor, kind: RadarrAccessKind): void {
   if (!isActive(actor)) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
@@ -31,6 +33,9 @@ export function assertRadarrAccess(actor: IntegrationActor, kind: RadarrAccessKi
       return;
     case "manage":
       if (!view.canManage) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "command":
+      if (!view.canCommand) throw new IntegrationError("FORBIDDEN", "Permission denied");
       return;
     default: {
       const _exhaustive: never = kind;

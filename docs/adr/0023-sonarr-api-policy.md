@@ -6,9 +6,10 @@ Accepté pour la Phase 18.4 (Sonarr).
 
 ## Contexte
 
-Sonarr expose une API HTTP officielle v3. Les mutations (commandes, grab/remove
-de file, édition de séries) sont hors scope. Un proxy générique, une clé
-`apikey` en query string ou un chemin hors allowlist sont interdits.
+Sonarr expose une API HTTP officielle v3. Un proxy générique, une clé
+`apikey` en query string ou un chemin hors allowlist sont interdits. Grab/remove
+de file et édition de séries restent hors scope. Les commandes ciblées
+`RefreshSeries` et `EpisodeSearch` sont autorisées en Phase 21.5.
 
 Officiel : https://sonarr.tv/docs/api/
 
@@ -20,7 +21,7 @@ Composé dans `apps/web`. Jamais importé par `@dashboard/integrations` ni par
 `@dashboard/widgets`. HTTP + Zod. Aucune migration DB. `baseUrl` = origine http(s)
 uniquement (pas de chemin, credentials, query ou fragment).
 
-### 2. Allowlist GET uniquement
+### 2. Allowlist
 
 Uniquement :
 
@@ -29,12 +30,15 @@ Uniquement :
 - `GET /api/v3/queue/status`
 - `GET /api/v3/series`
 - `GET /api/v3/diskspace`
+- `POST /api/v3/command` (Phase 21.5) avec corps allowlisté
+  `{ name: "RefreshSeries", seriesId }` ou
+  `{ name: "EpisodeSearch", episodeIds: [id] }`
 
 Aucun paramètre de query. `maxRetries: 0`, `maxRedirects: 0`. Corps borné
 (256 KiB / 512 KiB listes). Un corps tronqué est `INVALID_RESPONSE`.
 
-Interdit : POST/PUT/DELETE, `/api/v3/command`, queue grab/remove, chemins
-arbitraires, iframe, proxy générique, `apikey` en query.
+Interdit : PUT/DELETE, GET `/api/v3/command`, queue grab/remove, SeriesSearch,
+RssSync, chemins arbitraires, iframe, proxy générique, `apikey` en query.
 
 ### 3. Auth header uniquement
 
@@ -65,10 +69,22 @@ Un 401 sur `system/status` échoue l'overview (`UNAUTHORIZED`).
 
 ### 5. Permissions
 
-`sonarr.read` en conjonction de `integration.use|manage`. ADMIN par défaut ne
-l'obtient pas. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
-`sonarr-overview` : `publicSafe=false`. Capability : `status.read`.
+`sonarr.read` en conjonction de `integration.use|manage`. `sonarr.command` en
+conjonction de `integration.interact|manage`. ADMIN par défaut n'obtient ni
+l'une ni l'autre. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
+`sonarr-overview` : `publicSafe=false`. Capabilities : `status.read`,
+`command.queue`.
 
 ### 6. Cache
 
 8 s si complet, 5 s si partiel, failures 15 s. Coalescer + fence. Refresh 10/min.
+
+## Amendement Phase 21.5
+
+Commandes ciblées uniquement :
+
+- `POST /api/v3/command` avec `RefreshSeries` + `seriesId` obligatoire
+- `POST /api/v3/command` avec `EpisodeSearch` + un seul `episodeId`
+
+Toujours interdit : SeriesSearch, SeasonSearch, RssSync, delete, settings,
+commandes sans ID, GET command, query, `apikey` en query.

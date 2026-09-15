@@ -63,8 +63,18 @@ import {
   customApiValueInputSchema,
   type CustomApiService,
 } from "@dashboard/custom-api";
-import { radarrIntegrationInputSchema, type RadarrService } from "@dashboard/radarr";
-import { sonarrIntegrationInputSchema, type SonarrService } from "@dashboard/sonarr";
+import {
+  radarrIntegrationInputSchema,
+  radarrRefreshMovieInputSchema,
+  radarrSearchMovieInputSchema,
+  type RadarrService,
+} from "@dashboard/radarr";
+import {
+  sonarrIntegrationInputSchema,
+  sonarrRefreshSeriesInputSchema,
+  sonarrSearchEpisodeInputSchema,
+  type SonarrService,
+} from "@dashboard/sonarr";
 import {
   proxmoxGuestActionInputSchema,
   proxmoxIntegrationInputSchema,
@@ -267,6 +277,22 @@ function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function arrCommandAuditMetadata(
+  integrationType: "sonarr" | "radarr",
+  integrationId: string,
+  result: { action: string; resourceId: string; status: "success" | "accepted" | "failed" },
+): Record<string, unknown> {
+  return {
+    ...safeActionAuditMetadata({
+      integrationId,
+      integrationType,
+      action: result.action,
+      resourceId: result.resourceId,
+      result: result.status,
+    }),
+  };
 }
 
 function ntfyPublishAuditMetadata(
@@ -1075,6 +1101,36 @@ export const radarrRouter = t.router({
         procedure(() => ctx.radarr.refreshOverview(input.integrationId, ctx.actor)),
       ),
   }),
+  movies: t.router({
+    refresh: t.procedure.input(radarrRefreshMovieInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.radarr.refreshMovie(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "radarr.refresh-movie",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: arrCommandAuditMetadata("radarr", input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+    search: t.procedure.input(radarrSearchMovieInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.radarr.searchMovie(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "radarr.search-movie",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: arrCommandAuditMetadata("radarr", input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+  }),
 });
 export const sonarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.sonarr.permissions(ctx.actor)),
@@ -1097,6 +1153,38 @@ export const sonarrRouter = t.router({
       .mutation(({ ctx, input }) =>
         procedure(() => ctx.sonarr.refreshOverview(input.integrationId, ctx.actor)),
       ),
+  }),
+  series: t.router({
+    refresh: t.procedure.input(sonarrRefreshSeriesInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.sonarr.refreshSeries(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "sonarr.refresh-series",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: arrCommandAuditMetadata("sonarr", input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
+  }),
+  episodes: t.router({
+    search: t.procedure.input(sonarrSearchEpisodeInputSchema).mutation(({ ctx, input }) =>
+      procedure(async () => {
+        const result = await ctx.sonarr.searchEpisode(input, ctx.actor);
+        await emitAudit(ctx, {
+          actorUserId: ctx.actor.userId,
+          action: "sonarr.search-episode",
+          targetType: "integration",
+          targetId: input.integrationId,
+          outcome: "success",
+          metadata: arrCommandAuditMetadata("sonarr", input.integrationId, result),
+        });
+        return result;
+      }),
+    ),
   }),
 });
 function requireAuthenticatedUser(ctx: ApiContext): string {

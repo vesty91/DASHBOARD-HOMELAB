@@ -434,10 +434,12 @@ inventée).
 Statut : COMPLETE (Phase 18.4).
 
 Adapter `sonarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Sonarr.
-Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
+Auth header obligatoire (`X-Api-Key` uniquement). Lecture
 `GET /api/v3/system/status`, `GET /api/v3/health`, `GET /api/v3/queue/status`,
-`GET /api/v3/series`, `GET /api/v3/diskspace`. Voir ADR 0023. POST/PUT/DELETE,
-`/api/v3/command`, queue grab/remove et `apikey` en query sont hors scope.
+`GET /api/v3/series`, `GET /api/v3/diskspace`. Mutations Phase 21 : `POST /api/v3/command`
+uniquement avec `RefreshSeries` (seriesId requis) ou `EpisodeSearch` (un
+episodeId). Voir ADR 0023. PUT/DELETE, queue grab/remove, SeriesSearch, RssSync
+et `apikey` en query restent hors scope.
 
 `sonarr.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 Sonarr (`integration.use|manage` + `sonarr.read`). `integration.read` n'est
@@ -446,7 +448,8 @@ pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
 `integration.manage`.
 
 Widget `sonarr-overview` : `publicSafe=false`. Refresh manuel 10/min. Cache
-overview 8 s (5 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucune
+overview 8 s (5 s si partiel). Clé API jamais renvoyée. Le widget reste en
+lecture seule. Les commandes passent par le formulaire d'intégration. Aucune
 fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 `/api/v3/diskspace` rend la section `unavailable` (pas de zéros inventés).
 
@@ -455,10 +458,12 @@ fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 Statut : COMPLETE (Phase 18.5).
 
 Adapter `radarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Radarr.
-Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
+Auth header obligatoire (`X-Api-Key` uniquement). Lecture
 `GET /api/v3/system/status`, `GET /api/v3/health`, `GET /api/v3/queue/status`,
-`GET /api/v3/movie`, `GET /api/v3/diskspace`. Voir ADR 0024. POST/PUT/DELETE,
-`/api/v3/command`, queue grab/remove et `apikey` en query sont hors scope.
+`GET /api/v3/movie`, `GET /api/v3/diskspace`. Mutations Phase 21 : `POST /api/v3/command`
+uniquement avec `RefreshMovie` ou `MoviesSearch` (un `movieId`). Voir ADR 0024.
+PUT/DELETE, queue grab/remove, rename, delete et `apikey` en query restent hors
+scope.
 
 `radarr.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 Radarr (`integration.use|manage` + `radarr.read`). `integration.read` n'est
@@ -467,7 +472,8 @@ pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
 `integration.manage`.
 
 Widget `radarr-overview` : `publicSafe=false`. Refresh manuel 10/min. Cache
-overview 8 s (5 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucune
+overview 8 s (5 s si partiel). Clé API jamais renvoyée. Le widget reste en
+lecture seule. Les commandes passent par le formulaire d'intégration. Aucune
 fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 `/api/v3/diskspace` rend la section `unavailable` (pas de zéros inventés).
 
@@ -479,7 +485,8 @@ Adapter `prowlarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Pr
 Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
 `GET /api/v1/system/status`, `GET /api/v1/health`, `GET /api/v1/indexer`,
 `GET /api/v1/indexerstatus`. Voir ADR 0025. POST/PUT/DELETE, `/api/v1/search`,
-`/api/v1/command` et `apikey` en query sont hors scope.
+`/api/v1/command` et `apikey` en query restent hors scope (Phase 21 : Prowlarr
+reste read-only — pas d'action ciblée non destructive utile identifiée).
 
 `prowlarr.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 Prowlarr (`integration.use|manage` + `prowlarr.read`). `integration.read` n'est
@@ -592,7 +599,7 @@ Pour chaque adapter :
 
 ## 21. Actions sûres
 
-Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy).
+Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy, 21.5 *arr).
 
 Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
 Default deny. POST allowlisté. Rate limit par acteur / intégration / action.

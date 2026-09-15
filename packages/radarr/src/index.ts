@@ -9,6 +9,7 @@ export {
   OVERVIEW_CACHE_TTL_MS,
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   fetchRadarrOverview,
+  postRadarrCommand,
   radarrContextFromIntegration,
   testRadarrConnection,
 } from "./client";
@@ -20,6 +21,16 @@ export {
   createRadarrIntegrationDefinition,
   radarrIntegrationDefinition,
 } from "./definition";
+export {
+  RADARR_RESOURCE_ID_MAX,
+  assertRadarrResourceId,
+  isRadarrCommandPath,
+  radarrCommandResourceId,
+  radarrMoviesSearchCommand,
+  radarrRefreshMovieCommand,
+  serializeRadarrCommand,
+  type RadarrQueuedCommand,
+} from "./command";
 export {
   RADARR_DISKSPACE_MAX,
   RADARR_HEALTH_MAX,
@@ -38,6 +49,7 @@ export {
   toIntegrationError,
 } from "./errors";
 export {
+  RADARR_COMMAND_PATH,
   RADARR_DISKSPACE_PATH,
   RADARR_HEALTH_PATH,
   RADARR_QUEUE_STATUS_PATH,
@@ -61,7 +73,11 @@ export {
   radarrApiKeySchema,
   radarrConfigSchema,
   radarrIntegrationInputSchema,
+  radarrRefreshMovieInputSchema,
+  radarrSearchMovieInputSchema,
   radarrSecretSchema,
+  type RadarrRefreshMovieInput,
+  type RadarrSearchMovieInput,
 } from "./schemas";
 export { createRadarrService, type RadarrService, type RadarrServiceDeps } from "./service";
 export {
@@ -69,6 +85,7 @@ export {
   RADARR_LIST_MAX_BYTES,
   buildRadarrUrl,
   radarrAuthHeaders,
+  radarrCommand,
   radarrFetch,
 } from "./transport";
 export type {

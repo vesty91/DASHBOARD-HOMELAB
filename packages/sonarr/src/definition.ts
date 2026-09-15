@@ -20,7 +20,7 @@ import {
 
 export const SONARR_INTEGRATION_ID = "sonarr";
 export const SONARR_INTEGRATION_VERSION = 1;
-export const SONARR_CAPABILITIES = ["status.read"] as const;
+export const SONARR_CAPABILITIES = ["status.read", "command.queue"] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof SonarrError) return toIntegrationError(error).code;
@@ -41,7 +41,7 @@ export function createSonarrIntegrationDefinition(): IntegrationDefinition<
     displayName: "Sonarr",
     version: SONARR_INTEGRATION_VERSION,
     description:
-      "Version, séries, file d'attente et santé Sonarr via l'API officielle v3 en lecture seule.",
+      "Version, séries, file d'attente Sonarr et commandes ciblées (refresh série, recherche épisode) via l'API officielle v3.",
     configSchema: sonarrConfigSchema,
     secretSchema: sonarrSecretSchema,
     capabilities: SONARR_CAPABILITIES,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { radarrConfigSchema, radarrSecretSchema } from "./schemas";
+import { radarrConfigSchema, radarrRefreshMovieInputSchema, radarrSecretSchema } from "./schemas";
 
 describe("radarr schemas", () => {
   it("accepts a valid origin config and rejects malformed API keys", () => {
@@ -15,5 +15,20 @@ describe("radarr schemas", () => {
     expect(() => radarrSecretSchema.parse({ apiKey: "bad\nkey" })).toThrow(/visible ASCII/);
     expect(() => radarrSecretSchema.parse({ apiKey: "" })).toThrow();
     expect(() => radarrSecretSchema.parse({})).toThrow();
+  });
+
+  it("accepts a single positive movie id and rejects zero", () => {
+    expect(
+      radarrRefreshMovieInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        movieId: 20,
+      }),
+    ).toMatchObject({ movieId: 20 });
+    expect(() =>
+      radarrRefreshMovieInputSchema.parse({
+        integrationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        movieId: 0,
+      }),
+    ).toThrow();
   });
 });

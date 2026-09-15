@@ -186,9 +186,13 @@ const globalRuntime = globalThis as typeof globalThis & {
     radarrRefreshRateLimiter: MemoryRadarrRefreshRateLimiter;
     radarrRefreshFence: MemoryRadarrRefreshFence;
     radarrOverviewCoalescer: MemoryRadarrOverviewCoalescer;
+    radarrActionRateLimiter: MemorySafeActionRateLimiter;
+    radarrActionInFlight: MemorySafeActionInFlightGuard;
     sonarrRefreshRateLimiter: MemorySonarrRefreshRateLimiter;
     sonarrRefreshFence: MemorySonarrRefreshFence;
     sonarrOverviewCoalescer: MemorySonarrOverviewCoalescer;
+    sonarrActionRateLimiter: MemorySafeActionRateLimiter;
+    sonarrActionInFlight: MemorySafeActionInFlightGuard;
     serviceStatusCoalescer: MemoryServiceStatusCoalescer;
   };
 };
@@ -344,9 +348,13 @@ function integrationRuntime() {
     radarrRefreshRateLimiter: new MemoryRadarrRefreshRateLimiter(),
     radarrRefreshFence: new MemoryRadarrRefreshFence(),
     radarrOverviewCoalescer: new MemoryRadarrOverviewCoalescer(),
+    radarrActionRateLimiter: new MemorySafeActionRateLimiter(),
+    radarrActionInFlight: new MemorySafeActionInFlightGuard(),
     sonarrRefreshRateLimiter: new MemorySonarrRefreshRateLimiter(),
     sonarrRefreshFence: new MemorySonarrRefreshFence(),
     sonarrOverviewCoalescer: new MemorySonarrOverviewCoalescer(),
+    sonarrActionRateLimiter: new MemorySafeActionRateLimiter(),
+    sonarrActionInFlight: new MemorySafeActionInFlightGuard(),
     serviceStatusCoalescer: new MemoryServiceStatusCoalescer(),
   });
 }
@@ -535,6 +543,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.radarrRefreshRateLimiter,
     refreshFence: runtime.radarrRefreshFence,
     overviewCoalescer: runtime.radarrOverviewCoalescer,
+    actionRateLimiter: runtime.radarrActionRateLimiter,
+    inFlight: runtime.radarrActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "radarr",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   const sonarr = createSonarrService({
@@ -545,6 +562,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.sonarrRefreshRateLimiter,
     refreshFence: runtime.sonarrRefreshFence,
     overviewCoalescer: runtime.sonarrOverviewCoalescer,
+    actionRateLimiter: runtime.sonarrActionRateLimiter,
+    inFlight: runtime.sonarrActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "sonarr",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   attachDataChangedEvents(synology, "synology");

@@ -2,7 +2,7 @@ import type { IntegrationActor } from "@dashboard/integrations";
 
 export type SonarrActor = IntegrationActor;
 
-export type SonarrHttpMethod = "GET";
+export type SonarrHttpMethod = "GET" | "POST";
 
 export type SonarrSectionStatus = "available" | "degraded" | "unavailable";
 
@@ -23,6 +23,7 @@ export type SonarrOverviewStatus = "available" | "degraded";
 export interface SonarrPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canCommand: boolean;
 }
 
 export interface SonarrIntegrationMetadata {

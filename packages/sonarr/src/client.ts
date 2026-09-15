@@ -19,10 +19,12 @@ import type { SonarrConfig, SonarrSecrets } from "./schemas";
 import {
   SONARR_JSON_MAX_BYTES,
   SONARR_LIST_MAX_BYTES,
+  sonarrCommand,
   sonarrFetch,
   type SonarrRequestFn,
   type SonarrTransportContext,
 } from "./transport";
+import type { SonarrQueuedCommand } from "./command";
 import type {
   SonarrDiskSpaceDto,
   SonarrHealthDto,
@@ -215,4 +217,11 @@ export async function fetchSonarrOverview(ctx: SonarrClientContext): Promise<Son
     series,
     diskSpace,
   };
+}
+
+export async function postSonarrCommand(
+  ctx: SonarrClientContext,
+  command: SonarrQueuedCommand,
+): Promise<void> {
+  await sonarrCommand(ctx.request, ctx, command);
 }

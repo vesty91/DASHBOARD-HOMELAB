@@ -48,4 +48,27 @@ describe("sonarr access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus sonarr.command", () => {
+    expect(
+      sonarrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }).canCommand,
+    ).toBe(false);
+    expect(
+      sonarrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "sonarr.command"],
+        },
+      }).canCommand,
+    ).toBe(true);
+  });
 });
