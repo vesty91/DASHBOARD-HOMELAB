@@ -410,7 +410,30 @@ Schéma DB inchangé (`0000`–`0006`, pas de `0007`). Backup `formatVersion` 1 
 
 PRs : #53–#59. Tag `phase-21-complete`. Minor `v1.1.0`.
 
-Hors scope : `0007`, invoke arbitraire, REST proxy, Phase 22.
+Hors scope : invoke arbitraire, REST proxy.
+
+## Phase 22 — Automations & Alerting
+
+Statut : **IN PROGRESS**.
+
+Livrables prévus :
+
+- automation rules persistées (`0007`, schema 7) ;
+- scheduler worker ;
+- trigger registry ;
+- condition engine déclaratif ;
+- safe action registry ;
+- authorization runtime (pas de snapshot de privilèges) ;
+- cooldown / anti-loop ;
+- run history bornée ;
+- UI automations ;
+- audit ;
+- backup compatibility 5/6/7 ;
+- tests concurrency ;
+- release SemVer minor.
+
+Hors scope : n8n générique, shell, eval, webhook/REST proxy, cron shell,
+Custom API write, Grafana/Prowlarr write.
 
 ## Règle
 

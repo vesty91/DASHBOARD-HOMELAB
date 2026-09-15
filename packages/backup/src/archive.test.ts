@@ -18,7 +18,7 @@ function validTables() {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 6,
+      schemaVersion: 7,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -135,13 +135,13 @@ describe("backup archive", () => {
     expect(() =>
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 7, databaseSchemaVersion: 7 },
+        manifest: { ...archive.manifest, schemaVersion: 8, databaseSchemaVersion: 8 },
       }),
     ).toThrow(BackupError);
     try {
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 7, databaseSchemaVersion: 7 },
+        manifest: { ...archive.manifest, schemaVersion: 8, databaseSchemaVersion: 8 },
       });
     } catch (error) {
       expect(error).toMatchObject({ code: "INCOMPATIBLE_SCHEMA" });
@@ -225,5 +225,33 @@ describe("backup archive", () => {
     expect(parsed.tables.oidc_identities).toEqual([]);
     expect(parsed.tables.server_settings[0]?.oidcEnabled).toBe(false);
     expect(parsed.tables.oidc_secrets).toEqual([]);
+    expect(parsed.tables.automation_rules).toEqual([]);
+  });
+
+  it("upgrades a schema 6 archive with empty automation rules", () => {
+    const tables = {
+      ...validTables(),
+    };
+    delete (tables as { automation_rules?: unknown }).automation_rules;
+    const canonical = canonicalJson(tables);
+    const hashed = {
+      sha256: sha256Hex(canonical),
+      bytes: Buffer.byteLength(canonical, "utf8"),
+    };
+    const parsed = parseBackupArchive({
+      manifest: {
+        format: BACKUP_FORMAT,
+        formatVersion: 1,
+        schemaVersion: 6,
+        databaseSchemaVersion: 6,
+        appVersion: "1.1.0",
+        createdAt: "2026-09-14T12:00:00.000Z",
+        files: [{ name: "tables.json", sha256: hashed.sha256, bytes: hashed.bytes }],
+      },
+      tables,
+    });
+    expect(parsed.manifest.schemaVersion).toBe(6);
+    expect(parsed.tables.automation_rules).toEqual([]);
+    expect(parsed.tables.oidc_identities).toEqual([]);
   });
 });

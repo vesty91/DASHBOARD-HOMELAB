@@ -265,6 +265,38 @@ errorMessageSafe
 metadataJson
 ```
 
+## automation_rules
+
+```text
+id
+name
+description nullable
+enabled (défaut false)
+ownerUserId nullable
+triggerType
+triggerConfigJson
+conditionConfigJson nullable
+actionType
+actionConfigJson
+cooldownSeconds
+configRevision
+lastEnabledAt nullable
+createdAt
+updatedAt
+```
+
+Pas de secret. Permissions revalidées à chaque run (pas de snapshot).
+
+## automation_runtime_state
+
+Leases / nextRun. Non exporté. CASCADE à la suppression de la règle.
+Purge lors d'un restore.
+
+## automation_runs
+
+Historique borné (30 jours et 200 / règle). Non exporté. SET NULL si la règle
+est supprimée. Purge lors d'un restore.
+
 ## audit_logs
 
 ```text
@@ -298,6 +330,11 @@ integrations.status
 monitorChecks(targetType,targetId,checkedAt)
 auditLogs(createdAt)
 jobs(status,scheduledAt)
+automation_rules(ownerUserId)
+automation_rules(enabled)
+automation_runs(runKey) UNIQUE
+automation_runs(automationId,startedAt)
+automation_runtime_state(nextRunAt)
 ```
 
 ## 4. Transactions
@@ -341,17 +378,19 @@ Le manifest doit contenir :
 {
   "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "schemaVersion": 6,
-  "databaseSchemaVersion": 6,
+  "schemaVersion": 7,
+  "databaseSchemaVersion": 7,
   "appVersion": "1.1.0",
   "createdAt": "...",
   "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
 }
 ```
 
-La v1 n'accepte que les schémas Drizzle 5 et 6. La migration `0006` ajoute OIDC,
-audit et sessions. Le restore d'une archive v5 complète les tables OIDC vides.
-`audit_logs` et `auth_sessions` ne sont pas exportés.
+La v1 accepte les schémas Drizzle 5, 6 et 7. La migration `0007` ajoute les
+tables d'automations. Le restore d'une archive v5 complète OIDC puis les
+`automation_rules` vides. Le restore v6 complète `automation_rules` vides.
+`audit_logs`, `auth_sessions`, `automation_runs` et `automation_runtime_state`
+ne sont pas exportés.
 
 ## 8. Implémentation Phase 2
 

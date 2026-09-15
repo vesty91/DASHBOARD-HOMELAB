@@ -9,9 +9,11 @@ export {
   backupManifestSchema,
   backupTablesSchema,
   backupTablesSchemaV5,
+  backupTablesSchemaV6,
   type BackupArchive,
   type BackupManifest,
   type BackupTables,
+  type BackupTablesV6,
 } from "./schema";
 export {
   BACKUP_COLUMNS,

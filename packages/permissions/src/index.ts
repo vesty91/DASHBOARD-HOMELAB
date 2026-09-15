@@ -54,6 +54,9 @@ export const PERMISSIONS = [
   "seerr.read",
   "seerr.request.manage",
   "custom-api.read",
+  "automation.read",
+  "automation.manage",
+  "automation.run",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

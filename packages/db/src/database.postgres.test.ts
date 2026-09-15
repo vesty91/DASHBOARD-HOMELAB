@@ -8,6 +8,7 @@ import { createPostgresqlAuthStore } from "./repositories/auth";
 import { createPostgresqlBoardStore } from "./board-runtime";
 import { createPostgresqlAppStore } from "./app-runtime";
 import { createPostgresqlIntegrationStore } from "./integration-runtime";
+import { createPostgresqlAutomationStore } from "./automation-runtime";
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
@@ -629,6 +630,95 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
           "select count(*)::int count from information_schema.tables where table_schema='public' and table_name in ('oidc_identities','audit_logs','auth_sessions')",
         ),
       ).toMatchObject({ rows: [{ count: 3 }] });
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("upgrades schema 6 to 7 without losing boards or integrations", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      const files = [
+        "0000_kind_pride.sql",
+        "0001_slim_kabuki.sql",
+        "0002_brief_captain_america.sql",
+        "0003_known_doctor_spectrum.sql",
+        "0004_classy_rocket_raccoon.sql",
+        "0005_curved_stephen_strange.sql",
+        "0006_natural_boomer.sql",
+      ];
+      for (const file of files) {
+        await executePostgresqlMigration(
+          client.pool,
+          await readFile(new URL(`../drizzle/postgresql/${file}`, import.meta.url), "utf8"),
+        );
+      }
+      const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+      const boardId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
+      await client.pool.query(
+        "insert into users(id,username,username_canonical,status,is_system_admin,created_at,updated_at) values($1,'UpgradeAdmin','upgradeadmin','active',true,now(),now())",
+        [userId],
+      );
+      await client.pool.query(
+        "insert into boards(id,slug,name,visibility,owner_user_id,theme_json,settings_json,revision,created_at,updated_at) values($1,'kept','Kept Board','private',$2,'{}','{}',4,now(),now())",
+        [boardId, userId],
+      );
+      await client.pool.query(
+        "insert into integrations(id,type,name,base_url,enabled,config_json,status,config_revision,created_at,updated_at) values($1,'ntfy','ntfy','https://ntfy.example',true,'{}','available',1,now(),now())",
+        ["cccccccc-cccc-4ccc-8ccc-ccccccccccc1"],
+      );
+      await executePostgresqlMigration(
+        client.pool,
+        await readFile(
+          new URL("../drizzle/postgresql/0007_flaky_forge.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(
+        await client.pool.query("select slug,revision from boards where id=$1", [boardId]),
+      ).toMatchObject({ rows: [{ slug: "kept", revision: 4 }] });
+      expect(
+        await client.pool.query("select schema_version from server_settings where id='global'"),
+      ).toMatchObject({ rows: [{ schema_version: 7 }] });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from information_schema.tables where table_schema='public' and table_name in ('automation_rules','automation_runtime_state','automation_runs')",
+        ),
+      ).toMatchObject({ rows: [{ count: 3 }] });
+    } finally {
+      await client.close();
+    }
+  });
+
+  it("creates disabled automations and rejects stale revisions", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      await migratePostgresql(client.pool);
+      const users = createPostgresqlRepositories(client);
+      const owner = await users.users.create({ username: "auto-owner" });
+      const store = createPostgresqlAutomationStore(client);
+      const created = await store.create({
+        name: "Down alert",
+        ownerUserId: owner.id,
+        triggerType: "event",
+        triggerConfigJson: { eventType: "integration.status.changed" },
+        actionType: "ntfy.publish",
+        actionConfigJson: { integrationId: randomUUID(), topic: "homelab" },
+      });
+      expect(created.enabled).toBe(false);
+      expect(
+        await client.pool.query("select schema_version from server_settings where id='global'"),
+      ).toMatchObject({ rows: [{ schema_version: 7 }] });
+      const updated = await store.update(created.id, {
+        expectedConfigRevision: 1,
+        name: "Down alert v2",
+      });
+      expect(updated.configRevision).toBe(2);
+      await expect(
+        store.update(created.id, { expectedConfigRevision: 1, name: "stale" }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
     } finally {
       await client.close();
     }

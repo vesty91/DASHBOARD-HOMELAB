@@ -111,7 +111,7 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide (`schemaVersion` 6) ;
+- manifest valide (`schemaVersion` 7) ;
 - fichier invalide rejeté avant mutation.
 
 ### E2E-009 SSO admin
@@ -273,3 +273,10 @@ Adapters : `packages/proxmox`, `packages/qbittorrent`, `packages/ntfy`,
 command/request builders). Prowlarr, Grafana et Custom API restent GET-only
 (`method !== "GET"` rejeté). E2E : pages d'intégration sans fuite d'URL
 d'action vers le navigateur.
+
+## 22. Automations (Phase 22.1)
+
+`packages/automations` valide trigger/action allowlistés, JSON borné, clés
+sensibles interdites et revalidation live de l'owner. `packages/db` teste
+create/update CAS, owner SET NULL, historique conservé, upgrade 6 → 7
+(SQLite et PostgreSQL). Backup exporte `automation_rules` uniquement.

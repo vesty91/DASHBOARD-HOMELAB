@@ -52,6 +52,7 @@ SQLite en local. PostgreSQL en production. Migrations `0000`–`0006` immuables.
 | Roadmap             | `docs/12-ROADMAP.md`                          |
 | Hardening post-v1   | `docs/20-POST-V1-HARDENING.md`                |
 | Actions intégration | `docs/21-SAFE-INTEGRATION-ACTIONS.md`         |
+| Automations         | `docs/22-AUTOMATIONS.md`                      |
 | Notes de version    | `CHANGELOG.md`                                |
 | Semver              | `docs/adr/0029-semver-and-v1-release.md`      |
 

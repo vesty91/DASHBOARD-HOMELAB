@@ -196,15 +196,16 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
 2. Lire `CHANGELOG.md`. Migrations `0000`–`0006` sont immuables.
-   Phase 21 n'ajoute pas `0007` : l'upgrade 1.0.1 → 1.1.0 est un remplacement
-   d'images à schéma 6 constant.
+   Phase 22 ajoute `0007` (schema 7). L'upgrade 1.1.0 → schéma 7 conserve
+   users / boards / widgets / integrations.
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant.
 6. Rollback si nécessaire.
 
-Un backup schema v5 est encore accepté (upgrade in-memory vers v6).
-v6 accepté. v7+ rejeté. `appVersion` 0.1.0 dans une archive v5/v6 reste valide.
+Un backup schema v5 est encore accepté (upgrade in-memory vers v6 puis v7).
+v6 accepté (upgrade in-memory vers v7). v7 accepté. v8+ rejeté. `appVersion`
+0.1.0 dans une archive v5/v6/v7 reste valide.
 
 ## 11. Rollback
 
@@ -221,14 +222,15 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5 ou 6, hash SHA-256. Secrets : ciphertext / iv / authTag /
+`schemaVersion` 5, 6 ou 7, hash SHA-256. Secrets : ciphertext / iv / authTag /
 keyVersion uniquement.
 
 Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
 backup pré-restore sur disque → restore transactionnel → commit.
 
-`restore` exige `confirm: true`. Échec = rollback SQL. `audit_logs` et
-`auth_sessions` ne sont pas dans l'archive.
+`restore` exige `confirm: true`. Échec = rollback SQL. `audit_logs`,
+`auth_sessions`, `automation_runs` et `automation_runtime_state` ne sont pas
+dans l'archive. Un restore purge ces deux tables d'automation éphémères.
 
 ## 13. Logs et shutdown
 
