@@ -12,6 +12,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  ProwlarrStatusView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -33,6 +34,7 @@ export function ResponsiveBoardReadGrid({
   proxmoxViews = {},
   grafanaViews = {},
   ntfyViews = {},
+  prowlarrViews = {},
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
@@ -47,6 +49,7 @@ export function ResponsiveBoardReadGrid({
   proxmoxViews?: Record<string, ProxmoxResourcesView>;
   grafanaViews?: Record<string, GrafanaStatusView>;
   ntfyViews?: Record<string, NtfyStatusView>;
+  prowlarrViews?: Record<string, ProwlarrStatusView>;
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
@@ -62,6 +65,7 @@ export function ResponsiveBoardReadGrid({
     shouldPollJellyfinBoard(proxmoxViews) ||
     shouldPollJellyfinBoard(grafanaViews) ||
     shouldPollJellyfinBoard(ntfyViews) ||
+    shouldPollJellyfinBoard(prowlarrViews) ||
     shouldPollJellyfinBoard(radarrViews) ||
     shouldPollJellyfinBoard(sonarrViews) ||
     shouldPollJellyfinBoard(serviceStatusViews);
@@ -105,6 +109,7 @@ export function ResponsiveBoardReadGrid({
       proxmoxViews={proxmoxViews}
       grafanaViews={grafanaViews}
       ntfyViews={ntfyViews}
+      prowlarrViews={prowlarrViews}
       radarrViews={radarrViews}
       sonarrViews={sonarrViews}
       serviceStatusViews={serviceStatusViews}

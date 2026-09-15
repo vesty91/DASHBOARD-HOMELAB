@@ -50,6 +50,7 @@ export default async function IntegrationsPage({
       proxmoxPermissions,
       grafanaPermissions,
       ntfyPermissions,
+      prowlarrPermissions,
       radarrPermissions,
       sonarrPermissions,
     ] = await Promise.all([
@@ -67,6 +68,7 @@ export default async function IntegrationsPage({
       caller.proxmox.permissions(),
       caller.grafana.permissions(),
       caller.ntfy.permissions(),
+      caller.prowlarr.permissions(),
       caller.radarr.permissions(),
       caller.sonarr.permissions(),
     ]);
@@ -93,7 +95,7 @@ export default async function IntegrationsPage({
             description={
               catalog.length === 0
                 ? "Aucun type d'intégration disponible. Les connecteurs seront proposés ici lorsqu'ils seront disponibles."
-                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr ou Radarr."
+                : "Ajoutez une intégration Docker, Synology DSM, Jellyfin, Immich, Beszel, Uptime Kuma, Prometheus, Proxmox, Grafana, ntfy, Sonarr, Radarr ou Prowlarr."
             }
           />
         ) : (
@@ -133,6 +135,7 @@ export default async function IntegrationsPage({
                   (integration.type === "proxmox" && proxmoxPermissions.canRead) ||
                   (integration.type === "grafana" && grafanaPermissions.canRead) ||
                   (integration.type === "ntfy" && ntfyPermissions.canRead) ||
+                  (integration.type === "prowlarr" && prowlarrPermissions.canRead) ||
                   (integration.type === "radarr" && radarrPermissions.canRead) ||
                   (integration.type === "sonarr" && sonarrPermissions.canRead) ? (
                     <Link

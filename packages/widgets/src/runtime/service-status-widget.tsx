@@ -22,6 +22,7 @@ const SOURCE_LABELS = {
   proxmox: "Proxmox",
   grafana: "Grafana",
   ntfy: "ntfy",
+  prowlarr: "Prowlarr",
   radarr: "Radarr",
   sonarr: "Sonarr",
 } as const;

@@ -68,6 +68,7 @@ describe("widget registry", () => {
       "jellyfin-sessions",
       "ntfy-status",
       "prometheus-metric",
+      "prowlarr-status",
       "proxmox-resources",
       "radarr-overview",
       "service-status",
@@ -80,6 +81,7 @@ describe("widget registry", () => {
     expect(registry.get("prometheus-metric")?.publicSafe).toBe(false);
     expect(registry.get("grafana-status")?.publicSafe).toBe(false);
     expect(registry.get("ntfy-status")?.publicSafe).toBe(false);
+    expect(registry.get("prowlarr-status")?.publicSafe).toBe(false);
     expect(registry.get("radarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("sonarr-overview")?.publicSafe).toBe(false);
     expect(registry.get("proxmox-resources")?.publicSafe).toBe(false);

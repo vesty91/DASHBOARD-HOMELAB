@@ -12,6 +12,7 @@ import type {
 } from "@dashboard/uptime-kuma";
 import type { GrafanaIntegrationMetadata, GrafanaPermissionsView } from "@dashboard/grafana";
 import type { NtfyIntegrationMetadata, NtfyPermissionsView } from "@dashboard/ntfy";
+import type { ProwlarrIntegrationMetadata, ProwlarrPermissionsView } from "@dashboard/prowlarr";
 import type { RadarrIntegrationMetadata, RadarrPermissionsView } from "@dashboard/radarr";
 import type { SonarrIntegrationMetadata, SonarrPermissionsView } from "@dashboard/sonarr";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
@@ -38,6 +39,7 @@ export type IntegrationDetailResolution =
   | { kind: "proxmox"; metadata: ProxmoxIntegrationMetadata }
   | { kind: "grafana"; metadata: GrafanaIntegrationMetadata }
   | { kind: "ntfy"; metadata: NtfyIntegrationMetadata }
+  | { kind: "prowlarr"; metadata: ProwlarrIntegrationMetadata }
   | { kind: "radarr"; metadata: RadarrIntegrationMetadata }
   | { kind: "sonarr"; metadata: SonarrIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
@@ -101,6 +103,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<NtfyPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<NtfyIntegrationMetadata>;
+    };
+  };
+  prowlarr: {
+    permissions: () => Promise<Pick<ProwlarrPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<ProwlarrIntegrationMetadata>;
     };
   };
   radarr: {
@@ -210,6 +218,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.ntfy.integration.get({ integrationId: id });
       return { kind: "ntfy", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const prowlarrPermissions = await caller.prowlarr.permissions();
+  if (prowlarrPermissions.canRead) {
+    try {
+      const metadata = await caller.prowlarr.integration.get({ integrationId: id });
+      return { kind: "prowlarr", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

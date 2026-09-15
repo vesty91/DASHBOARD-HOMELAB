@@ -108,6 +108,15 @@ const ntfyDenied = {
   },
 };
 
+const prowlarrDenied = {
+  permissions: async () => ({ canRead: false as const }),
+  integration: {
+    get: async () => {
+      throw new Error("prowlarr unused");
+    },
+  },
+};
+
 const radarrDenied = {
   permissions: async () => ({ canRead: false as const }),
   integration: {
@@ -145,6 +154,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -185,6 +195,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -229,6 +240,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -273,6 +285,7 @@ describe("resolveIntegrationDetail", () => {
       },
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -317,6 +330,7 @@ describe("resolveIntegrationDetail", () => {
         },
       },
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -361,6 +375,7 @@ describe("resolveIntegrationDetail", () => {
           }),
         },
       },
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -370,6 +385,51 @@ describe("resolveIntegrationDetail", () => {
       metadata: {
         id: "99999999-9999-4999-8999-999999999999",
         name: "ntfy Lab",
+        enabled: true,
+      },
+    });
+    expect(integrationGet).not.toHaveBeenCalled();
+  });
+
+  it("lets a delegated Prowlarr reader open the page by name without integration.get", async () => {
+    const integrationGet = vi.fn();
+    const resolved = await resolveIntegrationDetail("cccccccc-cccc-4ccc-8ccc-cccccccccccc", {
+      docker: {
+        permissions: async () => ({ canRead: false }),
+        integration: {
+          get: async () => {
+            throw new Error("docker unused");
+          },
+        },
+      },
+      synology: synologyDenied,
+      jellyfin: jellyfinDenied,
+      immich: immichDenied,
+      beszel: beszelDenied,
+      prometheus: prometheusDenied,
+      uptimeKuma: uptimeKumaDenied,
+      proxmox: proxmoxDenied,
+      grafana: grafanaDenied,
+      ntfy: ntfyDenied,
+      prowlarr: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => ({
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            name: "Prowlarr Lab",
+            enabled: true,
+          }),
+        },
+      },
+      radarr: radarrDenied,
+      sonarr: sonarrDenied,
+      integration: { get: integrationGet },
+    });
+    expect(resolved).toEqual({
+      kind: "prowlarr",
+      metadata: {
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        name: "Prowlarr Lab",
         enabled: true,
       },
     });
@@ -396,6 +456,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -440,6 +501,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: {
         permissions: async () => ({ canRead: true }),
@@ -493,6 +555,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -533,6 +596,7 @@ describe("resolveIntegrationDetail", () => {
       proxmox: proxmoxDenied,
       grafana: grafanaDenied,
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: integrationGet },
@@ -641,6 +705,17 @@ describe("resolveIntegrationDetail", () => {
           },
         },
       },
+      prowlarr: {
+        permissions: async () => ({ canRead: true }),
+        integration: {
+          get: async () => {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Définition Prowlarr introuvable",
+            });
+          },
+        },
+      },
       radarr: {
         permissions: async () => ({ canRead: true }),
         integration: {
@@ -688,6 +763,7 @@ describe("resolveIntegrationDetail", () => {
         proxmox: proxmoxDenied,
         grafana: grafanaDenied,
         ntfy: ntfyDenied,
+        prowlarr: prowlarrDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {
@@ -740,6 +816,7 @@ describe("resolveIntegrationDetail", () => {
         integration: { get: vi.fn() },
       },
       ntfy: ntfyDenied,
+      prowlarr: prowlarrDenied,
       radarr: radarrDenied,
       sonarr: sonarrDenied,
       integration: { get: async () => genericIntegration() },
@@ -769,6 +846,7 @@ describe("resolveIntegrationDetail", () => {
         proxmox: proxmoxDenied,
         grafana: grafanaDenied,
         ntfy: ntfyDenied,
+        prowlarr: prowlarrDenied,
         radarr: radarrDenied,
         sonarr: sonarrDenied,
         integration: {

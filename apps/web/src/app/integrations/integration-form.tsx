@@ -25,6 +25,7 @@ export function IntegrationForm({
   const showProxmoxHelp = selectedType === "proxmox";
   const showGrafanaHelp = selectedType === "grafana";
   const showNtfyHelp = selectedType === "ntfy";
+  const showProwlarrHelp = selectedType === "prowlarr";
   const showRadarrHelp = selectedType === "radarr";
   const showSonarrHelp = selectedType === "sonarr";
   const showTrustedCa =
@@ -38,6 +39,7 @@ export function IntegrationForm({
     showProxmoxHelp ||
     showGrafanaHelp ||
     showNtfyHelp ||
+    showProwlarrHelp ||
     showRadarrHelp ||
     showSonarrHelp;
   const timeoutMs =
@@ -95,11 +97,13 @@ export function IntegrationForm({
                               ? "https://grafana.example:3000"
                               : showNtfyHelp
                                 ? "https://ntfy.example"
-                                : showRadarrHelp
-                                  ? "https://radarr.example:7878"
-                                  : showSonarrHelp
-                                    ? "https://sonarr.example:8989"
-                                    : undefined
+                                : showProwlarrHelp
+                                  ? "https://prowlarr.example:9696"
+                                  : showRadarrHelp
+                                    ? "https://radarr.example:7878"
+                                    : showSonarrHelp
+                                      ? "https://sonarr.example:8989"
+                                      : undefined
           }
         />
       </Field>
@@ -165,6 +169,13 @@ export function IntegrationForm({
           est optionnel et se configure ensuite comme secret serveur ; il n&apos;est jamais envoyé
           au navigateur. Lecture seule : santé, compteurs publics et version. Aucune publication ni
           abonnement aux topics.
+        </Alert>
+      ) : null}
+      {showProwlarrHelp ? (
+        <Alert>
+          Utilisez l&apos;URL HTTP(S) du serveur Prowlarr (origine uniquement). La clé API se
+          configure ensuite comme secret serveur et n&apos;est jamais envoyée au navigateur. Lecture
+          seule : version, indexeurs et santé. Aucune mutation, aucune recherche.
         </Alert>
       ) : null}
       {showRadarrHelp ? (
@@ -261,13 +272,15 @@ export function IntegrationForm({
                           ? "Utilisez ce champ pour un Grafana HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                           : showNtfyHelp
                             ? "Utilisez ce champ pour un ntfy HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                            : showRadarrHelp
-                              ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                              : showSonarrHelp
-                                ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                : showProxmoxHelp
-                                  ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                  : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                            : showProwlarrHelp
+                              ? "Utilisez ce champ pour un Prowlarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                              : showRadarrHelp
+                                ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                : showSonarrHelp
+                                  ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                  : showProxmoxHelp
+                                    ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                    : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

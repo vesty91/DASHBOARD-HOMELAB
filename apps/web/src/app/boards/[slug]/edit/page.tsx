@@ -13,6 +13,7 @@ import { resolveServiceStatusViews } from "../../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
 import { resolveNtfyStatusViews } from "../../resolve-ntfy-status";
+import { resolveProwlarrStatusViews } from "../../resolve-prowlarr-status";
 import { resolveRadarrOverviewViews } from "../../resolve-radarr-overview";
 import { resolveSonarrOverviewViews } from "../../resolve-sonarr-overview";
 import { resolveProxmoxResourcesViews } from "../../resolve-proxmox-resources";
@@ -43,6 +44,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     proxmoxViews,
     grafanaViews,
     ntfyViews,
+    prowlarrViews,
     radarrViews,
     sonarrViews,
     serviceStatusViews,
@@ -56,6 +58,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveProxmoxResourcesViews(snapshot, caller),
     resolveGrafanaStatusViews(snapshot, caller),
     resolveNtfyStatusViews(snapshot, caller),
+    resolveProwlarrStatusViews(snapshot, caller),
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
@@ -148,6 +151,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let prowlarrIntegrations: Awaited<ReturnType<typeof caller.prowlarr.integration.list>> = [];
+  try {
+    prowlarrIntegrations = await caller.prowlarr.integration.list();
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   let radarrIntegrations: Awaited<ReturnType<typeof caller.radarr.integration.list>> = [];
   try {
     radarrIntegrations = await caller.radarr.integration.list();
@@ -209,6 +222,8 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         grafanaIntegrations={grafanaIntegrations}
         ntfyViews={ntfyViews}
         ntfyIntegrations={ntfyIntegrations}
+        prowlarrViews={prowlarrViews}
+        prowlarrIntegrations={prowlarrIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

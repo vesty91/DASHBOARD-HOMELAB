@@ -12,6 +12,7 @@ import type {
   UptimeKumaStatusView,
   GrafanaStatusView,
   NtfyStatusView,
+  ProwlarrStatusView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -26,6 +27,7 @@ import type {
   UptimeKumaIntegrationOption,
   GrafanaIntegrationOption,
   NtfyIntegrationOption,
+  ProwlarrIntegrationOption,
   RadarrIntegrationOption,
   SonarrIntegrationOption,
   ProxmoxIntegrationOption,
@@ -56,6 +58,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations = [],
   ntfyViews = {},
   ntfyIntegrations = [],
+  prowlarrViews = {},
+  prowlarrIntegrations = [],
   radarrViews = {},
   radarrIntegrations = [],
   sonarrViews = {},
@@ -83,6 +87,8 @@ export function BoardEditWorkspace({
   grafanaIntegrations?: readonly GrafanaIntegrationOption[];
   ntfyViews?: Record<string, NtfyStatusView>;
   ntfyIntegrations?: readonly NtfyIntegrationOption[];
+  prowlarrViews?: Record<string, ProwlarrStatusView>;
+  prowlarrIntegrations?: readonly ProwlarrIntegrationOption[];
   radarrViews?: Record<string, RadarrOverviewView>;
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
@@ -198,6 +204,8 @@ export function BoardEditWorkspace({
         grafanaIntegrations={grafanaIntegrations}
         ntfyViews={ntfyViews}
         ntfyIntegrations={ntfyIntegrations}
+        prowlarrViews={prowlarrViews}
+        prowlarrIntegrations={prowlarrIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

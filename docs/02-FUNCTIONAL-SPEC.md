@@ -389,6 +389,21 @@ Lecture :
 Pas de mutation, pas de `/api/v3/command`, pas de `apikey` en query. Titres de
 films, chemins et dossiers ne sont pas exposés.
 
+### Prowlarr
+
+Phase 18.6 : lecture via l'API officielle v1 (header `X-Api-Key` uniquement).
+
+Lecture :
+
+- version (`GET /api/v1/system/status`) ;
+- compteurs de santé (`GET /api/v1/health`) ;
+- nombre d'indexeurs (`GET /api/v1/indexer`) ;
+- nombre de statuts (`GET /api/v1/indexerstatus`).
+
+Pas de mutation, pas de `/api/v1/search`, pas de `/api/v1/command`, pas de
+`apikey` en query. Noms d'indexeurs, URLs, clés et détails de trackers privés
+ne sont pas exposés.
+
 ## 11. Recherche globale
 
 V1.5 :

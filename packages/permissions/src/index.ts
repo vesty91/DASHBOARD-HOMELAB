@@ -41,6 +41,7 @@ export const PERMISSIONS = [
   "ntfy.read",
   "sonarr.read",
   "radarr.read",
+  "prowlarr.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

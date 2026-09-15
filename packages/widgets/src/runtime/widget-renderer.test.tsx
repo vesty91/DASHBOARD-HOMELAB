@@ -163,6 +163,36 @@ describe("widget renderer app tile isolation", () => {
     expect(screen.getByText("Débit 0.5 msg/s")).toBeTruthy();
   });
 
+  it("renders a Prowlarr status widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "prowlarr-1",
+          widgetType: "prowlarr-status",
+          widgetVersion: 1,
+          title: "Prowlarr",
+          config: { integrationId: "11111111-1111-4111-8111-111111111111" },
+          runtimeStatus: "ready",
+        }}
+        prowlarrView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          version: "1.32.2.4987",
+          indexerCount: 12,
+          enabledCount: 8,
+          indexerStatusCount: 3,
+          healthErrors: 1,
+          healthWarnings: 2,
+        }}
+      />,
+    );
+    expect(screen.getByText("Version 1.32.2.4987")).toBeTruthy();
+    expect(screen.getByText("12 indexeurs · 8 actifs")).toBeTruthy();
+    expect(screen.getByText("3 statuts")).toBeTruthy();
+    expect(screen.getByText("Santé 1 erreurs · 2 avertissements")).toBeTruthy();
+  });
+
   it("renders a Radarr overview widget from a ready view", () => {
     render(
       <WidgetRenderer
