@@ -81,6 +81,10 @@ Le client reçoit un message safe.
 
 Les détails sensibles restent logs serveur.
 
+Les mutations d'intégration Phase 21 exposent uniquement le DTO
+`{ status, action, resourceId, occurredAt }` (`safeActionResultSchema`).
+Jamais de réponse brute ni de secret. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
+
 `app.list/get` exigent `app.read`; `app.create/update/delete/test` exigent `app.manage`. `app.test`
 retourne uniquement status, latence, status HTTP et code sûr. Le résultat est conditionné à la
 révision de configuration afin d'éviter une écriture stale.

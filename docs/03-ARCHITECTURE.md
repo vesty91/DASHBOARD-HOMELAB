@@ -413,3 +413,8 @@ Voir ADR 0029, `CHANGELOG.md` et `docs/19-V1-STABILIZATION.md`.
 COMPLETE. Hardening post-v1 (a11y, Lighthouse, Actions, HTTPS smoke).
 Patch produit `1.0.1`. Schéma 6 / backup `formatVersion` 1 inchangés.
 Voir `docs/20-POST-V1-HARDENING.md`.
+
+# État Phase 21
+
+IN PROGRESS. Framework d'actions d'intégration allowlistées.
+Pas de `0007`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.

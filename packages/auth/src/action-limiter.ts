@@ -15,3 +15,11 @@ export function createInMemoryActionRateLimiter(limit: number, windowMs: number)
 }
 
 export type ActionRateLimiter = ReturnType<typeof createInMemoryActionRateLimiter>;
+
+export function integrationActionRateKey(
+  actorId: string,
+  integrationId: string,
+  action: string,
+): string {
+  return `${action}:${integrationId}:${actorId}`;
+}
