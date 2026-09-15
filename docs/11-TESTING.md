@@ -256,3 +256,8 @@ session, `/api/realtime/ws` (426 puis 403 Origin invalide / 401 sans ticket),
 `/api/realtime/events` 401, tRPC Origin 403, DB down live 200 / ready 503.
 Certificats : openssl local (SAN IP), pas d’ACME. Caddy proxifie
 `/api/realtime/ws` vers realtime. Détail : `docs/20-POST-V1-HARDENING.md`.
+
+## 20. Audit dépendances (Phase 20)
+
+Next.js **16.3.5** (patches GHSA RCE 16.3.2). `ws` **8.21.3**. Warning Windows
+standalone path length documenté, non « corrigé » par un hack de build.
