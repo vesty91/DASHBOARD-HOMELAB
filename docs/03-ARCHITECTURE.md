@@ -396,3 +396,9 @@ sensibles, contrôle d'origine realtime, cookies session explicites. Voir ADR 00
 
 COMPLETE. Images production multi-target, Compose postgres/redis/migrate/web/worker/realtime,
 health live/ready, GHCR sur tags semver, pas de `0007`. Voir ADR 0019 et `docs/10-DEPLOYMENT.md`.
+
+# État Phase 18
+
+COMPLETE. Neuf adapters lecture seule (Proxmox, Grafana, ntfy, Sonarr, Radarr,
+Prowlarr, qBittorrent, Seerr, Custom API) et widgets `publicSafe=false`.
+Pas de `0007`. Voir ADR 0020–0028.
