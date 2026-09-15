@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "turbo dev --filter=@dashboard/web",
     "build": "turbo build",
-    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && node --test scripts/write-release-bake.test.mjs && turbo lint",
+    "lint": "node scripts/check-architecture-boundaries.mjs && node scripts/check-production-compose.mjs && node --test scripts/write-release-bake.test.mjs scripts/lighthouse-budgets.test.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "pnpm --filter @dashboard/web test:e2e",
@@ -19,15 +19,17 @@
     "format:fix": "prettier --write .",
     "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build",
     "bundle:runtime": "node scripts/bundle-runtime.mjs",
-    "test:production": "node scripts/production-smoke.mjs"
+    "test:production": "node scripts/production-smoke.mjs",
+    "test:lighthouse": "node scripts/lighthouse-ci.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
+    "esbuild": "0.25.11",
     "eslint": "10.8.1",
+    "lighthouse": "13.4.1",
     "prettier": "3.9.6",
     "turbo": "2.10.10",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.67.0",
-    "esbuild": "0.25.11"
+    "typescript-eslint": "8.67.0"
   }
 }

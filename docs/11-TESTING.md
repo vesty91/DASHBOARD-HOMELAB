@@ -241,3 +241,9 @@ Upgrade AC-024 : SQLite et PostgreSQL seedent un board avant `0006` et
 vérifient la persistance. `scripts/check-production-compose.mjs` refuse
 `docker.sock`, `privileged`, et les ports postgres/redis. `pnpm test:production`
 exerce Compose + health + onboarding HTTP + DB down. Backup v5/v6/v7 inchangé.
+
+## 18. Lighthouse CI (Phase 20)
+
+`pnpm test:lighthouse` lance Chromium Playwright contre `next dev` SQLite et
+applique les budgets de `scripts/lighthouse-budgets.mjs`. Rapports dans
+`lighthouse-reports/` (gitignoré). Détail : `docs/20-POST-V1-HARDENING.md`.
