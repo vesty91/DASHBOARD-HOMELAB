@@ -178,6 +178,11 @@ pending / approved / processing / available. Même `router.refresh()` 10 s ; le
 navigateur ne contacte jamais l'API Seerr. Titres, utilisateurs et ids TMDB ne
 sont pas exposés.
 
+Phase 18.9 ajoute `custom-api-value` (`publicSafe=false`) : une valeur JSON
+bornée extraite d'un endpoint allowlisté (modes texte, nombre, badge ou liste).
+Même `router.refresh()` 10 s ; le navigateur ne contacte jamais l'API distante.
+Aucun JSON brut, aucun HTML, aucun chemin hors allowlist.
+
 ## 10. Widgets avec intégration
 
 - Docker Containers ;
@@ -197,17 +202,24 @@ sont pas exposés.
 - Radarr Overview (`radarr-overview`, Phase 18.5) ;
 - Prowlarr Status (`prowlarr-status`, Phase 18.6) ;
 - qBittorrent Transfer (`qbittorrent-transfer`, Phase 18.7) ;
-- Seerr Requests (`seerr-requests`, Phase 18.8).
+- Seerr Requests (`seerr-requests`, Phase 18.8) ;
+- Valeur API (`custom-api-value`, Phase 18.9).
 
 ## 11. Custom API widget
 
-Phase V2.
+Phase 18.9.
+
+Widget `custom-api-value` (`publicSafe=false`) : l'admin choisit une intégration
+`custom-api`, une `endpointKey` allowlistée, un JSONPath borné et un mode
+d'affichage. Les secrets restent serveur. GET uniquement, corps JSON ≤ 256 KiB,
+timeout, `maxRedirects: 0`, `maxRetries: 0`. Parseur JSONPath maison (pas de
+`$`, `..`, `*`, filtres). DTO `text` / `number` / `badge` / `list` seulement.
 
 Sécurité :
 
 - URL via intégration dédiée ;
 - secrets server-side ;
-- allowlist méthode ;
+- allowlist méthode GET et chemins ;
 - JSONPath contrôlé ;
 - taille réponse ;
 - timeout ;

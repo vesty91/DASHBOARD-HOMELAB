@@ -15,6 +15,7 @@ import type {
   ProwlarrStatusView,
   QbittorrentTransferView,
   SeerrRequestsView,
+  CustomApiValueView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -32,6 +33,7 @@ import type {
   ProwlarrIntegrationOption,
   QbittorrentIntegrationOption,
   SeerrIntegrationOption,
+  CustomApiIntegrationOption,
   RadarrIntegrationOption,
   SonarrIntegrationOption,
   ProxmoxIntegrationOption,
@@ -68,6 +70,8 @@ export function BoardEditWorkspace({
   qbittorrentIntegrations = [],
   seerrViews = {},
   seerrIntegrations = [],
+  customApiViews = {},
+  customApiIntegrations = [],
   radarrViews = {},
   radarrIntegrations = [],
   sonarrViews = {},
@@ -101,6 +105,8 @@ export function BoardEditWorkspace({
   qbittorrentIntegrations?: readonly QbittorrentIntegrationOption[];
   seerrViews?: Record<string, SeerrRequestsView>;
   seerrIntegrations?: readonly SeerrIntegrationOption[];
+  customApiViews?: Record<string, CustomApiValueView>;
+  customApiIntegrations?: readonly CustomApiIntegrationOption[];
   radarrViews?: Record<string, RadarrOverviewView>;
   radarrIntegrations?: readonly RadarrIntegrationOption[];
   sonarrViews?: Record<string, SonarrOverviewView>;
@@ -222,6 +228,8 @@ export function BoardEditWorkspace({
         qbittorrentIntegrations={qbittorrentIntegrations}
         seerrViews={seerrViews}
         seerrIntegrations={seerrIntegrations}
+        customApiViews={customApiViews}
+        customApiIntegrations={customApiIntegrations}
         radarrViews={radarrViews}
         radarrIntegrations={radarrIntegrations}
         sonarrViews={sonarrViews}

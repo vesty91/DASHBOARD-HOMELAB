@@ -526,6 +526,25 @@ fake data. Titres, utilisateurs, e-mails et identifiants TMDB jamais exposés.
 Un 403/404 sur `/api/v1/request/count` rend la section `unavailable` (pas de
 zéros inventés). Un 401/403 sur `/api/v1/status` échoue l'overview.
 
+## 18.9. Custom API
+
+Statut : IN PROGRESS (Phase 18.9).
+
+Adapter `custom-api` composé dans `apps/web`. Transport HTTP(S) vers une origine
+déclarée. GET uniquement vers une allowlist d'endpoints `{ key, label, path }`
+(max 8). Voir ADR 0028. POST/PUT/DELETE, URL widget, proxy générique, query
+string et JSONPath générique sont hors scope.
+
+`customApi.integration.get` expose `{ id, name, enabled, endpoints }` aux
+lecteurs Custom API (`integration.use|manage` + `custom-api.read`).
+`integration.read` n'est pas requis. `integration.list` / `integration.get`
+omettent `baseUrl`, `config`, `capabilities` et l'état des secrets d'un record
+`custom-api` sans `integration.manage`.
+
+Widget `custom-api-value` : `publicSafe=false`. Refresh manuel 10/min. Cache
+8 s (5 s si partiel, 15 s en échec). Secrets jamais renvoyés. Aucune mutation.
+Aucune fake data. JSON brut jamais exposé. Pas une source `service-status`.
+
 ## 19. Service status
 
 Agrégateur interne read-only, pas une nouvelle intégration externe.

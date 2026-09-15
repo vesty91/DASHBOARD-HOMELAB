@@ -2,6 +2,7 @@
 import type { AppTileConfig, AppTileView } from "../app-tile";
 import type { BookmarksConfig } from "../bookmarks";
 import type { ClockConfig } from "../clock";
+import type { CustomApiValueView } from "../custom-api-value";
 import type { BeszelHostsView } from "../beszel-hosts";
 import type { ImmichStatsView } from "../immich-stats";
 import type { JellyfinSessionsView } from "../jellyfin-sessions";
@@ -22,6 +23,7 @@ import type { WidgetItemStatus } from "../types";
 import { AppTileWidget } from "./app-tile-widget";
 import { BookmarksWidget } from "./bookmarks-widget";
 import { ClockWidget } from "./clock-widget";
+import { CustomApiValueWidget } from "./custom-api-value-widget";
 import { BeszelHostsWidget } from "./beszel-hosts-widget";
 import { ImmichStatsWidget } from "./immich-stats-widget";
 import { JellyfinSessionsWidget } from "./jellyfin-sessions-widget";
@@ -85,6 +87,7 @@ function ReadyWidget({
   qbittorrentView,
   radarrView,
   seerrView,
+  customApiView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -102,6 +105,7 @@ function ReadyWidget({
   qbittorrentView: QbittorrentTransferView | undefined;
   radarrView: RadarrOverviewView | undefined;
   seerrView: SeerrRequestsView | undefined;
+  customApiView: CustomApiValueView | undefined;
   sonarrView: SonarrOverviewView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
   serviceStatusView: ServiceStatusView | undefined;
@@ -134,6 +138,8 @@ function ReadyWidget({
       return <RadarrOverviewWidget view={radarrView} />;
     case "seerr-requests":
       return <SeerrRequestsWidget view={seerrView} />;
+    case "custom-api-value":
+      return <CustomApiValueWidget view={customApiView} />;
     case "sonarr-overview":
       return <SonarrOverviewWidget view={sonarrView} />;
     case "proxmox-resources":
@@ -160,6 +166,7 @@ export function WidgetRenderer({
   qbittorrentView,
   radarrView,
   seerrView,
+  customApiView,
   sonarrView,
   proxmoxView,
   serviceStatusView,
@@ -177,6 +184,7 @@ export function WidgetRenderer({
   qbittorrentView?: QbittorrentTransferView;
   radarrView?: RadarrOverviewView;
   seerrView?: SeerrRequestsView;
+  customApiView?: CustomApiValueView;
   sonarrView?: SonarrOverviewView;
   proxmoxView?: ProxmoxResourcesView;
   serviceStatusView?: ServiceStatusView;
@@ -202,6 +210,7 @@ export function WidgetRenderer({
           qbittorrentView={qbittorrentView}
           radarrView={radarrView}
           seerrView={seerrView}
+          customApiView={customApiView}
           sonarrView={sonarrView}
           proxmoxView={proxmoxView}
           serviceStatusView={serviceStatusView}

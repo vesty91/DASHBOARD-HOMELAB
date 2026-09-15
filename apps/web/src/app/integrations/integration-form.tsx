@@ -28,6 +28,7 @@ export function IntegrationForm({
   const showProwlarrHelp = selectedType === "prowlarr";
   const showQbittorrentHelp = selectedType === "qbittorrent";
   const showSeerrHelp = selectedType === "seerr";
+  const showCustomApiHelp = selectedType === "custom-api";
   const showRadarrHelp = selectedType === "radarr";
   const showSonarrHelp = selectedType === "sonarr";
   const showTrustedCa =
@@ -44,6 +45,7 @@ export function IntegrationForm({
     showProwlarrHelp ||
     showQbittorrentHelp ||
     showSeerrHelp ||
+    showCustomApiHelp ||
     showRadarrHelp ||
     showSonarrHelp;
   const timeoutMs =
@@ -53,6 +55,11 @@ export function IntegrationForm({
   const account = typeof integration?.config.account === "string" ? integration.config.account : "";
   const identity =
     typeof integration?.config.identity === "string" ? integration.config.identity : "";
+  const endpointsDefault = Array.isArray(integration?.config.endpoints)
+    ? JSON.stringify(integration.config.endpoints)
+    : '[{"key":"status","label":"Status","path":"/status"}]';
+  const apiKeyHeader =
+    typeof integration?.config.apiKeyHeader === "string" ? integration.config.apiKeyHeader : "";
   return (
     <form action={action} className="ui-form ui-form-wide ui-form-grid">
       <Field label="Type">
@@ -107,11 +114,13 @@ export function IntegrationForm({
                                     ? "https://qbittorrent.example:8080"
                                     : showSeerrHelp
                                       ? "https://seerr.example:5055"
-                                      : showRadarrHelp
-                                        ? "https://radarr.example:7878"
-                                        : showSonarrHelp
-                                          ? "https://sonarr.example:8989"
-                                          : undefined
+                                      : showCustomApiHelp
+                                        ? "https://api.example:8443"
+                                        : showRadarrHelp
+                                          ? "https://radarr.example:7878"
+                                          : showSonarrHelp
+                                            ? "https://sonarr.example:8989"
+                                            : undefined
           }
         />
       </Field>
@@ -201,6 +210,19 @@ export function IntegrationForm({
           titre, utilisateur ni identifiant TMDB.
         </Alert>
       ) : null}
+      {showCustomApiHelp ? (
+        <>
+          <Alert>
+            Utilisez l&apos;URL HTTP(S) de l&apos;origine uniquement. Déclarez une allowlist
+            d&apos;endpoints GET. Le widget ne peut appeler que ces chemins. Aucun proxy d&apos;URL
+            arbitraire.
+          </Alert>
+          <Alert tone="warning">
+            Secrets optionnels (Bearer ou clé API) côté serveur uniquement. GET JSON borné, sans
+            redirection, sans retry. Le navigateur ne contacte jamais l&apos;API distante.
+          </Alert>
+        </>
+      ) : null}
       {showRadarrHelp ? (
         <Alert>
           Utilisez l&apos;URL HTTP(S) du serveur Radarr (origine uniquement). La clé API se
@@ -275,6 +297,35 @@ export function IntegrationForm({
           />
         </Field>
       ) : null}
+      {showCustomApiHelp ? (
+        <>
+          <Field
+            label="Endpoints autorisés"
+            hint="JSON : jusqu'à 8 objets { key, label, path }. GET uniquement, pathname absolu, sans query."
+          >
+            <Textarea
+              name="endpoints"
+              rows={6}
+              required
+              defaultValue={endpointsDefault}
+              spellCheck={false}
+              autoComplete="off"
+            />
+          </Field>
+          <Field
+            label="En-tête de clé API"
+            hint="Requis seulement si une clé API est enregistrée ensuite."
+          >
+            <Select name="apiKeyHeader" defaultValue={apiKeyHeader}>
+              <option value="">Aucun</option>
+              <option value="X-Api-Key">X-Api-Key</option>
+              <option value="X-API-Key">X-API-Key</option>
+              <option value="X-Auth-Token">X-Auth-Token</option>
+              <option value="X-Token">X-Token</option>
+            </Select>
+          </Field>
+        </>
+      ) : null}
       {showTrustedCa ? (
         <Field
           label="CA de confiance (PEM, optionnel)"
@@ -301,13 +352,15 @@ export function IntegrationForm({
                                 ? "Utilisez ce champ pour un qBittorrent HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
                                 : showSeerrHelp
                                   ? "Utilisez ce champ pour un Seerr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                  : showRadarrHelp
-                                    ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                    : showSonarrHelp
-                                      ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                      : showProxmoxHelp
-                                        ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
-                                        : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                  : showCustomApiHelp
+                                    ? "Utilisez ce champ pour une API HTTPS signée par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                    : showRadarrHelp
+                                      ? "Utilisez ce champ pour un Radarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                      : showSonarrHelp
+                                        ? "Utilisez ce champ pour un Sonarr HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                        : showProxmoxHelp
+                                          ? "Utilisez ce champ pour un Proxmox HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
+                                          : "Utilisez ce champ pour un proxy Docker HTTPS signé par une CA privée. Collez uniquement le certificat CA public, jamais une clé privée."
           }
         >
           <Textarea

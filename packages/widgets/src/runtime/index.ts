@@ -5,6 +5,8 @@ export type { BookmarkLinkDraft, BookmarksDraftConfig } from "./bookmarks-form";
 export { BookmarksWidget } from "./bookmarks-widget";
 export { ClockForm } from "./clock-form";
 export { ClockWidget } from "./clock-widget";
+export { CustomApiValueForm, type CustomApiIntegrationOption } from "./custom-api-value-form";
+export { CustomApiValueWidget } from "./custom-api-value-widget";
 export { WidgetBoundary } from "./widget-boundary";
 export { WidgetFrame } from "./widget-frame";
 export { WidgetRenderer, type WidgetItemView } from "./widget-renderer";

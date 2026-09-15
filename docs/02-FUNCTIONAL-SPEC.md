@@ -431,6 +431,19 @@ Lecture :
 Pas de mutation, pas d'approve/decline, pas de `apikey` en query. Titres,
 utilisateurs, e-mails et identifiants TMDB ne sont pas exposés.
 
+### API personnalisée
+
+Phase 18.9 : GET JSON borné vers une allowlist d'endpoints déclarés (jusqu'à 8).
+Pas d'URL arbitraire, pas de proxy générique, pas d'appel navigateur.
+
+Lecture :
+
+- sonde du premier endpoint allowlisté (JSON 200) ;
+- extraction JSONPath d'un endpoint nommé (`customApi.value.get`).
+
+Auth optionnelle : `Authorization: Bearer` et/ou en-tête de clé API allowlisté.
+JSONPath maison (profondeur ≤ 8). Modes `text` / `number` / `badge` / `list`.
+
 ## 11. Recherche globale
 
 V1.5 :

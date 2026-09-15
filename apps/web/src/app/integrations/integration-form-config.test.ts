@@ -40,4 +40,27 @@ describe("configFromForm", () => {
       account: "monitor",
     });
   });
+
+  it("parses Custom API endpoints JSON and keeps invalid JSON for server-side Zod", () => {
+    const valid = new FormData();
+    valid.set("verifyTls", "on");
+    valid.set("timeoutMs", "8000");
+    valid.set("endpoints", '[{"key":"status","label":"Status","path":"/status"}]');
+    valid.set("apiKeyHeader", "X-Api-Key");
+    expect(configFromForm(valid)).toEqual({
+      verifyTls: true,
+      timeoutMs: 8000,
+      endpoints: [{ key: "status", label: "Status", path: "/status" }],
+      apiKeyHeader: "X-Api-Key",
+    });
+    const invalid = new FormData();
+    invalid.set("verifyTls", "on");
+    invalid.set("timeoutMs", "8000");
+    invalid.set("endpoints", "not-json");
+    expect(configFromForm(invalid)).toEqual({
+      verifyTls: true,
+      timeoutMs: 8000,
+      endpoints: "not-json",
+    });
+  });
 });

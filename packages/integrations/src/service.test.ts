@@ -909,6 +909,40 @@ describe("integration service", () => {
     expect(JSON.stringify(restricted)).not.toContain("seerr.example");
   });
 
+  it("redacts Custom API generic DTO details without integration.manage", async () => {
+    const store = createMemoryStore();
+    const service = serviceFor(store, new MemoryTestRateLimiter(), [
+      {
+        ...createTestHttpIntegrationDefinition(),
+        id: "custom-api",
+        displayName: "API personnalisée",
+      },
+    ]);
+    const customApi = await service.create(
+      {
+        type: "custom-api",
+        name: "API personnalisée",
+        baseUrl: "https://custom-api.example:8443",
+        enabled: true,
+        config: { path: "/status", timeoutMs: 1000, verifyTls: true },
+      },
+      admin,
+    );
+    const restricted = await service.get(customApi.id, reader);
+    expect(restricted).toMatchObject({
+      id: customApi.id,
+      type: "custom-api",
+      name: "API personnalisée",
+      enabled: true,
+      baseUrl: "",
+      config: {},
+      capabilities: [],
+      secrets: {},
+    });
+    expect(restricted).not.toHaveProperty("configRevision");
+    expect(JSON.stringify(restricted)).not.toContain("custom-api.example");
+  });
+
   it("redacts Radarr generic DTO details without integration.manage", async () => {
     const store = createMemoryStore();
     const service = serviceFor(store, new MemoryTestRateLimiter(), [

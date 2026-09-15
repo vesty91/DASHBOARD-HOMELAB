@@ -222,6 +222,41 @@ describe("widget renderer app tile isolation", () => {
     ).toBeTruthy();
   });
 
+  it("renders a Custom API value widget from a ready view", () => {
+    render(
+      <WidgetRenderer
+        item={{
+          id: "custom-api-1",
+          widgetType: "custom-api-value",
+          widgetVersion: 1,
+          title: "API",
+          config: {
+            integrationId: "11111111-1111-4111-8111-111111111111",
+            endpointKey: "status",
+            jsonPath: "status",
+            display: "text",
+          },
+          runtimeStatus: "ready",
+        }}
+        customApiView={{
+          status: "ready",
+          overviewStatus: "available",
+          fetchedAt: "2026-09-15T00:00:00.000Z",
+          label: "Santé",
+          unit: null,
+          display: "text",
+          text: "ok",
+          number: null,
+          badgeLabel: null,
+          badgeTone: null,
+          listItems: null,
+          listTruncated: false,
+        }}
+      />,
+    );
+    expect(screen.getByText("Santé · ok")).toBeTruthy();
+  });
+
   it("renders a qBittorrent transfer widget from a ready view", () => {
     render(
       <WidgetRenderer

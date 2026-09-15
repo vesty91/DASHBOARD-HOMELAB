@@ -18,6 +18,7 @@ import type {
   QbittorrentPermissionsView,
 } from "@dashboard/qbittorrent";
 import type { SeerrIntegrationMetadata, SeerrPermissionsView } from "@dashboard/seerr";
+import type { CustomApiIntegrationMetadata, CustomApiPermissionsView } from "@dashboard/custom-api";
 import type { RadarrIntegrationMetadata, RadarrPermissionsView } from "@dashboard/radarr";
 import type { SonarrIntegrationMetadata, SonarrPermissionsView } from "@dashboard/sonarr";
 import type { ProxmoxIntegrationMetadata, ProxmoxPermissionsView } from "@dashboard/proxmox";
@@ -47,6 +48,7 @@ export type IntegrationDetailResolution =
   | { kind: "prowlarr"; metadata: ProwlarrIntegrationMetadata }
   | { kind: "qbittorrent"; metadata: QbittorrentIntegrationMetadata }
   | { kind: "seerr"; metadata: SeerrIntegrationMetadata }
+  | { kind: "custom-api"; metadata: CustomApiIntegrationMetadata }
   | { kind: "radarr"; metadata: RadarrIntegrationMetadata }
   | { kind: "sonarr"; metadata: SonarrIntegrationMetadata }
   | { kind: "generic"; integration: IntegrationDto };
@@ -128,6 +130,12 @@ export interface IntegrationDetailCaller {
     permissions: () => Promise<Pick<SeerrPermissionsView, "canRead">>;
     integration: {
       get: (input: { integrationId: string }) => Promise<SeerrIntegrationMetadata>;
+    };
+  };
+  customApi: {
+    permissions: () => Promise<Pick<CustomApiPermissionsView, "canRead">>;
+    integration: {
+      get: (input: { integrationId: string }) => Promise<CustomApiIntegrationMetadata>;
     };
   };
   radarr: {
@@ -264,6 +272,15 @@ export async function resolveIntegrationDetail(
     try {
       const metadata = await caller.seerr.integration.get({ integrationId: id });
       return { kind: "seerr", metadata };
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+  const customApiPermissions = await caller.customApi.permissions();
+  if (customApiPermissions.canRead) {
+    try {
+      const metadata = await caller.customApi.integration.get({ integrationId: id });
+      return { kind: "custom-api", metadata };
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
     }

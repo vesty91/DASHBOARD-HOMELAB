@@ -44,6 +44,7 @@ export const PERMISSIONS = [
   "prowlarr.read",
   "qbittorrent.read",
   "seerr.read",
+  "custom-api.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

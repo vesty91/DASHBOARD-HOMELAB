@@ -11,6 +11,7 @@ import type {
   ProwlarrStatusView,
   QbittorrentTransferView,
   SeerrRequestsView,
+  CustomApiValueView,
   RadarrOverviewView,
   SonarrOverviewView,
   ProxmoxResourcesView,
@@ -34,6 +35,7 @@ export function BoardReadGrid({
   prowlarrViews = {},
   qbittorrentViews = {},
   seerrViews = {},
+  customApiViews = {},
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
@@ -53,6 +55,7 @@ export function BoardReadGrid({
   prowlarrViews?: Record<string, ProwlarrStatusView>;
   qbittorrentViews?: Record<string, QbittorrentTransferView>;
   seerrViews?: Record<string, SeerrRequestsView>;
+  customApiViews?: Record<string, CustomApiValueView>;
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
@@ -101,6 +104,7 @@ export function BoardReadGrid({
                   ? { qbittorrentView: qbittorrentViews[entry.id] }
                   : {})}
                 {...(seerrViews[entry.id] ? { seerrView: seerrViews[entry.id] } : {})}
+                {...(customApiViews[entry.id] ? { customApiView: customApiViews[entry.id] } : {})}
                 {...(radarrViews[entry.id] ? { radarrView: radarrViews[entry.id] } : {})}
                 {...(sonarrViews[entry.id] ? { sonarrView: sonarrViews[entry.id] } : {})}
               />
