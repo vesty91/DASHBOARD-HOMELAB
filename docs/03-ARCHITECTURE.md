@@ -427,4 +427,4 @@ at-most-once (leases, `runKey`, pas de retry side-effect). Actions via
 `runSafeIntegrationAction` (default-deny). Alerting status-transition +
 ntfy avec debounce/cooldown. UI `/automations` (dry-run, manual run,
 history). Pas d'eval, pas de proxy HTTP arbitraire.
-Voir `docs/22-AUTOMATIONS.md`.
+Minor produit `1.2.0`. Voir `docs/22-AUTOMATIONS.md`.

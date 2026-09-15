@@ -8,7 +8,7 @@ console.log(
   JSON.stringify({
     msg: "startup",
     service: "realtime",
-    version: process.env.APP_VERSION?.trim() || "1.1.0",
+    version: process.env.APP_VERSION?.trim() || "1.2.0",
     environment: process.env.NODE_ENV ?? "development",
     port: realtime.port(),
   }),
