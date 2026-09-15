@@ -20,7 +20,7 @@ import {
 
 export const SEERR_INTEGRATION_ID = "seerr";
 export const SEERR_INTEGRATION_VERSION = 1;
-export const SEERR_CAPABILITIES = ["status.read"] as const;
+export const SEERR_CAPABILITIES = ["status.read", "requests.manage"] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof SeerrError) return toIntegrationError(error).code;
@@ -41,7 +41,7 @@ export function createSeerrIntegrationDefinition(): IntegrationDefinition<
     displayName: "Seerr",
     version: SEERR_INTEGRATION_VERSION,
     description:
-      "Version et compteurs de demandes Seerr via l'API officielle v1 en lecture seule (compatible Jellyseerr et Overseerr).",
+      "Version et compteurs de demandes Seerr via l'API officielle v1, plus approve/decline ciblés (compatible Jellyseerr et Overseerr).",
     configSchema: seerrConfigSchema,
     secretSchema: seerrSecretSchema,
     capabilities: SEERR_CAPABILITIES,

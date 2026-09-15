@@ -2,7 +2,7 @@ import type { IntegrationActor } from "@dashboard/integrations";
 
 export type SeerrActor = IntegrationActor;
 
-export type SeerrHttpMethod = "GET";
+export type SeerrHttpMethod = "GET" | "POST";
 
 export type SeerrSectionStatus = "available" | "degraded" | "unavailable";
 
@@ -23,6 +23,7 @@ export type SeerrOverviewStatus = "available" | "degraded";
 export interface SeerrPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canManageRequests: boolean;
 }
 
 export interface SeerrIntegrationMetadata {

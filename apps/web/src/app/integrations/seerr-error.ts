@@ -32,9 +32,13 @@ export function seerrUserError(error: unknown): string {
       return "Configuration Seerr invalide. Vérifiez l'URL, TLS et la clé API.";
     case "NOT_FOUND":
       return "Ressource Seerr introuvable.";
+    case "VALIDATION_ERROR":
+      return "Paramètres Seerr invalides.";
+    case "CONFLICT":
+      return "Action Seerr impossible : configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations Seerr. Réessayez dans une minute.";
+      return "Trop de requêtes Seerr. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur Seerr est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers Seerr.";

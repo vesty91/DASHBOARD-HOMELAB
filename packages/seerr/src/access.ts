@@ -12,15 +12,17 @@ function hasAny(actor: IntegrationActor, permissions: readonly Permission[]): bo
 }
 
 export function seerrPermissionsView(actor: IntegrationActor): SeerrPermissionsView {
-  if (!isActive(actor)) return { canRead: false, canManage: false };
+  if (!isActive(actor)) return { canRead: false, canManage: false, canManageRequests: false };
   const integrationUse = hasAny(actor, ["integration.use", "integration.manage"]);
+  const integrationInteract = hasAny(actor, ["integration.interact", "integration.manage"]);
   return {
     canRead: integrationUse && hasAny(actor, ["seerr.read"]),
     canManage: hasAny(actor, ["integration.manage"]),
+    canManageRequests: integrationInteract && hasAny(actor, ["seerr.request.manage"]),
   };
 }
 
-export type SeerrAccessKind = "read" | "manage";
+export type SeerrAccessKind = "read" | "manage" | "request";
 
 export function assertSeerrAccess(actor: IntegrationActor, kind: SeerrAccessKind): void {
   if (!isActive(actor)) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
@@ -31,6 +33,9 @@ export function assertSeerrAccess(actor: IntegrationActor, kind: SeerrAccessKind
       return;
     case "manage":
       if (!view.canManage) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "request":
+      if (!view.canManageRequests) throw new IntegrationError("FORBIDDEN", "Permission denied");
       return;
     default: {
       const _exhaustive: never = kind;

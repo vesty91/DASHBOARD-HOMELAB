@@ -48,4 +48,27 @@ describe("seerr access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus seerr.request.manage", () => {
+    expect(
+      seerrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }).canManageRequests,
+    ).toBe(false);
+    expect(
+      seerrPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "seerr.request.manage"],
+        },
+      }).canManageRequests,
+    ).toBe(true);
+  });
 });

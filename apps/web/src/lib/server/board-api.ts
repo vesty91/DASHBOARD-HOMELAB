@@ -180,6 +180,8 @@ const globalRuntime = globalThis as typeof globalThis & {
     seerrRefreshRateLimiter: MemorySeerrRefreshRateLimiter;
     seerrRefreshFence: MemorySeerrRefreshFence;
     seerrOverviewCoalescer: MemorySeerrOverviewCoalescer;
+    seerrActionRateLimiter: MemorySafeActionRateLimiter;
+    seerrActionInFlight: MemorySafeActionInFlightGuard;
     customApiRefreshRateLimiter: MemoryCustomApiRefreshRateLimiter;
     customApiRefreshFence: MemoryCustomApiRefreshFence;
     customApiOverviewCoalescer: MemoryCustomApiOverviewCoalescer;
@@ -342,6 +344,8 @@ function integrationRuntime() {
     seerrRefreshRateLimiter: new MemorySeerrRefreshRateLimiter(),
     seerrRefreshFence: new MemorySeerrRefreshFence(),
     seerrOverviewCoalescer: new MemorySeerrOverviewCoalescer(),
+    seerrActionRateLimiter: new MemorySafeActionRateLimiter(),
+    seerrActionInFlight: new MemorySafeActionInFlightGuard(),
     customApiRefreshRateLimiter: new MemoryCustomApiRefreshRateLimiter(),
     customApiRefreshFence: new MemoryCustomApiRefreshFence(),
     customApiOverviewCoalescer: new MemoryCustomApiOverviewCoalescer(),
@@ -523,6 +527,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.seerrRefreshRateLimiter,
     refreshFence: runtime.seerrRefreshFence,
     overviewCoalescer: runtime.seerrOverviewCoalescer,
+    actionRateLimiter: runtime.seerrActionRateLimiter,
+    inFlight: runtime.seerrActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "seerr",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   const customApi = createCustomApiService({

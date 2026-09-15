@@ -7,6 +7,7 @@ import {
 } from "@dashboard/integrations";
 import { SeerrError, mapSeerrHttpStatus } from "./errors";
 import { assertSeerrBaseUrl, assertSeerrEndpointAllowed } from "./policy";
+import { seerrRequestActionPath, type SeerrRequestAction } from "./request-action";
 import type { SeerrConfig, SeerrSecrets } from "./schemas";
 import type { SeerrHttpMethod } from "./types";
 
@@ -43,7 +44,7 @@ export function seerrAuthHeaders(apiKey: string): Readonly<Record<string, string
 export async function seerrFetch(
   request: SeerrRequestFn,
   ctx: SeerrTransportContext,
-  method: SeerrHttpMethod,
+  method: Exclude<SeerrHttpMethod, "POST">,
   pathname: string,
   options: { maxBodyBytes?: number } = {},
 ): Promise<Extract<SecureHttpResult, { ok: true }>> {
@@ -59,6 +60,48 @@ export async function seerrFetch(
     maxRedirects: 0,
     maxBodyBytes: options.maxBodyBytes ?? SEERR_JSON_MAX_BYTES,
     headers: { ...seerrAuthHeaders(ctx.apiKey) },
+    ...(ctx.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.trustedCaPem }),
+  } satisfies SecureHttpRequest);
+  if (!result.ok) {
+    if (result.code === "TIMEOUT") throw new SeerrError("TIMEOUT", "Seerr request timed out");
+    throw new IntegrationError(result.code, "Seerr request failed");
+  }
+  if (result.truncated)
+    throw new IntegrationError("INVALID_RESPONSE", "Seerr response body is oversized");
+  if (result.status !== 200) {
+    const mapped = mapSeerrHttpStatus(result.status);
+    if (mapped.kind !== "INVALID_RESPONSE") throw mapped;
+    const classified = classifyHttpStatus(result.status);
+    throw new IntegrationError(classified ?? "INVALID_RESPONSE", "Seerr request failed");
+  }
+  return result;
+}
+
+const ALLOWED_REQUEST_HEADERS = new Set(["Accept", "X-Api-Key"]);
+
+export async function seerrRequestStatus(
+  request: SeerrRequestFn,
+  ctx: SeerrTransportContext,
+  requestId: number,
+  action: SeerrRequestAction,
+): Promise<Extract<SecureHttpResult, { ok: true }>> {
+  const url = buildSeerrUrl(ctx.baseUrl, seerrRequestActionPath(requestId, action));
+  assertSeerrEndpointAllowed("POST", url);
+  const headers: Record<string, string> = { ...seerrAuthHeaders(ctx.apiKey) };
+  for (const name of Object.keys(headers)) {
+    if (!ALLOWED_REQUEST_HEADERS.has(name))
+      throw new IntegrationError("FORBIDDEN", "Seerr header is not allowed");
+  }
+  const result = await request({
+    url,
+    method: "POST",
+    verifyTls: ctx.verifyTls,
+    timeoutMs: ctx.timeoutMs,
+    allowedSchemes: ["http:", "https:"],
+    maxRetries: 0,
+    maxRedirects: 0,
+    maxBodyBytes: SEERR_JSON_MAX_BYTES,
+    headers,
     ...(ctx.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.trustedCaPem }),
   } satisfies SecureHttpRequest);
   if (!result.ok) {

@@ -65,6 +65,10 @@ test("creates a Seerr integration without leaking the API key from the browser",
   await expect(page.getByRole("heading", { level: 1, name: "Seerr Lab" })).toBeVisible();
   await expect(page.getByText("Seerr", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Demandes" })).toBeVisible();
+  await expect(page.getByLabel("ID demande")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approuver" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refuser" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|clé API|Clé API/i).first(),
   ).toBeVisible({ timeout: 30_000 });

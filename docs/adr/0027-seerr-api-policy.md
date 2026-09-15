@@ -8,9 +8,9 @@ Accepté pour la Phase 18.8 (Seerr).
 
 Seerr expose une API HTTP officielle **v1**. Jellyseerr et Overseerr partagent
 cette API. Un seul package et un seul type d'intégration `seerr` couvrent les
-trois produits. Les mutations (approve/decline, listes de demandes) sont hors
-scope. Un proxy générique, une clé `apikey` en query string ou un chemin hors
-allowlist sont interdits.
+trois produits. Les mutations (listes de demandes, retry, delete, settings) hors approve/decline
+ciblés restent hors scope. Un proxy générique, une clé `apikey` en query string
+ou un chemin hors allowlist sont interdits.
 
 Officiel : https://docs.seerr.dev
 
@@ -23,18 +23,21 @@ Composé dans `apps/web`. Jamais importé par `@dashboard/integrations` ni par
 uniquement (pas de chemin, credentials, query ou fragment). Type d'intégration
 uniquement `seerr` — pas de copies Jellyseerr/Overseerr.
 
-### 2. Allowlist GET uniquement
+### 2. Allowlist
 
 Uniquement :
 
 - `GET /api/v1/status`
 - `GET /api/v1/request/count`
+- `POST /api/v1/request/{id}/approve` (Phase 21.6)
+- `POST /api/v1/request/{id}/decline` (Phase 21.6)
 
 Aucun paramètre de query. `maxRetries: 0`, `maxRedirects: 0`. Corps JSON borné
-(256 KiB). Un corps tronqué est `INVALID_RESPONSE`.
+(256 KiB). Un corps tronqué est `INVALID_RESPONSE`. Le JSON `MediaRequest`
+n'est jamais parsé ni renvoyé.
 
-Interdit : POST/PUT/DELETE, approve/decline, listes de demandes, chemins
-arbitraires, iframe, proxy générique, `apikey` en query.
+Interdit : PUT/DELETE, retry, pending, POST `/api/v1/request`, GET listes,
+chemins arbitraires, iframe, proxy générique, `apikey` en query.
 
 ### 3. Auth header uniquement
 
@@ -63,10 +66,23 @@ Un 401/403 sur `/status` échoue l'overview entier (`UNAUTHORIZED` /
 
 ### 5. Permissions
 
-`seerr.read` en conjonction de `integration.use|manage`. ADMIN par défaut ne
-l'obtient pas. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
-`seerr-requests` : `publicSafe=false`. Capability : `status.read`.
+`seerr.read` en conjonction de `integration.use|manage`. `seerr.request.manage`
+en conjonction de `integration.interact|manage`. ADMIN par défaut n'obtient ni
+l'une ni l'autre. SYSTEM_ADMIN via le catalogue `PERMISSIONS`. Widget
+`seerr-requests` : `publicSafe=false`. Capabilities : `status.read`,
+`requests.manage`.
 
 ### 6. Cache
 
 8 s si complet, 5 s si partiel, failures 15 s. Coalescer + fence. Refresh 10/min.
+
+## Amendement Phase 21.6
+
+Approve / decline ciblés uniquement :
+
+- `POST /api/v1/request/{id}/approve`
+- `POST /api/v1/request/{id}/decline`
+
+`{id}` est un entier 1..2_147_483_647. Le corps de réponse officiel n'est jamais
+exposé. Toujours interdit : retry, pending, delete, création, listes, users,
+settings.

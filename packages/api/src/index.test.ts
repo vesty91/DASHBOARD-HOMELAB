@@ -1663,6 +1663,58 @@ describe("seerr tRPC router", () => {
       /X-Api-Key|apiKey|apikey|email|tmdb|title|requestedBy|Dune/u,
     );
   });
+
+  it("audits request decline without users, titles or the API key", async () => {
+    const record = vi.fn(async () => undefined);
+    const actionDto = {
+      status: "success" as const,
+      action: "seerr.decline",
+      resourceId: "request:12",
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const seerrService = {
+      permissions: vi.fn(() => ({
+        canRead: true,
+        canManage: false,
+        canManageRequests: true,
+      })),
+      declineRequest: vi.fn(async () => actionDto),
+    } as unknown as SeerrService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      seerr: seerrService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    await expect(caller.seerr.requests.decline({ integrationId, requestId: 12 })).resolves.toEqual(
+      actionDto,
+    );
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "seerr.decline",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "seerr",
+          action: "seerr.decline",
+          resourceId: "request:12",
+          result: "success",
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(
+      /user@example.com|Secret User|Dune|apiKey|X-Api-Key|please add 4k/u,
+    );
+  });
 });
 
 describe("customApi tRPC router", () => {

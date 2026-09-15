@@ -58,5 +58,14 @@ export const seerrIntegrationInputSchema = z.object({
   integrationId: z.uuid(),
 });
 
+const seerrRequestIdSchema = z.number().int().positive().max(2_147_483_647);
+
+export const seerrRequestActionInputSchema = z.object({
+  integrationId: z.uuid(),
+  requestId: seerrRequestIdSchema,
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
 export type SeerrConfig = z.infer<typeof seerrConfigSchema>;
 export type SeerrSecrets = z.infer<typeof seerrSecretSchema>;
+export type SeerrRequestActionInput = z.infer<typeof seerrRequestActionInputSchema>;

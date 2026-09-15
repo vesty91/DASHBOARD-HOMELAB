@@ -29,6 +29,8 @@ export const AUDIT_ACTIONS = [
   "sonarr.search-episode",
   "radarr.refresh-movie",
   "radarr.search-movie",
+  "seerr.approve",
+  "seerr.decline",
   "backup.export",
   "backup.validate",
   "backup.restore",

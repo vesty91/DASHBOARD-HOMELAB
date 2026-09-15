@@ -30,10 +30,24 @@ describe("seerr policy", () => {
     ).toThrow(/not allowed/i);
     expect(() =>
       assertSeerrEndpointAllowed("POST", `https://seerr.lab:5055${SEERR_STATUS_PATH}`),
-    ).toThrow(/method/i);
+    ).toThrow(/allowlist/i);
     expect(() =>
       assertSeerrEndpointAllowed("POST", "https://seerr.lab:5055/api/v1/request"),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertSeerrEndpointAllowed("POST", "https://seerr.lab:5055/api/v1/request/12/pending"),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertSeerrEndpointAllowed("POST", "https://seerr.lab:5055/api/v1/request/12/retry"),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertSeerrEndpointAllowed("GET", "https://seerr.lab:5055/api/v1/request/12/approve"),
+    ).toThrow(/allowlist/i);
+    expect(() =>
+      assertSeerrEndpointAllowed("PUT", "https://seerr.lab:5055/api/v1/request/12/approve"),
     ).toThrow(/method/i);
+    assertSeerrEndpointAllowed("POST", "https://seerr.lab:5055/api/v1/request/12/approve");
+    assertSeerrEndpointAllowed("POST", "https://seerr.lab:5055/api/v1/request/12/decline");
     expect(() =>
       assertSeerrEndpointAllowed("GET", "https://seerr.lab:5055/api/v1/request"),
     ).toThrow(/allowlist/i);

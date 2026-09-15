@@ -1,4 +1,5 @@
 import { IntegrationError } from "@dashboard/integrations";
+import { isSeerrRequestActionPath } from "./request-action";
 import type { SeerrHttpMethod } from "./types";
 
 export const SEERR_STATUS_PATH = "/api/v1/status";
@@ -72,17 +73,21 @@ export function assertSeerrEndpointAllowed(method: string, url: string | URL): v
   )
     reject("Seerr path traversal is not allowed");
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod !== "GET") reject("Seerr method is not allowed");
+  if (normalizedMethod !== "GET" && normalizedMethod !== "POST")
+    reject("Seerr method is not allowed");
   const httpMethod = normalizedMethod as SeerrHttpMethod;
   const keys = uniqueQueryKeys(parsed);
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`Seerr query parameter ${key} is not allowed`);
+  if (keys.length > 0) reject("Seerr endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
-      if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("Seerr endpoint is not on the Phase 18 allowlist");
-      if (keys.length > 0) reject("Seerr Phase 18 endpoints must not use query parameters");
+      if (!ALLOWED_GET_PATHS.has(parsed.pathname)) reject("Seerr endpoint is not on the allowlist");
+      return;
+    case "POST":
+      if (!isSeerrRequestActionPath(parsed.pathname))
+        reject("Seerr endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

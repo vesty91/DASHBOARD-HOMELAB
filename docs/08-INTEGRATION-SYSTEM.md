@@ -531,9 +531,11 @@ Statut : COMPLETE (Phase 18.8).
 
 Adapter `seerr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Seerr
 (compatible Jellyseerr / Overseerr, même API v1 officielle). Auth header
-obligatoire (`X-Api-Key` uniquement). Lecture seule `GET /api/v1/status`,
-`GET /api/v1/request/count`. Voir ADR 0027. POST/PUT/DELETE, approve/decline et
-`apikey` en query sont hors scope. Un seul type d'intégration : `seerr`.
+obligatoire (`X-Api-Key` uniquement). Lecture `GET /api/v1/status`,
+`GET /api/v1/request/count`. Mutations Phase 21 : `POST /api/v1/request/{id}/approve`
+et `POST /api/v1/request/{id}/decline` uniquement. Voir ADR 0027. PUT/DELETE,
+retry, pending, création de demande, listes et `apikey` en query restent hors
+scope. Un seul type d'intégration : `seerr`.
 
 `seerr.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 Seerr (`integration.use|manage` + `seerr.read`). `integration.read` n'est pas
@@ -542,8 +544,10 @@ requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
 `integration.manage`.
 
 Widget `seerr-requests` : `publicSafe=false`. Refresh manuel 10/min. Cache
-overview 8 s (5 s si partiel). Clé API jamais renvoyée. Aucune mutation. Aucune
-fake data. Titres, utilisateurs, e-mails et identifiants TMDB jamais exposés.
+overview 8 s (5 s si partiel). Clé API jamais renvoyée. Le widget reste en
+lecture seule (compteurs). Approve/decline passent par le formulaire
+d'intégration (ID explicite). Aucune fake data. Titres, utilisateurs, e-mails et
+identifiants TMDB jamais exposés.
 Un 403/404 sur `/api/v1/request/count` rend la section `unavailable` (pas de
 zéros inventés). Un 401/403 sur `/api/v1/status` échoue l'overview.
 
@@ -599,7 +603,7 @@ Pour chaque adapter :
 
 ## 21. Actions sûres
 
-Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy, 21.5 *arr).
+Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy, 21.5 *arr, 21.6 Seerr).
 
 Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
 Default deny. POST allowlisté. Rate limit par acteur / intégration / action.
