@@ -6,8 +6,10 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
-Actions d'intégration sûres (Phase 21). Sera publié en **1.1.0** (minor
-backward-compatible). Schéma et backup inchangés.
+## [1.1.0] — 2026-09-15
+
+Actions d'intégration sûres (Phase 21). Minor backward-compatible.
+Schéma et backup inchangés.
 
 ### Ajouté
 

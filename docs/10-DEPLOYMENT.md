@@ -14,7 +14,7 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.0.1` (Phase 20 patch). Les tags `phase-*` ne publient
+La version applicative est `1.1.0` (Phase 21 minor). Les tags `phase-*` ne publient
 pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient `latest` /
 `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement `:tag` et
 `:sha-*` (ADR 0029).
@@ -196,7 +196,7 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
 2. Lire `CHANGELOG.md`. Migrations `0000`–`0006` sont immuables.
-   Phase 20 n'ajoute pas `0007` : l'upgrade 1.0.0 → 1.0.1 est un remplacement
+   Phase 21 n'ajoute pas `0007` : l'upgrade 1.0.1 → 1.1.0 est un remplacement
    d'images à schéma 6 constant.
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.

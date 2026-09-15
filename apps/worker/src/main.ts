@@ -14,7 +14,7 @@ console.log(
   JSON.stringify({
     msg: "startup",
     service: "worker",
-    version: process.env.APP_VERSION?.trim() || "1.0.1",
+    version: process.env.APP_VERSION?.trim() || "1.1.0",
     environment: process.env.NODE_ENV ?? "development",
     port: worker.port(),
   }),

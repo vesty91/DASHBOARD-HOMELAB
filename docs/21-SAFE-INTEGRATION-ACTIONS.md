@@ -3,8 +3,10 @@
 Statut : **COMPLETE**.
 
 Phase 21. Pas de `0007`. Schéma 6 / backup `formatVersion` 1 inchangés.
+Version produit **1.1.0** (tag `v1.1.0`). `phase-21-complete` pointe le merge
+de clôture docs, avant le bump minor.
 PRs #53 (framework), #54 (Proxmox), #55 (qBittorrent), #56 (ntfy), #57 (*arr),
-#58 (Seerr).
+#58 (Seerr), #59 (close).
 
 Ce n'est **pas** un proxy d'administration générique : pas d'invoke arbitraire,
 pas de REST proxy, pas de POST libre, pas de shell.
