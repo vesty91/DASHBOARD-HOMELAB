@@ -19,6 +19,8 @@ Voir ADR 0029.
   `runSafeIntegrationAction`, audit `source=automation`.
 - Alerting status-transition (Phase 22.5) : DOWN/recovery ntfy,
   debounce `forDurationSeconds`, cooldown anti-tempête.
+- UI automations (Phase 22.6) : `/automations`, wizard (création
+  désactivée), dry-run sans side effect, manual run, historique.
 - Permissions `automation.read` / `automation.manage` / `automation.run`
   (ADMIN default-deny).
 - Backup `schemaVersion` 7. Compat 5 → 6 → 7. Schéma 8+ rejeté.

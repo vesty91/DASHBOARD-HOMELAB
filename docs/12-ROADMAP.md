@@ -414,23 +414,29 @@ Hors scope : invoke arbitraire, REST proxy.
 
 ## Phase 22 — Automations & Alerting
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Livrables prévus :
+Livré :
 
 - automation rules persistées (`0007`, schema 7) ;
-- scheduler worker ;
-- trigger registry ;
+- triggers schedule / event / status-transition ;
 - condition engine déclaratif ;
-- safe action registry ;
-- authorization runtime (pas de snapshot de privilèges) ;
-- cooldown / anti-loop ;
-- run history bornée ;
-- UI automations ;
-- audit ;
+- scheduler worker at-most-once (leases multi-replica, `runKey`) ;
+- safe action registry (`automationAllowed`, default-deny) ;
+- authorization runtime (revalidation owner, pas de snapshot) ;
+- cooldown / anti-loop / debounce `forDurationSeconds` ;
+- run history bornée (éphémère, hors backup) ;
+- alerting status-transition → `ntfy.publish` (+ recovery optionnelle) ;
+- UI `/automations` (wizard, dry-run, manual run, history) ;
+- audit `automation.*` + `source=automation` ;
 - backup compatibility 5/6/7 ;
-- tests concurrency ;
-- release SemVer minor.
+- tests unitaires, scheduler, alerting, E2E UI.
+
+Migrations : `0000`–`0007` (SQLite + PostgreSQL). Pas de `0008`.
+Backup `formatVersion` 1 / `schemaVersion` 7.
+
+PRs : #61–#66. Tag `phase-22-complete`. Minor produit `v1.2.0` (release
+suivante).
 
 Hors scope : n8n générique, shell, eval, webhook/REST proxy, cron shell,
 Custom API write, Grafana/Prowlarr write.

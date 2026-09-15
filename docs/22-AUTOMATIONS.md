@@ -1,8 +1,9 @@
 # 22 — Automations & alerting
 
-Statut : **IN PROGRESS** (22.5 alerting).
+Statut : **COMPLETE**.
 
 Phase 22. Migration `0007`. `schemaVersion` 7. Backup `formatVersion` 1.
+Tag `phase-22-complete`. Minor produit `v1.2.0` (release suivante).
 
 Ce n'est **pas** un n8n / shell / eval / webhook proxy / REST proxy.
 
@@ -86,3 +87,16 @@ Cas réel : `available → unavailable` → `ntfy.publish`, recovery optionnelle
 - `cooldownSeconds` : anti tempête pendant une panne.
 - Helpers : `buildIntegrationDownAlert` / `buildIntegrationRecoveryAlert`.
 - Pas de retry aveugle si ntfy échoue.
+
+## 22.6 UI
+
+Routes App Router :
+
+- `/automations` — liste (empty state, pas de dump JSON)
+- `/automations/new` — wizard 7 étapes, création **désactivée**
+- `/automations/[id]` — edit CAS, enable, dry-run, manual run, history, delete
+
+Le catalogue d'actions UI n'expose que `automationAllowed = true`.
+Dry-run n'appelle jamais le dispatcher externe. Manual run passe par le
+moteur d'exécution + RBAC live. Historique : statut, durée, codes d'erreur
+sûrs — pas de payload brut ni de secrets.

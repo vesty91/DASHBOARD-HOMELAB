@@ -274,7 +274,7 @@ command/request builders). Prowlarr, Grafana et Custom API restent GET-only
 (`method !== "GET"` rejeté). E2E : pages d'intégration sans fuite d'URL
 d'action vers le navigateur.
 
-## 22. Automations (Phase 22.1)
+## 22. Automations (Phase 22)
 
 `packages/automations` valide trigger/action allowlistés, JSON borné, clés
 sensibles interdites et revalidation live de l'owner. Le moteur de
@@ -289,4 +289,8 @@ Le registry d'actions (`action-registry.test.ts`) refuse Proxmox/Seerr en
 automatique et revalide les permissions live avant `runSafeIntegrationAction`.
 L'alerting (`alerting.test.ts`) couvre available→unavailable, recovery,
 debounce/flapping, cooldown, permission révoquée, échec ntfy sans retry et
-déduplication Redis via `runKey`.
+déduplication Redis via `runKey`. Le service UI (`service.test.ts`) couvre
+create désactivé, enable, dry-run et refus de permission. E2E
+`apps/web/e2e/automations.spec.ts` : liste, création désactivée, edit,
+enable, dry-run sans appel externe, manual run, historique, mobile/a11y,
+permission refusée.
