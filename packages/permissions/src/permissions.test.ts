@@ -57,6 +57,9 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("seerr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("seerr.request.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("custom-api.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.manage");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.run");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");
@@ -86,6 +89,9 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "seerr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "seerr.request.manage")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "custom-api.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.manage")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.run")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.start")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.shutdown")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.reboot")).toBe(true);

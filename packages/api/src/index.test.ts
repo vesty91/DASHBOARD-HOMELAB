@@ -2283,7 +2283,7 @@ describe("backup tRPC router", () => {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 6,
+      schemaVersion: 7,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -2358,8 +2358,8 @@ describe("backup tRPC router", () => {
       preview: {
         format: "homelab-dashboard-backup",
         formatVersion: 1,
-        schemaVersion: 6,
-        databaseSchemaVersion: 6,
+        schemaVersion: 7,
+        databaseSchemaVersion: 7,
         appVersion: "0.1.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         compatible: true,
@@ -2387,6 +2387,7 @@ describe("backup tRPC router", () => {
           oidc_identities: 0,
           oidc_group_mappings: 0,
           oidc_secrets: 0,
+          automation_rules: 0,
         },
         encryptedSecretCount: 0,
         credentialCount: 0,

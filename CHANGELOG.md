@@ -6,6 +6,20 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Persistence des automations (Phase 22.1) : `automation_rules`,
+  `automation_runtime_state`, `automation_runs`.
+- Permissions `automation.read` / `automation.manage` / `automation.run`
+  (ADMIN default-deny).
+- Backup `schemaVersion` 7. Compat 5 → 6 → 7. Schéma 8+ rejeté.
+
+### Base de données
+
+- Migration `0007` (SQLite + PostgreSQL). `schemaVersion` 7.
+- Rétention des runs : 30 jours et 200 par règle.
+- Restore : les leases et l'historique de runs ne sont pas restaurés.
+
 ## [1.1.0] — 2026-09-15
 
 Actions d'intégration sûres (Phase 21). Minor backward-compatible.

@@ -22,6 +22,7 @@ export const BACKUP_TABLE_NAMES = [
   "oidc_identities",
   "oidc_group_mappings",
   "oidc_secrets",
+  "automation_rules",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLE_NAMES)[number];
@@ -50,6 +51,7 @@ export const TABLE_INSERT_ORDER = [
   "oidc_identities",
   "oidc_group_mappings",
   "oidc_secrets",
+  "automation_rules",
 ] as const satisfies readonly BackupTableName[];
 
 export const TABLE_DELETE_ORDER = [...TABLE_INSERT_ORDER].reverse();
@@ -192,6 +194,23 @@ export const BACKUP_COLUMNS = {
   oidc_identities: ["id", "userId", "issuer", "subject", "email", "createdAt", "updatedAt"],
   oidc_group_mappings: ["id", "oidcGroup", "localGroupId", "createdAt"],
   oidc_secrets: ["id", "ciphertext", "iv", "authTag", "keyVersion", "createdAt", "updatedAt"],
+  automation_rules: [
+    "id",
+    "name",
+    "description",
+    "enabled",
+    "ownerUserId",
+    "triggerType",
+    "triggerConfigJson",
+    "conditionConfigJson",
+    "actionType",
+    "actionConfigJson",
+    "cooldownSeconds",
+    "configRevision",
+    "lastEnabledAt",
+    "createdAt",
+    "updatedAt",
+  ],
 } as const satisfies Record<BackupTableName, readonly string[]>;
 
 export const JSON_OBJECT_COLUMNS = new Set([
@@ -199,9 +218,14 @@ export const JSON_OBJECT_COLUMNS = new Set([
   "themeJson",
   "settingsJson",
   "metadataJson",
+  "triggerConfigJson",
+  "actionConfigJson",
 ]);
 
-export const JSON_OBJECT_OR_NULL_COLUMNS = new Set(["healthcheckConfigJson"]);
+export const JSON_OBJECT_OR_NULL_COLUMNS = new Set([
+  "healthcheckConfigJson",
+  "conditionConfigJson",
+]);
 
 export const DATE_COLUMNS = new Set([
   "createdAt",
@@ -212,6 +236,7 @@ export const DATE_COLUMNS = new Set([
   "scheduledAt",
   "startedAt",
   "finishedAt",
+  "lastEnabledAt",
 ]);
 
 export const BOOLEAN_COLUMNS = new Set([

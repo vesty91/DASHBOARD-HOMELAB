@@ -40,6 +40,7 @@ const sqliteTables = {
   oidc_identities: sqliteSchema.oidcIdentities,
   oidc_group_mappings: sqliteSchema.oidcGroupMappings,
   oidc_secrets: sqliteSchema.oidcSecrets,
+  automation_rules: sqliteSchema.automationRules,
 } as const;
 
 const postgresqlTables = {
@@ -66,6 +67,7 @@ const postgresqlTables = {
   oidc_identities: postgresqlSchema.oidcIdentities,
   oidc_group_mappings: postgresqlSchema.oidcGroupMappings,
   oidc_secrets: postgresqlSchema.oidcSecrets,
+  automation_rules: postgresqlSchema.automationRules,
 } as const;
 
 function toSnakeCase(column: string): string {
@@ -81,10 +83,12 @@ function sqliteBindValue(value: unknown): string | number | null {
 }
 
 const POSTGRES_INSERT_BATCH = 200;
+const EPHEMERAL_RESTORE_TABLES = ["automation_runs", "automation_runtime_state"] as const;
 
 function postgresLockStatement(): ReturnType<typeof sql> {
+  const tables = [...TABLE_DELETE_ORDER, ...EPHEMERAL_RESTORE_TABLES];
   return sql.raw(
-    `LOCK TABLE ${TABLE_DELETE_ORDER.map((table) => `"${table}"`).join(", ")} IN ACCESS EXCLUSIVE MODE`,
+    `LOCK TABLE ${tables.map((table) => `"${table}"`).join(", ")} IN ACCESS EXCLUSIVE MODE`,
   );
 }
 
@@ -139,6 +143,7 @@ function assignTable(
 async function replaceSqliteTables(client: SqliteClient, tables: BackupTables): Promise<void> {
   client.sqlite.exec("BEGIN IMMEDIATE");
   try {
+    for (const table of EPHEMERAL_RESTORE_TABLES) client.sqlite.exec(`DELETE FROM "${table}"`);
     for (const table of TABLE_DELETE_ORDER) client.sqlite.exec(`DELETE FROM "${table}"`);
     for (const table of TABLE_INSERT_ORDER) {
       const rows = tables[table];
@@ -169,6 +174,9 @@ async function replacePostgresqlTables(
 ): Promise<void> {
   await client.db.transaction(async (tx) => {
     await tx.execute(postgresLockStatement());
+    for (const table of EPHEMERAL_RESTORE_TABLES) {
+      await tx.execute(sql.raw(`DELETE FROM "${table}"`));
+    }
     for (const table of TABLE_DELETE_ORDER) await tx.delete(postgresqlTables[table]);
     for (const table of TABLE_INSERT_ORDER) {
       const rows = tables[table];

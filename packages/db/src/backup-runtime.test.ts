@@ -7,6 +7,7 @@ import {
   parseBackupArchive,
 } from "@dashboard/backup";
 import { TABLE_NAMES } from "./schema/shared";
+import { createSqliteAutomationStore } from "./automation-runtime";
 import { createPostgresqlBackupStore, createSqliteBackupStore } from "./backup-runtime";
 import { createPostgresqlClient } from "./client/postgresql";
 import { createSqliteClient } from "./client/sqlite";
@@ -26,6 +27,9 @@ describe("backup runtime", () => {
     expect(TABLE_NAMES).toContain("auth_sessions");
     expect(BACKUP_TABLE_NAMES).not.toContain("audit_logs");
     expect(BACKUP_TABLE_NAMES).not.toContain("auth_sessions");
+    expect(BACKUP_TABLE_NAMES).toContain("automation_rules");
+    expect(BACKUP_TABLE_NAMES).not.toContain("automation_runtime_state");
+    expect(BACKUP_TABLE_NAMES).not.toContain("automation_runs");
   });
 
   it("round-trips a snapshot, keeps secrets encrypted, and rolls back failed restores", async () => {
@@ -61,7 +65,29 @@ describe("backup runtime", () => {
           now,
           now,
         );
+      const automations = createSqliteAutomationStore(client);
+      const rule = await automations.create({
+        name: "Backup rule",
+        ownerUserId: user.id,
+        triggerType: "schedule",
+        triggerConfigJson: { everyMinutes: 15 },
+        actionType: "ntfy.publish",
+        actionConfigJson: { integrationId, topic: "homelab" },
+      });
+      await automations.recordRun({
+        automationId: rule.id,
+        runKey: `${rule.id}:schedule:1`,
+        triggerType: "schedule",
+        status: "succeeded",
+        startedAt: new Date(),
+        finishedAt: new Date(),
+        actionType: "ntfy.publish",
+        resourceId: "homelab",
+      });
       const populated = await store.exportSnapshot();
+      expect(populated.automation_rules).toHaveLength(1);
+      expect(populated).not.toHaveProperty("automation_runs");
+      expect(populated).not.toHaveProperty("automation_runtime_state");
       const archive = buildArchive(populated, "2026-09-14T12:00:00.000Z");
       expect(archive.manifest.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
       expect(JSON.stringify(archive.tables.integration_secrets)).toContain("encrypted-cipher");
@@ -74,6 +100,21 @@ describe("backup runtime", () => {
         client.sqlite.prepare("SELECT count(*) AS count FROM users").get() as { count: number },
       ).toMatchObject({ count: 0 });
       expect(
+        client.sqlite.prepare("SELECT count(*) AS count FROM automation_rules").get() as {
+          count: number;
+        },
+      ).toMatchObject({ count: 0 });
+      expect(
+        client.sqlite.prepare("SELECT count(*) AS count FROM automation_runs").get() as {
+          count: number;
+        },
+      ).toMatchObject({ count: 0 });
+      expect(
+        client.sqlite.prepare("SELECT count(*) AS count FROM automation_runtime_state").get() as {
+          count: number;
+        },
+      ).toMatchObject({ count: 0 });
+      expect(
         client.sqlite.prepare("SELECT count(*) AS count FROM integration_secrets").get() as {
           count: number;
         },
@@ -83,6 +124,16 @@ describe("backup runtime", () => {
       expect(
         client.sqlite.prepare("SELECT username FROM users").get() as { username: string },
       ).toMatchObject({ username: "keeper" });
+      expect(
+        client.sqlite.prepare("SELECT count(*) AS count FROM automation_rules").get() as {
+          count: number;
+        },
+      ).toMatchObject({ count: 1 });
+      expect(
+        client.sqlite.prepare("SELECT count(*) AS count FROM automation_runs").get() as {
+          count: number;
+        },
+      ).toMatchObject({ count: 0 });
       expect(
         client.sqlite.prepare("SELECT ciphertext FROM integration_secrets").get() as {
           ciphertext: string;

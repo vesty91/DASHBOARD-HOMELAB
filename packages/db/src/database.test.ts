@@ -188,6 +188,9 @@ describe("SQLite database foundation", () => {
       oidc_secrets: sqliteSchema.oidcSecrets,
       audit_logs: sqliteSchema.auditLogs,
       auth_sessions: sqliteSchema.authSessions,
+      automation_rules: sqliteSchema.automationRules,
+      automation_runtime_state: sqliteSchema.automationRuntimeState,
+      automation_runs: sqliteSchema.automationRuns,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -215,6 +218,9 @@ describe("SQLite database foundation", () => {
       oidc_secrets: postgresqlSchema.oidcSecrets,
       audit_logs: postgresqlSchema.auditLogs,
       auth_sessions: postgresqlSchema.authSessions,
+      automation_rules: postgresqlSchema.automationRules,
+      automation_runtime_state: postgresqlSchema.automationRuntimeState,
+      automation_runs: postgresqlSchema.automationRuns,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

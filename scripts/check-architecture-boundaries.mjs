@@ -103,6 +103,20 @@ const forbiddenDependencies = new Map([
     ]),
   ],
   [
+    "packages/automations/package.json",
+    new Set([
+      "@dashboard/web",
+      "@dashboard/db",
+      "@dashboard/widgets",
+      "@dashboard/api",
+      "next",
+      "react",
+      "drizzle-orm",
+      "@dashboard/seerr",
+      "@dashboard/custom-api",
+    ]),
+  ],
+  [
     "packages/backup/package.json",
     new Set([
       "@dashboard/web",
@@ -114,6 +128,7 @@ const forbiddenDependencies = new Map([
       "drizzle-orm",
       "@dashboard/seerr",
       "@dashboard/custom-api",
+      "@dashboard/automations",
     ]),
   ],
   [

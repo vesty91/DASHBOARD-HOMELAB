@@ -1,3 +1,4 @@
+export * from "./automation-runtime";
 export * from "./job-runtime";
 export * from "./client";
 export * from "./config";

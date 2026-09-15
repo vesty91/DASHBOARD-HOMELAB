@@ -439,3 +439,93 @@ export const authSessions = pgTable(
   },
   (t) => [index("auth_sessions_user_revoked_idx").on(t.userId, t.revokedAt)],
 );
+export const automationRules = pgTable(
+  "automation_rules",
+  {
+    id: uuid("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(false),
+    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerConfigJson: jsonb("trigger_config_json").notNull().default({}),
+    conditionConfigJson: jsonb("condition_config_json"),
+    actionType: text("action_type").notNull(),
+    actionConfigJson: jsonb("action_config_json").notNull().default({}),
+    cooldownSeconds: integer("cooldown_seconds").notNull().default(60),
+    configRevision: integer("config_revision").notNull().default(1),
+    lastEnabledAt: timestamp("last_enabled_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("automation_rules_owner_idx").on(t.ownerUserId),
+    index("automation_rules_enabled_idx").on(t.enabled),
+    check(
+      "automation_rules_trigger_type_valid",
+      sql`${t.triggerType} IN ('schedule','event','status-transition')`,
+    ),
+    check(
+      "automation_rules_action_type_valid",
+      sql`${t.actionType} IN ('ntfy.publish','qbittorrent.pause','qbittorrent.resume','sonarr.refresh-series','sonarr.search-episode','radarr.refresh-movie','radarr.search-movie','proxmox.start','proxmox.shutdown','proxmox.reboot','seerr.approve','seerr.decline')`,
+    ),
+    check("automation_rules_config_revision_positive", sql`${t.configRevision} > 0`),
+    check("automation_rules_cooldown_bounds", sql`${t.cooldownSeconds} BETWEEN 0 AND 86400`),
+  ],
+);
+export const automationRuntimeState = pgTable(
+  "automation_runtime_state",
+  {
+    automationId: uuid("automation_id")
+      .primaryKey()
+      .references(() => automationRules.id, { onDelete: "cascade" }),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+    lastTriggeredAt: timestamp("last_triggered_at", { withTimezone: true }),
+    lastCompletedAt: timestamp("last_completed_at", { withTimezone: true }),
+    lastObservedState: jsonb("last_observed_state"),
+    failureCount: integer("failure_count").notNull().default(0),
+    leaseOwner: text("lease_owner"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+  },
+  (t) => [
+    index("automation_runtime_state_next_run_idx").on(t.nextRunAt),
+    index("automation_runtime_state_lease_idx").on(t.leaseUntil),
+    check("automation_runtime_state_failure_count", sql`${t.failureCount} >= 0`),
+  ],
+);
+export const automationRuns = pgTable(
+  "automation_runs",
+  {
+    id: uuid("id").primaryKey(),
+    automationId: uuid("automation_id").references(() => automationRules.id, {
+      onDelete: "set null",
+    }),
+    runKey: text("run_key").notNull(),
+    triggerType: text("trigger_type").notNull(),
+    status: text("status").notNull(),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    actionType: text("action_type").notNull(),
+    errorCode: text("error_code"),
+    resourceId: text("resource_id"),
+    summaryJson: jsonb("summary_json"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("automation_runs_run_key_uq").on(t.runKey),
+    index("automation_runs_automation_started_idx").on(t.automationId, t.startedAt),
+    index("automation_runs_finished_at_idx").on(t.finishedAt),
+    check(
+      "automation_runs_trigger_type_valid",
+      sql`${t.triggerType} IN ('schedule','event','status-transition')`,
+    ),
+    check(
+      "automation_runs_status_valid",
+      sql`${t.status} IN ('scheduled','running','succeeded','failed','skipped','denied','unknown')`,
+    ),
+    check(
+      "automation_runs_action_type_valid",
+      sql`${t.actionType} IN ('ntfy.publish','qbittorrent.pause','qbittorrent.resume','sonarr.refresh-series','sonarr.search-episode','radarr.refresh-movie','radarr.search-movie','proxmox.start','proxmox.shutdown','proxmox.reboot','seerr.approve','seerr.decline')`,
+    ),
+  ],
+);

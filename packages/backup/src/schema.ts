@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 6;
-export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6] as const;
+export const BACKUP_SCHEMA_VERSION = 7;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7] as const;
 export const BACKUP_APP_VERSION = "1.1.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -294,7 +294,40 @@ const jobRowSchema = z
   })
   .strict();
 
-export const backupTablesSchema = z
+const automationRuleRowSchema = z
+  .object({
+    id: uuidSchema,
+    name: z.string().min(1).max(100),
+    description: z.string().max(2000).nullable(),
+    enabled: z.boolean(),
+    ownerUserId: uuidSchema.nullable(),
+    triggerType: z.enum(["schedule", "event", "status-transition"]),
+    triggerConfigJson: jsonObjectSchema,
+    conditionConfigJson: jsonObjectSchema.nullable(),
+    actionType: z.enum([
+      "ntfy.publish",
+      "qbittorrent.pause",
+      "qbittorrent.resume",
+      "sonarr.refresh-series",
+      "sonarr.search-episode",
+      "radarr.refresh-movie",
+      "radarr.search-movie",
+      "proxmox.start",
+      "proxmox.shutdown",
+      "proxmox.reboot",
+      "seerr.approve",
+      "seerr.decline",
+    ]),
+    actionConfigJson: jsonObjectSchema,
+    cooldownSeconds: z.number().int().min(0).max(86_400),
+    configRevision: z.number().int().positive(),
+    lastEnabledAt: isoDateTimeSchema.nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
+export const backupTablesSchemaV6 = z
   .object({
     users: z.array(userRowSchema).max(10_000),
     groups: z.array(groupRowSchema).max(1_000),
@@ -322,12 +355,16 @@ export const backupTablesSchema = z
   })
   .strict();
 
+export const backupTablesSchema = backupTablesSchemaV6.extend({
+  automation_rules: z.array(automationRuleRowSchema).max(2_000),
+});
+
 export const backupManifestSchema = z
   .object({
     format: z.literal(BACKUP_FORMAT),
     formatVersion: z.literal(BACKUP_FORMAT_VERSION),
-    schemaVersion: z.union([z.literal(5), z.literal(BACKUP_SCHEMA_VERSION)]),
-    databaseSchemaVersion: z.union([z.literal(5), z.literal(BACKUP_SCHEMA_VERSION)]),
+    schemaVersion: z.union([z.literal(5), z.literal(6), z.literal(BACKUP_SCHEMA_VERSION)]),
+    databaseSchemaVersion: z.union([z.literal(5), z.literal(6), z.literal(BACKUP_SCHEMA_VERSION)]),
     appVersion: z.string().min(1).max(40),
     createdAt: isoDateTimeSchema,
     files: z.tuple([
@@ -388,6 +425,7 @@ export const backupTablesSchemaV5 = z
   .strict();
 
 export type BackupTablesV5 = z.infer<typeof backupTablesSchemaV5>;
+export type BackupTablesV6 = z.infer<typeof backupTablesSchemaV6>;
 export type BackupTables = z.infer<typeof backupTablesSchema>;
 export type BackupManifest = z.infer<typeof backupManifestSchema>;
 export type BackupArchive = z.infer<typeof backupArchiveSchema>;

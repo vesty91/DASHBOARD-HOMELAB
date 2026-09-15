@@ -418,4 +418,9 @@ Voir `docs/20-POST-V1-HARDENING.md`.
 
 COMPLETE. Actions d'intégration allowlistées (Proxmox, qBittorrent, ntfy,
 Sonarr, Radarr, Seerr). Prowlarr / Grafana / Custom API restent lecture seule.
-Minor produit `1.1.0`. Pas de `0007`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
+Minor produit `1.1.0`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
+
+# État Phase 22
+
+IN PROGRESS. Persistence automations (`0007`, schema 7). Pas d'eval, pas de
+proxy HTTP arbitraire. Voir `docs/22-AUTOMATIONS.md`.

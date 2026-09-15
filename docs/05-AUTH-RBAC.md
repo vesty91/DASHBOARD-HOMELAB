@@ -297,11 +297,16 @@ ntfy (`ntfy.publish`), Sonarr (`sonarr.command`), Radarr (`radarr.command`) et
 Seerr (`seerr.request.manage`)
 sont livrées. Prowlarr reste en lecture seule.
 
+Phase 22 : `automation.read`, `automation.manage` et `automation.run` existent.
+Le rôle `ADMIN` par défaut **n'obtient pas** ces permissions. `SYSTEM_ADMIN`
+possède le catalogue. Les permissions ne sont jamais figées sur la règle :
+chaque exécution recharge l'owner. Voir `docs/22-AUTOMATIONS.md`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `sonarr.command`, `radarr.read`,
 `radarr.command`, `prowlarr.read`,
-`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `seerr.request.manage`, `custom-api.read`, `docker.*`, `proxmox.start`,
+`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `seerr.request.manage`, `custom-api.read`, `automation.read`, `automation.manage`, `automation.run`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
 ## 10. Audit
@@ -309,7 +314,9 @@ sont livrées. Prowlarr reste en lecture seule.
 Journal serveur `audit_logs` (Phase 15). Couvre login, OIDC, utilisateurs,
 groupes, permissions, intégrations, secrets (sans contenu), Docker, backup et
 sessions. Lecture `audit.read` avec pagination. Jamais de mot de passe, token,
-cookie ou clé API. Les actions Proxmox réussies journalisent
+cookie ou clé API. Les actions d'automation journalisent
+`automation.create` / `automation.update` / `automation.delete` /
+`automation.enable` / `automation.disable` sans config sensible. Les actions Proxmox réussies journalisent
 `proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` avec
 `{ integrationId, integrationType, action, resourceId, result }`. Les actions
 qBittorrent réussies journalisent `qbittorrent.pause` / `qbittorrent.resume`
