@@ -90,6 +90,7 @@ function createCaller(
     | "realtimeTickets"
     | "jobs"
     | "backup"
+    | "automations"
     | "audit"
     | "sessions"
     | "oidc"
@@ -114,6 +115,7 @@ function createCaller(
     realtimeTickets?: ApiContext["realtimeTickets"];
     jobs?: ApiContext["jobs"];
     backup?: ApiContext["backup"];
+    automations?: ApiContext["automations"];
     audit?: ApiContext["audit"];
     sessions?: ApiContext["sessions"];
     oidc?: ApiContext["oidc"];
@@ -159,6 +161,29 @@ function createCaller(
         throw new Error("backup not stubbed");
       },
     },
+    automations: {
+      permissions: () => ({ canRead: false, canManage: false, canRun: false }),
+      catalog: () => ({ triggerTypes: [], actions: [] }),
+      list: async () => [],
+      get: async () => {
+        throw new Error("automations not stubbed");
+      },
+      create: async () => {
+        throw new Error("automations not stubbed");
+      },
+      update: async () => {
+        throw new Error("automations not stubbed");
+      },
+      setEnabled: async () => {
+        throw new Error("automations not stubbed");
+      },
+      delete: async () => undefined,
+      listRuns: async () => [],
+      dryRun: async () => ({ outcome: "would-deny", reasonCode: "NOT_WIRED" }),
+      manualRun: async () => {
+        throw new Error("automations not stubbed");
+      },
+    } as unknown as ApiContext["automations"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),

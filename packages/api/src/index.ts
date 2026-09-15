@@ -105,6 +105,13 @@ import {
   type AuditEventInput,
   type PublicAuthSession,
 } from "@dashboard/auth";
+import {
+  AutomationError,
+  automationEnabledUpdateSchema,
+  automationRuleCreateSchema,
+  automationRuleUpdateSchema,
+  type AutomationService,
+} from "@dashboard/automations";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -159,6 +166,7 @@ export interface ApiContext {
     listRecent(limit: number): Promise<JobListItem[]>;
   };
   backup: BackupService;
+  automations: AutomationService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -238,12 +246,16 @@ const mapError = (error: unknown): never => {
   if (
     error instanceof BoardError ||
     error instanceof AppError ||
-    error instanceof IntegrationError
+    error instanceof IntegrationError ||
+    error instanceof AutomationError
   ) {
     const code =
       error.code === "UNAUTHORIZED"
         ? "UNAUTHORIZED"
-        : error.code === "FORBIDDEN"
+        : error.code === "FORBIDDEN" ||
+            error.code === "DENIED_PERMISSION" ||
+            error.code === "DENIED_OWNER_MISSING" ||
+            error.code === "DENIED_OWNER_DISABLED"
           ? "FORBIDDEN"
           : error.code === "NOT_FOUND"
             ? "NOT_FOUND"
@@ -1530,11 +1542,56 @@ export const serviceStatusRouter = t.router({
     }),
   ),
 });
+export const automationsRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.automations.permissions(ctx.actor)),
+  catalog: t.procedure.query(({ ctx }) =>
+    procedure(async () => ctx.automations.catalog(ctx.actor)),
+  ),
+  list: t.procedure.query(({ ctx }) => procedure(() => ctx.automations.list(ctx.actor))),
+  get: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .query(({ ctx, input }) => procedure(() => ctx.automations.get(input.id, ctx.actor))),
+  create: t.procedure
+    .input(automationRuleCreateSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.automations.create(input, ctx.actor))),
+  update: t.procedure
+    .input(z.object({ id: z.uuid(), patch: automationRuleUpdateSchema }))
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.automations.update(input.id, input.patch, ctx.actor)),
+    ),
+  setEnabled: t.procedure
+    .input(z.object({ id: z.uuid() }).merge(automationEnabledUpdateSchema))
+    .mutation(({ ctx, input }) => {
+      const { id, ...patch } = input;
+      return procedure(() => ctx.automations.setEnabled(id, patch, ctx.actor));
+    }),
+  delete: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.automations.delete(input.id, ctx.actor))),
+  listRuns: t.procedure
+    .input(
+      z.object({
+        id: z.uuid(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      procedure(() => ctx.automations.listRuns(input.id, ctx.actor, input.limit)),
+    ),
+  dryRun: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.automations.dryRun(input.id, ctx.actor))),
+  manualRun: t.procedure.input(z.object({ id: z.uuid() })).mutation(({ ctx, input }) => {
+    consumeSensitiveAction(ctx, "automation.manualRun");
+    return procedure(() => ctx.automations.manualRun(input.id, ctx.actor));
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
   widget: widgetRouter,
   integration: integrationsRouter,
+  automation: automationsRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,

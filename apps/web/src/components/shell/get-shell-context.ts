@@ -13,6 +13,7 @@ export type ShellNav = {
   boards: boolean;
   apps: boolean;
   integrations: boolean;
+  automations: boolean;
   users: boolean;
   groups: boolean;
   account: boolean;
@@ -27,6 +28,7 @@ export async function getShellContext(): Promise<{ user: ShellUser | null; nav: 
         boards: false,
         apps: false,
         integrations: false,
+        automations: false,
         users: false,
         groups: false,
         account: false,
@@ -45,6 +47,10 @@ export async function getShellContext(): Promise<{ user: ShellUser | null; nav: 
       boards: active,
       apps: Boolean(subject && hasPermission(subject, "app.read")),
       integrations: Boolean(subject && hasPermission(subject, "integration.read")),
+      automations: Boolean(
+        subject &&
+        (hasPermission(subject, "automation.read") || hasPermission(subject, "automation.manage")),
+      ),
       users: Boolean(subject && hasPermission(subject, "user.read")),
       groups: Boolean(subject && hasPermission(subject, "group.read")),
       account: active,

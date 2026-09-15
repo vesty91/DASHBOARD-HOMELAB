@@ -7,6 +7,8 @@ import {
   createDashboardServiceStatusService,
   type BoardApiContext,
 } from "@dashboard/api";
+import { createAutomationService } from "@dashboard/automations";
+import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
 import {
@@ -691,6 +693,48 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       store: database.backupStore,
       persistPreRestore: persistPreRestoreArchive,
       afterCommit: () => runtime.cache.clear(),
+    }),
+    automations: createAutomationService({
+      store: database.automationStore,
+      async loadOwner(ownerUserId) {
+        const resolved = await database.authStore.resolvePermissionSubject(ownerUserId);
+        if (!resolved) return null;
+        return { id: ownerUserId, ...resolved };
+      },
+      async integrationExists(integrationId) {
+        return Boolean(await database.integrationStore.findById(integrationId));
+      },
+      dispatcher: createWebAutomationDispatcher({
+        async loadOwner(ownerUserId) {
+          const resolved = await database.authStore.resolvePermissionSubject(ownerUserId);
+          if (!resolved) return null;
+          return { id: ownerUserId, ...resolved };
+        },
+        ntfy,
+        qbittorrent,
+        sonarr,
+        radarr,
+        async audit(event) {
+          await database.securityStore.recordAudit({
+            actorUserId: event.actorUserId,
+            action: event.action as
+              | "ntfy.publish"
+              | "qbittorrent.pause"
+              | "qbittorrent.resume"
+              | "sonarr.refresh-series"
+              | "sonarr.search-episode"
+              | "radarr.refresh-movie"
+              | "radarr.search-movie",
+            targetType: event.targetType,
+            targetId: event.targetId,
+            outcome: event.outcome,
+            metadata: event.metadata,
+          });
+        },
+      }),
+      async audit(event) {
+        await database.securityStore.recordAudit(event);
+      },
     }),
     audit: {
       record: (event) => database.securityStore.recordAudit(event),

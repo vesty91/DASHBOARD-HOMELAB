@@ -18,6 +18,7 @@ import {
   UserRound,
   Users,
   UsersRound,
+  Workflow,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -39,6 +40,7 @@ function contextFromPath(pathname: string): string | null {
   if (/^\/boards\/[^/]+/.test(pathname)) return "Boards";
   if (/^\/apps\/.+/.test(pathname)) return "Apps";
   if (/^\/integrations\/.+/.test(pathname)) return "Intégrations";
+  if (/^\/automations/.test(pathname)) return "Automations";
   if (pathname.startsWith("/account")) return "Compte";
   return null;
 }
@@ -160,6 +162,7 @@ export function AppShell({
             {nav.boards ? link("/boards", "Boards", <LayoutGrid />) : null}
             {nav.apps ? link("/apps", "Apps", <AppWindow />) : null}
             {nav.integrations ? link("/integrations", "Intégrations", <Plug />) : null}
+            {nav.automations ? link("/automations", "Automations", <Workflow />) : null}
           </div>
           {showAdmin ? (
             <div className="shell-nav-section">
