@@ -15,6 +15,8 @@ export type AutomationStatusValue = (typeof AUTOMATION_STATUS_VALUES)[number];
 
 export const AUTOMATION_MIN_INTERVAL_MINUTES = 1;
 export const AUTOMATION_MAX_INTERVAL_MINUTES = 1_440;
+export const AUTOMATION_MIN_STATUS_FOR_DURATION_SECONDS = 0;
+export const AUTOMATION_MAX_STATUS_FOR_DURATION_SECONDS = 3_600;
 
 const uuidSchema = z.uuid();
 
@@ -61,6 +63,12 @@ const statusTransitionSchema = z
     to: z.union([z.literal("*"), z.enum(AUTOMATION_STATUS_VALUES)]),
     integrationId: uuidSchema.optional(),
     integrationType: z.string().min(1).max(64).optional(),
+    forDurationSeconds: z
+      .number()
+      .int()
+      .min(AUTOMATION_MIN_STATUS_FOR_DURATION_SECONDS)
+      .max(AUTOMATION_MAX_STATUS_FOR_DURATION_SECONDS)
+      .optional(),
   })
   .strict();
 
@@ -79,6 +87,7 @@ export type StatusTransitionTriggerConfig = {
   to: "*" | AutomationStatusValue;
   integrationId?: string;
   integrationType?: string;
+  forDurationSeconds?: number;
 };
 
 export type ParsedTriggerConfig =
@@ -134,6 +143,8 @@ export function parseTriggerConfig(
       const config: StatusTransitionTriggerConfig = { from: parsed.from, to: parsed.to };
       if (parsed.integrationId) config.integrationId = parsed.integrationId;
       if (parsed.integrationType) config.integrationType = parsed.integrationType;
+      if (parsed.forDurationSeconds !== undefined)
+        config.forDurationSeconds = parsed.forDurationSeconds;
       return { triggerType, config };
     }
     default: {

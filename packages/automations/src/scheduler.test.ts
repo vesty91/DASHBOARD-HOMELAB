@@ -97,6 +97,21 @@ class MemoryStore implements AutomationSchedulerStore {
       .map((rule) => rule.id);
   }
 
+  async listDueStatusDebounceIds(now: Date, limit: number) {
+    return [...this.rules.values()]
+      .filter((rule) => {
+        const state = this.runtimes.get(rule.id);
+        return (
+          rule.enabled &&
+          rule.triggerType === "status-transition" &&
+          state?.nextRunAt != null &&
+          state.nextRunAt.getTime() <= now.getTime()
+        );
+      })
+      .slice(0, limit)
+      .map((rule) => rule.id);
+  }
+
   async listUnscheduledScheduleIds(limit: number) {
     return [...this.rules.values()]
       .filter((rule) => {

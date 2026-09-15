@@ -1,6 +1,6 @@
 # 22 — Automations & alerting
 
-Statut : **IN PROGRESS** (22.4 actions).
+Statut : **IN PROGRESS** (22.5 alerting).
 
 Phase 22. Migration `0007`. `schemaVersion` 7. Backup `formatVersion` 1.
 
@@ -73,3 +73,16 @@ Manual-only : Proxmox start/shutdown/reboot, Seerr approve/decline.
 Chaque run revalide owner + `automation.run` + permission spécialisée via
 `runSafeIntegrationAction`. Audit `source=automation` avec `automationId` /
 `runId`. Pas de snapshot de privilèges.
+
+## 22.5 Alerting / status transitions
+
+Cas réel : `available → unavailable` → `ntfy.publish`, recovery optionnelle
+`unavailable → available`.
+
+- Source : événements `integration.status.changed` (pas de fake data).
+- Déclenchement sur transition uniquement (pas de spam si état stable).
+- `forDurationSeconds` (0–3600) : debounce via pending + `nextRunAt` ;
+  un flap avant échéance annule l'alerte.
+- `cooldownSeconds` : anti tempête pendant une panne.
+- Helpers : `buildIntegrationDownAlert` / `buildIntegrationRecoveryAlert`.
+- Pas de retry aveugle si ntfy échoue.

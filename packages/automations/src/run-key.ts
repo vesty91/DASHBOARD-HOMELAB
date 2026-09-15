@@ -16,6 +16,16 @@ export function buildScheduleRunKey(automationId: string, scheduledFor: Date): s
   return clampRunKey(`${automationId}:sch:${scheduledFor.getTime()}`);
 }
 
+export function buildStatusDebounceRunKey(
+  automationId: string,
+  pendingSinceIso: string,
+  status: string,
+): string {
+  return clampRunKey(
+    `${automationId}:deb:${sanitizeSegment(pendingSinceIso)}:${sanitizeSegment(status)}`,
+  );
+}
+
 export function buildEventRunKey(automationId: string, event: DomainEvent): string {
   const prefix = `${automationId}:evt:${sanitizeSegment(event.type)}:${sanitizeSegment(event.occurredAt)}`;
   switch (event.type) {

@@ -135,6 +135,9 @@ describe("worker automation scheduler", () => {
             listed += 1;
             return [];
           },
+          async listDueStatusDebounceIds() {
+            return [];
+          },
           async listUnscheduledScheduleIds() {
             return [];
           },

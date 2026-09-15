@@ -3,8 +3,13 @@ import { evaluateAutomationOwner, type AutomationOwnerRecord } from "./access";
 import { AutomationError } from "./errors";
 import { unwiredAutomationDispatcher, type AutomationActionDispatcher } from "./dispatcher";
 import { evaluateAutomationTrigger, type TriggerSkipReason } from "./evaluate";
-import { buildEventRunKey, buildScheduleRunKey } from "./run-key";
-import { nextScheduleRunAt, parseTriggerConfig, type AutomationStatusValue } from "./triggers";
+import { buildEventRunKey, buildScheduleRunKey, buildStatusDebounceRunKey } from "./run-key";
+import {
+  nextScheduleRunAt,
+  parseTriggerConfig,
+  type AutomationStatusValue,
+  type StatusTransitionTriggerConfig,
+} from "./triggers";
 import type { AutomationActionType, AutomationRunStatus, AutomationTriggerType } from "./types";
 
 export const AUTOMATION_SCHEDULER_SCAN_LIMIT = 100;
@@ -58,6 +63,7 @@ export interface AutomationSchedulerStore {
   getRule(id: string): Promise<AutomationRuleSnapshot | null>;
   getRuntime(id: string): Promise<AutomationRuntimeSnapshot | null>;
   listDueScheduleIds(now: Date, limit: number): Promise<string[]>;
+  listDueStatusDebounceIds(now: Date, limit: number): Promise<string[]>;
   listUnscheduledScheduleIds(limit: number): Promise<string[]>;
   listEnabledEventRuleIds(limit: number): Promise<string[]>;
   claimLease(input: {
@@ -137,6 +143,68 @@ function readObservedStatus(state: Record<string, unknown> | null): AutomationSt
   const status = state?.status;
   if (status === "unknown" || status === "available" || status === "unavailable") return status;
   return null;
+}
+
+function readPendingDebounce(state: Record<string, unknown> | null): {
+  from: AutomationStatusValue;
+  to: AutomationStatusValue;
+  since: string;
+  integrationId: string;
+  integrationType: string;
+} | null {
+  const pending = state?.pending;
+  if (!pending || typeof pending !== "object" || Array.isArray(pending)) return null;
+  const record = pending as Record<string, unknown>;
+  const from = record.from;
+  const to = record.to;
+  const since = record.since;
+  const integrationId = record.integrationId;
+  const integrationType = record.integrationType;
+  if (
+    (from === "unknown" || from === "available" || from === "unavailable") &&
+    (to === "unknown" || to === "available" || to === "unavailable") &&
+    typeof since === "string" &&
+    since.length > 0 &&
+    typeof integrationId === "string" &&
+    integrationId.length > 0 &&
+    typeof integrationType === "string" &&
+    integrationType.length > 0
+  )
+    return { from, to, since, integrationId, integrationType };
+  return null;
+}
+
+function observedStateWithPending(
+  status: AutomationStatusValue,
+  pending: {
+    from: AutomationStatusValue;
+    to: AutomationStatusValue;
+    since: string;
+    integrationId: string;
+    integrationType: string;
+  } | null,
+): Record<string, unknown> {
+  if (!pending) return { status };
+  return {
+    status,
+    pending: {
+      from: pending.from,
+      to: pending.to,
+      since: pending.since,
+      integrationId: pending.integrationId,
+      integrationType: pending.integrationType,
+    },
+  };
+}
+
+function matchesStatusFilters(
+  config: StatusTransitionTriggerConfig,
+  integrationId: string,
+  integrationType: string,
+): boolean {
+  if (config.integrationId && config.integrationId !== integrationId) return false;
+  if (config.integrationType && config.integrationType !== integrationType) return false;
+  return true;
 }
 
 function ownerErrorCode(error: unknown): string {
@@ -235,6 +303,8 @@ export class AutomationScheduler {
       await this.#seedUnscheduled(now);
       const dueIds = await this.store.listDueScheduleIds(now, this.scanLimit);
       await runLimited(dueIds, this.maxInFlight, (id) => this.#processSchedule(id, now));
+      const debounceIds = await this.store.listDueStatusDebounceIds(now, this.scanLimit);
+      await runLimited(debounceIds, this.maxInFlight, (id) => this.#processStatusDebounce(id, now));
     } catch {
       void now;
     }
@@ -302,6 +372,87 @@ export class AutomationScheduler {
     });
   }
 
+  async #processStatusDebounce(automationId: string, now: Date): Promise<void> {
+    const rule = await this.store.getRule(automationId);
+    const runtime = await this.store.getRuntime(automationId);
+    if (!rule || !runtime || !rule.enabled || rule.triggerType !== "status-transition") return;
+    const dueAt = runtime.nextRunAt;
+    if (!dueAt || dueAt.getTime() > now.getTime()) return;
+    const claimed = await this.store.claimLease({
+      automationId: rule.id,
+      workerId: this.workerId,
+      now,
+      leaseUntil: new Date(now.getTime() + this.leaseMs),
+    });
+    if (!claimed) return;
+    try {
+      const fresh = await this.store.getRuntime(rule.id);
+      const state = fresh?.lastObservedState ?? runtime.lastObservedState;
+      const status = readObservedStatus(state);
+      const pending = readPendingDebounce(state);
+      if (!status || !pending || pending.to !== status) {
+        await this.store.updateRuntime(rule.id, {
+          lastObservedState: status ? observedStateWithPending(status, null) : null,
+          nextRunAt: null,
+        });
+        return;
+      }
+      const pendingSince = Date.parse(pending.since);
+      let parsed;
+      try {
+        parsed = parseTriggerConfig(rule.triggerType, rule.triggerConfigJson);
+      } catch {
+        await this.store.updateRuntime(rule.id, {
+          lastObservedState: observedStateWithPending(status, null),
+          nextRunAt: null,
+        });
+        return;
+      }
+      if (parsed.triggerType !== "status-transition") return;
+      const forDurationSeconds = parsed.config.forDurationSeconds ?? 0;
+      if (
+        forDurationSeconds <= 0 ||
+        Number.isNaN(pendingSince) ||
+        now.getTime() - pendingSince < forDurationSeconds * 1000
+      )
+        return;
+      const evaluation = evaluateAutomationTrigger({
+        automationId: rule.id,
+        triggerType: rule.triggerType,
+        triggerConfigJson: rule.triggerConfigJson,
+        conditionConfigJson: rule.conditionConfigJson,
+        cooldownSeconds: rule.cooldownSeconds,
+        lastTriggeredAt: fresh?.lastTriggeredAt ?? runtime.lastTriggeredAt,
+        lastObservedStatus: pending.from,
+        now,
+        event: {
+          type: "integration.status.changed",
+          integrationId: pending.integrationId,
+          integrationType: pending.integrationType,
+          status: pending.to,
+          occurredAt: pending.since,
+        },
+      });
+      await this.store.updateRuntime(rule.id, {
+        lastObservedState: observedStateWithPending(status, null),
+        nextRunAt: null,
+      });
+      if (evaluation.outcome === "skip") return;
+      await this.#claimAndDispatch({
+        rule,
+        runtime: fresh ?? runtime,
+        now,
+        triggerType: rule.triggerType,
+        runKey: buildStatusDebounceRunKey(rule.id, pending.since, status),
+        scheduledFor: dueAt,
+        bumpNextRun: false,
+        alreadyClaimed: true,
+      });
+    } finally {
+      await this.store.releaseLease({ automationId: rule.id, workerId: this.workerId });
+    }
+  }
+
   async #processEvent(automationId: string, event: DomainEvent): Promise<void> {
     const rule = await this.store.getRule(automationId);
     const runtime = await this.store.getRuntime(automationId);
@@ -317,7 +468,25 @@ export class AutomationScheduler {
       });
       if (!claimed) return;
       try {
+        if (event.type !== "integration.status.changed") return;
         const fresh = await this.store.getRuntime(rule.id);
+        const previousState = fresh?.lastObservedState ?? runtime.lastObservedState;
+        const previousStatus = readObservedStatus(previousState);
+        let parsed;
+        try {
+          parsed = parseTriggerConfig(rule.triggerType, rule.triggerConfigJson);
+        } catch {
+          return;
+        }
+        if (parsed.triggerType !== "status-transition") return;
+        const forDurationSeconds = parsed.config.forDurationSeconds ?? 0;
+        if (!matchesStatusFilters(parsed.config, event.integrationId, event.integrationType)) {
+          await this.store.updateRuntime(rule.id, {
+            lastObservedState: observedStateWithPending(event.status, null),
+            nextRunAt: null,
+          });
+          return;
+        }
         const evaluation = evaluateAutomationTrigger({
           automationId: rule.id,
           triggerType: rule.triggerType,
@@ -325,25 +494,63 @@ export class AutomationScheduler {
           conditionConfigJson: rule.conditionConfigJson,
           cooldownSeconds: rule.cooldownSeconds,
           lastTriggeredAt: fresh?.lastTriggeredAt ?? runtime.lastTriggeredAt,
-          lastObservedStatus: readObservedStatus(
-            fresh?.lastObservedState ?? runtime.lastObservedState,
-          ),
+          lastObservedStatus: previousStatus,
           now,
           event,
         });
-        if (event.type === "integration.status.changed") {
-          await this.store.updateRuntime(rule.id, { lastObservedState: { status: event.status } });
+        if (forDurationSeconds <= 0) {
+          await this.store.updateRuntime(rule.id, {
+            lastObservedState: observedStateWithPending(event.status, null),
+            nextRunAt: null,
+          });
+          if (evaluation.outcome === "skip") return;
+          await this.#claimAndDispatch({
+            rule,
+            runtime: fresh ?? runtime,
+            now,
+            triggerType: rule.triggerType,
+            runKey: buildEventRunKey(rule.id, event),
+            scheduledFor: null,
+            bumpNextRun: false,
+            alreadyClaimed: true,
+          });
+          return;
         }
-        if (evaluation.outcome === "skip") return;
-        await this.#claimAndDispatch({
-          rule,
-          runtime: fresh ?? runtime,
-          now,
-          triggerType: rule.triggerType,
-          runKey: buildEventRunKey(rule.id, event),
-          scheduledFor: null,
-          bumpNextRun: false,
-          alreadyClaimed: true,
+        if (evaluation.outcome === "match") {
+          const since = now.toISOString();
+          if (!previousStatus) {
+            await this.store.updateRuntime(rule.id, {
+              lastObservedState: observedStateWithPending(event.status, null),
+              nextRunAt: null,
+            });
+            return;
+          }
+          await this.store.updateRuntime(rule.id, {
+            lastObservedState: observedStateWithPending(event.status, {
+              from: previousStatus,
+              to: event.status,
+              since,
+              integrationId: event.integrationId,
+              integrationType: event.integrationType,
+            }),
+            nextRunAt: new Date(now.getTime() + forDurationSeconds * 1000),
+          });
+          return;
+        }
+        const pending = readPendingDebounce(previousState);
+        if (pending && pending.to !== event.status) {
+          await this.store.updateRuntime(rule.id, {
+            lastObservedState: observedStateWithPending(event.status, null),
+            nextRunAt: null,
+          });
+          return;
+        }
+        await this.store.updateRuntime(rule.id, {
+          lastObservedState: observedStateWithPending(
+            event.status,
+            pending && pending.to === event.status ? pending : null,
+          ),
+          ...(pending && pending.to === event.status ? {} : { nextRunAt: null }),
         });
       } finally {
         await this.store.releaseLease({ automationId: rule.id, workerId: this.workerId });
