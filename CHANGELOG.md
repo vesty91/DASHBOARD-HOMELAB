@@ -17,6 +17,8 @@ Voir ADR 0029.
   pas de retry des mutations externes, `unknown` après crash.
 - Registry d'actions automation (Phase 22.4) : default-deny,
   `runSafeIntegrationAction`, audit `source=automation`.
+- Alerting status-transition (Phase 22.5) : DOWN/recovery ntfy,
+  debounce `forDurationSeconds`, cooldown anti-tempête.
 - Permissions `automation.read` / `automation.manage` / `automation.run`
   (ADMIN default-deny).
 - Backup `schemaVersion` 7. Compat 5 → 6 → 7. Schéma 8+ rejeté.

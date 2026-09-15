@@ -287,3 +287,6 @@ le claim unique multi-replica, crash after claim, crash after dispatch
 (`unknown`, pas de retry), shutdown, Redis down, et échec DB transitoire.
 Le registry d'actions (`action-registry.test.ts`) refuse Proxmox/Seerr en
 automatique et revalide les permissions live avant `runSafeIntegrationAction`.
+L'alerting (`alerting.test.ts`) couvre available→unavailable, recovery,
+debounce/flapping, cooldown, permission révoquée, échec ntfy sans retry et
+déduplication Redis via `runKey`.

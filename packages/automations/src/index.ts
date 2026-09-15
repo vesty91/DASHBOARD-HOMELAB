@@ -55,7 +55,9 @@ export {
 export {
   AUTOMATION_EVENT_TYPES,
   AUTOMATION_MAX_INTERVAL_MINUTES,
+  AUTOMATION_MAX_STATUS_FOR_DURATION_SECONDS,
   AUTOMATION_MIN_INTERVAL_MINUTES,
+  AUTOMATION_MIN_STATUS_FOR_DURATION_SECONDS,
   AUTOMATION_STATUS_VALUES,
   nextScheduleRunAt,
   parseTriggerConfig,
@@ -79,7 +81,15 @@ export {
   type TriggerEvaluation,
   type TriggerSkipReason,
 } from "./evaluate";
-export { buildEventRunKey, buildScheduleRunKey } from "./run-key";
+export { buildEventRunKey, buildScheduleRunKey, buildStatusDebounceRunKey } from "./run-key";
+export {
+  ALERTING_DEFAULT_COOLDOWN_SECONDS,
+  ALERTING_DEFAULT_FOR_DURATION_SECONDS,
+  buildIntegrationDownAlert,
+  buildIntegrationRecoveryAlert,
+  type IntegrationDownAlertInput,
+  type IntegrationRecoveryAlertInput,
+} from "./alerting";
 export {
   unwiredAutomationDispatcher,
   type AutomationActionDispatcher,

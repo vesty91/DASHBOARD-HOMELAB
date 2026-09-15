@@ -102,6 +102,7 @@ export interface AutomationStore {
   purgeHistory(now?: Date): Promise<number>;
   getRuntime(id: string): Promise<AutomationRuntimeStateRecord | null>;
   listDueScheduleIds(now: Date, limit: number): Promise<string[]>;
+  listDueStatusDebounceIds(now: Date, limit: number): Promise<string[]>;
   listUnscheduledScheduleIds(limit: number): Promise<string[]>;
   listEnabledEventRuleIds(limit: number): Promise<string[]>;
   claimLease(input: AutomationLeaseClaimInput): Promise<boolean>;
@@ -532,6 +533,23 @@ export function createSqliteAutomationStore(client: SqliteClient): AutomationSto
         .all(now.getTime(), now.getTime(), Math.min(100, Math.max(1, limit))) as { id: string }[];
       return rows.map((row) => row.id);
     },
+    async listDueStatusDebounceIds(now, limit) {
+      const rows = client.sqlite
+        .prepare(
+          `SELECT r.id AS id
+           FROM automation_rules r
+           INNER JOIN automation_runtime_state s ON s.automation_id = r.id
+           WHERE r.enabled = 1
+             AND r.trigger_type = 'status-transition'
+             AND s.next_run_at IS NOT NULL
+             AND s.next_run_at <= ?
+             AND (s.lease_until IS NULL OR s.lease_until < ?)
+           ORDER BY s.next_run_at ASC
+           LIMIT ?`,
+        )
+        .all(now.getTime(), now.getTime(), Math.min(100, Math.max(1, limit))) as { id: string }[];
+      return rows.map((row) => row.id);
+    },
     async listUnscheduledScheduleIds(limit) {
       const rows = client.sqlite
         .prepare(
@@ -909,6 +927,22 @@ export function createPostgresqlAutomationStore(client: PostgresqlClient): Autom
       );
       return result.rows.map((row) => row.id);
     },
+    async listDueStatusDebounceIds(now, limit) {
+      const result = await client.pool.query<{ id: string }>(
+        `SELECT r.id AS id
+         FROM automation_rules r
+         INNER JOIN automation_runtime_state s ON s.automation_id = r.id
+         WHERE r.enabled = true
+           AND r.trigger_type = 'status-transition'
+           AND s.next_run_at IS NOT NULL
+           AND s.next_run_at <= $1
+           AND (s.lease_until IS NULL OR s.lease_until < $1)
+         ORDER BY s.next_run_at ASC
+         LIMIT $2`,
+        [now, Math.min(100, Math.max(1, limit))],
+      );
+      return result.rows.map((row) => row.id);
+    },
     async listUnscheduledScheduleIds(limit) {
       const result = await client.pool.query<{ id: string }>(
         `SELECT r.id AS id
@@ -1019,6 +1053,8 @@ export function toAutomationSchedulerStore(store: AutomationStore) {
     getRule: (id: string) => store.get(id),
     getRuntime: (id: string) => store.getRuntime(id),
     listDueScheduleIds: (now: Date, limit: number) => store.listDueScheduleIds(now, limit),
+    listDueStatusDebounceIds: (now: Date, limit: number) =>
+      store.listDueStatusDebounceIds(now, limit),
     listUnscheduledScheduleIds: (limit: number) => store.listUnscheduledScheduleIds(limit),
     listEnabledEventRuleIds: (limit: number) => store.listEnabledEventRuleIds(limit),
     claimLease: (input: AutomationLeaseClaimInput) => store.claimLease(input),
