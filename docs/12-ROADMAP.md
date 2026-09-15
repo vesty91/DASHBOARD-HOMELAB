@@ -326,15 +326,28 @@ migration `0007`.
 
 ## Phase 18 — Extensions
 
-- Proxmox ;
-- Grafana ;
-- ntfy ;
-- Sonarr ;
-- Radarr ;
-- Prowlarr ;
-- qBittorrent ;
-- Jellyseerr ;
-- custom API widgets.
+Statut : COMPLETE / merged (PRs #33–#41).
+
+Livrables :
+
+- Proxmox VE (`proxmox`, widget `proxmox-resources`, `proxmox.read`, ADR 0020) ;
+- Grafana (`grafana`, widget `grafana-status`, `grafana.read`, ADR 0021) ;
+- ntfy (`ntfy`, widget `ntfy-status`, `ntfy.read`, ADR 0022) ;
+- Sonarr (`sonarr`, widget `sonarr-overview`, `sonarr.read`, ADR 0023) ;
+- Radarr (`radarr`, widget `radarr-overview`, `radarr.read`, ADR 0024) ;
+- Prowlarr (`prowlarr`, widget `prowlarr-status`, `prowlarr.read`, ADR 0025) ;
+- qBittorrent (`qbittorrent`, widget `qbittorrent-transfer`,
+  `qbittorrent.read`, ADR 0026) ;
+- Seerr / Jellyseerr / Overseerr (`seerr`, widget `seerr-requests`,
+  `seerr.read`, ADR 0027) ;
+- Custom API (`custom-api`, widget `custom-api-value`, `custom-api.read`,
+  ADR 0028).
+
+Lecture seule, SSRF, secrets serveur, DTO assainis, `publicSafe=false`.
+Aucune migration `0007`. Custom API n'est pas une source `service-status`.
+
+Hors scope : mutations (VM, torrents, ntfy publish, commandes *arr),
+proxy générique, URL widget arbitraire, tag semver `v1.0.0`.
 
 ## Règle
 

@@ -355,7 +355,7 @@ requête depuis l'URL : requête serveur fixe `up`.
 
 ## 18.1. Proxmox VE
 
-Statut : IN PROGRESS (Phase 18.1).
+Statut : COMPLETE (Phase 18.1).
 
 Adapter `proxmox` composé dans `apps/web`. Transport HTTP(S) vers l'origine Proxmox VE.
 Auth token officielle (`Authorization: PVEAPIToken=<USER@REALM!TOKENID=SECRET>`).
@@ -376,7 +376,7 @@ widget.
 
 ## 18.2. Grafana
 
-Statut : IN PROGRESS (Phase 18.2).
+Statut : COMPLETE (Phase 18.2).
 
 Adapter `grafana` composé dans `apps/web`. Transport HTTP(S) vers l'origine Grafana.
 Auth Bearer obligatoire (`Authorization: Bearer <serviceAccountToken>`).
@@ -400,7 +400,7 @@ section `unavailable` (pas de compteurs inventés).
 
 ## 18.3. ntfy
 
-Statut : IN PROGRESS (Phase 18.3).
+Statut : COMPLETE (Phase 18.3).
 
 Adapter `ntfy` composé dans `apps/web`. Transport HTTP(S) vers l'origine ntfy.
 Auth Bearer optionnelle (`Authorization: Bearer <accessToken>` uniquement si un
@@ -421,7 +421,7 @@ sur `/v1/version` rend la section `unavailable` (pas de version inventée).
 
 ## 18.4. Sonarr
 
-Statut : IN PROGRESS (Phase 18.4).
+Statut : COMPLETE (Phase 18.4).
 
 Adapter `sonarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Sonarr.
 Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
@@ -442,7 +442,7 @@ fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 
 ## 18.5. Radarr
 
-Statut : IN PROGRESS (Phase 18.5).
+Statut : COMPLETE (Phase 18.5).
 
 Adapter `radarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Radarr.
 Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
@@ -463,7 +463,7 @@ fake data. Titres, chemins et messages de santé jamais exposés. Un 403/404 sur
 
 ## 18.6. Prowlarr
 
-Statut : IN PROGRESS (Phase 18.6).
+Statut : COMPLETE (Phase 18.6).
 
 Adapter `prowlarr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Prowlarr.
 Auth header obligatoire (`X-Api-Key` uniquement). Lecture seule
@@ -485,7 +485,7 @@ la section `unavailable` (pas de zéros inventés).
 
 ## 18.7. qBittorrent
 
-Statut : IN PROGRESS (Phase 18.7).
+Statut : COMPLETE (Phase 18.7).
 
 Adapter `qbittorrent` composé dans `apps/web`. Transport HTTP(S) vers l'origine
 qBittorrent. Auth cookie de session (`POST /api/v2/auth/login`, cookie `SID`
@@ -506,7 +506,7 @@ jamais exposés.
 
 ## 18.8. Seerr
 
-Statut : IN PROGRESS (Phase 18.8).
+Statut : COMPLETE (Phase 18.8).
 
 Adapter `seerr` composé dans `apps/web`. Transport HTTP(S) vers l'origine Seerr
 (compatible Jellyseerr / Overseerr, même API v1 officielle). Auth header
@@ -528,7 +528,7 @@ zéros inventés). Un 401/403 sur `/api/v1/status` échoue l'overview.
 
 ## 18.9. Custom API
 
-Statut : IN PROGRESS (Phase 18.9).
+Statut : COMPLETE (Phase 18.9).
 
 Adapter `custom-api` composé dans `apps/web`. Transport HTTP(S) vers une origine
 déclarée. GET uniquement vers une allowlist d'endpoints `{ key, label, path }`
