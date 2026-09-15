@@ -407,3 +407,9 @@ Pas de `0007`. Voir ADR 0020–0028.
 
 COMPLETE. Release produit `1.0.0`, semver GHCR, pas de `0007`.
 Voir ADR 0029, `CHANGELOG.md` et `docs/19-V1-STABILIZATION.md`.
+
+# État Phase 20
+
+COMPLETE. Hardening post-v1 (a11y, Lighthouse, Actions, HTTPS smoke).
+Patch produit `1.0.1`. Schéma 6 / backup `formatVersion` 1 inchangés.
+Voir `docs/20-POST-V1-HARDENING.md`.
