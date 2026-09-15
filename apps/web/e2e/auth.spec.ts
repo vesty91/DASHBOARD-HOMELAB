@@ -30,6 +30,12 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.getByRole("button", { name: "Connexion" }).click();
   await expect(page).toHaveURL(/\/admin/);
   await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
+  const skip = page.getByRole("link", { name: "Aller au contenu" });
+  await skip.focus();
+  await expect(skip).toBeVisible();
+  await skip.click();
+  await expect(page).toHaveURL(/#contenu-principal/);
+  await expect(page.locator("#contenu-principal")).toBeVisible();
 
   await page.goto("/boards");
   await page.getByRole("button", { name: "Nouveau board" }).click();

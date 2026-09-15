@@ -402,3 +402,8 @@ health live/ready, GHCR sur tags semver, pas de `0007`. Voir ADR 0019 et `docs/1
 COMPLETE. Neuf adapters lecture seule (Proxmox, Grafana, ntfy, Sonarr, Radarr,
 Prowlarr, qBittorrent, Seerr, Custom API) et widgets `publicSafe=false`.
 Pas de `0007`. Voir ADR 0020–0028.
+
+# État Phase 19
+
+COMPLETE. Release produit `1.0.0`, semver GHCR, pas de `0007`.
+Voir ADR 0029, `CHANGELOG.md` et `docs/19-V1-STABILIZATION.md`.

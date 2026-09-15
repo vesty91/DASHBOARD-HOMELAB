@@ -347,7 +347,23 @@ Lecture seule, SSRF, secrets serveur, DTO assainis, `publicSafe=false`.
 Aucune migration `0007`. Custom API n'est pas une source `service-status`.
 
 Hors scope : mutations (VM, torrents, ntfy publish, commandes *arr),
-proxy générique, URL widget arbitraire, tag semver `v1.0.0`.
+proxy générique, URL widget arbitraire, tag semver `v1.0.0` (Phase 19).
+
+## Phase 19 — V1.0 Release & Final Stabilization
+
+Statut : COMPLETE.
+
+Livrables :
+
+- version produit `1.0.0` (`APP_VERSION`, health, Compose, backup metadata) ;
+- politique semver (ADR 0029) : prerelease GHCR sans `latest` ;
+- régression E2E / upgrade schéma 5→6 / smoke Compose ;
+- correctifs a11y (skip link, focus trap suppression widget, menu mobile) ;
+- README, CHANGELOG, notes de stabilisation ;
+- tags `phase-19-complete` et `v1.0.0` sur le même commit.
+
+Hors scope : migration `0007`, mutations d’intégrations Phase 18, bump des
+`package.json` internes.
 
 ## Règle
 

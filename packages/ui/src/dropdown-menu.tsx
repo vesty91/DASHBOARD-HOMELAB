@@ -1,7 +1,31 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cn } from "./cn";
+
+type MenuTriggerProps = {
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
+  "aria-haspopup"?: "menu";
+};
+
+function withMenuTriggerProps(trigger: ReactNode, open: boolean, menuId: string): ReactNode {
+  if (!isValidElement(trigger)) return trigger;
+  return cloneElement(trigger as ReactElement<MenuTriggerProps>, {
+    "aria-expanded": open,
+    "aria-controls": menuId,
+    "aria-haspopup": "menu",
+  });
+}
 
 export function DropdownMenu({
   trigger,
@@ -43,7 +67,7 @@ export function DropdownMenu({
           }
         }}
       >
-        {trigger}
+        {withMenuTriggerProps(trigger, open, menuId)}
       </div>
       {open ? (
         <div role="menu" id={menuId} className="ui-dropdown-menu">

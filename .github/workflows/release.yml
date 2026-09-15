@@ -29,6 +29,11 @@ jobs:
           echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
           echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" == *-* ]]; then
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -39,7 +44,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish multi-arch images
+      - name: Publish stable multi-arch images
+        if: steps.version.outputs.stable == 'true'
         uses: docker/bake-action@v6
         with:
           files: docker-bake.hcl
@@ -54,3 +60,20 @@ jobs:
             worker.tags=ghcr.io/vesty91/dashboard-homelab/worker:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/worker:${{ steps.version.outputs.minor }},ghcr.io/vesty91/dashboard-homelab/worker:${{ steps.version.outputs.major }},ghcr.io/vesty91/dashboard-homelab/worker:sha-${{ steps.version.outputs.sha }},ghcr.io/vesty91/dashboard-homelab/worker:latest
             realtime.tags=ghcr.io/vesty91/dashboard-homelab/realtime:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/realtime:${{ steps.version.outputs.minor }},ghcr.io/vesty91/dashboard-homelab/realtime:${{ steps.version.outputs.major }},ghcr.io/vesty91/dashboard-homelab/realtime:sha-${{ steps.version.outputs.sha }},ghcr.io/vesty91/dashboard-homelab/realtime:latest
             migrate.tags=ghcr.io/vesty91/dashboard-homelab/migrate:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/migrate:${{ steps.version.outputs.minor }},ghcr.io/vesty91/dashboard-homelab/migrate:${{ steps.version.outputs.major }},ghcr.io/vesty91/dashboard-homelab/migrate:sha-${{ steps.version.outputs.sha }},ghcr.io/vesty91/dashboard-homelab/migrate:latest
+
+      - name: Publish prerelease multi-arch images
+        if: steps.version.outputs.stable == 'false'
+        uses: docker/bake-action@v6
+        with:
+          files: docker-bake.hcl
+          targets: web,worker,realtime,migrate
+          push: true
+          sbom: true
+          provenance: true
+          set: |
+            *.platform=linux/amd64,linux/arm64
+            *.args.APP_VERSION=${{ steps.version.outputs.tag }}
+            web.tags=ghcr.io/vesty91/dashboard-homelab/web:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/web:sha-${{ steps.version.outputs.sha }}
+            worker.tags=ghcr.io/vesty91/dashboard-homelab/worker:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/worker:sha-${{ steps.version.outputs.sha }}
+            realtime.tags=ghcr.io/vesty91/dashboard-homelab/realtime:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/realtime:sha-${{ steps.version.outputs.sha }}
+            migrate.tags=ghcr.io/vesty91/dashboard-homelab/migrate:${{ steps.version.outputs.tag }},ghcr.io/vesty91/dashboard-homelab/migrate:sha-${{ steps.version.outputs.sha }}

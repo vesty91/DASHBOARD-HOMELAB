@@ -343,7 +343,7 @@ Le manifest doit contenir :
   "formatVersion": 1,
   "schemaVersion": 6,
   "databaseSchemaVersion": 6,
-  "appVersion": "0.1.0",
+  "appVersion": "1.0.0",
   "createdAt": "...",
   "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
 }

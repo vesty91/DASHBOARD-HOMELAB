@@ -67,6 +67,7 @@ import {
   type SonarrIntegrationOption,
   type ProxmoxIntegrationOption,
 } from "@dashboard/widgets/runtime";
+import { ConfirmDialog } from "@dashboard/ui";
 import { GridStack, type GridStackNode } from "gridstack";
 import { useRouter } from "next/navigation";
 import {
@@ -797,17 +798,16 @@ export function BoardEditor({
           </button>
         </form>
       )}
-      {deleteId && (
-        <section role="alertdialog" aria-labelledby="delete-widget-title" aria-modal="true">
-          <h2 id="delete-widget-title">Supprimer ce widget ?</h2>
-          <button type="button" onClick={() => setDeleteId(null)}>
-            Annuler
-          </button>
-          <button type="button" onClick={() => void removeItem(deleteId)}>
-            Supprimer définitivement
-          </button>
-        </section>
-      )}
+      {deleteId ? (
+        <ConfirmDialog
+          title="Supprimer ce widget ?"
+          onCancel={() => setDeleteId(null)}
+          onConfirm={() => void removeItem(deleteId)}
+          confirmLabel="Supprimer définitivement"
+        >
+          <p>Cette action est irréversible.</p>
+        </ConfirmDialog>
+      ) : null}
     </section>
   );
 }

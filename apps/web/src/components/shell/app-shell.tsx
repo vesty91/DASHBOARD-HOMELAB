@@ -1,6 +1,12 @@
 "use client";
 
-import { DropdownItem, DropdownMenu, IconButton, Tooltip } from "@dashboard/ui";
+import {
+  attachModalFocusTrap,
+  DropdownItem,
+  DropdownMenu,
+  IconButton,
+  Tooltip,
+} from "@dashboard/ui";
 import {
   AppWindow,
   LayoutDashboard,
@@ -18,7 +24,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { revokeCurrentSessionAction } from "@/app/logout-action";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ShellNav, ShellUser } from "./get-shell-context";
 
 function initials(user: ShellUser): string {
@@ -55,6 +61,7 @@ export function AppShell({
   const contextTitle = contextFromPath(pathname);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem("homelab-sidebar-collapsed") === "1");
@@ -66,15 +73,9 @@ export function AppShell({
 
   useEffect(() => {
     if (!mobileOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("ui-scroll-lock");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("ui-scroll-lock");
-    };
+    const panel = sidebarRef.current;
+    if (!panel) return;
+    return attachModalFocusTrap(panel, () => setMobileOpen(false));
   }, [mobileOpen]);
 
   const toggleCollapsed = () => {
@@ -126,7 +127,14 @@ export function AppShell({
         aria-label="Fermer la navigation"
         onClick={() => setMobileOpen(false)}
       />
-      <aside className="shell-sidebar" id="navigation-principale">
+      <aside
+        ref={sidebarRef}
+        className="shell-sidebar"
+        id="navigation-principale"
+        {...(mobileOpen
+          ? { role: "dialog" as const, "aria-modal": "true" as const, "aria-label": "Navigation" }
+          : {})}
+      >
         <div className="shell-brand">
           <span className="shell-brand-mark" aria-hidden="true">
             <span />
@@ -181,9 +189,11 @@ export function AppShell({
         <header className="shell-topbar">
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <IconButton
-              label="Ouvrir la navigation"
+              label={mobileOpen ? "Fermer la navigation" : "Ouvrir la navigation"}
               className="shell-menu-toggle"
-              onClick={() => setMobileOpen(true)}
+              aria-expanded={mobileOpen}
+              aria-controls="navigation-principale"
+              onClick={() => setMobileOpen((value) => !value)}
             >
               <Menu />
             </IconButton>
@@ -215,7 +225,7 @@ export function AppShell({
             </Link>
           )}
         </header>
-        <main id="contenu-principal" className="shell-content">
+        <main id="contenu-principal" className="shell-content" tabIndex={-1}>
           {children}
         </main>
       </div>
