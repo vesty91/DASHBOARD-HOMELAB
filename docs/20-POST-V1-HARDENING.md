@@ -67,3 +67,31 @@ Voir `scripts/lighthouse-budgets.mjs`.
 | `total-byte-weight` | ≤ 1 400 000 o | Baseline ~925 KiB ; ~50 % de marge, pas un freeze du bundle               |
 
 Rapports CI : artefact GitHub Actions `lighthouse-reports` (HTML + JSON + `summary.json`).
+
+## 20.3 GitHub Actions / supply chain
+
+Objectif : supprimer les runtimes Node 20 dépréciés des actions, sans casser
+CI, bake multi-arch, GHCR, SBOM ni provenance.
+
+| Action                       | Avant | Après | Motif                                                                                                         |
+| ---------------------------- | ----- | ----- | ------------------------------------------------------------------------------------------------------------- |
+| `actions/checkout`           | v4    | v5    | runtime `node24` (v5.0.0)                                                                                     |
+| `actions/setup-node`         | v4    | v5    | runtime `node24` ; `package-manager-cache: false` car `packageManager` activerait le cache auto (breaking v5) |
+| `actions/upload-artifact`    | v4    | v6    | v5 tournait encore sur Node 20 par défaut ; v6 = `node24`                                                     |
+| `docker/setup-buildx-action` | v3    | v4    | runtime `node24`                                                                                              |
+| `docker/setup-qemu-action`   | v3    | v4    | runtime `node24`                                                                                              |
+| `docker/login-action`        | v3    | v4    | runtime `node24`                                                                                              |
+| `docker/bake-action`         | v6    | v7    | runtime `node24` ; `source: .` conservé ; `sbom: true` / `provenance: true` inchangés                         |
+
+Non retenus : `checkout@v6/v7` (sûreté `pull_request_target`, hors de nos triggers),
+`setup-node@v6/v7` (cache npm / ESM, sans gain Node 24), `upload-artifact@v7`
+(uploads non zip, non utilisés).
+
+### Pinning
+
+Le dépôt pinne déjà les **majors** (`@v5`, `@v7`), pas les SHA. On conserve
+cette politique : un pin SHA de toutes les actions Docker/GitHub rendrait la
+maintenance trop lourde pour le bénéfice, alors que les majors Node 24
+éliminent l’avertissement visé. Les tags git produit (`v1.0.0`,
+`phase-19-complete`, etc.) restent intouchables. Pas de publication `v1.0.1`
+dans cette PR.
