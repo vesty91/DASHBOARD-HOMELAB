@@ -538,20 +538,23 @@ Jamais exposés : clé API, noms d'indexeurs, URLs, `startupPath`, `appData`,
 
 Routeur tRPC `qbittorrent` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                          | Permission                    | Capability    | Notes                                                |
-| ------------------------------ | ----------------------------- | ------------- | ---------------------------------------------------- |
-| `qbittorrent.permissions`      | auth active                   | —             | `canRead`, `canManage`                               |
-| `qbittorrent.integration.list` | use/manage + qbittorrent.read | —             | `{ id, name, enabled }[]`                            |
-| `qbittorrent.integration.get`  | use/manage + qbittorrent.read | —             | `{ id, name, enabled }`                              |
-| `qbittorrent.overview.get`     | use/manage + qbittorrent.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `qbittorrent.overview.refresh` | use/manage + qbittorrent.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| Route                          | Permission                           | Capability        | Notes                                                 |
+| ------------------------------ | ------------------------------------ | ----------------- | ----------------------------------------------------- |
+| `qbittorrent.permissions`      | auth active                          | —                 | `canRead`, `canManage`, `canPause`, `canResume`       |
+| `qbittorrent.integration.list` | use/manage + qbittorrent.read        | —                 | `{ id, name, enabled }[]`                             |
+| `qbittorrent.integration.get`  | use/manage + qbittorrent.read        | —                 | `{ id, name, enabled }`                               |
+| `qbittorrent.overview.get`     | use/manage + qbittorrent.read        | `status.read`     | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256  |
+| `qbittorrent.overview.refresh` | use/manage + qbittorrent.read        | `status.read`     | 10 requêtes / min / acteur / intégration              |
+| `qbittorrent.torrents.pause`   | interact/manage + qbittorrent.pause  | `torrents.pause`  | POST stop (v5) / pause (v4) ; 1–8 hashs ; pas `all`   |
+| `qbittorrent.torrents.resume`  | interact/manage + qbittorrent.resume | `torrents.resume` | POST start (v5) / resume (v4) ; 1–8 hashs ; pas `all` |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 `version`, `transfer`, `torrents`. Auth : cookie `SID` éphémère après
 `POST /api/v2/auth/login`. Jamais `SID`/`password` dans l'URL, le cache ou le DTO.
 
-Jamais exposés : cookie `SID`, mot de passe, noms de torrents, hashs, magnets,
-`save_path`, trackers, fichiers, `baseUrl`, config.
+Jamais exposés : cookie `SID`, mot de passe, noms de torrents, magnets,
+`save_path`, trackers, fichiers, `baseUrl`, config. Les mutations pause/resume
+n'acceptent que des hashs hex 40/64, max 8, jamais `all`.
 
 # Seerr API — Phase 18.8
 

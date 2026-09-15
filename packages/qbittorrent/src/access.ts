@@ -12,15 +12,19 @@ function hasAny(actor: IntegrationActor, permissions: readonly Permission[]): bo
 }
 
 export function qbittorrentPermissionsView(actor: IntegrationActor): QbittorrentPermissionsView {
-  if (!isActive(actor)) return { canRead: false, canManage: false };
+  if (!isActive(actor))
+    return { canRead: false, canManage: false, canPause: false, canResume: false };
   const integrationUse = hasAny(actor, ["integration.use", "integration.manage"]);
+  const integrationInteract = hasAny(actor, ["integration.interact", "integration.manage"]);
   return {
     canRead: integrationUse && hasAny(actor, ["qbittorrent.read"]),
     canManage: hasAny(actor, ["integration.manage"]),
+    canPause: integrationInteract && hasAny(actor, ["qbittorrent.pause"]),
+    canResume: integrationInteract && hasAny(actor, ["qbittorrent.resume"]),
   };
 }
 
-export type QbittorrentAccessKind = "read" | "manage";
+export type QbittorrentAccessKind = "read" | "manage" | "pause" | "resume";
 
 export function assertQbittorrentAccess(
   actor: IntegrationActor,
@@ -34,6 +38,12 @@ export function assertQbittorrentAccess(
       return;
     case "manage":
       if (!view.canManage) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "pause":
+      if (!view.canPause) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "resume":
+      if (!view.canResume) throw new IntegrationError("FORBIDDEN", "Permission denied");
       return;
     default: {
       const _exhaustive: never = kind;

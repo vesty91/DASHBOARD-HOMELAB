@@ -71,5 +71,16 @@ export const qbittorrentIntegrationInputSchema = z.object({
   integrationId: z.uuid(),
 });
 
+export const qbittorrentTorrentHashSchema = z
+  .string()
+  .regex(/^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$/u);
+
+export const qbittorrentTorrentActionInputSchema = z.object({
+  integrationId: z.uuid(),
+  hashes: z.array(qbittorrentTorrentHashSchema).min(1).max(8),
+  expectedConfigRevision: z.number().int().positive().optional(),
+});
+
 export type QbittorrentConfig = z.infer<typeof qbittorrentConfigSchema>;
 export type QbittorrentSecrets = z.infer<typeof qbittorrentSecretSchema>;
+export type QbittorrentTorrentActionInput = z.infer<typeof qbittorrentTorrentActionInputSchema>;

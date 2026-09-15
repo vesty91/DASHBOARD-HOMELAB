@@ -6,6 +6,10 @@ export const QBITTORRENT_LOGOUT_PATH = "/api/v2/auth/logout";
 export const QBITTORRENT_VERSION_PATH = "/api/v2/app/version";
 export const QBITTORRENT_TRANSFER_PATH = "/api/v2/transfer/info";
 export const QBITTORRENT_TORRENTS_PATH = "/api/v2/torrents/info";
+export const QBITTORRENT_TORRENTS_STOP_PATH = "/api/v2/torrents/stop";
+export const QBITTORRENT_TORRENTS_START_PATH = "/api/v2/torrents/start";
+export const QBITTORRENT_TORRENTS_PAUSE_PATH = "/api/v2/torrents/pause";
+export const QBITTORRENT_TORRENTS_RESUME_PATH = "/api/v2/torrents/resume";
 
 const ALLOWED_GET_PATHS = new Set([
   QBITTORRENT_VERSION_PATH,
@@ -13,7 +17,14 @@ const ALLOWED_GET_PATHS = new Set([
   QBITTORRENT_TORRENTS_PATH,
 ]);
 
-const ALLOWED_POST_PATHS = new Set([QBITTORRENT_LOGIN_PATH, QBITTORRENT_LOGOUT_PATH]);
+const ALLOWED_POST_PATHS = new Set([
+  QBITTORRENT_LOGIN_PATH,
+  QBITTORRENT_LOGOUT_PATH,
+  QBITTORRENT_TORRENTS_STOP_PATH,
+  QBITTORRENT_TORRENTS_START_PATH,
+  QBITTORRENT_TORRENTS_PAUSE_PATH,
+  QBITTORRENT_TORRENTS_RESUME_PATH,
+]);
 
 const DENIED_QUERY_KEYS = new Set([
   "apikey",
@@ -93,15 +104,15 @@ export function assertQbittorrentEndpointAllowed(method: string, url: string | U
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`qBittorrent query parameter ${key} is not allowed`);
-  if (keys.length > 0) reject("qBittorrent Phase 18 endpoints must not use query parameters");
+  if (keys.length > 0) reject("qBittorrent endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
       if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("qBittorrent endpoint is not on the Phase 18 allowlist");
+        reject("qBittorrent endpoint is not on the allowlist");
       return;
     case "POST":
       if (!ALLOWED_POST_PATHS.has(parsed.pathname))
-        reject("qBittorrent endpoint is not on the Phase 18 allowlist");
+        reject("qBittorrent endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

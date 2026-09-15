@@ -14,7 +14,9 @@ describe("qbittorrentUserError", () => {
     expect(qbittorrentUserError({ code: "UNREACHABLE" })).toBe(
       "Le serveur qBittorrent est injoignable.",
     );
-    expect(qbittorrentUserError({ code: "TOO_MANY_REQUESTS" })).toContain("actualisations");
+    expect(qbittorrentUserError({ code: "TOO_MANY_REQUESTS" })).toContain("requêtes");
+    expect(qbittorrentUserError({ code: "VALIDATION_ERROR" })).toContain("invalides");
+    expect(qbittorrentUserError({ code: "CONFLICT" })).toContain("conflit");
     expect(
       qbittorrentUserError({ message: "denied correct horse battery staple SID=abc" }),
     ).not.toContain("correct horse battery staple");

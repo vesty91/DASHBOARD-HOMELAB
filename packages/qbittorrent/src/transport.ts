@@ -133,6 +133,27 @@ export async function qbittorrentLogout(
   }
 }
 
+export async function qbittorrentPostForm(
+  request: QbittorrentRequestFn,
+  ctx: QbittorrentTransportContext,
+  pathname: string,
+  sid: string,
+  body: string,
+): Promise<Extract<SecureHttpResult, { ok: true }>> {
+  const result = await request(
+    commonRequest(ctx, "POST", pathname, {
+      maxBodyBytes: QBITTORRENT_TEXT_MAX_BYTES,
+      headers: {
+        Cookie: qbittorrentCookieHeader(sid),
+        Accept: "text/plain",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    }),
+  );
+  return throwIfFailed(result, "qBittorrent session is invalid");
+}
+
 export async function qbittorrentFetch(
   request: QbittorrentRequestFn,
   ctx: QbittorrentTransportContext,

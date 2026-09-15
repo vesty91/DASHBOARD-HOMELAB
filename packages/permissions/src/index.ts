@@ -46,6 +46,8 @@ export const PERMISSIONS = [
   "radarr.read",
   "prowlarr.read",
   "qbittorrent.read",
+  "qbittorrent.pause",
+  "qbittorrent.resume",
   "seerr.read",
   "custom-api.read",
 ] as const;

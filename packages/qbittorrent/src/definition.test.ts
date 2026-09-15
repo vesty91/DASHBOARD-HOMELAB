@@ -3,9 +3,13 @@ import { qbittorrentConfigSchema } from "./schemas";
 import { QBITTORRENT_INTEGRATION_ID, qbittorrentIntegrationDefinition } from "./definition";
 
 describe("qbittorrent definition", () => {
-  it("is a read-only transfer adapter with required username and password", () => {
+  it("exposes status read plus allowlisted torrent pause/resume capabilities", () => {
     expect(qbittorrentIntegrationDefinition.id).toBe(QBITTORRENT_INTEGRATION_ID);
-    expect(qbittorrentIntegrationDefinition.capabilities).toEqual(["status.read"]);
+    expect(qbittorrentIntegrationDefinition.capabilities).toEqual([
+      "status.read",
+      "torrents.pause",
+      "torrents.resume",
+    ]);
     expect(qbittorrentIntegrationDefinition.secretFields.map((field) => field.key)).toEqual([
       "username",
       "password",

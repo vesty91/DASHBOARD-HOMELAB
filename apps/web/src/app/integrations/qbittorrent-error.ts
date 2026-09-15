@@ -30,11 +30,15 @@ export function qbittorrentUserError(error: unknown): string {
       return "Identifiants qBittorrent invalides.";
     case "MISCONFIGURED":
       return "Configuration qBittorrent invalide. Vérifiez l'URL, TLS et les identifiants.";
+    case "VALIDATION_ERROR":
+      return "Paramètres qBittorrent invalides.";
     case "NOT_FOUND":
       return "Ressource qBittorrent introuvable.";
+    case "CONFLICT":
+      return "Action qBittorrent impossible : état ou configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations qBittorrent. Réessayez dans une minute.";
+      return "Trop de requêtes qBittorrent. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur qBittorrent est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers qBittorrent.";

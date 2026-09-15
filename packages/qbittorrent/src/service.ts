@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,23 +17,33 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
+import type { Permission } from "@dashboard/permissions";
 import { assertQbittorrentAccess, qbittorrentPermissionsView } from "./access";
 import { qbittorrentOverviewCacheOperation, overviewFailureCacheOperation } from "./cache-key";
 import {
   QBITTORRENT_OVERVIEW_FAILURE_TTL_MS,
   fetchQbittorrentOverview,
+  postQbittorrentTorrentAction,
   qbittorrentContextFromIntegration,
   overviewCacheTtl,
   type QbittorrentClientContext,
 } from "./client";
 import { QBITTORRENT_INTEGRATION_ID } from "./definition";
 import { QbittorrentError, toIntegrationError } from "./errors";
+import { normalizeQbittorrentHashes, qbittorrentHashesResourceId } from "./hashes";
 import type { QbittorrentOverviewCoalescer } from "./overview-coalescer";
 import type { QbittorrentRefreshFence } from "./refresh-fence";
-import type { QbittorrentConfig, QbittorrentSecrets } from "./schemas";
+import type {
+  QbittorrentConfig,
+  QbittorrentSecrets,
+  QbittorrentTorrentActionInput,
+} from "./schemas";
 import type {
   QbittorrentActor,
   QbittorrentIntegrationMetadata,
@@ -48,8 +59,21 @@ export interface QbittorrentServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: QbittorrentRefreshFence;
   overviewCoalescer: QbittorrentOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
+
+const TORRENT_ACTION_PERMISSION: Record<"pause" | "resume", Permission> = {
+  pause: "qbittorrent.pause",
+  resume: "qbittorrent.resume",
+};
+
+const TORRENT_ACTION_CAPABILITY: Record<"pause" | "resume", string> = {
+  pause: "torrents.pause",
+  resume: "torrents.resume",
+};
 
 function timeoutFromConfig(config: JsonObject): number {
   const raw = config.timeoutMs;
@@ -236,6 +260,46 @@ export function createQbittorrentService(deps: QbittorrentServiceDeps) {
     });
   }
 
+  async function runTorrentAction(
+    action: "pause" | "resume",
+    input: QbittorrentTorrentActionInput,
+    actor: QbittorrentActor,
+  ): Promise<SafeActionResult> {
+    assertQbittorrentAccess(actor, action);
+    const hashes = normalizeQbittorrentHashes(input.hashes);
+    const record = await deps.store.findById(input.integrationId);
+    if (!record) throw new IntegrationError("NOT_FOUND", "Définition qBittorrent introuvable");
+    const resourceId = qbittorrentHashesResourceId(hashes);
+    const publish = deps.publish;
+    return runSafeIntegrationAction({
+      actor,
+      action: `qbittorrent.${action}`,
+      actionPermissions: [TORRENT_ACTION_PERMISSION[action]],
+      integrationId: record.id,
+      expectedType: QBITTORRENT_INTEGRATION_ID,
+      loadedType: record.type,
+      resourceId,
+      rateLimiter: deps.actionRateLimiter,
+      inFlight: deps.inFlight,
+      cache: deps.cache,
+      currentConfigRevision: record.configRevision,
+      ...(input.expectedConfigRevision === undefined
+        ? {}
+        : { expectedConfigRevision: input.expectedConfigRevision }),
+      ...(publish ? { publish: () => publish(record.id) } : {}),
+      execute: async () => {
+        const loaded = await loadContext(record.id, TORRENT_ACTION_CAPABILITY[action]);
+        try {
+          await postQbittorrentTorrentAction(loaded.ctx, action, hashes);
+          deps.refreshFence.advance(record.id);
+          return "accepted";
+        } catch (error) {
+          throw normalizedRedactedError(error, loaded.secrets);
+        }
+      },
+    });
+  }
+
   return {
     permissions(actor: QbittorrentActor): QbittorrentPermissionsView {
       return qbittorrentPermissionsView(actor);
@@ -285,6 +349,18 @@ export function createQbittorrentService(deps: QbittorrentServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async pauseTorrents(
+      input: QbittorrentTorrentActionInput,
+      actor: QbittorrentActor,
+    ): Promise<SafeActionResult> {
+      return runTorrentAction("pause", input, actor);
+    },
+    async resumeTorrents(
+      input: QbittorrentTorrentActionInput,
+      actor: QbittorrentActor,
+    ): Promise<SafeActionResult> {
+      return runTorrentAction("resume", input, actor);
     },
   };
 }
