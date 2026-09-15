@@ -698,19 +698,19 @@ Permissions : `automation.read` / `automation.manage` / `automation.run`.
 `ADMIN` ne les reçoit pas (default-deny). `SYSTEM_ADMIN` : catalogue.
 Pas de mutation via GET. Manual run est rate-limité (`automation.manualRun`).
 
-| Route                    | Permission          | Notes                                                      |
-| ------------------------ | ------------------- | ---------------------------------------------------------- |
-| `automation.permissions` | authentifié         | `{ canRead, canManage, canRun }`                           |
-| `automation.catalog`     | `automation.read`   | Triggers implantés + actions `automationAllowed` uniquement |
-| `automation.list`        | `automation.read`   | Règles hydratées (runtime + dernier statut), sans secrets  |
-| `automation.get`         | `automation.read`   | Détail règle                                               |
-| `automation.create`      | `automation.manage` | Création **désactivée** ; owner = acteur                   |
-| `automation.update`      | `automation.manage` | CAS `expectedConfigRevision` → CONFLICT                    |
-| `automation.setEnabled`  | `automation.manage` | Revalide règle / owner / action / intégration avant enable |
-| `automation.delete`      | `automation.manage` | Confirmation UI ; historique de runs selon rétention       |
-| `automation.listRuns`    | `automation.read`   | Historique borné : statut, durée, codes sûrs               |
+| Route                    | Permission          | Notes                                                         |
+| ------------------------ | ------------------- | ------------------------------------------------------------- |
+| `automation.permissions` | authentifié         | `{ canRead, canManage, canRun }`                              |
+| `automation.catalog`     | `automation.read`   | Triggers implantés + actions `automationAllowed` uniquement   |
+| `automation.list`        | `automation.read`   | Règles hydratées (runtime + dernier statut), sans secrets     |
+| `automation.get`         | `automation.read`   | Détail règle                                                  |
+| `automation.create`      | `automation.manage` | Création **désactivée** ; owner = acteur                      |
+| `automation.update`      | `automation.manage` | CAS `expectedConfigRevision` → CONFLICT                       |
+| `automation.setEnabled`  | `automation.manage` | Revalide règle / owner / action / intégration avant enable    |
+| `automation.delete`      | `automation.manage` | Confirmation UI ; historique de runs selon rétention          |
+| `automation.listRuns`    | `automation.read`   | Historique borné : statut, durée, codes sûrs                  |
 | `automation.dryRun`      | `automation.run`    | `would-run` / `would-skip` / `would-deny` — aucun side effect |
-| `automation.manualRun`   | `automation.run`    | Exécution réelle via dispatcher safe + audit               |
+| `automation.manualRun`   | `automation.run`    | Exécution réelle via dispatcher safe + audit                  |
 
 Jamais exposés : credentials, `baseUrl` privé, raw external payload, stack
 traces, configs d'action non sanitaires.
