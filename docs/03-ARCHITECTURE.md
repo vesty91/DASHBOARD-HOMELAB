@@ -422,8 +422,9 @@ Minor produit `1.1.0`. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 
 # État Phase 22
 
-IN PROGRESS. Persistence automations (`0007`, schema 7). Scheduler worker
+COMPLETE. Persistence automations (`0007`, schema 7). Scheduler worker
 at-most-once (leases, `runKey`, pas de retry side-effect). Actions via
 `runSafeIntegrationAction` (default-deny). Alerting status-transition +
-ntfy avec debounce/cooldown. Pas d'eval, pas de proxy HTTP arbitraire.
+ntfy avec debounce/cooldown. UI `/automations` (dry-run, manual run,
+history). Pas d'eval, pas de proxy HTTP arbitraire.
 Voir `docs/22-AUTOMATIONS.md`.
