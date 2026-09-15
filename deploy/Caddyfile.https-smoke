@@ -1,0 +1,29 @@
+# CI/local HTTPS smoke only. Same reverse_proxy topology as deploy/Caddyfile.
+# File TLS (openssl, SAN IP 127.0.0.1) — no public ACME.
+# auto_https off so :443 uses the mounted certificate.
+
+{
+	auto_https off
+}
+
+:80 {
+	redir {$CADDY_PUBLIC_ORIGIN}{uri} 308
+}
+
+:443 {
+	tls /etc/caddy/certs/cert.pem /etc/caddy/certs/key.pem
+	encode gzip zstd
+	handle /api/realtime/ws* {
+		uri strip_prefix /api/realtime
+		reverse_proxy realtime:3002 {
+			flush_interval -1
+			header_up Host {host}
+			header_up X-Forwarded-Proto https
+		}
+	}
+	reverse_proxy web:3000 {
+		flush_interval -1
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+	}
+}
