@@ -42,6 +42,7 @@ export const PERMISSIONS = [
   "proxmox.reboot",
   "grafana.read",
   "ntfy.read",
+  "ntfy.publish",
   "sonarr.read",
   "radarr.read",
   "prowlarr.read",

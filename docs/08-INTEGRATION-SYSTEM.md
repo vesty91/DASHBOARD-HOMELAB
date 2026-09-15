@@ -410,9 +410,11 @@ Statut : COMPLETE (Phase 18.3).
 
 Adapter `ntfy` composé dans `apps/web`. Transport HTTP(S) vers l'origine ntfy.
 Auth Bearer optionnelle (`Authorization: Bearer <accessToken>` uniquement si un
-jeton est configuré). Lecture seule `GET /v1/health`, `GET /v1/stats`,
-`GET /v1/version`. Voir ADR 0022. Publication, subscribe/poll/websocket/SSE,
-`/v1/config`, `/metrics` et `/v1/account` sont hors scope.
+jeton est configuré). Lecture `GET /v1/health`, `GET /v1/stats`,
+`GET /v1/version`. Publication Phase 21 : `POST /{topic}` (topic strict, pas
+`/v1/*`). Headers allowlistés `Title` / `Priority` / `Tags` uniquement. Voir
+ADR 0022. Subscribe/poll/websocket/SSE, `/v1/config`, `/metrics`, `/v1/account`,
+Actions HTTP, Click, Attach et Email restent hors scope.
 
 `ntfy.integration.get` expose uniquement `{ id, name, enabled }` aux lecteurs
 ntfy (`integration.use|manage` + `ntfy.read`). `integration.read` n'est
@@ -421,9 +423,11 @@ pas requis. `integration.list` / `integration.get` omettent `baseUrl`, `config`,
 `integration.manage`.
 
 Widget `ntfy-status` : `publicSafe=false`. Refresh manuel 10/min. Cache
-overview 8 s (5 s si partiel). Jeton jamais renvoyé. Aucune mutation. Aucune
-fake data. Noms de topics et corps de messages jamais exposés. Un 401/403/404
-sur `/v1/version` rend la section `unavailable` (pas de version inventée).
+overview 8 s (5 s si partiel). Jeton jamais renvoyé. Le widget `ntfy-status`
+reste en lecture seule. La publication passe par le formulaire d'intégration.
+Aucune fake data. Corps de messages jamais exposés dans le DTO overview. Un
+401/403/404 sur `/v1/version` rend la section `unavailable` (pas de version
+inventée).
 
 ## 18.4. Sonarr
 
@@ -588,7 +592,7 @@ Pour chaque adapter :
 
 ## 21. Actions sûres
 
-Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent).
+Statut : IN PROGRESS (21.1 framework, 21.2 Proxmox, 21.3 qBittorrent, 21.4 ntfy).
 
 Contrat commun dans `@dashboard/integrations` (`runSafeIntegrationAction`).
 Default deny. POST allowlisté. Rate limit par acteur / intégration / action.

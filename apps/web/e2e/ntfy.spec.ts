@@ -64,6 +64,9 @@ test("creates an ntfy integration without leaking the access token from the brow
   await expect(page.getByRole("heading", { level: 1, name: "ntfy Lab" })).toBeVisible();
   await expect(page.getByText("ntfy", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualiser" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Publication" })).toBeVisible();
+  await expect(page.getByLabel("Topic")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publier" })).toBeVisible();
   await expect(
     page.getByText(/injoignable|indisponible|Délai|TLS|DNS|jeton|Jeton/i).first(),
   ).toBeVisible({ timeout: 30_000 });

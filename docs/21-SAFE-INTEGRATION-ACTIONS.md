@@ -13,7 +13,7 @@ Toute mutation externe passe par `runSafeIntegrationAction`
 1. Session authentifiée (`UNAUTHORIZED` sinon).
 2. `integration.interact` **ou** `integration.manage`.
 3. Permission **spécialisée** explicite (`docker.start`, `proxmox.start`,
-   `qbittorrent.pause`, …).
+   `qbittorrent.pause`, `ntfy.publish`, …).
 4. Type d'intégration attendu.
 5. Entrées Zod / IDs bornés.
 6. Méthode **POST** uniquement ; chemin construit puis **allowlist exacte**.
@@ -67,7 +67,7 @@ architecture.
 
 ## Hors scope de 21.1
 
-Implémentation ntfy / *arr / Seerr : PRs suivantes.
+Implémentation *arr / Seerr : PRs suivantes.
 Grafana et Custom API restent en lecture seule.
 
 ## 21.2 Proxmox power
@@ -84,3 +84,11 @@ Livré : `qbittorrent.pause` / `qbittorrent.resume` sur des hashs explicites
 repli `/pause` et `/resume` (v4) si 404. Hashes dans le corps form-urlencoded,
 jamais en query, jamais `all`. Widget `qbittorrent-transfer` inchangé (lecture
 seule). Pas de delete, add, recheck, rename, preferences.
+
+## 21.4 ntfy publish
+
+Livré : `ntfy.publish` via `POST /{topic}` (topic `[A-Za-z0-9][A-Za-z0-9._-]{0,63}`,
+pas de réservés `v1`/`metrics`/…). Message ≤ 4096, titre ≤ 120, priorité enum
+`min|low|default|high|max`, tags ≤ 5. Headers allowlistés uniquement. Pas
+d'Actions HTTP, Click, Attach, Email, Delay. Audit : topic, priorité,
+`messageLength` — jamais le corps.

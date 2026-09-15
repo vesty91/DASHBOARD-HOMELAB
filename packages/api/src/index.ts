@@ -46,7 +46,11 @@ import {
 } from "@dashboard/prometheus";
 import { uptimeKumaIntegrationInputSchema, type UptimeKumaService } from "@dashboard/uptime-kuma";
 import { grafanaIntegrationInputSchema, type GrafanaService } from "@dashboard/grafana";
-import { ntfyIntegrationInputSchema, type NtfyService } from "@dashboard/ntfy";
+import {
+  ntfyIntegrationInputSchema,
+  ntfyPublishInputSchema,
+  type NtfyService,
+} from "@dashboard/ntfy";
 import { prowlarrIntegrationInputSchema, type ProwlarrService } from "@dashboard/prowlarr";
 import {
   qbittorrentIntegrationInputSchema,
@@ -263,6 +267,24 @@ function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function ntfyPublishAuditMetadata(
+  integrationId: string,
+  result: { action: string; resourceId: string; status: "success" | "accepted" | "failed" },
+  extras: { priority: string; messageLength: number },
+): Record<string, unknown> {
+  return {
+    ...safeActionAuditMetadata({
+      integrationId,
+      integrationType: "ntfy",
+      action: result.action,
+      resourceId: result.resourceId,
+      result: result.status,
+    }),
+    priority: extras.priority,
+    messageLength: extras.messageLength,
+  };
 }
 
 function qbittorrentTorrentAuditMetadata(
@@ -879,6 +901,23 @@ export const ntfyRouter = t.router({
         procedure(() => ctx.ntfy.refreshOverview(input.integrationId, ctx.actor)),
       ),
   }),
+  publish: t.procedure.input(ntfyPublishInputSchema).mutation(({ ctx, input }) =>
+    procedure(async () => {
+      const result = await ctx.ntfy.publishMessage(input, ctx.actor);
+      await emitAudit(ctx, {
+        actorUserId: ctx.actor.userId,
+        action: "ntfy.publish",
+        targetType: "integration",
+        targetId: input.integrationId,
+        outcome: "success",
+        metadata: ntfyPublishAuditMetadata(input.integrationId, result, {
+          priority: input.priority,
+          messageLength: input.message.length,
+        }),
+      });
+      return result;
+    }),
+  ),
 });
 export const prowlarrRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.prowlarr.permissions(ctx.actor)),

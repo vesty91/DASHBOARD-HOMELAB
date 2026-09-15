@@ -50,7 +50,7 @@ export function ntfyAuthHeaders(accessToken?: string): Readonly<Record<string, s
 export async function ntfyFetch(
   request: NtfyRequestFn,
   ctx: NtfyTransportContext,
-  method: NtfyHttpMethod,
+  method: Exclude<NtfyHttpMethod, "POST">,
   pathname: string,
   options: { maxBodyBytes?: number } = {},
 ): Promise<Extract<SecureHttpResult, { ok: true }>> {
@@ -66,6 +66,67 @@ export async function ntfyFetch(
     maxRedirects: 0,
     maxBodyBytes: options.maxBodyBytes ?? NTFY_JSON_MAX_BYTES,
     headers: { ...ntfyAuthHeaders(ctx.accessToken) },
+    ...(ctx.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.trustedCaPem }),
+  } satisfies SecureHttpRequest);
+  if (!result.ok) {
+    if (result.code === "TIMEOUT") throw new NtfyError("TIMEOUT", "ntfy request timed out");
+    throw new IntegrationError(result.code, "ntfy request failed");
+  }
+  if (result.truncated)
+    throw new IntegrationError("INVALID_RESPONSE", "ntfy response body is oversized");
+  if (result.status !== 200) {
+    const mapped = mapNtfyHttpStatus(result.status);
+    if (mapped.kind !== "INVALID_RESPONSE") throw mapped;
+    const classified = classifyHttpStatus(result.status);
+    throw new IntegrationError(classified ?? "INVALID_RESPONSE", "ntfy request failed");
+  }
+  return result;
+}
+
+const ALLOWED_PUBLISH_HEADERS = new Set([
+  "Accept",
+  "Authorization",
+  "Content-Type",
+  "Priority",
+  "Tags",
+  "Title",
+]);
+
+export async function ntfyPublish(
+  request: NtfyRequestFn,
+  ctx: NtfyTransportContext,
+  pathname: string,
+  message: string,
+  options: {
+    title?: string;
+    priority: string;
+    tags: readonly string[];
+  },
+): Promise<Extract<SecureHttpResult, { ok: true }>> {
+  const url = buildNtfyUrl(ctx.baseUrl, pathname);
+  assertNtfyEndpointAllowed("POST", url);
+  const headers: Record<string, string> = {
+    ...ntfyAuthHeaders(ctx.accessToken),
+    "Content-Type": "text/plain; charset=utf-8",
+    Priority: options.priority,
+  };
+  if (options.title !== undefined) headers.Title = options.title;
+  if (options.tags.length > 0) headers.Tags = options.tags.join(",");
+  for (const name of Object.keys(headers)) {
+    if (!ALLOWED_PUBLISH_HEADERS.has(name))
+      throw new IntegrationError("FORBIDDEN", "ntfy header is not allowed");
+  }
+  const result = await request({
+    url,
+    method: "POST",
+    verifyTls: ctx.verifyTls,
+    timeoutMs: ctx.timeoutMs,
+    allowedSchemes: ["http:", "https:"],
+    maxRetries: 0,
+    maxRedirects: 0,
+    maxBodyBytes: NTFY_JSON_MAX_BYTES,
+    headers,
+    body: message,
     ...(ctx.trustedCaPem === undefined ? {} : { trustedCaPem: ctx.trustedCaPem }),
   } satisfies SecureHttpRequest);
   if (!result.ok) {

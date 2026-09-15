@@ -48,4 +48,27 @@ describe("ntfy access", () => {
       ),
     ).toThrow(/Permission denied/);
   });
+
+  it("requires interact plus ntfy.publish", () => {
+    expect(
+      ntfyPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.manage"],
+        },
+      }).canPublish,
+    ).toBe(false);
+    expect(
+      ntfyPermissionsView({
+        userId: "u1",
+        subject: {
+          status: "active",
+          isSystemAdmin: false,
+          directPermissions: ["integration.interact", "ntfy.publish"],
+        },
+      }).canPublish,
+    ).toBe(true);
+  });
 });

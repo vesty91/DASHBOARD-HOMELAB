@@ -4,8 +4,16 @@ import { NtfyError, sectionReasonFromError, toIntegrationError } from "./errors"
 import { NTFY_HEALTH_PATH, NTFY_STATS_PATH, NTFY_VERSION_PATH } from "./policy";
 import type { NtfyConfig, NtfySecrets } from "./schemas";
 import {
+  assertNtfyMessage,
+  assertNtfyPriority,
+  assertNtfyTags,
+  assertNtfyTitle,
+  ntfyPublishPath,
+} from "./topic";
+import {
   NTFY_JSON_MAX_BYTES,
   ntfyFetch,
+  ntfyPublish,
   type NtfyRequestFn,
   type NtfyTransportContext,
 } from "./transport";
@@ -168,4 +176,28 @@ export async function fetchNtfyOverview(ctx: NtfyClientContext): Promise<NtfyOve
     stats,
     version,
   };
+}
+
+export async function postNtfyPublish(
+  ctx: NtfyClientContext,
+  input: {
+    topic: string;
+    message: string;
+    title?: string;
+    priority: string;
+    tags?: readonly string[];
+  },
+): Promise<void> {
+  const title = assertNtfyTitle(input.title);
+  await ntfyPublish(
+    ctx.request,
+    ctx,
+    ntfyPublishPath(input.topic),
+    assertNtfyMessage(input.message),
+    {
+      priority: assertNtfyPriority(input.priority),
+      tags: assertNtfyTags(input.tags),
+      ...(title === undefined ? {} : { title }),
+    },
+  );
 }

@@ -3,9 +3,12 @@ import { ntfyConfigSchema } from "./schemas";
 import { NTFY_INTEGRATION_ID, ntfyIntegrationDefinition } from "./definition";
 
 describe("ntfy definition", () => {
-  it("is a read-only status adapter with an optional token", () => {
+  it("exposes status read and bounded publish capabilities", () => {
     expect(ntfyIntegrationDefinition.id).toBe(NTFY_INTEGRATION_ID);
-    expect(ntfyIntegrationDefinition.capabilities).toEqual(["status.read"]);
+    expect(ntfyIntegrationDefinition.capabilities).toEqual([
+      "status.read",
+      "notifications.publish",
+    ]);
     expect(ntfyIntegrationDefinition.secretFields.map((field) => field.key)).toEqual([
       "accessToken",
     ]);

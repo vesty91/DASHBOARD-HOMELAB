@@ -20,7 +20,7 @@ import {
 
 export const NTFY_INTEGRATION_ID = "ntfy";
 export const NTFY_INTEGRATION_VERSION = 1;
-export const NTFY_CAPABILITIES = ["status.read"] as const;
+export const NTFY_CAPABILITIES = ["status.read", "notifications.publish"] as const;
 
 function connectionCode(error: unknown): IntegrationErrorCode {
   if (error instanceof NtfyError) return toIntegrationError(error).code;
@@ -37,7 +37,8 @@ export function createNtfyIntegrationDefinition(): IntegrationDefinition<NtfyCon
     id: NTFY_INTEGRATION_ID,
     displayName: "ntfy",
     version: NTFY_INTEGRATION_VERSION,
-    description: "Santé, compteurs publics et version ntfy via l'API officielle en lecture seule.",
+    description:
+      "Santé ntfy et publication ciblée via l'API officielle (topic, message, titre, priorité, tags bornés).",
     configSchema: ntfyConfigSchema,
     secretSchema: ntfySecretSchema,
     capabilities: NTFY_CAPABILITIES,

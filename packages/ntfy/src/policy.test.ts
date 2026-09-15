@@ -17,10 +17,11 @@ describe("ntfy policy", () => {
     );
   });
 
-  it("allows only the read-only ntfy endpoints", () => {
+  it("allows documented GET probes and POST publish to a validated topic", () => {
     assertNtfyEndpointAllowed("GET", `https://ntfy.lab${NTFY_HEALTH_PATH}`);
     assertNtfyEndpointAllowed("GET", `https://ntfy.lab${NTFY_STATS_PATH}`);
     assertNtfyEndpointAllowed("GET", `https://ntfy.lab${NTFY_VERSION_PATH}`);
+    assertNtfyEndpointAllowed("POST", "https://ntfy.lab/homelab-alerts");
     expect(() =>
       assertNtfyEndpointAllowed("GET", `https://ntfy.lab${NTFY_HEALTH_PATH}?token=x`),
     ).toThrow(/not allowed/i);
@@ -28,6 +29,9 @@ describe("ntfy policy", () => {
       assertNtfyEndpointAllowed("GET", `https://ntfy.lab${NTFY_STATS_PATH}?access_token=secret`),
     ).toThrow(/not allowed/i);
     expect(() => assertNtfyEndpointAllowed("POST", `https://ntfy.lab${NTFY_HEALTH_PATH}`)).toThrow(
+      /allowlist/i,
+    );
+    expect(() => assertNtfyEndpointAllowed("PUT", "https://ntfy.lab/homelab-alerts")).toThrow(
       /method/i,
     );
     expect(() => assertNtfyEndpointAllowed("GET", "https://ntfy.lab/v1/config")).toThrow(
@@ -36,6 +40,10 @@ describe("ntfy policy", () => {
     expect(() => assertNtfyEndpointAllowed("GET", "https://ntfy.lab/metrics")).toThrow(
       /allowlist/i,
     );
+    expect(() => assertNtfyEndpointAllowed("POST", "https://ntfy.lab/v1")).toThrow(/allowlist/i);
+    expect(() =>
+      assertNtfyEndpointAllowed("POST", "https://ntfy.lab/homelab-alerts?click=https://evil"),
+    ).toThrow(/query parameters/i);
     expect(() => assertNtfyEndpointAllowed("GET", "https://ntfy.lab/v1/account")).toThrow(
       /allowlist/i,
     );

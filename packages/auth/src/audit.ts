@@ -24,6 +24,7 @@ export const AUDIT_ACTIONS = [
   "proxmox.reboot",
   "qbittorrent.pause",
   "qbittorrent.resume",
+  "ntfy.publish",
   "backup.export",
   "backup.validate",
   "backup.restore",

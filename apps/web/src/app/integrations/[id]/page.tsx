@@ -13,7 +13,12 @@ import type {
   GrafanaOverview,
   GrafanaSectionReason,
 } from "@dashboard/grafana";
-import type { NtfyIntegrationMetadata, NtfyOverview, NtfySectionReason } from "@dashboard/ntfy";
+import type {
+  NtfyIntegrationMetadata,
+  NtfyOverview,
+  NtfyPermissionsView,
+  NtfySectionReason,
+} from "@dashboard/ntfy";
 import type {
   ProwlarrIntegrationMetadata,
   ProwlarrOverview,
@@ -86,6 +91,7 @@ import { UptimeKumaRefreshButton } from "../uptime-kuma-refresh-button";
 import { grafanaUserError } from "../grafana-error";
 import { GrafanaRefreshButton } from "../grafana-refresh-button";
 import { ntfyUserError } from "../ntfy-error";
+import { NtfyPublishForm } from "../ntfy-publish-form";
 import { NtfyRefreshButton } from "../ntfy-refresh-button";
 import { prowlarrUserError } from "../prowlarr-error";
 import { ProwlarrRefreshButton } from "../prowlarr-refresh-button";
@@ -2435,10 +2441,12 @@ async function NtfyIntegrationDetail({
       </PageContainer>
     );
   }
+  const permissions: NtfyPermissionsView = await caller.ntfy.permissions();
   return (
     <PageContainer>
       <PageHeader title={metadata.name} description="ntfy" />
       <NtfyRefreshButton integrationId={id} />
+      <NtfyPublishForm integrationId={id} canPublish={permissions.canPublish} />
       <Suspense fallback={<p className="ui-muted">Chargement de ntfy…</p>}>
         <NtfyOverviewPanel id={id} caller={caller} />
       </Suspense>
