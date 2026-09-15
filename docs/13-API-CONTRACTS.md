@@ -459,20 +459,22 @@ de dossiers, payloads d'alertes, `password`, `basicAuthPassword`,
 
 Routeur tRPC `ntfy` (aucun generic invoke). Input : `integrationId` UUID.
 
-| Route                   | Permission             | Capability    | Notes                                                |
-| ----------------------- | ---------------------- | ------------- | ---------------------------------------------------- |
-| `ntfy.permissions`      | auth active            | —             | `canRead`, `canManage`                               |
-| `ntfy.integration.list` | use/manage + ntfy.read | —             | `{ id, name, enabled }[]`                            |
-| `ntfy.integration.get`  | use/manage + ntfy.read | —             | `{ id, name, enabled }`                              |
-| `ntfy.overview.get`     | use/manage + ntfy.read | `status.read` | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256 |
-| `ntfy.overview.refresh` | use/manage + ntfy.read | `status.read` | 10 requêtes / min / acteur / intégration             |
+| Route                   | Permission                     | Capability              | Notes                                                                     |
+| ----------------------- | ------------------------------ | ----------------------- | ------------------------------------------------------------------------- |
+| `ntfy.permissions`      | auth active                    | —                       | `canRead`, `canManage`, `canPublish`                                      |
+| `ntfy.integration.list` | use/manage + ntfy.read         | —                       | `{ id, name, enabled }[]`                                                 |
+| `ntfy.integration.get`  | use/manage + ntfy.read         | —                       | `{ id, name, enabled }`                                                   |
+| `ntfy.overview.get`     | use/manage + ntfy.read         | `status.read`           | Cache 8 s (5 s si partiel) ; coalescer ; clé SHA-256                      |
+| `ntfy.overview.refresh` | use/manage + ntfy.read         | `status.read`           | 10 requêtes / min / acteur / intégration                                  |
+| `ntfy.publish`          | interact/manage + ntfy.publish | `notifications.publish` | POST `/{topic}` ; titre/priorité/tags bornés ; pas d'Actions/Click/Attach |
 
 DTO overview : `status` (`available` \| `degraded`), `fetchedAt`, sections
 `health`, `stats`, `version`. Auth : header `Authorization: Bearer` seulement
 si un jeton est configuré. Jamais dans l'URL.
 
-Jamais exposés : jeton d'accès, noms de topics, corps de messages, listes
-d'utilisateurs, `/v1/config`, `/metrics`, `/v1/account`, `baseUrl`, config.
+Jamais exposés : jeton d'accès, listes d'utilisateurs, `/v1/config`, `/metrics`,
+`/v1/account`, `baseUrl`, config. `ntfy.publish` n'écrit pas le corps du message
+dans l'audit (seulement `messageLength`).
 
 # Sonarr API — Phase 18.4
 

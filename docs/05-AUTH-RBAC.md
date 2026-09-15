@@ -234,6 +234,10 @@ Phase 18.3 : lecture ntfy exige (`integration.use` ou `integration.manage`) **et
 `/integrations/[id]` ntfy : `integration.read` n'est pas requis. Le rôle `ADMIN` par
 défaut **n'obtient pas** `ntfy.read`.
 
+Phase 21 : publication ntfy exige (`integration.interact` ou `integration.manage`)
+**et** `ntfy.publish`. `ntfy.read` et `integration.manage` seuls sont insuffisants.
+Pas d'actions HTTP, click URL, attach ni e-mail.
+
 Phase 18.4 : lecture Sonarr exige (`integration.use` ou `integration.manage`) **et**
 `sonarr.read`. Cette conjonction suffit pour `sonarr.integration.get` et
 `/integrations/[id]` Sonarr : `integration.read` n'est pas requis. Le rôle `ADMIN` par
@@ -273,12 +277,12 @@ Phase 21 : une action d'intégration exige (`integration.interact` ou
 `integration.manage`) **et** la permission spécialisée de l'action. `*.read` et
 `integration.manage` seuls sont insuffisants. Voir `docs/21-SAFE-INTEGRATION-ACTIONS.md`.
 Les permissions d'action Proxmox (`proxmox.start`, `proxmox.shutdown`,
-`proxmox.reboot`) et qBittorrent (`qbittorrent.pause`, `qbittorrent.resume`)
-sont livrées. ntfy / *arr / Seerr suivent dans les PRs suivantes.
+`proxmox.reboot`), qBittorrent (`qbittorrent.pause`, `qbittorrent.resume`) et
+ntfy (`ntfy.publish`) sont livrées. *arr / Seerr suivent dans les PRs suivantes.
 
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
-`grafana.read`, `ntfy.read`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
+`grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `radarr.read`, `prowlarr.read`,
 `qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `custom-api.read`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
@@ -291,7 +295,9 @@ cookie ou clé API. Les actions Proxmox réussies journalisent
 `proxmox.start` / `proxmox.shutdown` / `proxmox.reboot` avec
 `{ integrationId, integrationType, action, resourceId, result }`. Les actions
 qBittorrent réussies journalisent `qbittorrent.pause` / `qbittorrent.resume`
-avec le même DTO (hash ou identifiant de lot, jamais le nom du torrent).
+avec le même DTO (hash ou identifiant de lot, jamais le nom du torrent). Les
+publications ntfy réussies journalisent `ntfy.publish` avec topic (`resourceId`),
+`priority`, `messageLength` et `result` — jamais le corps du message.
 
 ## 11. Anti-bruteforce
 

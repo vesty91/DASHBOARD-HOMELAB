@@ -30,11 +30,15 @@ export function ntfyUserError(error: unknown): string {
       return "Jeton d'accès ntfy invalide.";
     case "MISCONFIGURED":
       return "Configuration ntfy invalide. Vérifiez l'URL et TLS.";
+    case "VALIDATION_ERROR":
+      return "Paramètres ntfy invalides.";
     case "NOT_FOUND":
       return "Ressource ntfy introuvable.";
+    case "CONFLICT":
+      return "Action ntfy impossible : configuration en conflit.";
     case "RATE_LIMITED":
     case "TOO_MANY_REQUESTS":
-      return "Trop d'actualisations ntfy. Réessayez dans une minute.";
+      return "Trop de requêtes ntfy. Réessayez dans une minute.";
     default:
       if (/dns/i.test(message)) return "Le serveur ntfy est injoignable (DNS).";
       if (/tls/i.test(message)) return "Erreur TLS vers ntfy.";

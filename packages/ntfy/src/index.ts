@@ -10,6 +10,7 @@ export {
   OVERVIEW_PARTIAL_CACHE_TTL_MS,
   fetchNtfyOverview,
   ntfyContextFromIntegration,
+  postNtfyPublish,
   testNtfyConnection,
 } from "./client";
 export {
@@ -30,6 +31,21 @@ export {
   assertNtfyEndpointAllowed,
 } from "./policy";
 export {
+  NTFY_MESSAGE_MAX,
+  NTFY_PRIORITIES,
+  NTFY_TAG_MAX,
+  NTFY_TITLE_MAX,
+  NTFY_TOPIC_MAX,
+  assertNtfyMessage,
+  assertNtfyPriority,
+  assertNtfyTags,
+  assertNtfyTitle,
+  assertNtfyTopic,
+  isNtfyPublishPath,
+  ntfyPublishPath,
+  type NtfyPriority,
+} from "./topic";
+export {
   NTFY_OVERVIEW_COALESCER_MAX_IN_FLIGHT,
   MemoryNtfyOverviewCoalescer,
   type NtfyOverviewCoalescer,
@@ -44,10 +60,18 @@ export {
   ntfyAccessTokenSchema,
   ntfyConfigSchema,
   ntfyIntegrationInputSchema,
+  ntfyPublishInputSchema,
   ntfySecretSchema,
+  type NtfyPublishInput,
 } from "./schemas";
 export { createNtfyService, type NtfyService, type NtfyServiceDeps } from "./service";
-export { NTFY_JSON_MAX_BYTES, buildNtfyUrl, ntfyAuthHeaders, ntfyFetch } from "./transport";
+export {
+  NTFY_JSON_MAX_BYTES,
+  buildNtfyUrl,
+  ntfyAuthHeaders,
+  ntfyFetch,
+  ntfyPublish,
+} from "./transport";
 export type {
   NtfyActor,
   NtfyHealthDto,

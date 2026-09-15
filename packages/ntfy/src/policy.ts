@@ -1,5 +1,6 @@
 import { IntegrationError } from "@dashboard/integrations";
 import type { NtfyHttpMethod } from "./types";
+import { isNtfyPublishPath } from "./topic";
 
 export const NTFY_HEALTH_PATH = "/v1/health";
 export const NTFY_STATS_PATH = "/v1/stats";
@@ -69,17 +70,20 @@ export function assertNtfyEndpointAllowed(method: string, url: string | URL): vo
   )
     reject("ntfy path traversal is not allowed");
   const normalizedMethod = method.toUpperCase();
-  if (normalizedMethod !== "GET") reject("ntfy method is not allowed");
+  if (normalizedMethod !== "GET" && normalizedMethod !== "POST")
+    reject("ntfy method is not allowed");
   const httpMethod = normalizedMethod as NtfyHttpMethod;
   const keys = uniqueQueryKeys(parsed);
   for (const key of keys)
     if (DENIED_QUERY_KEYS.has(key.toLocaleLowerCase("und")))
       reject(`ntfy query parameter ${key} is not allowed`);
+  if (keys.length > 0) reject("ntfy endpoints must not use query parameters");
   switch (httpMethod) {
     case "GET":
-      if (!ALLOWED_GET_PATHS.has(parsed.pathname))
-        reject("ntfy endpoint is not on the Phase 18 allowlist");
-      if (keys.length > 0) reject("ntfy Phase 18 endpoints must not use query parameters");
+      if (!ALLOWED_GET_PATHS.has(parsed.pathname)) reject("ntfy endpoint is not on the allowlist");
+      return;
+    case "POST":
+      if (!isNtfyPublishPath(parsed.pathname)) reject("ntfy endpoint is not on the allowlist");
       return;
     default: {
       const _exhaustive: never = httpMethod;

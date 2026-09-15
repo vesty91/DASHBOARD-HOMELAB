@@ -2,7 +2,7 @@ import type { IntegrationActor } from "@dashboard/integrations";
 
 export type NtfyActor = IntegrationActor;
 
-export type NtfyHttpMethod = "GET";
+export type NtfyHttpMethod = "GET" | "POST";
 
 export type NtfySectionStatus = "available" | "degraded" | "unavailable";
 
@@ -23,6 +23,7 @@ export type NtfyOverviewStatus = "available" | "degraded";
 export interface NtfyPermissionsView {
   readonly canRead: boolean;
   readonly canManage: boolean;
+  readonly canPublish: boolean;
 }
 
 export interface NtfyIntegrationMetadata {

@@ -45,6 +45,7 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("proxmox.reboot");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("grafana.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("ntfy.publish");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("sonarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("radarr.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("prowlarr.read");
@@ -70,6 +71,7 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "synology.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "grafana.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "ntfy.read")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "ntfy.publish")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "sonarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "radarr.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "prowlarr.read")).toBe(true);

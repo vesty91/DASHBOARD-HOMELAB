@@ -1383,6 +1383,61 @@ describe("ntfy tRPC router", () => {
       /Bearer|accessToken|topic|publish|Authorization/u,
     );
   });
+
+  it("audits publish without the message body or token", async () => {
+    const record = vi.fn(async () => undefined);
+    const actionDto = {
+      status: "accepted" as const,
+      action: "ntfy.publish",
+      resourceId: "homelab-alerts",
+      occurredAt: "2026-09-15T00:00:00.000Z",
+    };
+    const ntfyService = {
+      permissions: vi.fn(() => ({ canRead: true, canManage: false, canPublish: true })),
+      publishMessage: vi.fn(async () => actionDto),
+    } as unknown as NtfyService;
+    const caller = createCaller({
+      actor: {
+        userId: actor.userId,
+        subject: { status: "active" as const, isSystemAdmin: true },
+      },
+      boards: service(),
+      apps,
+      integrations,
+      docker,
+      ntfy: ntfyService,
+      audit: {
+        record,
+        list: async () => ({ items: [], nextCursor: null }),
+      },
+    });
+    const secretBody = "private disk failure";
+    await expect(
+      caller.ntfy.publish({
+        integrationId,
+        topic: "homelab-alerts",
+        message: secretBody,
+        priority: "high",
+      }),
+    ).resolves.toEqual(actionDto);
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "ntfy.publish",
+        outcome: "success",
+        metadata: expect.objectContaining({
+          integrationId,
+          integrationType: "ntfy",
+          action: "ntfy.publish",
+          resourceId: "homelab-alerts",
+          result: "accepted",
+          priority: "high",
+          messageLength: secretBody.length,
+        }),
+      }),
+    );
+    expect(JSON.stringify(record.mock.calls)).not.toContain(secretBody);
+    expect(JSON.stringify(record.mock.calls)).not.toMatch(/Bearer|accessToken|tk_/u);
+  });
 });
 
 describe("prowlarr tRPC router", () => {

@@ -167,6 +167,8 @@ const globalRuntime = globalThis as typeof globalThis & {
     ntfyRefreshRateLimiter: MemoryNtfyRefreshRateLimiter;
     ntfyRefreshFence: MemoryNtfyRefreshFence;
     ntfyOverviewCoalescer: MemoryNtfyOverviewCoalescer;
+    ntfyActionRateLimiter: MemorySafeActionRateLimiter;
+    ntfyActionInFlight: MemorySafeActionInFlightGuard;
     prowlarrRefreshRateLimiter: MemoryProwlarrRefreshRateLimiter;
     prowlarrRefreshFence: MemoryProwlarrRefreshFence;
     prowlarrOverviewCoalescer: MemoryProwlarrOverviewCoalescer;
@@ -323,6 +325,8 @@ function integrationRuntime() {
     ntfyRefreshRateLimiter: new MemoryNtfyRefreshRateLimiter(),
     ntfyRefreshFence: new MemoryNtfyRefreshFence(),
     ntfyOverviewCoalescer: new MemoryNtfyOverviewCoalescer(),
+    ntfyActionRateLimiter: new MemorySafeActionRateLimiter(),
+    ntfyActionInFlight: new MemorySafeActionInFlightGuard(),
     prowlarrRefreshRateLimiter: new MemoryProwlarrRefreshRateLimiter(),
     prowlarrRefreshFence: new MemoryProwlarrRefreshFence(),
     prowlarrOverviewCoalescer: new MemoryProwlarrOverviewCoalescer(),
@@ -463,6 +467,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     refreshRateLimiter: runtime.ntfyRefreshRateLimiter,
     refreshFence: runtime.ntfyRefreshFence,
     overviewCoalescer: runtime.ntfyOverviewCoalescer,
+    actionRateLimiter: runtime.ntfyActionRateLimiter,
+    inFlight: runtime.ntfyActionInFlight,
+    publish: (integrationId) =>
+      publish({
+        type: "integration.data.changed",
+        integrationId,
+        integrationType: "ntfy",
+        occurredAt: occurredAt(),
+      }),
     ...(keyring ? { keyring } : {}),
   });
   const prowlarr = createProwlarrService({

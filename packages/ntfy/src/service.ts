@@ -8,6 +8,7 @@ import {
   loadIntegrationSecrets,
   redactKnownSecretValues,
   requireCapability,
+  runSafeIntegrationAction,
   type IntegrationCache,
   type IntegrationDefinition,
   type IntegrationErrorCode,
@@ -16,6 +17,9 @@ import {
   type IntegrationRegistry,
   type IntegrationStore,
   type JsonObject,
+  type SafeActionInFlightGuard,
+  type SafeActionRateLimiter,
+  type SafeActionResult,
   type SecureHttpRequest,
   type SecureHttpResult,
 } from "@dashboard/integrations";
@@ -26,13 +30,21 @@ import {
   fetchNtfyOverview,
   ntfyContextFromIntegration,
   overviewCacheTtl,
+  postNtfyPublish,
   type NtfyClientContext,
 } from "./client";
 import { NTFY_INTEGRATION_ID } from "./definition";
 import { NtfyError, toIntegrationError } from "./errors";
+import {
+  assertNtfyMessage,
+  assertNtfyPriority,
+  assertNtfyTags,
+  assertNtfyTitle,
+  assertNtfyTopic,
+} from "./topic";
 import type { NtfyOverviewCoalescer } from "./overview-coalescer";
 import type { NtfyRefreshFence } from "./refresh-fence";
-import type { NtfyConfig, NtfySecrets } from "./schemas";
+import type { NtfyConfig, NtfyPublishInput, NtfySecrets } from "./schemas";
 import type {
   NtfyActor,
   NtfyIntegrationMetadata,
@@ -48,6 +60,9 @@ export interface NtfyServiceDeps {
   refreshRateLimiter: IntegrationRateLimiter;
   refreshFence: NtfyRefreshFence;
   overviewCoalescer: NtfyOverviewCoalescer;
+  actionRateLimiter: SafeActionRateLimiter;
+  inFlight: SafeActionInFlightGuard;
+  publish?: (integrationId: string) => Promise<void>;
   keyring?: Parameters<typeof loadIntegrationSecrets>[3];
 }
 
@@ -275,6 +290,50 @@ export function createNtfyService(deps: NtfyServiceDeps) {
       const generation = deps.refreshFence.advance(recordId);
       deps.cache.invalidate(recordId);
       return overviewFor(recordId, generation);
+    },
+    async publishMessage(input: NtfyPublishInput, actor: NtfyActor): Promise<SafeActionResult> {
+      assertNtfyAccess(actor, "publish");
+      const topic = assertNtfyTopic(input.topic);
+      const message = assertNtfyMessage(input.message);
+      const title = assertNtfyTitle(input.title);
+      const priority = assertNtfyPriority(input.priority);
+      const tags = assertNtfyTags(input.tags);
+      const record = await deps.store.findById(input.integrationId);
+      if (!record) throw new IntegrationError("NOT_FOUND", "Définition ntfy introuvable");
+      const realtime = deps.publish;
+      return runSafeIntegrationAction({
+        actor,
+        action: "ntfy.publish",
+        actionPermissions: ["ntfy.publish"],
+        integrationId: record.id,
+        expectedType: NTFY_INTEGRATION_ID,
+        loadedType: record.type,
+        resourceId: topic,
+        rateLimiter: deps.actionRateLimiter,
+        inFlight: deps.inFlight,
+        cache: deps.cache,
+        currentConfigRevision: record.configRevision,
+        ...(input.expectedConfigRevision === undefined
+          ? {}
+          : { expectedConfigRevision: input.expectedConfigRevision }),
+        ...(realtime ? { publish: () => realtime(record.id) } : {}),
+        execute: async () => {
+          const loaded = await loadContext(record.id, "notifications.publish");
+          try {
+            await postNtfyPublish(loaded.ctx, {
+              topic,
+              message,
+              priority,
+              tags,
+              ...(title === undefined ? {} : { title }),
+            });
+            deps.refreshFence.advance(record.id);
+            return "accepted";
+          } catch (error) {
+            throw normalizedRedactedError(error, loaded.secrets);
+          }
+        },
+      });
     },
   };
 }

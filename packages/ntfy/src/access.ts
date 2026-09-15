@@ -12,15 +12,17 @@ function hasAny(actor: IntegrationActor, permissions: readonly Permission[]): bo
 }
 
 export function ntfyPermissionsView(actor: IntegrationActor): NtfyPermissionsView {
-  if (!isActive(actor)) return { canRead: false, canManage: false };
+  if (!isActive(actor)) return { canRead: false, canManage: false, canPublish: false };
   const integrationUse = hasAny(actor, ["integration.use", "integration.manage"]);
+  const integrationInteract = hasAny(actor, ["integration.interact", "integration.manage"]);
   return {
     canRead: integrationUse && hasAny(actor, ["ntfy.read"]),
     canManage: hasAny(actor, ["integration.manage"]),
+    canPublish: integrationInteract && hasAny(actor, ["ntfy.publish"]),
   };
 }
 
-export type NtfyAccessKind = "read" | "manage";
+export type NtfyAccessKind = "read" | "manage" | "publish";
 
 export function assertNtfyAccess(actor: IntegrationActor, kind: NtfyAccessKind): void {
   if (!isActive(actor)) throw new IntegrationError("UNAUTHORIZED", "Authentication required");
@@ -31,6 +33,9 @@ export function assertNtfyAccess(actor: IntegrationActor, kind: NtfyAccessKind):
       return;
     case "manage":
       if (!view.canManage) throw new IntegrationError("FORBIDDEN", "Permission denied");
+      return;
+    case "publish":
+      if (!view.canPublish) throw new IntegrationError("FORBIDDEN", "Permission denied");
       return;
     default: {
       const _exhaustive: never = kind;
