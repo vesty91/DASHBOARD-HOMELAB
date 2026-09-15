@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import { tmpdir } from "node:os";
@@ -211,6 +211,9 @@ ${alt}`,
     ],
     { env: { ...process.env, OPENSSL_CONF: cnf }, stdio: "pipe" },
   );
+  chmodSync(dir, 0o755);
+  chmodSync(join(dir, "cert.pem"), 0o644);
+  chmodSync(join(dir, "key.pem"), 0o644);
   return dir;
 }
 
@@ -282,8 +285,17 @@ try {
   await compose(["up", "-d", "web", "worker", "realtime"]);
   await waitFor("http://127.0.0.1:3000/health/ready", 200, "web ready on loopback");
   await compose(["up", "-d", "proxy"]);
-
-  const live = await waitFor(`${publicOrigin}/health/live`, 200, "https live", ca);
+  let live;
+  try {
+    live = await waitFor(`${publicOrigin}/health/live`, 200, "https live", ca);
+  } catch (error) {
+    const logs = await compose(["logs", "proxy"], { capture: true }).catch(() => ({
+      stdout: "",
+      stderr: "",
+    }));
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${detail}\n--- proxy logs ---\n${logs.stdout}${logs.stderr}`);
+  }
   if (live.status !== "live") throw new Error("https live contract mismatch");
   const ready = await waitFor(`${publicOrigin}/health/ready`, 200, "https ready", ca);
   if (ready.status !== "ready") throw new Error("https ready contract mismatch");
