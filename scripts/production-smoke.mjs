@@ -16,7 +16,7 @@ const env = {
   POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || randomBytes(18).toString("base64url"),
   POSTGRES_USER: process.env.POSTGRES_USER || "dashboard",
   POSTGRES_DB: process.env.POSTGRES_DB || "dashboard",
-  APP_VERSION: process.env.APP_VERSION || "1.5.0",
+  APP_VERSION: process.env.APP_VERSION || "1.6.0",
   WEB_PORT: process.env.WEB_PORT || "3000",
 };
 

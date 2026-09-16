@@ -6,12 +6,26 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-09-16
+
+Reliability & SLO Analytics (Phase 26). Minor backward-compatible.
+Migrations `0011`–`0012`, DB `schemaVersion` 12, backup `schemaVersion` 11.
+
 ### Ajouté
 
-- Reliability & SLO Analytics (Phase 26) : agrégats quotidiens
-  `service_reliability_daily`, objectifs `service_slos`, UI `/reliability`,
-  widget `reliability-status`, export CSV, RBAC `reliability.read` /
-  `slo.manage`. Migrations `0011`–`0012`, DB schema 12, backup schema 11.
+- Reliability aggregation (Phase 26.1) : `@dashboard/reliability`, table
+  `service_reliability_daily`, rebuild borné, worker tick, rétention 730 j,
+  rollups exclus du backup.
+- SLO / error budget (Phase 26.2) : `service_slos`, bases points 90_000–99_999,
+  fenêtres 7/30/90, `excludeMaintenance`, CAS `configRevision`, permissions
+  `reliability.read` / `slo.manage`.
+- UI (Phase 26.3) : `/reliability`, export CSV formula-safe, widget
+  `reliability-status` (`publicSafe: false`), `reliability.summarize`.
+
+### Base de données
+
+- Migrations `0011`–`0012` (SQLite + PostgreSQL). DB `schemaVersion` 12.
+- Backup `schemaVersion` 11 (inclut `service_slos` ; exclut rollups).
 
 ## [1.5.0] — 2026-09-16
 
