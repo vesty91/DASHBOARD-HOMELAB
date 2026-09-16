@@ -185,6 +185,20 @@ export {
   seerrRequestsDraftConfig,
 } from "./seerr-requests";
 export type {
+  ReliabilityStatusConfig,
+  ReliabilityStatusDraftConfig,
+  ReliabilityStatusView,
+  ReliabilityStatusWindowDays,
+} from "./reliability-status";
+export {
+  RELIABILITY_STATUS_UNSET_SERVICE_KEY,
+  RELIABILITY_STATUS_WINDOW_DAYS,
+  reliabilityStatusConfigSchema,
+  reliabilityStatusContract,
+  reliabilityStatusDefaultConfig,
+  reliabilityStatusDraftConfig,
+} from "./reliability-status";
+export type {
   ServiceStatusCanonical,
   ServiceStatusConfig,
   ServiceStatusDisplayMode,

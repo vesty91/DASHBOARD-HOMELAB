@@ -147,6 +147,8 @@ import {
   listDailyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
+  summarizeReliabilitySchema,
+  type SummarizeReliabilityInput,
   updateSloSchema,
   type ReliabilityService,
 } from "@dashboard/reliability";
@@ -1758,6 +1760,16 @@ export const reliabilityRouter = t.router({
   evaluateSlo: t.procedure
     .input(evaluateSloSchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateSlo(input, ctx.actor))),
+  summarize: t.procedure
+    .input(summarizeReliabilitySchema.optional())
+    .query(({ ctx, input }) =>
+      procedure(() =>
+        ctx.reliability.summarize(
+          summarizeReliabilitySchema.parse(input ?? {}) as SummarizeReliabilityInput,
+          ctx.actor,
+        ),
+      ),
+    ),
 });
 export const dashboardRouter = t.router({
   board: boardRouter,

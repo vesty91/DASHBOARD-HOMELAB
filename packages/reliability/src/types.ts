@@ -54,3 +54,12 @@ export type ServiceSlo = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type ReliabilityServiceSummary = {
+  serviceKey: string;
+  days: DailyReliabilityRollup[];
+  slo: ServiceSlo | null;
+  availabilityBasisPoints: number | null;
+  sloMet: boolean | null;
+  remainingBudgetBasisPoints: number | null;
+};

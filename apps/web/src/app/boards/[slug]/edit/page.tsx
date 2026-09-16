@@ -9,6 +9,7 @@ import { resolveBeszelHostsViews } from "../../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../../resolve-prometheus-metric";
+import { resolveReliabilityStatusViews } from "../../resolve-reliability-status";
 import { resolveServiceStatusViews } from "../../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../../resolve-grafana-status";
@@ -54,6 +55,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     radarrViews,
     sonarrViews,
     serviceStatusViews,
+    reliabilityStatusViews,
   ] = await Promise.all([
     resolveAppTileViews(snapshot, caller),
     resolveJellyfinSessionViews(snapshot, caller),
@@ -71,6 +73,7 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
+    resolveReliabilityStatusViews(snapshot, caller),
   ]);
   let canReadApps = true;
   try {
@@ -230,6 +233,16 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
     ))
       throw error;
   }
+  let reliabilityIntegrations: Awaited<ReturnType<typeof caller.integration.list>>["items"] = [];
+  try {
+    reliabilityIntegrations = (await caller.integration.list({ limit: 100 })).items;
+  } catch (error) {
+    if (!(
+      error instanceof TRPCError &&
+      (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
+    ))
+      throw error;
+  }
   return (
     <PageContainer wide>
       <header className="board-edit-chrome">
@@ -274,7 +287,9 @@ export default async function EditBoardPage({ params }: { params: Promise<{ slug
         sonarrViews={sonarrViews}
         sonarrIntegrations={sonarrIntegrations}
         serviceStatusViews={serviceStatusViews}
+        reliabilityStatusViews={reliabilityStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
+        reliabilityIntegrations={reliabilityIntegrations}
         canReadApps={canReadApps}
       />
     </PageContainer>

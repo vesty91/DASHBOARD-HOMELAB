@@ -269,6 +269,7 @@ function createCaller(
       permissions: () => ({ canRead: false, canManageSlo: false }),
       listDaily: async () => [],
       rebuildRecent: async () => ({ days: 0, upserted: 0 }),
+      summarize: async () => [],
       listSlos: async () => [],
       getSlo: async () => {
         throw new Error("slo not stubbed");

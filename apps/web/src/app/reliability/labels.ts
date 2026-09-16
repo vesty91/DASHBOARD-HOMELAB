@@ -1,0 +1,43 @@
+import type { SloWindowDays } from "@dashboard/reliability";
+
+export const SLO_WINDOW_LABELS: Record<SloWindowDays, string> = {
+  7: "7 jours",
+  30: "30 jours",
+  90: "90 jours",
+};
+
+export function formatBasisPoints(bps: number | null): string {
+  if (bps === null) return "—";
+  return `${(bps / 1000).toFixed(3)} %`;
+}
+
+export function formatSeconds(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remMinutes = minutes % 60;
+  if (hours < 24) return remMinutes > 0 ? `${hours} h ${remMinutes} min` : `${hours} h`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days} j ${remHours} h` : `${days} j`;
+}
+
+export function formatUtcDate(dateUtc: string): string {
+  const parsed = Date.parse(`${dateUtc}T00:00:00.000Z`);
+  if (!Number.isFinite(parsed)) return dateUtc;
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(parsed));
+}
+
+export function sloStatusLabel(met: boolean | null): string {
+  if (met === null) return "Sans SLO";
+  return met ? "Respecté" : "Dépassé";
+}
+
+export function sloStatusTone(met: boolean | null): "success" | "danger" | "neutral" {
+  if (met === null) return "neutral";
+  return met ? "success" : "danger";
+}

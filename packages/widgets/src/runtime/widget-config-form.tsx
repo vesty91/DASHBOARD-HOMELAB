@@ -14,6 +14,7 @@ import type { QbittorrentTransferDraftConfig } from "../qbittorrent-transfer";
 import type { RadarrOverviewDraftConfig } from "../radarr-overview";
 import type { SeerrRequestsDraftConfig } from "../seerr-requests";
 import type { SonarrOverviewDraftConfig } from "../sonarr-overview";
+import type { ReliabilityStatusDraftConfig } from "../reliability-status";
 import type { ServiceStatusDraftConfig } from "../service-status";
 import type { UptimeKumaStatusDraftConfig } from "../uptime-kuma-status";
 import { AppTileForm, type AppOption } from "./app-tile-form";
@@ -35,6 +36,10 @@ import {
 import { RadarrOverviewForm, type RadarrIntegrationOption } from "./radarr-overview-form";
 import { SeerrRequestsForm, type SeerrIntegrationOption } from "./seerr-requests-form";
 import { SonarrOverviewForm, type SonarrIntegrationOption } from "./sonarr-overview-form";
+import {
+  ReliabilityStatusForm,
+  type ReliabilityIntegrationOption,
+} from "./reliability-status-form";
 import { ServiceStatusForm, type ServiceStatusCatalogOption } from "./service-status-form";
 import { UptimeKumaStatusForm, type UptimeKumaIntegrationOption } from "./uptime-kuma-status-form";
 
@@ -58,6 +63,7 @@ export function WidgetConfigForm({
   sonarrIntegrations,
   proxmoxIntegrations,
   serviceStatusCatalog,
+  reliabilityIntegrations,
   uptimeKumaIntegrations,
 }: {
   widgetType: string;
@@ -79,6 +85,7 @@ export function WidgetConfigForm({
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   proxmoxIntegrations?: readonly ProxmoxIntegrationOption[];
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
+  reliabilityIntegrations?: readonly ReliabilityIntegrationOption[];
   uptimeKumaIntegrations?: readonly UptimeKumaIntegrationOption[];
 }) {
   switch (widgetType) {
@@ -210,6 +217,15 @@ export function WidgetConfigForm({
           config={config as ProxmoxResourcesDraftConfig}
           onChange={onChange}
           integrations={proxmoxIntegrations ?? []}
+          {...(permissionDenied ? { permissionDenied: true } : {})}
+        />
+      );
+    case "reliability-status":
+      return (
+        <ReliabilityStatusForm
+          config={config as ReliabilityStatusDraftConfig}
+          onChange={onChange}
+          integrations={reliabilityIntegrations ?? []}
           {...(permissionDenied ? { permissionDenied: true } : {})}
         />
       );

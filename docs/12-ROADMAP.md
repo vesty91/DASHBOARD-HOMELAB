@@ -536,10 +536,12 @@ Livrables prévus :
 - rebuild borné (≤90 j) depuis incidents + maintenance ;
 - rétention 730 j ; rollups **exclus** du backup (dérivés) ;
 - SLO / error budget (PR 26.2) ;
-- UI + widget (PR 26.3).
+- UI + widget (PR 26.3) — **livré** : `/reliability`, widget `reliability-status`,
+  `reliability.summarize`, E2E `reliability.spec.ts`.
 
 PR 26.1 : agrégation + API lecture `reliability.*` + worker tick.
 PR 26.2 : SLO / error budget (`service_slos`, migration `0012`).
+PR 26.3 : pages fiabilité, export CSV, widget board, nav `reliability.read`.
 DB `schemaVersion` **12**. Backup `schemaVersion` **11** (inclut `service_slos` ;
 rollups exclus).
 

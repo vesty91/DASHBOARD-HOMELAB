@@ -4,6 +4,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ReliabilityStatusView,
   ServiceStatusView,
   UptimeKumaStatusView,
   GrafanaStatusView,
@@ -39,6 +40,7 @@ export function BoardReadGrid({
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
+  reliabilityStatusViews = {},
 }: {
   layout: LayoutRecord;
   items: ItemRecord[];
@@ -59,6 +61,7 @@ export function BoardReadGrid({
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
+  reliabilityStatusViews?: Record<string, ReliabilityStatusView>;
 }) {
   return (
     <section
@@ -92,6 +95,9 @@ export function BoardReadGrid({
                   : {})}
                 {...(serviceStatusViews[entry.id]
                   ? { serviceStatusView: serviceStatusViews[entry.id] }
+                  : {})}
+                {...(reliabilityStatusViews[entry.id]
+                  ? { reliabilityStatusView: reliabilityStatusViews[entry.id] }
                   : {})}
                 {...(uptimeKumaViews[entry.id]
                   ? { uptimeKumaView: uptimeKumaViews[entry.id] }

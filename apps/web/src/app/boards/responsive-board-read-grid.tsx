@@ -8,6 +8,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ReliabilityStatusView,
   ServiceStatusView,
   UptimeKumaStatusView,
   GrafanaStatusView,
@@ -44,6 +45,7 @@ export function ResponsiveBoardReadGrid({
   radarrViews = {},
   sonarrViews = {},
   serviceStatusViews = {},
+  reliabilityStatusViews = {},
 }: {
   snapshot: BoardSnapshot;
   appViews: Record<string, AppTileView>;
@@ -62,6 +64,7 @@ export function ResponsiveBoardReadGrid({
   radarrViews?: Record<string, RadarrOverviewView>;
   sonarrViews?: Record<string, SonarrOverviewView>;
   serviceStatusViews?: Record<string, ServiceStatusView>;
+  reliabilityStatusViews?: Record<string, ReliabilityStatusView>;
 }) {
   const router = useRouter();
   const [requested, setRequested] = useState<"desktop" | "mobile">("desktop");
@@ -128,6 +131,7 @@ export function ResponsiveBoardReadGrid({
       radarrViews={radarrViews}
       sonarrViews={sonarrViews}
       serviceStatusViews={serviceStatusViews}
+      reliabilityStatusViews={reliabilityStatusViews}
     />
   );
 }

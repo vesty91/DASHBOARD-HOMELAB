@@ -9,6 +9,7 @@ import { resolveBeszelHostsViews } from "../resolve-beszel-hosts";
 import { resolveImmichStatsViews } from "../resolve-immich-stats";
 import { resolveJellyfinSessionViews } from "../resolve-jellyfin-sessions";
 import { resolvePrometheusMetricViews } from "../resolve-prometheus-metric";
+import { resolveReliabilityStatusViews } from "../resolve-reliability-status";
 import { resolveServiceStatusViews } from "../resolve-service-status";
 import { resolveUptimeKumaStatusViews } from "../resolve-uptime-kuma-status";
 import { resolveGrafanaStatusViews } from "../resolve-grafana-status";
@@ -59,6 +60,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     radarrViews,
     sonarrViews,
     serviceStatusViews,
+    reliabilityStatusViews,
   ] = await Promise.all([
     caller.board.canAccess({ slug, permission: "board.edit" }),
     resolveAppTileViews(snapshot, caller),
@@ -77,6 +79,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
     resolveRadarrOverviewViews(snapshot, caller),
     resolveSonarrOverviewViews(snapshot, caller),
     resolveServiceStatusViews(snapshot, caller),
+    resolveReliabilityStatusViews(snapshot, caller),
   ]);
   return (
     <PageContainer wide>
@@ -112,6 +115,7 @@ export default async function BoardPage({ params }: { params: Promise<{ slug: st
         radarrViews={radarrViews}
         sonarrViews={sonarrViews}
         serviceStatusViews={serviceStatusViews}
+        reliabilityStatusViews={reliabilityStatusViews}
       />
     </PageContainer>
   );

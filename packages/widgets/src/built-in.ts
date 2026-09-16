@@ -14,6 +14,7 @@ import { radarrOverviewContract } from "./radarr-overview";
 import { sonarrOverviewContract } from "./sonarr-overview";
 import { customApiValueContract } from "./custom-api-value";
 import { seerrRequestsContract } from "./seerr-requests";
+import { reliabilityStatusContract } from "./reliability-status";
 import { serviceStatusContract } from "./service-status";
 import { uptimeKumaStatusContract } from "./uptime-kuma-status";
 import { createWidgetRegistry, type WidgetRegistry } from "./registry";
@@ -35,6 +36,7 @@ export function createBuiltInWidgetRegistry(): WidgetRegistry {
     .register(qbittorrentTransferContract)
     .register(radarrOverviewContract)
     .register(sonarrOverviewContract)
+    .register(reliabilityStatusContract)
     .register(serviceStatusContract)
     .register(seerrRequestsContract)
     .register(uptimeKumaStatusContract)
