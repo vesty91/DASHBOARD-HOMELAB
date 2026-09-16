@@ -6,10 +6,10 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
-Préparation minor **1.5.0** (Phase 25). Pas encore tagué / publié.
+## [1.5.0] — 2026-09-16
 
-Status Pages & Maintenance Windows (safe). Migration `0010`, backup
-`schemaVersion` 10.
+Status Pages & Maintenance Windows (Phase 25). Minor backward-compatible.
+Migration `0010`, backup `schemaVersion` 10.
 
 ### Ajouté
 

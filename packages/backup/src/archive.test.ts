@@ -70,7 +70,7 @@ describe("backup archive", () => {
   it("builds a versioned manifest with integrity hashes", () => {
     const archive = buildArchive(validTables(), "2026-09-14T12:00:00.000Z");
     expect(archive.manifest.appVersion).toBe(BACKUP_APP_VERSION);
-    expect(BACKUP_APP_VERSION).toBe("1.4.0");
+    expect(BACKUP_APP_VERSION).toBe("1.5.0");
     expect(archive.manifest.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(archive.manifest.databaseSchemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(archive.manifest.files[0]?.name).toBe("tables.json");
@@ -249,7 +249,7 @@ describe("backup archive", () => {
         formatVersion: 1,
         schemaVersion: 6,
         databaseSchemaVersion: 6,
-        appVersion: "1.4.0",
+        appVersion: "1.5.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         files: [{ name: "tables.json", sha256: hashed.sha256, bytes: hashed.bytes }],
       },
