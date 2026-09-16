@@ -444,4 +444,4 @@ HTML/API auth, offline shell public. Web Push VAPID opt-in
 (`push_subscriptions` chiffrées, tRPC `push.*`, delivery Notification
 Center). UX mobile (safe-area, touch targets) — pas de bouton Install
 universel. Backup exclut aussi `push_subscriptions`.
-Minor produit `1.4.0` (release suivante). Voir `docs/24-PWA.md`.
+Minor produit `1.4.0`. Voir `docs/24-PWA.md`.
