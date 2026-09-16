@@ -42,14 +42,14 @@ Backup : `push_subscriptions` est exclus de l’archive (éphémère), avec
 
 ### API `push.*`
 
-| Route                 | Permission                 | Notes                                         |
-| --------------------- | -------------------------- | --------------------------------------------- |
-| `push.permissions`    | authentifié                | `{ canRead, canManage, vapidConfigured }`     |
-| `push.vapidPublicKey` | `notification.read.self`   | Clé publique seulement ; `null` si incomplet  |
-| `push.list`           | `notification.read.self`   | Hash + métadonnées, jamais endpoint/clés      |
-| `push.subscribe`      | `notification.manage.self` | Upsert ; max 10 ; fail-closed sans VAPID      |
-| `push.unsubscribe`    | `notification.manage.self` | Par `id` ou `endpoint`                        |
-| `push.unsubscribeAll` | `notification.manage.self` | Tous les abonnements de l’acteur              |
+| Route                 | Permission                 | Notes                                        |
+| --------------------- | -------------------------- | -------------------------------------------- |
+| `push.permissions`    | authentifié                | `{ canRead, canManage, vapidConfigured }`    |
+| `push.vapidPublicKey` | `notification.read.self`   | Clé publique seulement ; `null` si incomplet |
+| `push.list`           | `notification.read.self`   | Hash + métadonnées, jamais endpoint/clés     |
+| `push.subscribe`      | `notification.manage.self` | Upsert ; max 10 ; fail-closed sans VAPID     |
+| `push.unsubscribe`    | `notification.manage.self` | Par `id` ou `endpoint`                       |
+| `push.unsubscribeAll` | `notification.manage.self` | Tous les abonnements de l’acteur             |
 
 Réutilise `notification.read.self` / `notification.manage.self`.
 
