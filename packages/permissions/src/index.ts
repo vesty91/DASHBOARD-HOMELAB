@@ -57,6 +57,9 @@ export const PERMISSIONS = [
   "automation.read",
   "automation.manage",
   "automation.run",
+  "notification.read.self",
+  "notification.manage.self",
+  "incident.read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

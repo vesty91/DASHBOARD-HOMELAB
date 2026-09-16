@@ -57,6 +57,13 @@
       "when": 1789500488477,
       "tag": "0007_dashing_smasher",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789549155284,
+      "tag": "0008_reflective_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

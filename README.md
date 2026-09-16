@@ -40,7 +40,7 @@ pnpm test:e2e
 pnpm build
 ```
 
-SQLite en local. PostgreSQL en production. Migrations `0000`–`0006` immuables.
+SQLite en local. PostgreSQL en production. Migrations `0000`–`0008` (schema 8).
 
 ## Documentation
 

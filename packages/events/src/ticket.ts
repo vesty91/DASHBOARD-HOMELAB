@@ -9,6 +9,7 @@ export const REALTIME_TICKET_MAX_TOKEN_BYTES = 8_192;
 
 export const realtimeSubscriptionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("runtime") }),
+  z.object({ kind: z.literal("notifications") }),
   z.object({ kind: z.literal("board"), id: EVENT_RESOURCE_ID }),
   z.object({ kind: z.literal("integration"), id: EVENT_RESOURCE_ID }),
 ]);
@@ -64,7 +65,9 @@ export function normalizeRealtimeSubscriptions(
     const parsed = realtimeSubscriptionSchema.safeParse(subscription);
     if (!parsed.success) continue;
     const key =
-      parsed.data.kind === "runtime" ? "runtime" : `${parsed.data.kind}:${parsed.data.id}`;
+      parsed.data.kind === "runtime" || parsed.data.kind === "notifications"
+        ? parsed.data.kind
+        : `${parsed.data.kind}:${parsed.data.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
     normalized.push(parsed.data);

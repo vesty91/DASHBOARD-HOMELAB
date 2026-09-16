@@ -10,6 +10,7 @@ const worker = await startWorker({
   ...(persistence
     ? {
         jobs: persistence.jobs,
+        purgeNotifications: persistence.purgeNotifications,
         automations: {
           store: persistence.schedulerStore,
           loadOwner: persistence.loadOwner,

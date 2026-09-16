@@ -29,6 +29,7 @@ export interface WorkerOptions {
   intervalMs?: number;
   now?: () => Date;
   jobs?: JobRecorder;
+  purgeNotifications?: () => Promise<number>;
   automations?: {
     store: AutomationSchedulerStore;
     loadOwner?: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -186,6 +187,13 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       if (scheduler && running) {
         try {
           await scheduler.tick();
+        } catch {
+          void occurredAt;
+        }
+      }
+      if (options.purgeNotifications && running) {
+        try {
+          await options.purgeNotifications();
         } catch {
           void occurredAt;
         }

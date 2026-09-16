@@ -62,6 +62,9 @@ function eventFields(event: DomainEvent): Record<string, string> | null {
     case "board.deleted":
     case "integration.updated":
     case "integration.deleted":
+    case "notification.created":
+    case "notification.updated":
+    case "notification.dismissed":
       return null;
     default: {
       const _never: never = event;

@@ -91,6 +91,7 @@ function createCaller(
     | "jobs"
     | "backup"
     | "automations"
+    | "notifications"
     | "audit"
     | "sessions"
     | "oidc"
@@ -116,6 +117,7 @@ function createCaller(
     jobs?: ApiContext["jobs"];
     backup?: ApiContext["backup"];
     automations?: ApiContext["automations"];
+    notifications?: ApiContext["notifications"];
     audit?: ApiContext["audit"];
     sessions?: ApiContext["sessions"];
     oidc?: ApiContext["oidc"];
@@ -184,6 +186,22 @@ function createCaller(
         throw new Error("automations not stubbed");
       },
     } as unknown as ApiContext["automations"],
+    notifications: {
+      permissions: () => ({ canRead: false, canManage: false }),
+      list: async () => ({ items: [], nextCursor: null }),
+      countUnread: async () => 0,
+      markRead: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      markAllRead: async () => ({ updated: 0 }),
+      dismiss: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      createForUser: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      purgeExpired: async () => 0,
+    } as unknown as ApiContext["notifications"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),

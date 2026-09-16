@@ -15,6 +15,7 @@
     "@dashboard/db": "workspace:*",
     "@dashboard/events": "workspace:*",
     "@dashboard/integrations": "workspace:*",
+    "@dashboard/notifications": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
     "@dashboard/qbittorrent": "workspace:*",
     "@dashboard/radarr": "workspace:*",

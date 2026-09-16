@@ -554,3 +554,102 @@ export const automationRuns = sqliteTable(
     ),
   ],
 );
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    category: text("category", {
+      enum: ["integration", "automation", "system", "security", "backup"],
+    }).notNull(),
+    severity: text("severity", {
+      enum: ["info", "success", "warning", "error", "critical"],
+    }).notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    sourceType: text("source_type", {
+      enum: ["integration", "automation", "system", "security", "backup", "incident"],
+    }).notNull(),
+    sourceId: text("source_id"),
+    sourceIntegrationId: text("source_integration_id").references(() => integrations.id, {
+      onDelete: "set null",
+    }),
+    dedupKey: text("dedup_key"),
+    destinationPath: text("destination_path"),
+    readAt: integer("read_at", { mode: "timestamp_ms" }),
+    dismissedAt: integer("dismissed_at", { mode: "timestamp_ms" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    index("notifications_user_unread_idx").on(t.userId, t.readAt, t.dismissedAt),
+    index("notifications_user_dedup_idx").on(t.userId, t.dedupKey, t.createdAt),
+    index("notifications_expires_at_idx").on(t.expiresAt),
+    check(
+      "notifications_category_valid",
+      sql`${t.category} IN ('integration','automation','system','security','backup')`,
+    ),
+    check(
+      "notifications_severity_valid",
+      sql`${t.severity} IN ('info','success','warning','error','critical')`,
+    ),
+    check(
+      "notifications_source_type_valid",
+      sql`${t.sourceType} IN ('integration','automation','system','security','backup','incident')`,
+    ),
+  ],
+);
+export const incidents = sqliteTable(
+  "incidents",
+  {
+    id: text("id").primaryKey(),
+    integrationId: text("integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["availability"] }).notNull(),
+    severity: text("severity", {
+      enum: ["info", "success", "warning", "error", "critical"],
+    }).notNull(),
+    status: text("status", { enum: ["open", "resolved"] }).notNull(),
+    openedAt: integer("opened_at", { mode: "timestamp_ms" }).notNull(),
+    lastChangedAt: integer("last_changed_at", { mode: "timestamp_ms" }).notNull(),
+    resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+    openingEventId: text("opening_event_id"),
+    closingEventId: text("closing_event_id"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("incidents_open_integration_kind_uq")
+      .on(t.integrationId, t.kind)
+      .where(sql`${t.status} = 'open'`),
+    index("incidents_status_changed_idx").on(t.status, t.lastChangedAt),
+    index("incidents_integration_idx").on(t.integrationId),
+    check("incidents_kind_valid", sql`${t.kind} IN ('availability')`),
+    check(
+      "incidents_severity_valid",
+      sql`${t.severity} IN ('info','success','warning','error','critical')`,
+    ),
+    check("incidents_status_valid", sql`${t.status} IN ('open','resolved')`),
+  ],
+);
+export const incidentEvents = sqliteTable(
+  "incident_events",
+  {
+    id: text("id").primaryKey(),
+    incidentId: text("incident_id")
+      .notNull()
+      .references(() => incidents.id, { onDelete: "cascade" }),
+    eventType: text("event_type", { enum: ["opened", "resolved", "note"] }).notNull(),
+    summary: text("summary").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("incident_events_incident_created_idx").on(t.incidentId, t.createdAt),
+    check("incident_events_type_valid", sql`${t.eventType} IN ('opened','resolved','note')`),
+  ],
+);

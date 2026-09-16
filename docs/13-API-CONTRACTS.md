@@ -688,9 +688,9 @@ la transaction.
 | `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
 
 Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
-en clair dans l'archive. Schéma ≠ 5, ≠ 6 et ≠ 7 → `INCOMPATIBLE_SCHEMA`. `audit_logs`,
-`auth_sessions`, `automation_runs` et `automation_runtime_state` sont exclus de
-l'archive.
+en clair dans l'archive. Schéma ≠ 5, ≠ 6, ≠ 7 et ≠ 8 → `INCOMPATIBLE_SCHEMA`.
+`audit_logs`, `auth_sessions`, `automation_runs`, `automation_runtime_state`,
+`notifications`, `incidents` et `incident_events` sont exclus de l'archive.
 
 # Automations — Phase 22
 
@@ -703,10 +703,10 @@ Pas de mutation via GET. Manual run est rate-limité (`automation.manualRun`).
 | `automation.permissions` | authentifié         | `{ canRead, canManage, canRun }`                              |
 | `automation.catalog`     | `automation.read`   | Triggers implantés + actions `automationAllowed` uniquement   |
 | `automation.list`        | `automation.read`   | Règles hydratées (runtime + dernier statut), sans secrets     |
-| `automation.get`         | `automation.read`   | Détail règle                                                  |
+| `automation.get`         | `automation.read`   | Détail rule                                                   |
 | `automation.create`      | `automation.manage` | Création **désactivée** ; owner = acteur                      |
 | `automation.update`      | `automation.manage` | CAS `expectedConfigRevision` → CONFLICT                       |
-| `automation.setEnabled`  | `automation.manage` | Revalide règle / owner / action / intégration avant enable    |
+| `automation.setEnabled`  | `automation.manage` | Revalide rule / owner / action / intégration avant enable     |
 | `automation.delete`      | `automation.manage` | Confirmation UI ; historique de runs selon rétention          |
 | `automation.listRuns`    | `automation.read`   | Historique borné : statut, durée, codes sûrs                  |
 | `automation.dryRun`      | `automation.run`    | `would-run` / `would-skip` / `would-deny` — aucun side effect |
@@ -714,6 +714,25 @@ Pas de mutation via GET. Manual run est rate-limité (`automation.manualRun`).
 
 Jamais exposés : credentials, `baseUrl` privé, raw external payload, stack
 traces, configs d'action non sanitaires.
+
+# Notifications — Phase 23
+
+Permissions : `notification.read.self` / `notification.manage.self`.
+`ADMIN` default-deny. `SYSTEM_ADMIN` : catalogue. Self-only (pas d'admin global).
+
+| Route                      | Permission                 | Notes                                                       |
+| -------------------------- | -------------------------- | ----------------------------------------------------------- |
+| `notification.permissions` | authentifié                | `{ canRead, canManage }`                                    |
+| `notification.list`        | `notification.read.self`   | Pagination cursor ; source integration revalidée / redactée |
+| `notification.unreadCount` | `notification.read.self`   | Compteur unread                                             |
+| `notification.markRead`    | `notification.manage.self` | Self-only                                                   |
+| `notification.markAllRead` | `notification.manage.self` | Self-only                                                   |
+| `notification.dismiss`     | `notification.manage.self` | Soft-dismiss                                                |
+
+Realtime : `notification.created` / `updated` / `dismissed` via abonnement
+`{ kind: "notifications" }` + filtre `ticket.userId === event.userId`.
+
+Jamais exposés : secrets, HTML, payloads bruts, stack traces, URLs externes.
 
 # SSO / admin avancé — Phase 15
 
