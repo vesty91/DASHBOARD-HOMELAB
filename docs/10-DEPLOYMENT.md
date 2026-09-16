@@ -65,6 +65,20 @@ realtime. Une mauvaise valeur doit échouer clairement.
 Onboarding (AC-001 / AC-002) : instance vierge → `/setup` → premier admin →
 l'URL d'onboarding refuse une nouvelle création.
 
+## 4bis. PWA (Phase 24)
+
+L’app web expose un Web App Manifest (`/manifest.webmanifest`) et un
+service worker (`/sw.js`) pour installation / shell hors ligne.
+
+Points déploiement :
+
+1. Servir `sw.js` et le manifest avec `Cache-Control: no-cache` (déjà
+   configuré dans `apps/web/next.config.ts`).
+2. HTTPS (ou localhost) requis pour l’enregistrement du service worker
+   (`isSecureContext`).
+3. Le shell offline ne contient aucune donnée métier ; ne pas élargir
+   la allowlist de cache sans revue sécurité (voir `docs/09-SECURITY.md`).
+
 ## 5. Services et réseau
 
 | Service  | Ports publiés    | Notes                         |

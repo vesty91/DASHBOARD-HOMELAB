@@ -13,6 +13,8 @@ describe("HTTP security headers", () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("worker-src 'self' blob:");
+    expect(csp).toContain("manifest-src 'self'");
     expect(csp).not.toContain("unsafe-eval");
     const http = securityHeaders("http://localhost:3000").map((header) => header.key);
     expect(http).not.toContain("Strict-Transport-Security");

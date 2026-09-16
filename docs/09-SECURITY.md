@@ -82,7 +82,26 @@ Enforcement (Phase 16) :
 - `frame-ancestors 'none'` ;
 - `object-src 'none'` ;
 - `base-uri 'self'` ;
-- `form-action 'self'`.
+- `form-action 'self'` ;
+- `worker-src 'self' blob:` (service workers / workers Next) ;
+- `manifest-src 'self'` (Web App Manifest PWA).
+
+## 5bis. PWA / Service Worker (Phase 24)
+
+Règles obligatoires :
+
+- le service worker (`/sw.js`) ne met **jamais** en cache le HTML
+  authentifié ni les réponses `/api/**`, tRPC, auth, realtime,
+  notifications, intégrations, automations ou backup ;
+- navigation : network-first, repli uniquement vers `/offline.html`
+  (shell public, sans données privées) ;
+- assets autorisés au cache : `/_next/static/**`, `/icons/**`,
+  `offline.html`, `manifest.webmanifest` ;
+- caches versionnés ; suppression des caches obsolètes à `activate` ;
+- taille de cache bornée ;
+- `Cache-Control: no-cache` sur `/sw.js` et le manifest pour forcer
+  la mise à jour ;
+- branding original Homelab Dashboard — aucun asset Homarr.
 
 ## 6. CSRF
 

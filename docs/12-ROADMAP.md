@@ -469,6 +469,25 @@ PRs : #70–#72 (+ #73 close). Tag `phase-23-complete`. Minor produit
 Hors scope : ITSM complet, e-mail obligatoire, remplacement de ntfy /
 automation_runs / audit_logs.
 
+## Phase 24 — Progressive Web App (secure)
+
+Statut : **IN PROGRESS**.
+
+Objectifs :
+
+- PWA installable avec branding original Homelab Dashboard / Homelab
+  (jamais Homarr) ;
+- service worker sécurisé : jamais de cache HTML authentifié, ni
+  API / tRPC / auth / realtime / notifications / intégrations /
+  automations / backup ;
+- page `offline.html` publique sans données privées ;
+- caches versionnés + purge à l’activation + taille bornée ;
+- CSP minimale (`worker-src` déjà OK, `manifest-src 'self'` optionnel) ;
+- pas de bibliothèque PWA volumineuse.
+
+PR 24.1 : fondation PWA sécurisée (manifest, icônes, SW, offline shell,
+enregistrement, tests).
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.
