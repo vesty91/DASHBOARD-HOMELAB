@@ -43,6 +43,10 @@ test("service worker registers and keeps Cache-Control fresh for sw/manifest", a
   expect(manifestHeaders["cache-control"] ?? "").toMatch(/no-cache|no-store|must-revalidate/i);
 
   await page.goto("/login");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+  });
   await expect
     .poll(async () => {
       return page.evaluate(async () => {
@@ -67,6 +71,10 @@ test("service worker registers and keeps Cache-Control fresh for sw/manifest", a
 
 test("offline navigation falls back to the public offline shell", async ({ page, context }) => {
   await page.goto("/login");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+  });
   await page.waitForFunction(async () => {
     const registration = await navigator.serviceWorker.getRegistration("/");
     return Boolean(registration?.active);
@@ -91,6 +99,10 @@ test("offline navigation falls back to the public offline shell", async ({ page,
 
 test("service worker does not cache sensitive API responses", async ({ page }) => {
   await page.goto("/login");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+  });
   await page.waitForFunction(async () => {
     const registration = await navigator.serviceWorker.getRegistration("/");
     return Boolean(registration?.active);

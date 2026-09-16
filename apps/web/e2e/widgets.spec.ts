@@ -42,6 +42,17 @@ function boardRevision(slug: string) {
   }
 }
 
+function boardVisibility(slug: string) {
+  const database = openE2eDatabase();
+  try {
+    return String(
+      database.prepare("SELECT visibility FROM boards WHERE slug=?").get(slug)?.visibility ?? "",
+    );
+  } finally {
+    database.close();
+  }
+}
+
 test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", async ({
   page,
   context,
@@ -165,7 +176,8 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
-  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect.poll(() => boardVisibility("public-clock"), { timeout: 20_000 }).toBe("public");
+  await page.reload();
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
   await page.goto("/boards/phase-6-widgets/edit");

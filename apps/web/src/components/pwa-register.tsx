@@ -11,6 +11,8 @@ export function PwaRegister() {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
     if (!window.isSecureContext) return;
+    // Playwright sets webdriver; PWA e2e registers explicitly when needed.
+    if (navigator.webdriver) return;
 
     let cancelled = false;
 

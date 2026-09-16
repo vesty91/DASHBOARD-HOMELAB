@@ -128,13 +128,16 @@ for (const viewport of VIEWPORTS) {
       await assertNoHorizontalOverflow(page);
 
       await page.getByRole("button", { name: "Ouvrir la navigation" }).click();
+      await expect(page.locator(".shell")).toHaveAttribute("data-mobile-open", "true");
       await expect(page.locator("#navigation-principale")).toBeVisible();
       await expect(page.getByRole("link", { name: "Boards" })).toBeVisible();
-      await page.getByRole("button", { name: "Fermer la navigation" }).first().click();
+      // Prefer the in-drawer close control — the backdrop sits under the sidebar.
+      await page.locator(".shell-close-drawer").click();
+      await expect(page.locator(".shell")).toHaveAttribute("data-mobile-open", "false");
       await assertNoHorizontalOverflow(page);
 
       await page.goto("/boards");
-      await expect(page.getByRole("heading", { name: /Boards/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Boards", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Ouvrir la navigation" })).toBeVisible();
       await assertNoHorizontalOverflow(page);
 
