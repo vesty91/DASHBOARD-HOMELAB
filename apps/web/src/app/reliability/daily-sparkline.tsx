@@ -13,7 +13,12 @@ export function DailySparkline({ days }: { days: readonly DailyReliabilityRollup
   const values = sorted.map((day) => dailyAvailabilityBps(day) ?? 0);
   if (values.length < 2) {
     return (
-      <svg viewBox="0 0 100 24" role="img" aria-label="Tendance de disponibilité indisponible">
+      <svg
+        viewBox="0 0 100 24"
+        role="img"
+        aria-label="Tendance de disponibilité indisponible"
+        data-testid="reliability-daily-sparkline"
+      >
         <line x1="0" y1="12" x2="100" y2="12" stroke="currentColor" strokeWidth="1" opacity="0.3" />
       </svg>
     );

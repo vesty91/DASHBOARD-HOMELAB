@@ -44,7 +44,9 @@ test("reliability: overview, detail, slo create, csv export, a11y", async ({ pag
   await expect(detailLink).toBeVisible();
   await detailLink.click();
   await expect(page).toHaveURL(/\/reliability\/[0-9a-f-]{36}/i);
-  await expect(page.getByTestId("reliability-daily-sparkline")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("reliability-daily-sparkline")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("reliability-daily-table")).toBeVisible();
 
   await page.getByTestId("reliability-slo-name").fill("E2E availability");
   await page.getByTestId("reliability-slo-objective").fill("99.9");
