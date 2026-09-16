@@ -746,6 +746,7 @@ Opt-in uniquement. Self-only. Origin/CSRF via tRPC existant.
 | `push.list`           | `notification.read.self`   | Abonnements actifs (hash + métadonnées), jamais endpoint/clés       |
 | `push.subscribe`      | `notification.manage.self` | Upsert par `endpoint_hash` ; max 10 actifs ; fail-closed sans VAPID |
 | `push.unsubscribe`    | `notification.manage.self` | Par `id` ou `endpoint`                                              |
+| `push.unsubscribeAll` | `notification.manage.self` | Supprime tous les abonnements push de l’acteur                      |
 
 Delivery : uniquement depuis `notifications.createForUser` (create + coalesce).
 `push_subscriptions` hors backup. Payload lock-screen minimal.

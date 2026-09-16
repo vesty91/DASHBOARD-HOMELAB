@@ -64,6 +64,16 @@ Ne pas simplement écraser le desktop en une colonne.
 
 Utiliser layouts mobiles persistés.
 
+Shell mobile (Phase 24.3) :
+
+- `viewport-fit=cover` + `env(safe-area-inset-*)` sur topbar, drawer,
+  contenu, overlays et auth ;
+- cibles tactiles ≥ 44px pour les contrôles du shell (menu, cloche, nav) ;
+- notification center full-width confortable ;
+- préférences push sur `/account/security#push` ;
+- **pas** de bouton Install PWA universel (Chromium vs Safari/iOS documentés
+  dans `docs/09-SECURITY.md` / `docs/10-DEPLOYMENT.md`).
+
 ## 7. Loading
 
 Préférer skeletons stables.

@@ -492,6 +492,11 @@ PR 24.2 : Web Push backend (migration `0009`, `schemaVersion` 9,
 souscriptions chiffrées, tRPC `push.*`, delivery depuis Notification
 Center, SW `push` / `notificationclick`).
 
+PR 24.3 : Mobile UX (safe-area / touch targets shell, notification center
+confortable, préférences push enable / disable device / disable all,
+docs install Chromium vs iOS + limites iOS Web Push, E2E viewports
+375×812 / 390×844 / 430×932). **Pas** de bouton Install universel.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

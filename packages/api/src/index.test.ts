@@ -214,6 +214,7 @@ function createCaller(
         throw new Error("push not stubbed");
       },
       unsubscribe: async () => ({ removed: false }),
+      unsubscribeAll: async () => ({ removed: 0 }),
       deliverForNotification: async () => undefined,
     } as unknown as ApiContext["push"],
     incidents: {

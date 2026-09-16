@@ -232,6 +232,20 @@ export function createSqlitePushSubscriptionStore(client: SqliteClient): PushSub
         throw normalizeDatabaseError(error);
       }
     },
+    async deleteAllForUser(userId) {
+      try {
+        const existing = await db
+          .select({ id: table.id })
+          .from(table)
+          .where(eq(table.userId, userId))
+          .all();
+        if (existing.length === 0) return 0;
+        await db.delete(table).where(eq(table.userId, userId)).run();
+        return existing.length;
+      } catch (error) {
+        throw normalizeDatabaseError(error);
+      }
+    },
   };
 }
 
@@ -363,6 +377,16 @@ export function createPostgresqlPushSubscriptionStore(
         if (!rows[0]?.id) return false;
         await db.delete(table).where(and(eq(table.id, id), eq(table.userId, userId)));
         return true;
+      } catch (error) {
+        throw normalizeDatabaseError(error);
+      }
+    },
+    async deleteAllForUser(userId) {
+      try {
+        const rows = await db.select({ id: table.id }).from(table).where(eq(table.userId, userId));
+        if (rows.length === 0) return 0;
+        await db.delete(table).where(eq(table.userId, userId));
+        return rows.length;
       } catch (error) {
         throw normalizeDatabaseError(error);
       }

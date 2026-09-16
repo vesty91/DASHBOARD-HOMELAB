@@ -3,6 +3,7 @@ import { Button, Field, Input, PageContainer, PageHeader } from "@dashboard/ui";
 import { requireSession } from "@/lib/server/auth";
 import { getBoardCaller } from "@/lib/server/board-api";
 import { changePasswordAction } from "./actions";
+import { PushPreferencesPanel } from "./push-preferences-panel";
 import { SessionsPanel } from "./sessions-panel";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function SecurityPage() {
     <PageContainer>
       <PageHeader
         title="Sécurité du compte"
-        description="Mot de passe local et sessions actives."
+        description="Mot de passe local, sessions actives et notifications push."
       />
       <form action={changePasswordAction} className="ui-form ui-card ui-form-card">
         <h2 className="ui-section-title">Mot de passe</h2>
@@ -36,6 +37,7 @@ export default async function SecurityPage() {
         </Button>
       </form>
       <SessionsPanel sessions={sessions} />
+      <PushPreferencesPanel />
     </PageContainer>
   );
 }
