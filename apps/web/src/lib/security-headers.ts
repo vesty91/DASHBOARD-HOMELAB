@@ -11,6 +11,7 @@ export function dashboardCsp(): string {
     "font-src 'self'",
     "connect-src 'self' ws: wss:",
     "worker-src 'self' blob:",
+    "manifest-src 'self'",
   ].join("; ");
 }
 

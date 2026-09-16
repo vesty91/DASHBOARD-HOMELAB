@@ -6,6 +6,8 @@ test("login page enforces security headers and CSP", async ({ request }) => {
   const headers = response.headers();
   expect(headers["content-security-policy"]).toContain("default-src 'self'");
   expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(headers["content-security-policy"]).toContain("worker-src 'self' blob:");
+  expect(headers["content-security-policy"]).toContain("manifest-src 'self'");
   expect(headers["content-security-policy"]).not.toContain("unsafe-eval");
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");

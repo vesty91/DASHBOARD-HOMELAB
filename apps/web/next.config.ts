@@ -19,7 +19,15 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders(appUrl) }];
+    const noCache = [
+      { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+      { key: "Pragma", value: "no-cache" },
+    ];
+    return [
+      { source: "/:path*", headers: securityHeaders(appUrl) },
+      { source: "/sw.js", headers: noCache },
+      { source: "/manifest.webmanifest", headers: noCache },
+    ];
   },
   async rewrites() {
     if (!realtimeUrl) return [];
