@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Alert, Badge, Button, ConfirmDialog, Field, Input, Select, Textarea } from "@dashboard/ui";
@@ -46,6 +46,20 @@ function toDrafts(page: ManagedStatusPageDto): ServiceDraft[] {
     .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
 }
 
+function preferredMaintenanceIntegrationId(
+  page: ManagedStatusPageDto,
+  integrations: IntegrationOption[],
+  current: string,
+): string {
+  const pageIds = page.services.map((service) => service.sourceIntegrationId);
+  if (pageIds.length > 0) {
+    if (current && pageIds.includes(current)) return current;
+    return pageIds[0] ?? "";
+  }
+  if (current && integrations.some((item) => item.id === current)) return current;
+  return integrations[0]?.id ?? "";
+}
+
 export function StatusPageDetail({
   page,
   integrations,
@@ -73,9 +87,15 @@ export function StatusPageDetail({
   const [maintenanceDescription, setMaintenanceDescription] = useState("");
   const [maintenanceStartsAt, setMaintenanceStartsAt] = useState("");
   const [maintenanceEndsAt, setMaintenanceEndsAt] = useState("");
-  const [maintenanceIntegrationId, setMaintenanceIntegrationId] = useState(
-    page.services[0]?.sourceIntegrationId ?? integrations[0]?.id ?? "",
+  const [maintenanceIntegrationId, setMaintenanceIntegrationId] = useState(() =>
+    preferredMaintenanceIntegrationId(page, integrations, ""),
   );
+
+  useEffect(() => {
+    setMaintenanceIntegrationId((current) =>
+      preferredMaintenanceIntegrationId(page, integrations, current),
+    );
+  }, [page, integrations]);
 
   const relatedMaintenances = useMemo(() => {
     const ids = new Set(page.services.map((service) => service.sourceIntegrationId));
