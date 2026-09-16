@@ -2165,8 +2165,7 @@ button[aria-pressed="true"] {
   min-height: 100vh;
   padding: 1.5rem 1.25rem max(2rem, env(safe-area-inset-bottom, 0px));
   background:
-    radial-gradient(circle at top left, rgb(79 125 255 / 0.12), transparent 40%),
-    var(--background);
+    radial-gradient(circle at top left, rgb(79 125 255 / 0.12), transparent 40%), var(--background);
   color: var(--foreground);
 }
 
@@ -2244,4 +2243,3 @@ button[aria-pressed="true"] {
 .public-status-maintenance-list p {
   margin: 0.25rem 0 0;
 }
-
