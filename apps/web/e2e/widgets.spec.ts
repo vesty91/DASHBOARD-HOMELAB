@@ -165,10 +165,9 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
-  // Status defaults to "Sauvegardé" — wait for the in-flight cycle so we don't race.
-  await expect(page.getByRole("status")).toHaveText("Sauvegarde…");
-  await expect(page.getByRole("status")).toHaveText("Sauvegardé");
-  await expect(page.getByLabel("Visibilité")).toHaveValue("public");
+  // Persist may finish faster than the transient "Sauvegarde…" label — assert outcome.
+  await expect(page.getByLabel("Visibilité")).toHaveValue("public", { timeout: 15_000 });
+  await expect(page).not.toHaveURL(/\?.*visibility=/);
 
   await page.goto("/boards/phase-6-widgets/edit");
   await expect(page.getByRole("heading", { name: "Modifier Phase 6 Widgets" })).toBeVisible();

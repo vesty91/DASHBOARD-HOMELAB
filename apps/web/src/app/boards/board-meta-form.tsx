@@ -19,20 +19,24 @@ export function BoardMetaForm({
     visibility: "private" | "authenticated" | "public";
   }) => Promise<BoardMutationResult<{ revision: number }>>;
 }) {
+  function submit(form: HTMLFormElement): void {
+    if (conflict) return;
+    const data = new FormData(form);
+    void onSave({
+      name: String(data.get("name") ?? ""),
+      description: String(data.get("description") ?? ""),
+      visibility: String(data.get("visibility") ?? "private") as
+        "private" | "authenticated" | "public",
+    });
+  }
+
   return (
     <form
       className="board-meta-form"
+      method="post"
       onSubmit={(event) => {
         event.preventDefault();
-        if (conflict) return;
-        const form = event.currentTarget;
-        const data = new FormData(form);
-        void onSave({
-          name: String(data.get("name") ?? ""),
-          description: String(data.get("description") ?? ""),
-          visibility: String(data.get("visibility") ?? "private") as
-            "private" | "authenticated" | "public",
-        });
+        submit(event.currentTarget);
       }}
     >
       <Field label="Nom">
@@ -48,7 +52,15 @@ export function BoardMetaForm({
           <option value="public">Public</option>
         </Select>
       </Field>
-      <Button variant="secondary" type="submit" disabled={conflict}>
+      <Button
+        variant="secondary"
+        type="button"
+        disabled={conflict}
+        onClick={(event) => {
+          const form = event.currentTarget.form;
+          if (form) submit(form);
+        }}
+      >
         Enregistrer les métadonnées
       </Button>
     </form>

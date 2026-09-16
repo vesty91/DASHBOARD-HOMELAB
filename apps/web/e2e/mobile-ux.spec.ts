@@ -130,7 +130,9 @@ for (const viewport of VIEWPORTS) {
       await page.getByRole("button", { name: "Ouvrir la navigation" }).click();
       await expect(page.locator("#navigation-principale")).toBeVisible();
       await expect(page.getByRole("link", { name: "Boards" })).toBeVisible();
-      await page.getByRole("button", { name: "Fermer la navigation" }).first().click();
+      // Prefer the in-drawer close control — the backdrop sits under the sidebar.
+      await page.locator(".shell-close-drawer").click();
+      await expect(page.locator("#navigation-principale")).toBeHidden();
       await assertNoHorizontalOverflow(page);
 
       await page.goto("/boards");
