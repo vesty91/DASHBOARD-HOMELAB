@@ -10,6 +10,7 @@ import {
 } from "@dashboard/automations";
 import { createConfiguredEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
 import type { IntegrationStore } from "@dashboard/integrations";
+import type { IncidentService } from "@dashboard/notifications";
 import { createProductionAutomationDispatcher } from "./bootstrap-actions";
 import type { AutomationAuditSink } from "./actions";
 
@@ -30,6 +31,7 @@ export interface WorkerOptions {
   now?: () => Date;
   jobs?: JobRecorder;
   purgeNotifications?: () => Promise<number>;
+  incidents?: Pick<IncidentService, "handleStatusChanged">;
   automations?: {
     store: AutomationSchedulerStore;
     loadOwner?: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -106,6 +108,16 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       void scheduler.handleEvent(event);
     });
     scheduler.setEventIngest("live");
+  }
+  let unsubscribeIncidents: (() => void) | null = null;
+  if (options.incidents) {
+    const incidentEngine = options.incidents;
+    unsubscribeIncidents = bus.subscribe((event) => {
+      if (event.type !== "integration.status.changed") return;
+      void incidentEngine.handleStatusChanged(event).catch(() => {
+        void event.integrationId;
+      });
+    });
   }
 
   function schedulerHealth(): AutomationSchedulerHealth {
@@ -217,6 +229,7 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       running = false;
       clearInterval(timer);
       unsubscribeEvents?.();
+      unsubscribeIncidents?.();
       if (scheduler) await scheduler.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

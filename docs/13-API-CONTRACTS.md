@@ -734,6 +734,19 @@ Realtime : `notification.created` / `updated` / `dismissed` via abonnement
 
 Jamais exposés : secrets, HTML, payloads bruts, stack traces, URLs externes.
 
+## Incidents — Phase 23.2
+
+Permission : `incident.read`. `ADMIN` default-deny. `SYSTEM_ADMIN` : catalogue.
+
+| Route                  | Permission      | Notes                                                     |
+| ---------------------- | --------------- | --------------------------------------------------------- |
+| `incident.permissions` | authentifié     | `{ canRead }`                                             |
+| `incident.list`        | `incident.read` | Pagination cursor ; filtres status / integrationId / kind |
+| `incident.get`         | `incident.read` | Détail ; `integrationId` redacté si accès source révoqué  |
+| `incident.timeline`    | `incident.read` | Events `opened` / `resolved` / `note`, résumés plain text |
+
+Jamais exposés : secrets, payloads bruts, stack traces, URLs externes.
+
 # SSO / admin avancé — Phase 15
 
 OIDC générique, audit et sessions. Les secrets OIDC et d'intégration restent

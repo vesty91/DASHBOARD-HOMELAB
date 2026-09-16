@@ -2,7 +2,14 @@ export { NOTIFICATION_ERROR_CODES, NotificationError, type NotificationErrorCode
 export {
   INCIDENT_EVENT_TYPES,
   INCIDENT_KINDS,
+  INCIDENT_LIST_DEFAULT_LIMIT,
+  INCIDENT_LIST_MAX_LIMIT,
+  INCIDENT_OPEN_SEVERITY,
+  INCIDENT_RECOVER_SEVERITY,
   INCIDENT_STATUSES,
+  INCIDENT_SUMMARY_MAX,
+  INCIDENT_TIMELINE_DEFAULT_LIMIT,
+  INCIDENT_TIMELINE_MAX_LIMIT,
   NOTIFICATION_BODY_MAX,
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_DEDUP_KEY_MAX,
@@ -33,6 +40,15 @@ export {
   type NotificationListQuery,
 } from "./schemas";
 export {
+  incidentListQuerySchema,
+  incidentTimelineQuerySchema,
+  parseIncidentListQuery,
+  parseIncidentTimelineQuery,
+  sanitizeIncidentSummary,
+  type IncidentListQuery,
+  type IncidentTimelineQuery,
+} from "./incident-schemas";
+export {
   createNotificationService,
   type NotificationActor,
   type NotificationRecord,
@@ -40,3 +56,15 @@ export {
   type NotificationStorePort,
   type NotificationView,
 } from "./service";
+export {
+  createIncidentService,
+  type IncidentActor,
+  type IncidentEventRecord,
+  type IncidentEventView,
+  type IncidentHandleResult,
+  type IncidentRecord,
+  type IncidentService,
+  type IncidentStatusChangedInput,
+  type IncidentStorePort,
+  type IncidentView,
+} from "./incidents";

@@ -8,7 +8,8 @@ import {
   type BoardApiContext,
 } from "@dashboard/api";
 import { createAutomationService } from "@dashboard/automations";
-import { createNotificationService } from "@dashboard/notifications";
+import { createIncidentService, createNotificationService } from "@dashboard/notifications";
+import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
@@ -612,6 +613,44 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     events: integrationMutationEvents(),
     ...(keyring ? { keyring } : {}),
   });
+  async function integrationAccessible(viewerUserId: string, integrationId: string) {
+    const resolved = await database.authStore.resolvePermissionSubject(viewerUserId);
+    if (!resolved) return false;
+    if (resolved.isSystemAdmin) return true;
+    try {
+      await integrations.get(integrationId, {
+        userId: viewerUserId,
+        subject: resolved,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  const notifications = createNotificationService({
+    store: database.notificationStore,
+    integrationAccessible,
+    async publish(event) {
+      await publish(event);
+    },
+  });
+  const incidents = createIncidentService({
+    store: database.incidentStore,
+    notifications,
+    async listRecipientUserIds() {
+      const users = await database.authStore.listUsers();
+      const recipients: string[] = [];
+      for (const user of users) {
+        if (user.status !== "active") continue;
+        const resolved = await database.authStore.resolvePermissionSubject(user.id);
+        if (!resolved) continue;
+        if (resolved.isSystemAdmin || hasPermission(resolved, "integration.read"))
+          recipients.push(user.id);
+      }
+      return recipients;
+    },
+    integrationAccessible,
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -738,26 +777,8 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
         await database.securityStore.recordAudit(event);
       },
     }),
-    notifications: createNotificationService({
-      store: database.notificationStore,
-      async integrationAccessible(viewerUserId, integrationId) {
-        const subject = await database.authStore.resolvePermissionSubject(viewerUserId);
-        if (!subject) return false;
-        if (subject.isSystemAdmin) return true;
-        try {
-          await integrations.get(integrationId, {
-            userId: viewerUserId,
-            subject,
-          });
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      async publish(event) {
-        await publish(event);
-      },
-    }),
+    notifications,
+    incidents,
     audit: {
       record: (event) => database.securityStore.recordAudit(event),
       list: (query) => database.securityStore.listAudit(query),

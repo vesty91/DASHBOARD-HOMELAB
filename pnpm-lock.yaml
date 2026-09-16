@@ -226,6 +226,9 @@ importers:
       '@dashboard/ntfy':
         specifier: workspace:*
         version: link:../../packages/ntfy
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../../packages/permissions
       '@dashboard/qbittorrent':
         specifier: workspace:*
         version: link:../../packages/qbittorrent
