@@ -443,22 +443,28 @@ Custom API write, Grafana/Prowlarr write.
 
 ## Phase 23 — Notification Center & Incidents
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Livrables prévus :
+Livré :
 
 - notifications in-app persistées (`0008`, schema 8) ;
 - cycle de vie incident (open / resolve) sur transitions de statut ;
-- unread / read / dismiss + badge ;
-- realtime user-scoped ;
+- unread / read / dismiss + badge shell ;
+- realtime user-scoped (`notification.created` / `updated` / `dismissed`) ;
 - severity + category fermées ;
 - déduplication + rétention worker ;
-- sources integration / automation / system ;
-- RBAC `notification.*.self` + revalidation d’accès source ;
-- UI Notification Center + timeline incidents ;
+- sources integration / automation / system / incident ;
+- RBAC `notification.*.self` + `incident.read` + revalidation d’accès source ;
+- UI Notification Center (`/notifications`) + timeline incidents (`/incidents`) ;
 - pas de payload brut / secrets ;
-- backup : notifications et incidents exclus (éphémères) ;
-- release SemVer minor.
+- backup : `notifications`, `incidents`, `incident_events` exclus (éphémères) ;
+- tests unitaires, runtime DB, E2E UI.
+
+Migrations : `0000`–`0008` (SQLite + PostgreSQL).
+Backup `formatVersion` 1 / `schemaVersion` 8 (compat 5/6/7 → 8).
+
+PRs : #70–#72. Tag `phase-23-complete`. Minor produit `v1.3.0` (release
+suivante).
 
 Hors scope : ITSM complet, e-mail obligatoire, remplacement de ntfy /
 automation_runs / audit_logs.

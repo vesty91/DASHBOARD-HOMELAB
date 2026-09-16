@@ -4,8 +4,8 @@ Dashboard self-hosted pour homelab et NAS. Version **1.2.0**.
 
 Le produit centralise les boards, les applications, les widgets, les intégrations
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
-les automations / alertes, la sauvegarde et l’OIDC. Les secrets et les appels
-d’API restent côté serveur.
+les automations / alertes, le centre de notifications / incidents, la sauvegarde
+et l’OIDC. Les secrets et les appels d’API restent côté serveur.
 
 Identité originale. Homarr n’est qu’une référence fonctionnelle (`reference/homarr`,
 lecture seule).
@@ -54,6 +54,7 @@ SQLite en local. PostgreSQL en production. Migrations `0000`–`0008` (schema 8)
 | Hardening post-v1   | `docs/20-POST-V1-HARDENING.md`                |
 | Actions intégration | `docs/21-SAFE-INTEGRATION-ACTIONS.md`         |
 | Automations         | `docs/22-AUTOMATIONS.md`                      |
+| Notifications       | `docs/23-NOTIFICATIONS.md`                    |
 | Notes de version    | `CHANGELOG.md`                                |
 | Semver              | `docs/adr/0029-semver-and-v1-release.md`      |
 

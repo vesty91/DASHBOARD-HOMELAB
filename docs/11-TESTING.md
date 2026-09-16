@@ -111,7 +111,7 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide (`schemaVersion` 7) ;
+- manifest valide (`schemaVersion` 8) ;
 - fichier invalide rejeté avant mutation.
 
 ### E2E-009 SSO admin
@@ -294,3 +294,15 @@ create désactivé, enable, dry-run et refus de permission. E2E
 `apps/web/e2e/automations.spec.ts` : liste, création désactivée, edit,
 enable, dry-run sans appel externe, manual run, historique, mobile/a11y,
 permission refusée.
+
+## 23. Notifications & Incidents (Phase 23)
+
+`packages/notifications` et `packages/db` couvrent persistence schéma 8,
+pagination cursor, déduplication, isolation utilisateur, rétention, et
+upgrade 7 → 8 (SQLite / PostgreSQL) sans perte d'automations. Le moteur
+d'incidents consomme `integration.status.changed` (open / resolve, flap,
+idempotence). Backup : `notifications`, `incidents`, `incident_events`
+absents de l'archive ; `schemaVersion` 8. E2E
+`apps/web/e2e/notifications.spec.ts` : badge unread, mark read / all /
+dismiss, deep-link interne allowlisté, timeline incident, isolation
+cross-user, clavier / focus trap.

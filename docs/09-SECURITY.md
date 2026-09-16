@@ -137,6 +137,11 @@ Options :
 - avertissement clair si export portable contient secrets ;
 - pas de téléchargement sans `backup.manage`.
 
+Tables éphémères hors archive (Phase 14+) : `audit_logs`, `auth_sessions`,
+`automation_runs`, `automation_runtime_state`. Phase 23 ajoute
+`notifications`, `incidents` et `incident_events` à cette exclusion.
+`schemaVersion` courant : **8** (compat restore 5/6/7).
+
 ## 10. Rate limiting
 
 Sur :
@@ -273,7 +278,9 @@ origine realtime, cookies session explicites, et tests négatifs Docker POST exe
 - rate limit non partagé entre processus / replicas ;
 - IP d'audit volontairement absente (`X-Forwarded-For` non fiable, ADR 0003) ;
 - RFC1918 autorisé pour les intégrations homelab (loopback / metadata / link-local bloqués) ;
-- `audit_logs` et `auth_sessions` exclus du backup.
+- `audit_logs`, `auth_sessions`, `automation_runs`,
+  `automation_runtime_state`, `notifications`, `incidents` et
+  `incident_events` exclus du backup.
 
 La Phase 6 ajoute : validation HTTP(S) des Bookmarks sans fetch serveur, `rel="noopener noreferrer"`
 pour `new-tab`, projection publique qui omet les configs unsafe, IDOR item (appartenance board

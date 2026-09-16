@@ -6,6 +6,28 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+Préparation minor **1.3.0** (Phase 23). Pas encore tagué / publié.
+
+Notification Center & Incidents. Migration `0008`, backup `schemaVersion` 8.
+
+### Ajouté
+
+- Persistence notifications in-app (Phase 23.1) : `notifications`,
+  catégories / sévérités fermées, déduplication, rétention worker.
+- Incidents disponibilité (Phase 23.2) : `incidents` / `incident_events`,
+  open / resolve sur `integration.status.changed`, timeline.
+- UI Notification Center (Phase 23.3) : badge shell, `/notifications`,
+  `/incidents`, realtime user-scoped.
+- Permissions `notification.read.self` / `notification.manage.self` /
+  `incident.read` (ADMIN default-deny).
+- Backup `schemaVersion` 8. Compat 5 → 6 → 7 → 8. Schéma 9+ rejeté.
+  `notifications`, `incidents`, `incident_events` exclus de l'archive.
+
+### Base de données
+
+- Migration `0008` (SQLite + PostgreSQL). `schemaVersion` 8.
+- Tables éphémères hors backup / hors restore.
+
 ## [1.2.0] — 2026-09-16
 
 Automations & alerting (Phase 22). Minor backward-compatible.
