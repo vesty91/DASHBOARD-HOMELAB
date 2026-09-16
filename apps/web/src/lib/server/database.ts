@@ -37,6 +37,10 @@ import {
   createPostgresqlStatusPageStore,
   createSqliteStatusPageStore,
 } from "@dashboard/db/status-page-runtime";
+import {
+  createPostgresqlReliabilityStore,
+  createSqliteReliabilityStore,
+} from "@dashboard/db/reliability-runtime";
 
 const globalDatabase = globalThis as typeof globalThis & {
   dashboardDatabase?: ReturnType<typeof createDatabase>;
@@ -57,6 +61,7 @@ async function createDatabase() {
       incidentStore: createPostgresqlIncidentStore(client),
       pushSubscriptionStore: createPostgresqlPushSubscriptionStore(client),
       statusPageStore: createPostgresqlStatusPageStore(client),
+      reliabilityStore: createPostgresqlReliabilityStore(client),
       jobStore: createPostgresqlJobStore(client),
       backupStore: createPostgresqlBackupStore(client),
       securityStore: createPostgresqlSecurityStore(client.pool),
@@ -75,6 +80,7 @@ async function createDatabase() {
     incidentStore: createSqliteIncidentStore(client),
     pushSubscriptionStore: createSqlitePushSubscriptionStore(client),
     statusPageStore: createSqliteStatusPageStore(client),
+    reliabilityStore: createSqliteReliabilityStore(client),
     jobStore: createSqliteJobStore(client),
     backupStore: createSqliteBackupStore(client),
     securityStore: createSqliteSecurityStore(client.sqlite),

@@ -17,6 +17,7 @@ try {
     "0008_reflective_norman_osborn.sql",
     "0009_flimsy_arachne.sql",
     "0010_many_yellowjacket.sql",
+    "0011_normal_mac_gargan.sql",
   ])
     database.exec(
       await readFile(

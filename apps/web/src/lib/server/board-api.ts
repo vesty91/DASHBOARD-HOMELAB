@@ -20,6 +20,7 @@ import {
   createStatusPageService,
   type PublicStatusPageDto,
 } from "@dashboard/status-pages";
+import { createReliabilityService } from "@dashboard/reliability";
 import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
@@ -704,6 +705,9 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       return recipients;
     },
   });
+  const reliability = createReliabilityService({
+    store: database.reliabilityStore,
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -834,6 +838,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     push,
     incidents,
     statusPages,
+    reliability,
     audit: {
       record: (event) => database.securityStore.recordAudit(event),
       list: (query) => database.securityStore.listAudit(query),

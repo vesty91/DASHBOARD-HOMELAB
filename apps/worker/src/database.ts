@@ -6,6 +6,7 @@ import {
   createPostgresqlJobStore,
   createPostgresqlNotificationStore,
   createPostgresqlStatusPageStore,
+  createPostgresqlReliabilityStore,
   createSqliteAuthStore,
   createSqliteAutomationStore,
   createSqliteClient,
@@ -13,6 +14,7 @@ import {
   createSqliteJobStore,
   createSqliteNotificationStore,
   createSqliteStatusPageStore,
+  createSqliteReliabilityStore,
   parseDatabaseConfig,
   toAutomationSchedulerStore,
   type AutomationStore,
@@ -35,6 +37,7 @@ import {
 import { hasPermission } from "@dashboard/permissions";
 import type { IntegrationStore } from "@dashboard/integrations";
 import { createStatusPageService, type MaintenanceWindowService } from "@dashboard/status-pages";
+import { createReliabilityService, type ReliabilityService } from "@dashboard/reliability";
 import type { AutomationAuditSink } from "./actions";
 import { createJobRecorder } from "./jobs";
 import type { JobRecorder } from "./server";
@@ -47,6 +50,7 @@ export interface WorkerPersistence {
   purgeNotifications: () => Promise<number>;
   incidents: IncidentService;
   maintenance: Pick<MaintenanceWindowService, "tick">;
+  reliability: Pick<ReliabilityService, "tick">;
   integrationStore: IntegrationStore;
   audit: AutomationAuditSink;
   loadOwner: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -158,6 +162,9 @@ export function createWorkerPersistenceFromEnv(
         resolvePermissionSubject: async (userId) =>
           (await auth.resolvePermissionSubject(userId)) ?? null,
       }),
+      reliability: createReliabilityService({
+        store: createPostgresqlReliabilityStore(client),
+      }),
       integrationStore: createPostgresqlIntegrationStore(client.pool),
       audit: {
         async record(event) {
@@ -195,6 +202,9 @@ export function createWorkerPersistenceFromEnv(
       listUsers: () => auth.listUsers(),
       resolvePermissionSubject: async (userId) =>
         (await auth.resolvePermissionSubject(userId)) ?? null,
+    }),
+    reliability: createReliabilityService({
+      store: createSqliteReliabilityStore(client),
     }),
     integrationStore: createSqliteIntegrationStore(client.sqlite),
     audit: {

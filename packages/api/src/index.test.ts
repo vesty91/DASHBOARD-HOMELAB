@@ -96,6 +96,7 @@ function createCaller(
     | "push"
     | "incidents"
     | "statusPages"
+    | "reliability"
     | "audit"
     | "sessions"
     | "oidc"
@@ -264,6 +265,12 @@ function createCaller(
         tick: async () => ({ transitioned: 0 }),
       },
     } as unknown as ApiContext["statusPages"],
+    reliability: {
+      permissions: () => ({ canRead: false }),
+      listDaily: async () => [],
+      rebuildRecent: async () => ({ days: 0, upserted: 0 }),
+      tick: async () => ({ upserted: 0, deleted: 0 }),
+    } as unknown as ApiContext["reliability"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),

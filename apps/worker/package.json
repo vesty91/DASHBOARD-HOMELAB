@@ -23,6 +23,7 @@
     "@dashboard/secrets": "workspace:*",
     "@dashboard/sonarr": "workspace:*",
     "@dashboard/status-pages": "workspace:*",
+    "@dashboard/reliability": "workspace:*",
     "tsx": "4.23.13"
   },
   "devDependencies": {

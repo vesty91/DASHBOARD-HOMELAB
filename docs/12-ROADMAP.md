@@ -525,6 +525,23 @@ Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
 Hors scope : indexation SEO volontaire, CAPTCHA public, SSE public dédié
 (polling borné accepté).
 
+## Phase 26 — Reliability & SLO Analytics
+
+Statut : **IN PROGRESS**.
+
+Livrables prévus :
+
+- agrégats quotidiens UTC `service_reliability_daily` (migration `0011`) ;
+- package `@dashboard/reliability` (agrégation pure + service) ;
+- rebuild borné (≤90 j) depuis incidents + maintenance ;
+- rétention 730 j ; rollups **exclus** du backup (dérivés) ;
+- SLO / error budget (PR 26.2) ;
+- UI + widget (PR 26.3).
+
+PR 26.1 : agrégation + API lecture `reliability.*` + worker tick.
+Backup `formatVersion` 1 / `schemaVersion` 10 inchangé (pas de config durable
+nouvelle). DB `schemaVersion` 11.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.
