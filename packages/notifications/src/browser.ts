@@ -1,15 +1,7 @@
-import type {
-  NotificationCategory,
-  NotificationSeverity,
-  NotificationSourceType,
-} from "./types";
+import type { NotificationCategory, NotificationSeverity, NotificationSourceType } from "./types";
 
 export { safeDestinationPath } from "./destination";
-export type {
-  NotificationCategory,
-  NotificationSeverity,
-  NotificationSourceType,
-} from "./types";
+export type { NotificationCategory, NotificationSeverity, NotificationSourceType } from "./types";
 
 /** Client-safe notification DTO shape (mirrors NotificationView). */
 export type NotificationView = {
