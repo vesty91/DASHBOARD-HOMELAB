@@ -302,7 +302,18 @@ pagination cursor, déduplication, isolation utilisateur, rétention, et
 upgrade 7 → 8 (SQLite / PostgreSQL) sans perte d'automations. Le moteur
 d'incidents consomme `integration.status.changed` (open / resolve, flap,
 idempotence). Backup : `notifications`, `incidents`, `incident_events`
-absents de l'archive ; `schemaVersion` 9. E2E
-`apps/web/e2e/notifications.spec.ts` : badge unread, mark read / all /
-dismiss, deep-link interne allowlisté, timeline incident, isolation
-cross-user, clavier / focus trap.
+absents de l'archive ; `schemaVersion` 8 à la clôture Phase 23 (schema 9
+après Phase 24). E2E `apps/web/e2e/notifications.spec.ts` : badge unread,
+mark read / all / dismiss, deep-link interne allowlisté, timeline incident,
+isolation cross-user, clavier / focus trap.
+
+## 24. PWA & Web Push (Phase 24)
+
+`apps/web` couvre le service worker sécurisé (pas de cache HTML/API auth),
+le manifest, `/offline.html`, et l’enregistrement conditionnel (skip
+Playwright webdriver). `packages/db` / `packages/notifications` :
+migration `0009`, `push_subscriptions` chiffrées, upgrade 8 → 9, delivery
+VAPID fail-closed sans clés. Backup : `push_subscriptions` absente de
+l’archive ; `schemaVersion` 9. E2E PWA / mobile / push : viewports
+375×812 / 390×844 / 430×932, préférences enable / disable device /
+disable all, pas de bouton Install universel.

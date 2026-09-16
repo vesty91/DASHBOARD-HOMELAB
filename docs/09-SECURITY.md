@@ -193,7 +193,8 @@ Tables éphémères hors archive (Phase 14+) : `audit_logs`, `auth_sessions`,
 `automation_runs`, `automation_runtime_state`. Phase 23 ajoute
 `notifications`, `incidents` et `incident_events` à cette exclusion.
 Phase 24 ajoute `push_subscriptions` (endpoints Web Push chiffrés) à
-cette exclusion. `schemaVersion` courant : **9** (compat restore 5/6/7/8).
+cette exclusion. `schemaVersion` courant : **9** (compat restore
+5/6/7/8 → 9).
 
 ## 10. Rate limiting
 

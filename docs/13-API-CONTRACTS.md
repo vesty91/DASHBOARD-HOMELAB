@@ -688,9 +688,10 @@ la transaction.
 | `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
 
 Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
-en clair dans l'archive. Schéma ≠ 5, ≠ 6, ≠ 7 et ≠ 8 → `INCOMPATIBLE_SCHEMA`.
+en clair dans l'archive. Schéma ≠ 5, ≠ 6, ≠ 7, ≠ 8 et ≠ 9 → `INCOMPATIBLE_SCHEMA`.
 `audit_logs`, `auth_sessions`, `automation_runs`, `automation_runtime_state`,
-`notifications`, `incidents` et `incident_events` sont exclus de l'archive.
+`notifications`, `incidents`, `incident_events` et `push_subscriptions` sont
+exclus de l'archive.
 
 # Automations — Phase 22
 

@@ -6,6 +6,30 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+Préparation minor **1.4.0** (Phase 24). Pas encore tagué / publié.
+
+Progressive Web App sécurisée & Web Push. Migration `0009`, backup
+`schemaVersion` 9.
+
+### Ajouté
+
+- PWA (Phase 24.1) : manifest, icônes Homelab Dashboard, service worker
+  sécurisé (pas de cache HTML auth / API / tRPC), shell `/offline.html`.
+- Web Push VAPID (Phase 24.2) : `push_subscriptions` chiffrées, tRPC
+  `push.*`, delivery depuis Notification Center, SW `push` /
+  `notificationclick`, payload lock-screen minimal.
+- UX mobile (Phase 24.3) : safe-area, touch targets shell ≥ 44px,
+  préférences push enable / disable device / disable all — pas de bouton
+  Install universel.
+- Backup `schemaVersion` 9. Compat 5 → 6 → 7 → 8 → 9. Schéma 10+ rejeté.
+  `push_subscriptions` (avec `notifications`, `incidents`,
+  `incident_events`) exclus de l'archive.
+
+### Base de données
+
+- Migration `0009` (SQLite + PostgreSQL). `schemaVersion` 9.
+- Table `push_subscriptions` éphémère hors backup / hors restore.
+
 ## [1.3.0] — 2026-09-16
 
 Notification Center & Incidents (Phase 23). Minor backward-compatible.

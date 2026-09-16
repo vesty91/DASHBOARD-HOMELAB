@@ -4,8 +4,9 @@ Dashboard self-hosted pour homelab et NAS. Version **1.3.0**.
 
 Le produit centralise les boards, les applications, les widgets, les intégrations
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
-les automations / alertes, le centre de notifications / incidents, la sauvegarde
-et l’OIDC. Les secrets et les appels d’API restent côté serveur.
+les automations / alertes, le centre de notifications / incidents, la PWA /
+Web Push, la sauvegarde et l’OIDC. Les secrets et les appels d’API restent côté
+serveur.
 
 Identité originale. Homarr n’est qu’une référence fonctionnelle (`reference/homarr`,
 lecture seule).
@@ -40,7 +41,9 @@ pnpm test:e2e
 pnpm build
 ```
 
-SQLite en local. PostgreSQL en production. Migrations `0000`–`0008` (schema 8).
+SQLite en local. PostgreSQL en production. Migrations `0000`–`0009`
+(schema 9). La minor produit **1.4.0** (Phase 24) est préparée dans
+`CHANGELOG` Unreleased — pas encore taguée.
 
 ## Documentation
 
@@ -55,6 +58,7 @@ SQLite en local. PostgreSQL en production. Migrations `0000`–`0008` (schema 8)
 | Actions intégration | `docs/21-SAFE-INTEGRATION-ACTIONS.md`         |
 | Automations         | `docs/22-AUTOMATIONS.md`                      |
 | Notifications       | `docs/23-NOTIFICATIONS.md`                    |
+| PWA / Web Push      | `docs/24-PWA.md`                              |
 | Notes de version    | `CHANGELOG.md`                                |
 | Semver              | `docs/adr/0029-semver-and-v1-release.md`      |
 

@@ -9,7 +9,8 @@ Complète les alertes ntfy (Phase 22) par une **boîte de réception in-app**.
 Ne remplace pas `automation_runs`, `audit_logs` ni ntfy.
 
 Backup : `notifications`, `incidents` et `incident_events` sont exclus de
-l'archive (éphémères). Compat restore 5/6/7 → 8.
+l'archive (éphémères). Compat restore 5/6/7 → 8 à la clôture Phase 23
+(Phase 24 étend à schema 9 sans réintroduire ces tables).
 
 ## Modèle
 
