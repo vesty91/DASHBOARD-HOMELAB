@@ -1,11 +1,15 @@
 # 23 — Notification Center & Incidents
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
 Phase 23. Migration `0008`. `schemaVersion` 8. Backup `formatVersion` 1.
+Tag `phase-23-complete`. Minor produit `v1.3.0` (release suivante).
 
 Complète les alertes ntfy (Phase 22) par une **boîte de réception in-app**.
 Ne remplace pas `automation_runs`, `audit_logs` ni ntfy.
+
+Backup : `notifications`, `incidents` et `incident_events` sont exclus de
+l'archive (éphémères). Compat restore 5/6/7 → 8.
 
 ## Modèle
 
@@ -66,12 +70,24 @@ Notifications in-app :
 
 ## API
 
-| Route                  | Permission      | Notes                 |
-| ---------------------- | --------------- | --------------------- |
-| `incident.permissions` | authentifié     | `{ canRead }`         |
-| `incident.list`        | `incident.read` | Pagination cursor     |
-| `incident.get`         | `incident.read` | Détail                |
-| `incident.timeline`    | `incident.read` | Events chronologiques |
+| Route                      | Permission                 | Notes                    |
+| -------------------------- | -------------------------- | ------------------------ |
+| `notification.permissions` | authentifié                | `{ canRead, canManage }` |
+| `notification.list`        | `notification.read.self`   | Pagination cursor        |
+| `notification.unreadCount` | `notification.read.self`   | Compteur unread          |
+| `notification.markRead`    | `notification.manage.self` | Self-only                |
+| `notification.markAllRead` | `notification.manage.self` | Self-only                |
+| `notification.dismiss`     | `notification.manage.self` | Soft-dismiss             |
+| `incident.permissions`     | authentifié                | `{ canRead }`            |
+| `incident.list`            | `incident.read`            | Pagination cursor        |
+| `incident.get`             | `incident.read`            | Détail                   |
+| `incident.timeline`        | `incident.read`            | Events chronologiques    |
+
+## UI
+
+- Badge + panneau shell (AppShell) — unread, mark read / all, deep-link interne
+- `/notifications` — liste dismissible
+- `/incidents` — liste + détail timeline
 
 ## Rétention
 

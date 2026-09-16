@@ -87,6 +87,9 @@ oidc.manage
 session.read.self
 session.revoke.self
 session.manage
+notification.read.self
+notification.manage.self
+incident.read
 ```
 
 ## 6. Permissions board
@@ -302,11 +305,16 @@ Le rôle `ADMIN` par défaut **n'obtient pas** ces permissions. `SYSTEM_ADMIN`
 possède le catalogue. Les permissions ne sont jamais figées sur la règle :
 chaque exécution recharge l'owner. Voir `docs/22-AUTOMATIONS.md`.
 
+Phase 23 : `notification.read.self`, `notification.manage.self` et
+`incident.read` existent. Self-only pour les notifications (pas d'admin
+global sur la boîte d'un autre utilisateur). `ADMIN` default-deny.
+`SYSTEM_ADMIN` : catalogue. Voir `docs/23-NOTIFICATIONS.md`.
+
 `group.manage` ne suffit pas : un `ADMIN` ne peut pas s'accorder `synology.read`, `jellyfin.read`,
 `immich.read`, `beszel.read`, `prometheus.read`, `uptime-kuma.read`, `proxmox.read`,
 `grafana.read`, `ntfy.read`, `ntfy.publish`, `sonarr.read`, `sonarr.command`, `radarr.read`,
 `radarr.command`, `prowlarr.read`,
-`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `seerr.request.manage`, `custom-api.read`, `automation.read`, `automation.manage`, `automation.run`, `docker.*`, `proxmox.start`,
+`qbittorrent.read`, `qbittorrent.pause`, `qbittorrent.resume`, `seerr.read`, `seerr.request.manage`, `custom-api.read`, `automation.read`, `automation.manage`, `automation.run`, `notification.read.self`, `notification.manage.self`, `incident.read`, `docker.*`, `proxmox.start`,
 `proxmox.shutdown`, `proxmox.reboot` ni `settings.manage`.
 
 ## 10. Audit
