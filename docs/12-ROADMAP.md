@@ -488,6 +488,10 @@ Objectifs :
 PR 24.1 : fondation PWA sécurisée (manifest, icônes, SW, offline shell,
 enregistrement, tests).
 
+PR 24.2 : Web Push backend (migration `0009`, `schemaVersion` 9,
+souscriptions chiffrées, tRPC `push.*`, delivery depuis Notification
+Center, SW `push` / `notificationclick`).
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

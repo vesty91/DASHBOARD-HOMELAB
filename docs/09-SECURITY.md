@@ -103,6 +103,22 @@ Règles obligatoires :
   la mise à jour ;
 - branding original Homelab Dashboard — aucun asset Homarr.
 
+## 5ter. Web Push (Phase 24.2)
+
+- Opt-in uniquement : aucune souscription automatique.
+- `WEB_PUSH_VAPID_PUBLIC_KEY` peut atteindre le client ; la clé privée
+  (`WEB_PUSH_VAPID_PRIVATE_KEY`) reste en environnement serveur uniquement
+  (jamais navigateur, DB, logs ou backup).
+- Endpoints / `p256dh` / `auth` chiffrés AES-256-GCM avec AAD dédié
+  (`dashboard.push-subscription.v1`).
+- Max 10 abonnements actifs par utilisateur.
+- Payload lock-screen minimal par défaut (pas de titres métier, emails,
+  torrents, erreurs brutes). Cible de clic : chemins internes allowlistés.
+- Émission uniquement depuis le pipeline Notification Center
+  (`createForUser`), jamais depuis les adapters / ntfy.
+- Réponses push `404` / `410` → désactivation ; erreurs transitoires bornées
+  (pas de retry infini).
+
 ## 6. CSRF
 
 Mutations authentifiées par cookie protégées (`SameSite=Lax`).
@@ -159,7 +175,8 @@ Options :
 Tables éphémères hors archive (Phase 14+) : `audit_logs`, `auth_sessions`,
 `automation_runs`, `automation_runtime_state`. Phase 23 ajoute
 `notifications`, `incidents` et `incident_events` à cette exclusion.
-`schemaVersion` courant : **8** (compat restore 5/6/7).
+Phase 24 ajoute `push_subscriptions` (endpoints Web Push chiffrés) à
+cette exclusion. `schemaVersion` courant : **9** (compat restore 5/6/7/8).
 
 ## 10. Rate limiting
 

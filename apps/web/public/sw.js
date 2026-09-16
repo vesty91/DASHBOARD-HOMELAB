@@ -172,3 +172,80 @@ self.addEventListener("fetch", (event) => {
     })(),
   );
 });
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "Homelab Dashboard",
+    body: "You have a new notification",
+    tag: "homelab-notification",
+    data: { path: "/notifications" },
+  };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      if (parsed && typeof parsed === "object") {
+        payload = {
+          title:
+            typeof parsed.title === "string" && parsed.title.trim() ? parsed.title : payload.title,
+          body: typeof parsed.body === "string" && parsed.body.trim() ? parsed.body : payload.body,
+          tag: typeof parsed.tag === "string" && parsed.tag.trim() ? parsed.tag : payload.tag,
+          data:
+            parsed.data && typeof parsed.data === "object"
+              ? {
+                  path:
+                    typeof parsed.data.path === "string" && parsed.data.path.startsWith("/")
+                      ? parsed.data.path
+                      : "/notifications",
+                }
+              : payload.data,
+        };
+      }
+    }
+  } catch {
+    // Keep conservative defaults when payload is missing or invalid.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: payload.tag,
+      data: payload.data,
+      renotify: true,
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const rawPath =
+    event.notification &&
+    event.notification.data &&
+    typeof event.notification.data.path === "string"
+      ? event.notification.data.path
+      : "/notifications";
+  const path = rawPath.startsWith("/") && !rawPath.includes("://") ? rawPath : "/notifications";
+  const targetUrl = new URL(path, self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clientList) {
+        if ("focus" in client) {
+          await client.focus();
+          if ("navigate" in client) {
+            try {
+              await client.navigate(targetUrl);
+            } catch {
+              // Older clients may reject navigate; open a new window instead.
+            }
+          }
+          return;
+        }
+      }
+      if (self.clients.openWindow) await self.clients.openWindow(targetUrl);
+    })(),
+  );
+});

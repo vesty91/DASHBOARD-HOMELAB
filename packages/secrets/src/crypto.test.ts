@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { decryptSecret, encryptSecret } from "./crypto";
+import {
+  decryptPushSubscriptionField,
+  decryptSecret,
+  encryptPushSubscriptionField,
+  encryptSecret,
+} from "./crypto";
 import { SecretError } from "./errors";
 import { createEnvKeyring, parseSecretEncryptionKey } from "./keyring";
+import { redact } from "./redaction";
 
 const master = Buffer.alloc(32, 9).toString("base64");
 const other = Buffer.alloc(32, 3).toString("base64");
@@ -96,5 +102,86 @@ describe("AES-256-GCM secrets", () => {
       expect(error).toBeInstanceOf(SecretError);
       expect(String(error)).not.toContain(input.plaintext);
     }
+  });
+});
+
+describe("push subscription AES-256-GCM secrets", () => {
+  const keyring = createEnvKeyring(master)!;
+  const input = {
+    userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    subscriptionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    field: "endpoint" as const,
+    plaintext: "https://push.example/endpoint/secret-path",
+  };
+
+  it("roundtrips with dedicated push AAD", () => {
+    const encrypted = encryptPushSubscriptionField(keyring, input);
+    expect(
+      decryptPushSubscriptionField(keyring, {
+        ...input,
+        ...encrypted,
+      }),
+    ).toBe(input.plaintext);
+  });
+
+  it("does not decrypt under integration secret AAD", () => {
+    const encrypted = encryptPushSubscriptionField(keyring, input);
+    expect(() =>
+      decryptSecret(keyring, {
+        integrationId: input.userId,
+        key: input.field,
+        ciphertext: encrypted.ciphertext,
+        iv: encrypted.iv,
+        authTag: encrypted.authTag,
+        keyVersion: encrypted.keyVersion,
+      }),
+    ).toThrow(SecretError);
+  });
+
+  it("binds AAD to userId, subscriptionId, and field", () => {
+    const encrypted = encryptPushSubscriptionField(keyring, input);
+    expect(() =>
+      decryptPushSubscriptionField(keyring, {
+        ...encrypted,
+        userId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        subscriptionId: input.subscriptionId,
+        field: input.field,
+      }),
+    ).toThrow(SecretError);
+    expect(() =>
+      decryptPushSubscriptionField(keyring, {
+        ...encrypted,
+        userId: input.userId,
+        subscriptionId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        field: input.field,
+      }),
+    ).toThrow(SecretError);
+    expect(() =>
+      decryptPushSubscriptionField(keyring, {
+        ...encrypted,
+        userId: input.userId,
+        subscriptionId: input.subscriptionId,
+        field: "p256dh",
+      }),
+    ).toThrow(SecretError);
+  });
+
+  it("redacts push secrets from logs", () => {
+    const redacted = redact({
+      endpoint: input.plaintext,
+      p256dh: "BNcRdtrerQ==",
+      auth: "tBHItJI5svw=",
+      vapidPrivateKey: "private-key-material",
+      statusCode: 410,
+    });
+    expect(redacted).toEqual({
+      endpoint: "[REDACTED]",
+      p256dh: "[REDACTED]",
+      auth: "[REDACTED]",
+      vapidPrivateKey: "[REDACTED]",
+      statusCode: 410,
+    });
+    expect(JSON.stringify(redacted)).not.toContain(input.plaintext);
+    expect(JSON.stringify(redacted)).not.toContain("private-key-material");
   });
 });

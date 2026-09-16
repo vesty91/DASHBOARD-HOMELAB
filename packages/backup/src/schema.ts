@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 8;
-export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8] as const;
+export const BACKUP_SCHEMA_VERSION = 9;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9] as const;
 export const BACKUP_APP_VERSION = "1.3.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -367,12 +367,14 @@ export const backupManifestSchema = z
       z.literal(5),
       z.literal(6),
       z.literal(7),
+      z.literal(8),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     databaseSchemaVersion: z.union([
       z.literal(5),
       z.literal(6),
       z.literal(7),
+      z.literal(8),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     appVersion: z.string().min(1).max(40),

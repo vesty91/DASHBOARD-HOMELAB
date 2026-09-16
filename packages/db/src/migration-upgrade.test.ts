@@ -24,6 +24,7 @@ const phase23NotificationMigration = new URL(
   "../drizzle/sqlite/0008_reflective_norman_osborn.sql",
   import.meta.url,
 );
+const phase24PushMigration = new URL("../drizzle/sqlite/0009_flimsy_arachne.sql", import.meta.url);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -452,6 +453,42 @@ describe("Phase 23 notification migration", () => {
             .get(table)?.count,
         ).toBe(1);
       }
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 24 web push migration", () => {
+  it("adds push_subscriptions and bumps schema_version to 9", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase13JobsMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase15SecurityMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase22AutomationMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase23NotificationMigration, "utf8"));
+      database
+        .prepare(
+          "INSERT INTO users(id,username,username_canonical,created_at,updated_at) VALUES('u1','Admin','admin',1,1)",
+        )
+        .run();
+      executeSqliteMigration(database, await readFile(phase24PushMigration, "utf8"));
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 9 });
+      expect(
+        database
+          .prepare(
+            "SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='push_subscriptions'",
+          )
+          .get()?.count,
+      ).toBe(1);
     } finally {
       database.close();
     }

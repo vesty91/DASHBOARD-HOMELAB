@@ -7,7 +7,7 @@ describe("backup service", () => {
     tables.server_settings = [
       {
         id: "global",
-        schemaVersion: 8,
+        schemaVersion: 9,
         instanceName: null,
         onboardingCompleted: false,
         oidcEnabled: false,

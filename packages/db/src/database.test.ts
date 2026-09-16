@@ -194,6 +194,7 @@ describe("SQLite database foundation", () => {
       notifications: sqliteSchema.notifications,
       incidents: sqliteSchema.incidents,
       incident_events: sqliteSchema.incidentEvents,
+      push_subscriptions: sqliteSchema.pushSubscriptions,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -227,6 +228,7 @@ describe("SQLite database foundation", () => {
       notifications: postgresqlSchema.notifications,
       incidents: postgresqlSchema.incidents,
       incident_events: postgresqlSchema.incidentEvents,
+      push_subscriptions: postgresqlSchema.pushSubscriptions,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

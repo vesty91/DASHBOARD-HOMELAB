@@ -4,6 +4,8 @@ export const NOTIFICATION_ERROR_CODES = [
   "DENIED_PERMISSION",
   "NOT_FOUND",
   "CONFLICT",
+  "SECRETS_NOT_CONFIGURED",
+  "MISCONFIGURED",
 ] as const;
 export type NotificationErrorCode = (typeof NOTIFICATION_ERROR_CODES)[number];
 

@@ -10,6 +10,11 @@ const SENSITIVE_KEYS = new Set([
   "idtoken",
   "accesstoken",
   "refreshtoken",
+  "vapidprivatekey",
+  "privatekey",
+  "p256dh",
+  "endpoint",
+  "auth",
 ]);
 
 function normalizeKey(key: string): string {

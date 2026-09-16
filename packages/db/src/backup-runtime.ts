@@ -89,6 +89,7 @@ const EPHEMERAL_RESTORE_TABLES = [
   "notifications",
   "incidents",
   "incident_events",
+  "push_subscriptions",
 ] as const;
 
 function postgresLockStatement(): ReturnType<typeof sql> {

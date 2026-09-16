@@ -1,6 +1,7 @@
 export * from "./automation-runtime";
 export * from "./notification-runtime";
 export * from "./incident-runtime";
+export * from "./push-subscription-runtime";
 export * from "./job-runtime";
 export * from "./client";
 export * from "./config";

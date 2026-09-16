@@ -111,7 +111,7 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide (`schemaVersion` 8) ;
+- manifest valide (`schemaVersion` 9) ;
 - fichier invalide rejeté avant mutation.
 
 ### E2E-009 SSO admin
@@ -302,7 +302,7 @@ pagination cursor, déduplication, isolation utilisateur, rétention, et
 upgrade 7 → 8 (SQLite / PostgreSQL) sans perte d'automations. Le moteur
 d'incidents consomme `integration.status.changed` (open / resolve, flap,
 idempotence). Backup : `notifications`, `incidents`, `incident_events`
-absents de l'archive ; `schemaVersion` 8. E2E
+absents de l'archive ; `schemaVersion` 9. E2E
 `apps/web/e2e/notifications.spec.ts` : badge unread, mark read / all /
 dismiss, deep-link interne allowlisté, timeline incident, isolation
 cross-user, clavier / focus trap.

@@ -8,7 +8,12 @@ import {
   type BoardApiContext,
 } from "@dashboard/api";
 import { createAutomationService } from "@dashboard/automations";
-import { createIncidentService, createNotificationService } from "@dashboard/notifications";
+import {
+  createIncidentService,
+  createNotificationService,
+  createPushService,
+  createWebPushSender,
+} from "@dashboard/notifications";
 import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
@@ -627,11 +632,36 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       return false;
     }
   }
+  const push = createPushService({
+    store: database.pushSubscriptionStore,
+    keyring,
+    ...(process.env.WEB_PUSH_VAPID_PUBLIC_KEY ||
+    process.env.WEB_PUSH_VAPID_PRIVATE_KEY ||
+    process.env.WEB_PUSH_VAPID_SUBJECT
+      ? {
+          vapid: {
+            ...(process.env.WEB_PUSH_VAPID_PUBLIC_KEY
+              ? { publicKey: process.env.WEB_PUSH_VAPID_PUBLIC_KEY }
+              : {}),
+            ...(process.env.WEB_PUSH_VAPID_PRIVATE_KEY
+              ? { privateKey: process.env.WEB_PUSH_VAPID_PRIVATE_KEY }
+              : {}),
+            ...(process.env.WEB_PUSH_VAPID_SUBJECT
+              ? { subject: process.env.WEB_PUSH_VAPID_SUBJECT }
+              : {}),
+          },
+        }
+      : { vapid: undefined }),
+    send: createWebPushSender(),
+  });
   const notifications = createNotificationService({
     store: database.notificationStore,
     integrationAccessible,
     async publish(event) {
       await publish(event);
+    },
+    async deliverPush(notification) {
+      await push.deliverForNotification(notification);
     },
   });
   const incidents = createIncidentService({
@@ -778,6 +808,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       },
     }),
     notifications,
+    push,
     incidents,
     audit: {
       record: (event) => database.securityStore.recordAudit(event),

@@ -153,6 +153,7 @@ export function createNotificationService(deps: {
     notificationId: string;
     occurredAt: string;
   }) => Promise<void>;
+  deliverPush?: (notification: NotificationRecord) => Promise<void>;
 }) {
   async function maybeRedact(
     row: NotificationRecord,
@@ -164,6 +165,15 @@ export function createNotificationService(deps: {
       redact = !ok;
     }
     return toView(row, redact);
+  }
+
+  async function maybeDeliverPush(notification: NotificationRecord): Promise<void> {
+    if (!deps.deliverPush) return;
+    try {
+      await deps.deliverPush(notification);
+    } catch {
+      // Push is best-effort; Notification Center remains the source of truth.
+    }
   }
 
   return {
@@ -205,6 +215,7 @@ export function createNotificationService(deps: {
             notificationId: updated.id,
             occurredAt: now.toISOString(),
           });
+          await maybeDeliverPush(updated);
           return updated;
         }
       }
@@ -218,6 +229,7 @@ export function createNotificationService(deps: {
         notificationId: created.id,
         occurredAt: now.toISOString(),
       });
+      await maybeDeliverPush(created);
       return created;
     },
 

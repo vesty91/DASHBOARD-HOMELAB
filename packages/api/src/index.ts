@@ -117,8 +117,11 @@ import {
   incidentListQuerySchema,
   incidentTimelineQuerySchema,
   notificationListQuerySchema,
+  pushSubscribeInputSchema,
+  pushUnsubscribeInputSchema,
   type IncidentService,
   type NotificationService,
+  type PushService,
 } from "@dashboard/notifications";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
@@ -176,6 +179,7 @@ export interface ApiContext {
   backup: BackupService;
   automations: AutomationService;
   notifications: NotificationService;
+  push: PushService;
   incidents: IncidentService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
@@ -1615,6 +1619,19 @@ export const notificationsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.notifications.dismiss(input.id, ctx.actor))),
 });
+export const pushRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.push.permissions(ctx.actor)),
+  vapidPublicKey: t.procedure.query(({ ctx }) =>
+    procedure(async () => ctx.push.getVapidPublicKey(ctx.actor)),
+  ),
+  list: t.procedure.query(({ ctx }) => procedure(() => ctx.push.list(ctx.actor))),
+  subscribe: t.procedure
+    .input(pushSubscribeInputSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.push.subscribe(ctx.actor, input))),
+  unsubscribe: t.procedure
+    .input(pushUnsubscribeInputSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.push.unsubscribe(ctx.actor, input))),
+});
 export const incidentsRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.incidents.permissions(ctx.actor)),
   list: t.procedure
@@ -1634,6 +1651,7 @@ export const dashboardRouter = t.router({
   integration: integrationsRouter,
   automation: automationsRouter,
   notification: notificationsRouter,
+  push: pushRouter,
   incident: incidentsRouter,
   docker: dockerRouter,
   synology: synologyRouter,

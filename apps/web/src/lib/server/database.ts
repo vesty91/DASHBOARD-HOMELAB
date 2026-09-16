@@ -29,6 +29,10 @@ import {
   createPostgresqlIncidentStore,
   createSqliteIncidentStore,
 } from "@dashboard/db/incident-runtime";
+import {
+  createPostgresqlPushSubscriptionStore,
+  createSqlitePushSubscriptionStore,
+} from "@dashboard/db/push-subscription-runtime";
 
 const globalDatabase = globalThis as typeof globalThis & {
   dashboardDatabase?: ReturnType<typeof createDatabase>;
@@ -47,6 +51,7 @@ async function createDatabase() {
       automationStore: createPostgresqlAutomationStore(client),
       notificationStore: createPostgresqlNotificationStore(client),
       incidentStore: createPostgresqlIncidentStore(client),
+      pushSubscriptionStore: createPostgresqlPushSubscriptionStore(client),
       jobStore: createPostgresqlJobStore(client),
       backupStore: createPostgresqlBackupStore(client),
       securityStore: createPostgresqlSecurityStore(client.pool),
@@ -63,6 +68,7 @@ async function createDatabase() {
     automationStore: createSqliteAutomationStore(client),
     notificationStore: createSqliteNotificationStore(client),
     incidentStore: createSqliteIncidentStore(client),
+    pushSubscriptionStore: createSqlitePushSubscriptionStore(client),
     jobStore: createSqliteJobStore(client),
     backupStore: createSqliteBackupStore(client),
     securityStore: createSqliteSecurityStore(client.sqlite),

@@ -18,7 +18,7 @@ function validTables() {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 8,
+      schemaVersion: 9,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -135,13 +135,13 @@ describe("backup archive", () => {
     expect(() =>
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 9, databaseSchemaVersion: 9 },
+        manifest: { ...archive.manifest, schemaVersion: 10, databaseSchemaVersion: 10 },
       }),
     ).toThrow(BackupError);
     try {
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 9, databaseSchemaVersion: 9 },
+        manifest: { ...archive.manifest, schemaVersion: 10, databaseSchemaVersion: 10 },
       });
     } catch (error) {
       expect(error).toMatchObject({ code: "INCOMPATIBLE_SCHEMA" });

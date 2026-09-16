@@ -30,6 +30,7 @@ export const TABLE_NAMES = [
   "notifications",
   "incidents",
   "incident_events",
+  "push_subscriptions",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
@@ -199,4 +200,23 @@ export const SCHEMA_CONTRACT = {
     "updatedAt",
   ],
   incident_events: ["id", "incidentId", "eventType", "summary", "createdAt"],
+  push_subscriptions: [
+    "id",
+    "userId",
+    "endpointHash",
+    "endpointCiphertext",
+    "endpointIv",
+    "endpointAuthTag",
+    "p256dhCiphertext",
+    "p256dhIv",
+    "p256dhAuthTag",
+    "authCiphertext",
+    "authIv",
+    "authAuthTag",
+    "keyVersion",
+    "userAgent",
+    "disabledAt",
+    "createdAt",
+    "updatedAt",
+  ],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;
