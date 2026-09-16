@@ -137,7 +137,7 @@ for (const viewport of VIEWPORTS) {
       await assertNoHorizontalOverflow(page);
 
       await page.goto("/boards");
-      await expect(page.getByRole("heading", { name: /Boards/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Boards", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Ouvrir la navigation" })).toBeVisible();
       await assertNoHorizontalOverflow(page);
 
