@@ -452,7 +452,7 @@ COMPLETE. Status pages sûres (`0010`, schema 10) : package
 `@dashboard/status-pages`, projection publique opt-in (pas d’IDs
 d’intégration / URL / secrets), maintenance windows UTC + notifications,
 UI admin `/status-pages*` et publique `/status/[slug]` (`noindex`).
-Backup **inclut** la config status/maintenance. Minor produit `1.5.0`.
+Backup **inclut** la config status/maintenance. Minor produit `1.6.0`.
 Voir `docs/25-STATUS-PAGES.md`.
 
 # État Phase 26
