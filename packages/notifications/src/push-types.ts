@@ -64,4 +64,5 @@ export interface PushSubscriptionStorePort {
   ): Promise<PushSubscriptionRecord>;
   disable(id: string, at: Date): Promise<void>;
   deleteForUser(id: string, userId: string): Promise<boolean>;
+  deleteAllForUser(userId: string): Promise<number>;
 }

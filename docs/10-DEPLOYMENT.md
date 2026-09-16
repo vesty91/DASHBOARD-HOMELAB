@@ -82,6 +82,12 @@ Points déploiement :
    `WEB_PUSH_VAPID_PRIVATE_KEY` et `WEB_PUSH_VAPID_SUBJECT` (ex.
    `mailto:admin@example.com`). Sans ces trois valeurs, `push.subscribe`
    échoue fermé ; aucune souscription automatique.
+5. Installation : **aucun** bouton « Installer l’app » produit.
+   - Chromium / Edge : UI navigateur (`beforeinstallprompt` possible mais
+     non exposé comme CTA).
+   - iOS Safari : « Sur l’écran d’accueil » uniquement.
+6. iOS Web Push : nécessite la PWA sur l’écran d’accueil (pas Safari onglet)
+   lorsque la plateforme le permet ; voir `docs/09-SECURITY.md` §5ter.
 
 ## 5. Services et réseau
 

@@ -119,6 +119,23 @@ Règles obligatoires :
 - Réponses push `404` / `410` → désactivation ; erreurs transitoires bornées
   (pas de retry infini).
 
+### Installation PWA (pas de bouton Install universel)
+
+- **Chromium / Edge** (desktop et Android) : installation via l’UI du
+  navigateur (menu « Installer » / `beforeinstallprompt`). Le produit
+  n’expose **pas** de CTA Install générique — les APIs ne sont pas
+  universelles.
+- **iOS Safari** : uniquement « Sur l’écran d’accueil » (Share sheet).
+  Pas d’API Install standard équivalente.
+
+### Limitations iOS Web Push
+
+- Sur iOS, Web Push (versions supportées) exige une **PWA installée** sur
+  l’écran d’accueil — pas une session Safari en onglet seul.
+- Permission utilisateur explicite toujours requise.
+- La delivery est plus restrictive que Chrome Android ; le payload reste
+  minimal (`buildSafePushPayload` dans `packages/notifications`).
+
 ## 6. CSRF
 
 Mutations authentifiées par cookie protégées (`SameSite=Lax`).

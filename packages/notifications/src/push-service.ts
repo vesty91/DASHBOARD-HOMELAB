@@ -235,6 +235,12 @@ export function createPushService(deps: {
       return { removed };
     },
 
+    async unsubscribeAll(actor: NotificationActor): Promise<{ removed: number }> {
+      requireSelfPermission(actor, "notification.manage.self");
+      const removed = await deps.store.deleteAllForUser(actor.userId!);
+      return { removed };
+    },
+
     async deliverForNotification(notification: NotificationRecord): Promise<void> {
       if (!deps.keyring) return;
       const publicKey = deps.vapid?.publicKey?.trim();

@@ -1631,6 +1631,9 @@ export const pushRouter = t.router({
   unsubscribe: t.procedure
     .input(pushUnsubscribeInputSchema)
     .mutation(({ ctx, input }) => procedure(() => ctx.push.unsubscribe(ctx.actor, input))),
+  unsubscribeAll: t.procedure.mutation(({ ctx }) =>
+    procedure(() => ctx.push.unsubscribeAll(ctx.actor)),
+  ),
 });
 export const incidentsRouter = t.router({
   permissions: t.procedure.query(({ ctx }) => ctx.incidents.permissions(ctx.actor)),

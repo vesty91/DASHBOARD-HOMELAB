@@ -199,6 +199,14 @@ export function NotificationCenter({
               >
                 Voir tout
               </Link>
+              <Link
+                className="ui-btn ui-btn-ghost"
+                href="/account/security#push"
+                data-testid="notification-push-prefs-link"
+                onClick={() => setOpen(false)}
+              >
+                Préférences push
+              </Link>
             </div>
           </div>
           {error ? <p className="notification-center-error">{error}</p> : null}

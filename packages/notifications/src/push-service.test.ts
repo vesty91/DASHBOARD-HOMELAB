@@ -102,6 +102,15 @@ function createMemoryStore(): PushSubscriptionStorePort & {
       rows.delete(id);
       return true;
     },
+    async deleteAllForUser(userId) {
+      let removed = 0;
+      for (const [id, row] of rows) {
+        if (row.userId !== userId) continue;
+        rows.delete(id);
+        removed += 1;
+      }
+      return removed;
+    },
   };
 }
 
@@ -177,6 +186,33 @@ describe("push service", () => {
     });
     await expect(service.unsubscribe(actor(USER_A), { id: created.id })).resolves.toEqual({
       removed: true,
+    });
+  });
+
+  it("unsubscribes all devices for the actor only", async () => {
+    const store = createMemoryStore();
+    const service = createPushService({
+      store,
+      keyring: createEnvKeyring(KEY),
+      vapid: VAPID,
+      send: async () => ({ statusCode: 201 }),
+    });
+    await service.subscribe(actor(USER_A), {
+      endpoint: "https://push.example/a1",
+      keys: { p256dh: "p1", auth: "a1" },
+    });
+    await service.subscribe(actor(USER_A), {
+      endpoint: "https://push.example/a2",
+      keys: { p256dh: "p2", auth: "a2" },
+    });
+    await service.subscribe(actor(USER_B), {
+      endpoint: "https://push.example/b1",
+      keys: { p256dh: "p3", auth: "a3" },
+    });
+    await expect(service.unsubscribeAll(actor(USER_A))).resolves.toEqual({ removed: 2 });
+    expect(await service.list(actor(USER_A))).toEqual({ items: [] });
+    expect(await service.list(actor(USER_B))).toMatchObject({
+      items: [{ endpointHash: hashPushEndpoint("https://push.example/b1") }],
     });
   });
 
