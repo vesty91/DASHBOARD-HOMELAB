@@ -14,6 +14,7 @@ try {
     "0005_wandering_mac_gargan.sql",
     "0006_exotic_sugar_man.sql",
     "0007_dashing_smasher.sql",
+    "0008_reflective_norman_osborn.sql",
   ])
     database.exec(
       await readFile(
