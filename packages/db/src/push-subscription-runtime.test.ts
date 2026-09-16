@@ -20,7 +20,7 @@ describe("SQLite push subscription persistence", () => {
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 10 });
+      ).toMatchObject({ schema_version: 11 });
       const repos = createSqliteRepositories(client);
       const user = await repos.users.create({ username: "pusher" });
       const other = await repos.users.create({ username: "other" });

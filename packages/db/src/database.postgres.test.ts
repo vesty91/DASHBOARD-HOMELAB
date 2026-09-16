@@ -822,6 +822,50 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
     }
   });
 
+  it("upgrades schema 10 to 11 with reliability daily rollups", async () => {
+    const client = createPostgresqlClient(connectionString!);
+    try {
+      await client.pool.query("drop schema public cascade; create schema public");
+      const files = [
+        "0000_kind_pride.sql",
+        "0001_slim_kabuki.sql",
+        "0002_brief_captain_america.sql",
+        "0003_known_doctor_spectrum.sql",
+        "0004_classy_rocket_raccoon.sql",
+        "0005_curved_stephen_strange.sql",
+        "0006_natural_boomer.sql",
+        "0007_flaky_forge.sql",
+        "0008_common_post.sql",
+        "0009_serious_lilith.sql",
+        "0010_faulty_the_hood.sql",
+      ];
+      for (const file of files) {
+        await executePostgresqlMigration(
+          client.pool,
+          await readFile(new URL(`../drizzle/postgresql/${file}`, import.meta.url), "utf8"),
+        );
+      }
+      await executePostgresqlMigration(
+        client.pool,
+        await readFile(
+          new URL("../drizzle/postgresql/0011_typical_joystick.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(
+        await client.pool.query("select schema_version from server_settings where id='global'"),
+      ).toMatchObject({ rows: [{ schema_version: 11 }] });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from information_schema.tables where table_schema='public' and table_name=$1",
+          ["service_reliability_daily"],
+        ),
+      ).toMatchObject({ rows: [{ count: 1 }] });
+    } finally {
+      await client.close();
+    }
+  });
+
   it("creates disabled automations and rejects stale revisions", async () => {
     const client = createPostgresqlClient(connectionString!);
     try {
@@ -841,7 +885,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(created.enabled).toBe(false);
       expect(
         await client.pool.query("select schema_version from server_settings where id='global'"),
-      ).toMatchObject({ rows: [{ schema_version: 10 }] });
+      ).toMatchObject({ rows: [{ schema_version: 11 }] });
       const updated = await store.update(created.id, {
         expectedConfigRevision: 1,
         name: "Down alert v2",

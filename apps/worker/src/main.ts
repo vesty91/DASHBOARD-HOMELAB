@@ -13,6 +13,7 @@ const worker = await startWorker({
         purgeNotifications: persistence.purgeNotifications,
         incidents: persistence.incidents,
         maintenance: persistence.maintenance,
+        reliability: persistence.reliability,
         automations: {
           store: persistence.schedulerStore,
           loadOwner: persistence.loadOwner,

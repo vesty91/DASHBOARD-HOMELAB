@@ -138,6 +138,12 @@ import {
   PUBLIC_STATUS_RATE_WINDOW_MS,
   type StatusPageService,
 } from "@dashboard/status-pages";
+import {
+  ReliabilityError,
+  listDailyReliabilitySchema,
+  rebuildReliabilitySchema,
+  type ReliabilityService,
+} from "@dashboard/reliability";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -197,6 +203,7 @@ export interface ApiContext {
   push: PushService;
   incidents: IncidentService;
   statusPages: StatusPageService;
+  reliability: ReliabilityService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -279,7 +286,8 @@ const mapError = (error: unknown): never => {
     error instanceof IntegrationError ||
     error instanceof AutomationError ||
     error instanceof NotificationError ||
-    error instanceof StatusPageError
+    error instanceof StatusPageError ||
+    error instanceof ReliabilityError
   ) {
     const code =
       error.code === "UNAUTHORIZED"
@@ -1718,6 +1726,15 @@ export const statusPageRouter = t.router({
     return procedure(() => ctx.statusPages.getPublicBySlug(input.slug));
   }),
 });
+export const reliabilityRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.reliability.permissions(ctx.actor)),
+  listDaily: t.procedure
+    .input(listDailyReliabilitySchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.listDaily(input, ctx.actor))),
+  rebuildRecent: t.procedure
+    .input(rebuildReliabilitySchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.reliability.rebuildRecent(input, ctx.actor))),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -1728,6 +1745,7 @@ export const dashboardRouter = t.router({
   push: pushRouter,
   incident: incidentsRouter,
   statusPage: statusPageRouter,
+  reliability: reliabilityRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,

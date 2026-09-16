@@ -773,3 +773,31 @@ export const maintenanceWindowTargets = sqliteTable(
     index("maintenance_window_targets_integration_idx").on(t.integrationId),
   ],
 );
+/** Opaque service key = integration id. Daily UTC rollups; excluded from backup. */
+export const serviceReliabilityDaily = sqliteTable(
+  "service_reliability_daily",
+  {
+    id: text("id").primaryKey(),
+    serviceKey: text("service_key").notNull(),
+    dateUtc: text("date_utc").notNull(),
+    observedSeconds: integer("observed_seconds").notNull(),
+    availableSeconds: integer("available_seconds").notNull(),
+    degradedSeconds: integer("degraded_seconds").notNull(),
+    unavailableSeconds: integer("unavailable_seconds").notNull(),
+    maintenanceSeconds: integer("maintenance_seconds").notNull(),
+    unknownSeconds: integer("unknown_seconds").notNull(),
+    incidentCount: integer("incident_count").notNull().default(0),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_reliability_daily_service_date_uq").on(t.serviceKey, t.dateUtc),
+    index("service_reliability_daily_date_idx").on(t.dateUtc),
+    check("service_reliability_daily_observed_nonneg", sql`${t.observedSeconds} >= 0`),
+    check("service_reliability_daily_available_nonneg", sql`${t.availableSeconds} >= 0`),
+    check("service_reliability_daily_degraded_nonneg", sql`${t.degradedSeconds} >= 0`),
+    check("service_reliability_daily_unavailable_nonneg", sql`${t.unavailableSeconds} >= 0`),
+    check("service_reliability_daily_maintenance_nonneg", sql`${t.maintenanceSeconds} >= 0`),
+    check("service_reliability_daily_unknown_nonneg", sql`${t.unknownSeconds} >= 0`),
+    check("service_reliability_daily_incident_nonneg", sql`${t.incidentCount} >= 0`),
+  ],
+);
