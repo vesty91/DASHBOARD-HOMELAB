@@ -497,7 +497,7 @@ Migrations : `0000`–`0009` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 9 (compat 5/6/7/8 → 9).
 
 PRs : #75–#78 (+ close). Tag `phase-24-complete`. Minor produit
-`v1.4.0` (release séparée).
+`v1.4.0`.
 
 Hors scope : bouton Install universel, bibliothèque PWA volumineuse,
 payload métier sur lock-screen, ITSM push.

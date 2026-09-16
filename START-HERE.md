@@ -1,6 +1,6 @@
 # START HERE
 
-> **v1.3.0** — procédure d’installation : `README.md` et `docs/10-DEPLOYMENT.md`.
+> **v1.4.0** — procédure d’installation : `README.md` et `docs/10-DEPLOYMENT.md`.
 > Le texte ci-dessous décrit le bootstrap historique d’août 2026.
 
 Ce dépôt contient déjà :

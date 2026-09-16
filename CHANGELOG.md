@@ -6,10 +6,10 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
-Préparation minor **1.4.0** (Phase 24). Pas encore tagué / publié.
+## [1.4.0] — 2026-09-16
 
-Progressive Web App sécurisée & Web Push. Migration `0009`, backup
-`schemaVersion` 9.
+Progressive Web App sécurisée & Web Push (Phase 24). Minor backward-compatible.
+Migration `0009`, backup `schemaVersion` 9.
 
 ### Ajouté
 

@@ -3,7 +3,7 @@
 Statut : **COMPLETE**.
 
 Phase 24. Migration `0009`. `schemaVersion` 9. Backup `formatVersion` 1.
-Tag `phase-24-complete`. Minor produit `v1.4.0` (release séparée).
+Tag `phase-24-complete`. Minor produit `v1.4.0`.
 
 PWA installable avec branding **Homelab Dashboard** (jamais Homarr), service
 worker sécurisé, shell hors ligne public, et Web Push VAPID opt-in branché
