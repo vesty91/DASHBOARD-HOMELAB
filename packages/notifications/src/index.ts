@@ -29,7 +29,7 @@ export {
   type NotificationSeverity,
   type NotificationSourceType,
 } from "./types";
-export { assertSafeDestinationPath } from "./destination";
+export { assertSafeDestinationPath, safeDestinationPath } from "./destination";
 export { sanitizeNotificationText } from "./content";
 export {
   notificationCreateSchema,

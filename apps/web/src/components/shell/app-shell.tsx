@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plug,
+  TriangleAlert,
   UserRound,
   Users,
   UsersRound,
@@ -27,6 +28,7 @@ import { signOut } from "next-auth/react";
 import { revokeCurrentSessionAction } from "@/app/logout-action";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ShellNav, ShellUser } from "./get-shell-context";
+import { NotificationCenter } from "./notification-center";
 
 function initials(user: ShellUser): string {
   const source = (user.displayName ?? user.username).trim();
@@ -41,6 +43,8 @@ function contextFromPath(pathname: string): string | null {
   if (/^\/apps\/.+/.test(pathname)) return "Apps";
   if (/^\/integrations\/.+/.test(pathname)) return "Intégrations";
   if (/^\/automations/.test(pathname)) return "Automations";
+  if (/^\/notifications/.test(pathname)) return "Notifications";
+  if (/^\/incidents/.test(pathname)) return "Incidents";
   if (pathname.startsWith("/account")) return "Compte";
   return null;
 }
@@ -163,6 +167,7 @@ export function AppShell({
             {nav.apps ? link("/apps", "Apps", <AppWindow />) : null}
             {nav.integrations ? link("/integrations", "Intégrations", <Plug />) : null}
             {nav.automations ? link("/automations", "Automations", <Workflow />) : null}
+            {nav.incidents ? link("/incidents", "Incidents", <TriangleAlert />) : null}
           </div>
           {showAdmin ? (
             <div className="shell-nav-section">
@@ -202,31 +207,40 @@ export function AppShell({
             </IconButton>
             {contextTitle ? <p className="shell-topbar-title">{contextTitle}</p> : null}
           </div>
-          {user && displayName ? (
-            <DropdownMenu
-              trigger={
-                <button type="button" className="shell-user" aria-haspopup="menu">
-                  <span className="shell-avatar">{initials(user)}</span>
-                  <span className="shell-user-name">{displayName}</span>
-                </button>
-              }
-            >
-              <DropdownItem href="/account/security">Compte</DropdownItem>
-              <DropdownItem
-                onSelect={() => {
-                  void revokeCurrentSessionAction().finally(() => {
-                    void signOut({ callbackUrl: "/login" });
-                  });
-                }}
+          <div className="shell-topbar-actions">
+            {nav.notifications ? (
+              <NotificationCenter canRead={nav.notifications} canManage={nav.notificationManage} />
+            ) : null}
+            {user && displayName ? (
+              <DropdownMenu
+                trigger={
+                  <button type="button" className="shell-user" aria-haspopup="menu">
+                    <span className="shell-avatar">{initials(user)}</span>
+                    <span className="shell-user-name">{displayName}</span>
+                  </button>
+                }
               >
-                Déconnexion
-              </DropdownItem>
-            </DropdownMenu>
-          ) : (
-            <Link className="ui-btn ui-btn-primary" href="/login">
-              Connexion
-            </Link>
-          )}
+                <DropdownItem href="/account/security">Compte</DropdownItem>
+                {nav.notifications ? (
+                  <DropdownItem href="/notifications">Notifications</DropdownItem>
+                ) : null}
+                {nav.incidents ? <DropdownItem href="/incidents">Incidents</DropdownItem> : null}
+                <DropdownItem
+                  onSelect={() => {
+                    void revokeCurrentSessionAction().finally(() => {
+                      void signOut({ callbackUrl: "/login" });
+                    });
+                  }}
+                >
+                  Déconnexion
+                </DropdownItem>
+              </DropdownMenu>
+            ) : (
+              <Link className="ui-btn ui-btn-primary" href="/login">
+                Connexion
+              </Link>
+            )}
+          </div>
         </header>
         <main id="contenu-principal" className="shell-content" tabIndex={-1}>
           {children}

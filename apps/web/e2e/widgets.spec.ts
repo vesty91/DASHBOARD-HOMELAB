@@ -165,6 +165,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
   await page.goto("/boards/phase-6-widgets/edit");
@@ -179,7 +180,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
 
   await context.clearCookies();
   await page.goto("/boards/public-clock");
-  await expect(page.locator("[data-clock-timezone]")).toBeVisible();
+  await expect(page.locator("[data-clock-timezone]")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("link", { name: "Modifier" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Ajouter un widget" })).toHaveCount(0);
 

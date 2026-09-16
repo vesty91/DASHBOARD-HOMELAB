@@ -1,5 +1,5 @@
 export { Alert } from "./alert";
-export { Badge } from "./badge";
+export { Badge, type BadgeTone } from "./badge";
 export { Button, IconButton } from "./button";
 export { Card, CardBody, CardFooter, CardHeader, CardTitle } from "./card";
 export { ConfirmDialog, Dialog } from "./dialog";
