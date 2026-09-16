@@ -435,4 +435,4 @@ COMPLETE. Notification Center in-app (`0008`, schema 8) : unread / read /
 dismiss, badge, realtime user-scoped. Incidents disponibilité
 (open / resolve) + timeline. RBAC `notification.*.self` / `incident.read`.
 Backup exclut `notifications`, `incidents`, `incident_events`.
-Minor produit `1.3.0` (release suivante). Voir `docs/23-NOTIFICATIONS.md`.
+Minor produit `1.3.0`. Voir `docs/23-NOTIFICATIONS.md`.

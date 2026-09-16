@@ -20,7 +20,7 @@ describe("web health contracts", () => {
   it("live only reports process liveness and a safe version", () => {
     const body = liveHealthBody();
     expect(body.status).toBe("live");
-    expect(body.version).toBe(process.env.APP_VERSION?.trim() || "1.2.0");
+    expect(body.version).toBe(process.env.APP_VERSION?.trim() || "1.3.0");
     expect(JSON.stringify(body)).not.toMatch(
       /DATABASE_URL|REDIS_URL|AUTH_SECRET|postgres(?:ql)?:\/\//iu,
     );

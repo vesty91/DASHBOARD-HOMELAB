@@ -55,7 +55,7 @@ export function getAuthSessionConfiguration(environment: ServerEnv) {
 
 export const serverEnv = parseServerEnv(process.env);
 
-export const APP_VERSION = process.env.APP_VERSION?.trim() || "1.2.0";
+export const APP_VERSION = process.env.APP_VERSION?.trim() || "1.3.0";
 
 export function assertRuntimeProductionEnv(
   environment: Readonly<Record<string, string | undefined>> = process.env,

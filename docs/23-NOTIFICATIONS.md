@@ -3,7 +3,7 @@
 Statut : **COMPLETE**.
 
 Phase 23. Migration `0008`. `schemaVersion` 8. Backup `formatVersion` 1.
-Tag `phase-23-complete`. Minor produit `v1.3.0` (release suivante).
+Tag `phase-23-complete`. Minor produit `v1.3.0`.
 
 Complète les alertes ntfy (Phase 22) par une **boîte de réception in-app**.
 Ne remplace pas `automation_runs`, `audit_logs` ni ntfy.

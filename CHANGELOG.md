@@ -6,9 +6,10 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
-Préparation minor **1.3.0** (Phase 23). Pas encore tagué / publié.
+## [1.3.0] — 2026-09-16
 
-Notification Center & Incidents. Migration `0008`, backup `schemaVersion` 8.
+Notification Center & Incidents (Phase 23). Minor backward-compatible.
+Migration `0008`, backup `schemaVersion` 8.
 
 ### Ajouté
 
