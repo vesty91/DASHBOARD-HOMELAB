@@ -85,6 +85,13 @@
       "when": 1789594620513,
       "tag": "0011_normal_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789595826560,
+      "tag": "0012_tranquil_mindworm",
+      "breakpoints": true
     }
   ]
 }

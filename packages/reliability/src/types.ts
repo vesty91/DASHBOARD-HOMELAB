@@ -41,3 +41,16 @@ export type ServicePresence = {
   /** Instant from which the service is considered observable. */
   observableFromMs: number;
 };
+
+export type ServiceSlo = {
+  id: string;
+  serviceKey: string;
+  name: string;
+  objectiveBasisPoints: number;
+  windowDays: 7 | 30 | 90;
+  excludeMaintenance: boolean;
+  enabled: boolean;
+  configRevision: number;
+  createdAt: Date;
+  updatedAt: Date;
+};

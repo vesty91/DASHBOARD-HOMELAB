@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 10;
-export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10] as const;
+export const BACKUP_SCHEMA_VERSION = 11;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11] as const;
 export const BACKUP_APP_VERSION = "1.5.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -377,6 +377,21 @@ const maintenanceWindowTargetRowSchema = z
   })
   .strict();
 
+const serviceSloRowSchema = z
+  .object({
+    id: uuidSchema,
+    serviceKey: z.string().min(1).max(128),
+    name: z.string().min(1).max(200),
+    objectiveBasisPoints: z.number().int().min(90_000).max(99_999),
+    windowDays: z.union([z.literal(7), z.literal(30), z.literal(90)]),
+    excludeMaintenance: z.boolean(),
+    enabled: z.boolean(),
+    configRevision: z.number().int().positive(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
 export const backupTablesSchemaV6 = z
   .object({
     users: z.array(userRowSchema).max(10_000),
@@ -409,11 +424,15 @@ export const backupTablesSchemaV9 = backupTablesSchemaV6.extend({
   automation_rules: z.array(automationRuleRowSchema).max(2_000),
 });
 
-export const backupTablesSchema = backupTablesSchemaV9.extend({
+export const backupTablesSchemaV10 = backupTablesSchemaV9.extend({
   status_pages: z.array(statusPageRowSchema).max(500),
   status_page_services: z.array(statusPageServiceRowSchema).max(5_000),
   maintenance_windows: z.array(maintenanceWindowRowSchema).max(2_000),
   maintenance_window_targets: z.array(maintenanceWindowTargetRowSchema).max(10_000),
+});
+
+export const backupTablesSchema = backupTablesSchemaV10.extend({
+  service_slos: z.array(serviceSloRowSchema).max(2_000),
 });
 
 export const backupManifestSchema = z
@@ -426,6 +445,7 @@ export const backupManifestSchema = z
       z.literal(7),
       z.literal(8),
       z.literal(9),
+      z.literal(10),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     databaseSchemaVersion: z.union([
@@ -434,6 +454,7 @@ export const backupManifestSchema = z
       z.literal(7),
       z.literal(8),
       z.literal(9),
+      z.literal(10),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     appVersion: z.string().min(1).max(40),
@@ -498,6 +519,7 @@ export const backupTablesSchemaV5 = z
 export type BackupTablesV5 = z.infer<typeof backupTablesSchemaV5>;
 export type BackupTablesV6 = z.infer<typeof backupTablesSchemaV6>;
 export type BackupTablesV9 = z.infer<typeof backupTablesSchemaV9>;
+export type BackupTablesV10 = z.infer<typeof backupTablesSchemaV10>;
 export type BackupTables = z.infer<typeof backupTablesSchema>;
 export type BackupManifest = z.infer<typeof backupManifestSchema>;
 export type BackupArchive = z.infer<typeof backupArchiveSchema>;

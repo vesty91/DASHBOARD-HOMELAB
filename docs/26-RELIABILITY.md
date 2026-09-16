@@ -1,8 +1,8 @@
 # 26 — Reliability & SLO Analytics
 
-Phase 26. Migration `0011`. DB `schemaVersion` 11.
-Backup `formatVersion` 1 / `schemaVersion` **10** (inchangé en 26.1 :
-pas de config durable nouvelle).
+Phase 26. Migrations `0011`–`0012`. DB `schemaVersion` **12**.
+Backup `formatVersion` 1 / `schemaVersion` **11** (SLO config durable ;
+rollups exclus).
 
 ## Objectif
 
@@ -10,7 +10,7 @@ Agrégats d’availability **quotidiens UTC** dérivés des incidents et des
 fenêtres de maintenance — pas de nouveau backend de monitoring, pas de
 PromQL arbitraire, pas de stockage haute fréquence.
 
-## Table `service_reliability_daily`
+## Table `service_reliability_daily` (0011)
 
 | Colonne           | Rôle                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------ |
@@ -45,21 +45,63 @@ Somme des buckets ≤ `observedSeconds`. Pas de double comptage.
 
 730 jours (2 ans). Au-delà : delete.
 
+## SLO / error budget (0012 — PR 26.2)
+
+Table `service_slos` :
+
+| Colonne                | Rôle                                  |
+| ---------------------- | ------------------------------------- |
+| `serviceKey`           | Clé opaque (= integration id)         |
+| `objectiveBasisPoints` | 90_000–99_999 (90.000%–99.999%)       |
+| `windowDays`           | 7 / 30 / 90                           |
+| `excludeMaintenance`   | retire la maintenance du dénominateur |
+| `configRevision`       | optimistic concurrency                |
+
+### Formule disponibilité
+
+- `unknown` exclu du numérateur et du dénominateur (conservateur).
+- `degraded` compte contre la disponibilité (non “good”).
+- Si `excludeMaintenance` : maintenance retirée du dénominateur.
+- Sinon : maintenance reste dans le dénominateur, jamais “available”.
+- Objectif 100% rejeté (error budget pathologique).
+
+### Error budget
+
+Entiers :
+
+- `allowedDowntime = floor(eligible * (100000 - objective) / 100000)`
+- `consumed = max(0, eligible - available)`
+- `remainingBudgetBps` dérivé de remaining/allowed
+
 ## Backup
 
-`service_reliability_daily` est **exclu** de l’archive (données dérivées
-rejouables). Pas de bump `BACKUP_SCHEMA_VERSION` en 26.1.
+- `service_reliability_daily` **exclu** (dérivé rejouable).
+- `service_slos` **inclus** → `BACKUP_SCHEMA_VERSION` **11** (compat 5–11).
+
+## Permissions
+
+| Permission         | Rôle                       |
+| ------------------ | -------------------------- |
+| `reliability.read` | lecture rollups / evaluate |
+| `slo.manage`       | CRUD objectifs SLO         |
+
+ADMIN default-deny pour les deux.
 
 ## API
 
-Permission `reliability.read` (ADMIN default-deny).
-
 | Route                       | Notes                             |
 | --------------------------- | --------------------------------- |
-| `reliability.permissions`   | `{ canRead }`                     |
+| `reliability.permissions`   | `{ canRead, canManageSlo }`       |
 | `reliability.listDaily`     | ≤50 serviceKeys, ≤90 jours        |
 | `reliability.rebuildRecent` | `settings.manage` ou SYSTEM_ADMIN |
+| `reliability.listSlos`      |                                   |
+| `reliability.getSlo`        |                                   |
+| `reliability.createSlo`     | `slo.manage`                      |
+| `reliability.updateSlo`     | revision conflict                 |
+| `reliability.deleteSlo`     | revision conflict                 |
+| `reliability.evaluateSlo`   | window + error budget             |
 
-## Hors scope 26.1
+## Hors scope 26.2
 
-SLO / error budget, UI, widget, CSV (PR 26.2 / 26.3).
+UI, widget, CSV (PR 26.3). Burn-rate multi-fenêtre / alerting `slo.budget.low`
+optionnel ultérieur.

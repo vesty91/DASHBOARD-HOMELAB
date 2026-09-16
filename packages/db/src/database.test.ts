@@ -199,6 +199,7 @@ describe("SQLite database foundation", () => {
       status_page_services: sqliteSchema.statusPageServices,
       maintenance_windows: sqliteSchema.maintenanceWindows,
       maintenance_window_targets: sqliteSchema.maintenanceWindowTargets,
+      service_slos: sqliteSchema.serviceSlos,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -237,6 +238,7 @@ describe("SQLite database foundation", () => {
       status_page_services: postgresqlSchema.statusPageServices,
       maintenance_windows: postgresqlSchema.maintenanceWindows,
       maintenance_window_targets: postgresqlSchema.maintenanceWindowTargets,
+      service_slos: postgresqlSchema.serviceSlos,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

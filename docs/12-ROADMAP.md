@@ -539,8 +539,9 @@ Livrables prévus :
 - UI + widget (PR 26.3).
 
 PR 26.1 : agrégation + API lecture `reliability.*` + worker tick.
-Backup `formatVersion` 1 / `schemaVersion` 10 inchangé (pas de config durable
-nouvelle). DB `schemaVersion` 11.
+PR 26.2 : SLO / error budget (`service_slos`, migration `0012`).
+DB `schemaVersion` **12**. Backup `schemaVersion` **11** (inclut `service_slos` ;
+rollups exclus).
 
 ## Règle
 

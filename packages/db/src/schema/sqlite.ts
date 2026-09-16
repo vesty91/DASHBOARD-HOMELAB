@@ -801,3 +801,28 @@ export const serviceReliabilityDaily = sqliteTable(
     check("service_reliability_daily_incident_nonneg", sql`${t.incidentCount} >= 0`),
   ],
 );
+export const serviceSlos = sqliteTable(
+  "service_slos",
+  {
+    id: text("id").primaryKey(),
+    serviceKey: text("service_key").notNull(),
+    name: text("name").notNull(),
+    objectiveBasisPoints: integer("objective_basis_points").notNull(),
+    windowDays: integer("window_days").notNull(),
+    excludeMaintenance: integer("exclude_maintenance", { mode: "boolean" }).notNull().default(true),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    configRevision: integer("config_revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_slos_service_name_uq").on(t.serviceKey, t.name),
+    index("service_slos_service_key_idx").on(t.serviceKey),
+    check(
+      "service_slos_objective_bps_range",
+      sql`${t.objectiveBasisPoints} >= 90000 AND ${t.objectiveBasisPoints} <= 99999`,
+    ),
+    check("service_slos_window_days_valid", sql`${t.windowDays} IN (7, 30, 90)`),
+    check("service_slos_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);

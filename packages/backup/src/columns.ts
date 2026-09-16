@@ -27,6 +27,7 @@ export const BACKUP_TABLE_NAMES = [
   "status_page_services",
   "maintenance_windows",
   "maintenance_window_targets",
+  "service_slos",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLE_NAMES)[number];
@@ -60,6 +61,7 @@ export const TABLE_INSERT_ORDER = [
   "status_page_services",
   "maintenance_windows",
   "maintenance_window_targets",
+  "service_slos",
 ] as const satisfies readonly BackupTableName[];
 
 export const TABLE_DELETE_ORDER = [...TABLE_INSERT_ORDER].reverse();
@@ -254,6 +256,18 @@ export const BACKUP_COLUMNS = {
     "updatedAt",
   ],
   maintenance_window_targets: ["maintenanceId", "integrationId"],
+  service_slos: [
+    "id",
+    "serviceKey",
+    "name",
+    "objectiveBasisPoints",
+    "windowDays",
+    "excludeMaintenance",
+    "enabled",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
 } as const satisfies Record<BackupTableName, readonly string[]>;
 
 export const JSON_OBJECT_COLUMNS = new Set([
@@ -294,6 +308,7 @@ export const BOOLEAN_COLUMNS = new Set([
   "oidcAutoProvision",
   "oidcAllowLocalLogin",
   "showIncidentHistory",
+  "excludeMaintenance",
 ]);
 
 export const PREVIEW_REDACTED_COLUMNS = new Set(["ciphertext", "iv", "authTag", "passwordHash"]);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLO_OBJECTIVE_BPS_MAX, SLO_OBJECTIVE_BPS_MIN } from "./slo-math";
 
 export const utcDateSchema = z
   .string()
@@ -32,5 +33,55 @@ export const rebuildReliabilitySchema = z.object({
   serviceKeys: z.array(serviceKeySchema).max(50).optional(),
 });
 
+export const sloWindowDaysSchema = z.union([z.literal(7), z.literal(30), z.literal(90)]);
+
+export const objectiveBasisPointsSchema = z
+  .number()
+  .int()
+  .min(SLO_OBJECTIVE_BPS_MIN)
+  .max(SLO_OBJECTIVE_BPS_MAX);
+
+export const createSloSchema = z.object({
+  serviceKey: serviceKeySchema,
+  name: z.string().trim().min(1).max(200),
+  objectiveBasisPoints: objectiveBasisPointsSchema,
+  windowDays: sloWindowDaysSchema,
+  excludeMaintenance: z.boolean().default(true),
+  enabled: z.boolean().default(true),
+});
+
+export const updateSloSchema = z.object({
+  id: z.string().uuid(),
+  expectedConfigRevision: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200).optional(),
+  objectiveBasisPoints: objectiveBasisPointsSchema.optional(),
+  windowDays: sloWindowDaysSchema.optional(),
+  excludeMaintenance: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const deleteSloSchema = z.object({
+  id: z.string().uuid(),
+  expectedConfigRevision: z.number().int().positive(),
+});
+
+export const getSloSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const listSlosSchema = z.object({
+  serviceKeys: z.array(serviceKeySchema).max(50).optional(),
+  limit: z.number().int().min(1).max(200).default(100),
+});
+
+export const evaluateSloSchema = z.object({
+  id: z.string().uuid(),
+});
+
 export type ListDailyReliabilityInput = z.infer<typeof listDailyReliabilitySchema>;
 export type RebuildReliabilityInput = z.infer<typeof rebuildReliabilitySchema>;
+export type CreateSloInput = z.infer<typeof createSloSchema>;
+export type UpdateSloInput = z.infer<typeof updateSloSchema>;
+export type DeleteSloInput = z.infer<typeof deleteSloSchema>;
+export type ListSlosInput = z.infer<typeof listSlosSchema>;
+export type EvaluateSloInput = z.infer<typeof evaluateSloSchema>;

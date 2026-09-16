@@ -63,6 +63,7 @@ export const PERMISSIONS = [
   "status-page.read",
   "status-page.manage",
   "reliability.read",
+  "slo.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_NAMES = ["SYSTEM_ADMIN", "ADMIN", "EDITOR", "USER", "VIEWER"] as const;

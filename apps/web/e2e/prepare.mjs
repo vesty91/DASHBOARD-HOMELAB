@@ -18,6 +18,7 @@ try {
     "0009_flimsy_arachne.sql",
     "0010_many_yellowjacket.sql",
     "0011_normal_mac_gargan.sql",
+    "0012_tranquil_mindworm.sql",
   ])
     database.exec(
       await readFile(

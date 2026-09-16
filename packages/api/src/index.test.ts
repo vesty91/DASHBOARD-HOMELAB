@@ -266,9 +266,23 @@ function createCaller(
       },
     } as unknown as ApiContext["statusPages"],
     reliability: {
-      permissions: () => ({ canRead: false }),
+      permissions: () => ({ canRead: false, canManageSlo: false }),
       listDaily: async () => [],
       rebuildRecent: async () => ({ days: 0, upserted: 0 }),
+      listSlos: async () => [],
+      getSlo: async () => {
+        throw new Error("slo not stubbed");
+      },
+      createSlo: async () => {
+        throw new Error("slo not stubbed");
+      },
+      updateSlo: async () => {
+        throw new Error("slo not stubbed");
+      },
+      deleteSlo: async () => undefined,
+      evaluateSlo: async () => {
+        throw new Error("slo not stubbed");
+      },
       tick: async () => ({ upserted: 0, deleted: 0 }),
     } as unknown as ApiContext["reliability"],
     audit: {
@@ -2504,6 +2518,7 @@ describe("backup tRPC router", () => {
           status_page_services: 0,
           maintenance_windows: 0,
           maintenance_window_targets: 0,
+          service_slos: 0,
         },
         encryptedSecretCount: 0,
         credentialCount: 0,

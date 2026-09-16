@@ -757,3 +757,27 @@ export const serviceReliabilityDaily = pgTable(
     check("service_reliability_daily_incident_nonneg", sql`${t.incidentCount} >= 0`),
   ],
 );
+export const serviceSlos = pgTable(
+  "service_slos",
+  {
+    id: uuid("id").primaryKey(),
+    serviceKey: text("service_key").notNull(),
+    name: text("name").notNull(),
+    objectiveBasisPoints: integer("objective_basis_points").notNull(),
+    windowDays: integer("window_days").notNull(),
+    excludeMaintenance: boolean("exclude_maintenance").notNull().default(true),
+    enabled: boolean("enabled").notNull().default(true),
+    configRevision: integer("config_revision").notNull().default(1),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("service_slos_service_name_uq").on(t.serviceKey, t.name),
+    index("service_slos_service_key_idx").on(t.serviceKey),
+    check(
+      "service_slos_objective_bps_range",
+      sql`${t.objectiveBasisPoints} >= 90000 AND ${t.objectiveBasisPoints} <= 99999`,
+    ),
+    check("service_slos_window_days_valid", sql`${t.windowDays} IN (7, 30, 90)`),
+    check("service_slos_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);

@@ -135,13 +135,13 @@ describe("backup archive", () => {
     expect(() =>
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 11, databaseSchemaVersion: 11 },
+        manifest: { ...archive.manifest, schemaVersion: 12, databaseSchemaVersion: 12 },
       }),
     ).toThrow(BackupError);
     try {
       parseBackupArchive({
         ...archive,
-        manifest: { ...archive.manifest, schemaVersion: 11, databaseSchemaVersion: 11 },
+        manifest: { ...archive.manifest, schemaVersion: 12, databaseSchemaVersion: 12 },
       });
     } catch (error) {
       expect(error).toMatchObject({ code: "INCOMPATIBLE_SCHEMA" });
@@ -227,6 +227,7 @@ describe("backup archive", () => {
     expect(parsed.tables.oidc_secrets).toEqual([]);
     expect(parsed.tables.automation_rules).toEqual([]);
     expect(parsed.tables.status_pages).toEqual([]);
+    expect(parsed.tables.service_slos).toEqual([]);
   });
 
   it("upgrades a schema 6 archive with empty automation rules", () => {
@@ -238,6 +239,7 @@ describe("backup archive", () => {
     delete (tables as { status_page_services?: unknown }).status_page_services;
     delete (tables as { maintenance_windows?: unknown }).maintenance_windows;
     delete (tables as { maintenance_window_targets?: unknown }).maintenance_window_targets;
+    delete (tables as { service_slos?: unknown }).service_slos;
     const canonical = canonicalJson(tables);
     const hashed = {
       sha256: sha256Hex(canonical),
@@ -258,6 +260,7 @@ describe("backup archive", () => {
     expect(parsed.manifest.schemaVersion).toBe(6);
     expect(parsed.tables.automation_rules).toEqual([]);
     expect(parsed.tables.status_pages).toEqual([]);
+    expect(parsed.tables.service_slos).toEqual([]);
     expect(parsed.tables.oidc_identities).toEqual([]);
   });
 });
