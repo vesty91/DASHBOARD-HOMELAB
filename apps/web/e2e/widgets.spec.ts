@@ -42,6 +42,17 @@ function boardRevision(slug: string) {
   }
 }
 
+function boardVisibility(slug: string) {
+  const database = openE2eDatabase();
+  try {
+    return String(
+      database.prepare("SELECT visibility FROM boards WHERE slug=?").get(slug)?.visibility ?? "",
+    );
+  } finally {
+    database.close();
+  }
+}
+
 test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", async ({
   page,
   context,
@@ -165,14 +176,9 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
-  await expect(page).not.toHaveURL(/\?.*visibility=/);
-  // Uncontrolled select can stay "public" without a successful save — reload to verify persistence.
-  await expect
-    .poll(async () => {
-      await page.reload();
-      return page.getByLabel("Visibilité").inputValue();
-    })
-    .toBe("public");
+  await expect.poll(() => boardVisibility("public-clock"), { timeout: 20_000 }).toBe("public");
+  await page.reload();
+  await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
   await page.goto("/boards/phase-6-widgets/edit");
   await expect(page.getByRole("heading", { name: "Modifier Phase 6 Widgets" })).toBeVisible();
