@@ -38,3 +38,11 @@ export const NOTIFICATION_READ_OR_DISMISSED_RETENTION_MS = 30 * 24 * 60 * 60 * 1
 export const NOTIFICATION_UNREAD_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 export const NOTIFICATION_LIST_DEFAULT_LIMIT = 50;
 export const NOTIFICATION_LIST_MAX_LIMIT = 100;
+
+export const INCIDENT_SUMMARY_MAX = 500;
+export const INCIDENT_LIST_DEFAULT_LIMIT = 50;
+export const INCIDENT_LIST_MAX_LIMIT = 100;
+export const INCIDENT_TIMELINE_DEFAULT_LIMIT = 100;
+export const INCIDENT_TIMELINE_MAX_LIMIT = 200;
+export const INCIDENT_OPEN_SEVERITY = "error" as const satisfies NotificationSeverity;
+export const INCIDENT_RECOVER_SEVERITY = "success" as const satisfies NotificationSeverity;

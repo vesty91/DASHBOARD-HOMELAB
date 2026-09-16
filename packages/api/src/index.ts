@@ -114,7 +114,10 @@ import {
 } from "@dashboard/automations";
 import {
   NotificationError,
+  incidentListQuerySchema,
+  incidentTimelineQuerySchema,
   notificationListQuerySchema,
+  type IncidentService,
   type NotificationService,
 } from "@dashboard/notifications";
 import { requireServiceStatusActor } from "./service-status";
@@ -173,6 +176,7 @@ export interface ApiContext {
   backup: BackupService;
   automations: AutomationService;
   notifications: NotificationService;
+  incidents: IncidentService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -1611,6 +1615,18 @@ export const notificationsRouter = t.router({
     .input(z.object({ id: z.uuid() }))
     .mutation(({ ctx, input }) => procedure(() => ctx.notifications.dismiss(input.id, ctx.actor))),
 });
+export const incidentsRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.incidents.permissions(ctx.actor)),
+  list: t.procedure
+    .input(incidentListQuerySchema.optional())
+    .query(({ ctx, input }) => procedure(() => ctx.incidents.list(ctx.actor, input ?? {}))),
+  get: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .query(({ ctx, input }) => procedure(() => ctx.incidents.get(input.id, ctx.actor))),
+  timeline: t.procedure
+    .input(incidentTimelineQuerySchema)
+    .query(({ ctx, input }) => procedure(() => ctx.incidents.timeline(ctx.actor, input))),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -1618,6 +1634,7 @@ export const dashboardRouter = t.router({
   integration: integrationsRouter,
   automation: automationsRouter,
   notification: notificationsRouter,
+  incident: incidentsRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,
