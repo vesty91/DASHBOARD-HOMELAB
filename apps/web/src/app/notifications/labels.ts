@@ -3,7 +3,7 @@ import type {
   NotificationCategory,
   NotificationSeverity,
   NotificationSourceType,
-} from "@dashboard/notifications";
+} from "@dashboard/notifications/browser";
 
 export const SEVERITY_LABELS: Record<NotificationSeverity, string> = {
   info: "Info",

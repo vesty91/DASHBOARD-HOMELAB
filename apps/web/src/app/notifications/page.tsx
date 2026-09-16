@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bell } from "lucide-react";
-import { safeDestinationPath } from "@dashboard/notifications";
+import { safeDestinationPath } from "@dashboard/notifications/browser";
 import { Badge, EmptyState, PageContainer, PageHeader } from "@dashboard/ui";
 import { getBoardCaller } from "@/lib/server/board-api";
 import {

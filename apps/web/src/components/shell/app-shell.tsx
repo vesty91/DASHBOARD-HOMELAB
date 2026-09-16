@@ -208,7 +208,9 @@ export function AppShell({
             {contextTitle ? <p className="shell-topbar-title">{contextTitle}</p> : null}
           </div>
           <div className="shell-topbar-actions">
-            <NotificationCenter canRead={nav.notifications} canManage={nav.notificationManage} />
+            {nav.notifications ? (
+              <NotificationCenter canRead={nav.notifications} canManage={nav.notificationManage} />
+            ) : null}
             {user && displayName ? (
               <DropdownMenu
                 trigger={

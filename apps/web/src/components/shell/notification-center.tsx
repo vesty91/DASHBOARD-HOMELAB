@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import { Bell } from "lucide-react";
-import { safeDestinationPath, type NotificationView } from "@dashboard/notifications";
+import { safeDestinationPath, type NotificationView } from "@dashboard/notifications/browser";
 import { Badge, Button, Dialog, EmptyState, IconButton } from "@dashboard/ui";
 import {
   dismissNotificationAction,
