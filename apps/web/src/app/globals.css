@@ -2103,3 +2103,143 @@ button[aria-pressed="true"] {
     display: none;
   }
 }
+
+.status-page-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0;
+}
+
+.status-page-summary dt {
+  margin: 0 0 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-page-summary dd {
+  margin: 0;
+  font-size: 0.925rem;
+}
+
+.status-page-services {
+  display: grid;
+  gap: 1rem;
+}
+
+.status-page-service-row {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.status-page-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.status-page-service-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.status-page-service-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.public-status-shell {
+  min-height: 100vh;
+  padding: 1.5rem 1.25rem max(2rem, env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at top left, rgb(79 125 255 / 0.12), transparent 40%), var(--background);
+  color: var(--foreground);
+}
+
+.public-status {
+  width: min(48rem, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.75rem;
+}
+
+.public-status-brand {
+  margin: 0 0 0.35rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.public-status-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.public-status-overall {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 0.5rem;
+}
+
+.public-status-overall-label {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.public-status-updated,
+.public-status-offline {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+}
+
+.public-status-offline {
+  color: var(--warning, #d5a017);
+}
+
+.public-status h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.public-status-service-list,
+.public-status-maintenance-list,
+.public-status-incident-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.public-status-service-list li,
+.public-status-maintenance-list li,
+.public-status-incident-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-status-service-list p,
+.public-status-maintenance-list p {
+  margin: 0.25rem 0 0;
+}

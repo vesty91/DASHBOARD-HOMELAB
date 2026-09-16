@@ -519,7 +519,7 @@ Livrables prévus :
 PR 25.1 : core sûr (schéma, domain, API, tests).
 PR 25.2 : logique métier maintenance (lifecycle UTC, notifications, worker tick ;
 sans UI ni migration `0011`).
-
+PR 25.3 : UI admin + page publique Next.js + E2E.
 Migrations : `0000`–`0010` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
 

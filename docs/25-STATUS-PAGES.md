@@ -78,6 +78,24 @@ Exclus (runtime / dérivé) : `notifications`, `incidents`, `incident_events`,
 - UI admin / page publique Next.js (timezone UI deferred — all instants are UTC)
 - historique d’incidents public riche
 
+## UI (PR 25.3)
+
+Routes admin (auth + `status-page.read` / `status-page.manage`) :
+
+- `/status-pages` — liste
+- `/status-pages/new` — création (visibilité **private** par défaut)
+- `/status-pages/[id]` — services, publish/unpublish, maintenance
+- `/status-pages/maintenance/[id]` — détail notification
+
+Route publique :
+
+- `/status/[slug]` — uniquement si `visibility=public` **et** `enabled=true`
+- `robots: noindex` par défaut
+- labels texte (pas couleur seule), services, maintenances, incidents publics dérivés, dernière MAJ
+- polling borné (~TTL cache 15s) ; PWA ne cache pas le statut live (offline → indisponible)
+
+E2E : `apps/web/e2e/status-pages.spec.ts`.
+
 ## Maintenance windows (PR 25.2)
 
 Lifecycle : `scheduled` → `active` → `completed`, or `cancelled`.
