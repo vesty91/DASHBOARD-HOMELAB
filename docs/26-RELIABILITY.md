@@ -1,8 +1,8 @@
 # 26 — Reliability & SLO Analytics
 
-Phase 26. Migrations `0011`–`0012`. DB `schemaVersion` **12**.
+Phase 26 **COMPLETE**. Migrations `0011`–`0012`. DB `schemaVersion` **12**.
 Backup `formatVersion` 1 / `schemaVersion` **11** (SLO config durable ;
-rollups exclus).
+rollups exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
 
 ## Objectif
 

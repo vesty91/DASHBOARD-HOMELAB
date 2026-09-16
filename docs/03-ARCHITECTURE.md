@@ -454,3 +454,10 @@ d’intégration / URL / secrets), maintenance windows UTC + notifications,
 UI admin `/status-pages*` et publique `/status/[slug]` (`noindex`).
 Backup **inclut** la config status/maintenance. Minor produit `1.5.0`.
 Voir `docs/25-STATUS-PAGES.md`.
+
+# État Phase 26
+
+COMPLETE. Fiabilité / SLO (`0011`–`0012`, DB schema 12) : package
+`@dashboard/reliability`, rollups quotidiens dérivés (hors backup), objectifs
+`service_slos` (backup schema 11), UI `/reliability`, widget
+`reliability-status`. Minor produit `1.6.0`. Voir `docs/26-RELIABILITY.md`.

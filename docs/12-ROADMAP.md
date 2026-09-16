@@ -527,23 +527,30 @@ Hors scope : indexation SEO volontaire, CAPTCHA public, SSE public dédié
 
 ## Phase 26 — Reliability & SLO Analytics
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Livrables prévus :
+Livrables :
 
 - agrégats quotidiens UTC `service_reliability_daily` (migration `0011`) ;
-- package `@dashboard/reliability` (agrégation pure + service) ;
-- rebuild borné (≤90 j) depuis incidents + maintenance ;
-- rétention 730 j ; rollups **exclus** du backup (dérivés) ;
-- SLO / error budget (PR 26.2) ;
-- UI + widget (PR 26.3) — **livré** : `/reliability`, widget `reliability-status`,
-  `reliability.summarize`, E2E `reliability.spec.ts`.
+- package `@dashboard/reliability` (agrégation pure + service + SLO math) ;
+- rebuild borné (≤90 j) depuis incidents + maintenance ; worker tick +
+  rétention 730 j ;
+- rollups **exclus** du backup (dérivés rejouables) ;
+- SLO / error budget : table `service_slos` (migration `0012`), bases points
+  90_000–99_999, fenêtres 7/30/90, `excludeMaintenance`, CAS `configRevision` ;
+- UI `/reliability` + détail service, export CSV formula-safe, widget
+  `reliability-status` (`publicSafe: false`), `reliability.summarize` ;
+- permissions `reliability.read` / `slo.manage` (ADMIN default-deny) ;
+- docs `docs/26-RELIABILITY.md`.
 
-PR 26.1 : agrégation + API lecture `reliability.*` + worker tick.
-PR 26.2 : SLO / error budget (`service_slos`, migration `0012`).
-PR 26.3 : pages fiabilité, export CSV, widget board, nav `reliability.read`.
-DB `schemaVersion` **12**. Backup `schemaVersion` **11** (inclut `service_slos` ;
-rollups exclus).
+PRs : #86–#88 (+ close). Tag `phase-26-complete`. Minor produit `v1.6.0`.
+
+Migrations : `0000`–`0012` (SQLite + PostgreSQL). DB `schemaVersion` **12**.
+Backup `formatVersion` 1 / `schemaVersion` **11** (compat 5–11 ; inclut
+`service_slos` ; exclut `service_reliability_daily`).
+
+Hors scope : PromQL arbitraire, store haute fréquence, burn-rate multi-fenêtre
+avancé, alerting `slo.budget.low` (optionnel ultérieur).
 
 ## Règle
 
