@@ -17,13 +17,13 @@
     "@dashboard/integrations": "workspace:*",
     "@dashboard/notifications": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
-  "@dashboard/permissions": "workspace:*",
-  "@dashboard/qbittorrent": "workspace:*",
-  "@dashboard/radarr": "workspace:*",
-  "@dashboard/secrets": "workspace:*",
-  "@dashboard/sonarr": "workspace:*",
-  "@dashboard/status-pages": "workspace:*",
-  "tsx": "4.23.13"
+    "@dashboard/permissions": "workspace:*",
+    "@dashboard/qbittorrent": "workspace:*",
+    "@dashboard/radarr": "workspace:*",
+    "@dashboard/secrets": "workspace:*",
+    "@dashboard/sonarr": "workspace:*",
+    "@dashboard/status-pages": "workspace:*",
+    "tsx": "4.23.13"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
