@@ -1,3 +1,9 @@
+import type {
+  NotificationCategory,
+  NotificationSeverity,
+  NotificationSourceType,
+} from "./types";
+
 export { safeDestinationPath } from "./destination";
 export type {
   NotificationCategory,
