@@ -72,7 +72,8 @@ Inclus (config durable) : `status_pages`, `status_page_services`,
 Exclus (runtime / dérivé) : `notifications`, `incidents`, `incident_events`,
 `push_subscriptions`, …
 
-`BACKUP_SCHEMA_VERSION` = **10** ; compat restore **5–10**.
+`BACKUP_SCHEMA_VERSION` = **11** (Phase 26.2 ; Phase 25 avait livré **10**) ;
+compat restore **5–11**.
 
 ## UI (PR 25.3)
 

@@ -378,7 +378,7 @@ Le manifest doit contenir :
 {
   "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "databaseSchemaVersion": 10,
   "appVersion": "1.5.0",
   "createdAt": "...",

@@ -6,11 +6,23 @@ import type { ReliabilityStorePort } from "./ports";
 function emptyStore(): ReliabilityStorePort {
   return {
     listIntegrationPresence: async () => [],
+    integrationExists: async () => false,
     listIncidentsBetween: async () => [],
     listMaintenancesBetween: async () => [],
     upsertDaily: async () => undefined,
     listDaily: async () => [],
     deleteOlderThan: async () => 0,
+    listSlos: async () => [],
+    getSlo: async () => null,
+    createSlo: async () => {
+      throw new Error("not implemented");
+    },
+    updateSlo: async () => {
+      throw new Error("not implemented");
+    },
+    deleteSlo: async () => {
+      throw new Error("not implemented");
+    },
   };
 }
 
@@ -31,5 +43,29 @@ describe("reliability service permissions", () => {
         },
       ),
     ).rejects.toBeInstanceOf(ReliabilityError);
+  });
+
+  it("rejects createSlo without slo.manage", async () => {
+    const service = createReliabilityService({ store: emptyStore() });
+    await expect(
+      service.createSlo(
+        {
+          serviceKey: "svc",
+          name: "Primary",
+          objectiveBasisPoints: 99_900,
+          windowDays: 30,
+          excludeMaintenance: true,
+          enabled: true,
+        },
+        {
+          userId: "u1",
+          subject: {
+            status: "active",
+            isSystemAdmin: false,
+            directPermissions: ["reliability.read"],
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

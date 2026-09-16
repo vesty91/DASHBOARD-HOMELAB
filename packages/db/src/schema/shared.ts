@@ -35,6 +35,7 @@ export const TABLE_NAMES = [
   "status_page_services",
   "maintenance_windows",
   "maintenance_window_targets",
+  "service_slos",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
@@ -265,4 +266,16 @@ export const SCHEMA_CONTRACT = {
     "updatedAt",
   ],
   maintenance_window_targets: ["maintenanceId", "integrationId"],
+  service_slos: [
+    "id",
+    "serviceKey",
+    "name",
+    "objectiveBasisPoints",
+    "windowDays",
+    "excludeMaintenance",
+    "enabled",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;

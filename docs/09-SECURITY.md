@@ -196,7 +196,7 @@ Phase 24 ajoute `push_subscriptions` (endpoints Web Push chiffrés) à
 cette exclusion. Phase 25 **inclut** au backup `status_pages`,
 `status_page_services`, `maintenance_windows` et
 `maintenance_window_targets` (config durable). `schemaVersion` courant :
-**10** (compat restore 5/6/7/8/9 → 10).
+**11** (compat restore 5–11).
 
 ## 10. Rate limiting
 

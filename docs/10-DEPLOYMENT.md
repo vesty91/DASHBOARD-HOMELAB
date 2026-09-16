@@ -247,7 +247,7 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5–10, hash SHA-256. Secrets : ciphertext / iv / authTag /
+`schemaVersion` 5–11, hash SHA-256. Secrets : ciphertext / iv / authTag /
 keyVersion uniquement. Phase 25 inclut la config status pages /
 maintenance.
 

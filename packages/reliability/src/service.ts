@@ -13,12 +13,24 @@ import {
 import { ReliabilityError } from "./errors";
 import type { ReliabilityStorePort } from "./ports";
 import {
+  createSloSchema,
+  deleteSloSchema,
+  evaluateSloSchema,
+  getSloSchema,
   listDailyReliabilitySchema,
+  listSlosSchema,
   rebuildReliabilitySchema,
+  updateSloSchema,
+  type CreateSloInput,
+  type DeleteSloInput,
+  type EvaluateSloInput,
   type ListDailyReliabilityInput,
+  type ListSlosInput,
   type RebuildReliabilityInput,
+  type UpdateSloInput,
 } from "./schemas";
-import type { DailyReliabilityRollup } from "./types";
+import { computeSloFromDaily } from "./slo-math";
+import type { ServiceSlo } from "./types";
 
 export type ReliabilityActor = {
   userId: string | null;
@@ -33,6 +45,17 @@ function requireRead(actor: ReliabilityActor): asserts actor is ReliabilityActor
   }
   if (!hasPermission(actor.subject, "reliability.read")) {
     throw new ReliabilityError("FORBIDDEN", "reliability.read required");
+  }
+}
+
+function requireSloManage(actor: ReliabilityActor): asserts actor is ReliabilityActor & {
+  subject: PermissionSubject;
+} {
+  if (!actor.subject || actor.subject.status !== "active") {
+    throw new ReliabilityError("UNAUTHORIZED", "Authentication required");
+  }
+  if (!hasPermission(actor.subject, "slo.manage")) {
+    throw new ReliabilityError("FORBIDDEN", "slo.manage required");
   }
 }
 
@@ -68,7 +91,7 @@ export function createReliabilityService(deps: {
       deps.store.listMaintenancesBetween(fromMs - MS_PER_DAY, toMs),
     ]);
 
-    const rows: DailyReliabilityRollup[] = [];
+    const rows = [];
     for (const service of filtered) {
       for (const dateUtc of dates) {
         const rollup = buildDailyRollup({
@@ -88,13 +111,21 @@ export function createReliabilityService(deps: {
     return { days, upserted: rows.length };
   }
 
+  async function requireSlo(id: string): Promise<ServiceSlo> {
+    const slo = await deps.store.getSlo(id);
+    if (!slo) throw new ReliabilityError("NOT_FOUND", "SLO not found");
+    return slo;
+  }
+
   return {
     permissions(actor: ReliabilityActor) {
+      const active = Boolean(actor.subject && actor.subject.status === "active");
       return {
         canRead: Boolean(
-          actor.subject &&
-          actor.subject.status === "active" &&
-          hasPermission(actor.subject, "reliability.read"),
+          active && actor.subject && hasPermission(actor.subject, "reliability.read"),
+        ),
+        canManageSlo: Boolean(
+          active && actor.subject && hasPermission(actor.subject, "slo.manage"),
         ),
       };
     },
@@ -126,6 +157,88 @@ export function createReliabilityService(deps: {
         days: input.days,
         ...(input.serviceKeys ? { serviceKeys: input.serviceKeys } : {}),
       });
+    },
+
+    async listSlos(raw: ListSlosInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = listSlosSchema.parse(raw);
+      return deps.store.listSlos({
+        ...(input.serviceKeys ? { serviceKeys: input.serviceKeys } : {}),
+        limit: input.limit,
+      });
+    },
+
+    async getSlo(raw: { id: string }, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = getSloSchema.parse(raw);
+      return requireSlo(input.id);
+    },
+
+    async createSlo(raw: CreateSloInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = createSloSchema.parse(raw);
+      if (!(await deps.store.integrationExists(input.serviceKey))) {
+        throw new ReliabilityError("NOT_FOUND", "Service key not found");
+      }
+      return deps.store.createSlo({
+        id: createId(),
+        serviceKey: input.serviceKey,
+        name: input.name,
+        objectiveBasisPoints: input.objectiveBasisPoints,
+        windowDays: input.windowDays,
+        excludeMaintenance: input.excludeMaintenance,
+        enabled: input.enabled,
+        now: now(),
+      });
+    },
+
+    async updateSlo(raw: UpdateSloInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = updateSloSchema.parse(raw);
+      await requireSlo(input.id);
+      return deps.store.updateSlo({
+        id: input.id,
+        expectedConfigRevision: input.expectedConfigRevision,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.objectiveBasisPoints !== undefined
+          ? { objectiveBasisPoints: input.objectiveBasisPoints }
+          : {}),
+        ...(input.windowDays !== undefined ? { windowDays: input.windowDays } : {}),
+        ...(input.excludeMaintenance !== undefined
+          ? { excludeMaintenance: input.excludeMaintenance }
+          : {}),
+        ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+        now: now(),
+      });
+    },
+
+    async deleteSlo(raw: DeleteSloInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = deleteSloSchema.parse(raw);
+      await requireSlo(input.id);
+      await deps.store.deleteSlo(input.id, input.expectedConfigRevision);
+    },
+
+    async evaluateSlo(raw: EvaluateSloInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = evaluateSloSchema.parse(raw);
+      const slo = await requireSlo(input.id);
+      const nowMs = now().getTime();
+      const toDate = utcDateString(nowMs);
+      const fromDate = utcDateString(nowMs - (slo.windowDays - 1) * MS_PER_DAY);
+      const days = await deps.store.listDaily({
+        serviceKeys: [slo.serviceKey],
+        fromDateUtc: fromDate,
+        toDateUtc: toDate,
+        limit: slo.windowDays,
+      });
+      const computation = computeSloFromDaily({
+        days,
+        windowDays: slo.windowDays,
+        objectiveBasisPoints: slo.objectiveBasisPoints,
+        excludeMaintenance: slo.excludeMaintenance,
+      });
+      return { slo, computation, fromDateUtc: fromDate, toDateUtc: toDate };
     },
 
     async tick(): Promise<{ upserted: number; deleted: number }> {

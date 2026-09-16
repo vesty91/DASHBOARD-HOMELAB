@@ -140,8 +140,14 @@ import {
 } from "@dashboard/status-pages";
 import {
   ReliabilityError,
+  createSloSchema,
+  deleteSloSchema,
+  evaluateSloSchema,
+  getSloSchema,
   listDailyReliabilitySchema,
+  listSlosSchema,
   rebuildReliabilitySchema,
+  updateSloSchema,
   type ReliabilityService,
 } from "@dashboard/reliability";
 import { requireServiceStatusActor } from "./service-status";
@@ -1734,6 +1740,24 @@ export const reliabilityRouter = t.router({
   rebuildRecent: t.procedure
     .input(rebuildReliabilitySchema)
     .mutation(({ ctx, input }) => procedure(() => ctx.reliability.rebuildRecent(input, ctx.actor))),
+  listSlos: t.procedure
+    .input(listSlosSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.listSlos(input, ctx.actor))),
+  getSlo: t.procedure
+    .input(getSloSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.getSlo(input, ctx.actor))),
+  createSlo: t.procedure
+    .input(createSloSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.reliability.createSlo(input, ctx.actor))),
+  updateSlo: t.procedure
+    .input(updateSloSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.reliability.updateSlo(input, ctx.actor))),
+  deleteSlo: t.procedure
+    .input(deleteSloSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.reliability.deleteSlo(input, ctx.actor))),
+  evaluateSlo: t.procedure
+    .input(evaluateSloSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateSlo(input, ctx.actor))),
 });
 export const dashboardRouter = t.router({
   board: boardRouter,
