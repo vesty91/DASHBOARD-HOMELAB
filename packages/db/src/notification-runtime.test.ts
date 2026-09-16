@@ -17,12 +17,12 @@ async function setup() {
 }
 
 describe("SQLite notification persistence", () => {
-  it("persists, paginates, dedups, and isolates users at schema 8", async () => {
+  it("persists, paginates, dedups, and isolates users at schema 9", async () => {
     const { client, user, other, service } = await setup();
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 8 });
+      ).toMatchObject({ schema_version: 9 });
       const first = await service.createForUser({
         userId: user.id,
         category: "system",

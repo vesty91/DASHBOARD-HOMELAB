@@ -92,6 +92,7 @@ function createCaller(
     | "backup"
     | "automations"
     | "notifications"
+    | "push"
     | "incidents"
     | "audit"
     | "sessions"
@@ -119,6 +120,7 @@ function createCaller(
     backup?: ApiContext["backup"];
     automations?: ApiContext["automations"];
     notifications?: ApiContext["notifications"];
+    push?: ApiContext["push"];
     incidents?: ApiContext["incidents"];
     audit?: ApiContext["audit"];
     sessions?: ApiContext["sessions"];
@@ -204,6 +206,16 @@ function createCaller(
       },
       purgeExpired: async () => 0,
     } as unknown as ApiContext["notifications"],
+    push: {
+      permissions: () => ({ canRead: false, canManage: false, vapidConfigured: false }),
+      getVapidPublicKey: () => ({ publicKey: null }),
+      list: async () => ({ items: [] }),
+      subscribe: async () => {
+        throw new Error("push not stubbed");
+      },
+      unsubscribe: async () => ({ removed: false }),
+      deliverForNotification: async () => undefined,
+    } as unknown as ApiContext["push"],
     incidents: {
       permissions: () => ({ canRead: false }),
       list: async () => ({ items: [], nextCursor: null }),
@@ -2339,7 +2351,7 @@ describe("backup tRPC router", () => {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 8,
+      schemaVersion: 9,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -2414,8 +2426,8 @@ describe("backup tRPC router", () => {
       preview: {
         format: "homelab-dashboard-backup",
         formatVersion: 1,
-        schemaVersion: 8,
-        databaseSchemaVersion: 8,
+        schemaVersion: 9,
+        databaseSchemaVersion: 9,
         appVersion: "0.1.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         compatible: true,

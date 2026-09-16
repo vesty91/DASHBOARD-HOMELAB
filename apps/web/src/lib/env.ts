@@ -38,6 +38,9 @@ export const serverEnvSchema = z.object({
   INTEGRATION_DEFAULT_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).optional(),
   BACKUP_DIR: z.string().trim().min(1).max(4096).optional(),
   APP_VERSION: z.string().trim().min(1).max(64).optional(),
+  WEB_PUSH_VAPID_PUBLIC_KEY: z.string().trim().min(1).max(512).optional(),
+  WEB_PUSH_VAPID_PRIVATE_KEY: z.string().trim().min(1).max(512).optional(),
+  WEB_PUSH_VAPID_SUBJECT: z.string().trim().min(1).max(256).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

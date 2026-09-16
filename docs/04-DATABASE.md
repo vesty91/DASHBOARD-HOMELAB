@@ -378,22 +378,23 @@ Le manifest doit contenir :
 {
   "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "schemaVersion": 8,
-  "databaseSchemaVersion": 8,
+  "schemaVersion": 9,
+  "databaseSchemaVersion": 9,
   "appVersion": "1.3.0",
   "createdAt": "...",
   "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
 }
 ```
 
-La v1 accepte les schémas Drizzle 5, 6, 7 et 8. La migration `0007` ajoute
+La v1 accepte les schémas Drizzle 5, 6, 7, 8 et 9. La migration `0007` ajoute
 les tables d'automations. La migration `0008` ajoute `notifications`,
-`incidents` et `incident_events` (éphémères, hors backup). Le restore d'une
-archive v5 complète OIDC puis les `automation_rules` vides. Le restore v6
-complète `automation_rules` vides. Le restore v7 est accepté tel quel.
-`audit_logs`, `auth_sessions`, `automation_runs`,
-`automation_runtime_state`, `notifications`, `incidents` et
-`incident_events` ne sont pas exportés.
+`incidents` et `incident_events` (éphémères, hors backup). La migration
+`0009` ajoute `push_subscriptions` (éphémères, hors backup). Le restore
+d'une archive v5 complète OIDC puis les `automation_rules` vides. Le
+restore v6 complète `automation_rules` vides. Le restore v7/v8 est accepté
+tel quel. `audit_logs`, `auth_sessions`, `automation_runs`,
+`automation_runtime_state`, `notifications`, `incidents`,
+`incident_events` et `push_subscriptions` ne sont pas exportés.
 
 ## 8. Implémentation Phase 2
 

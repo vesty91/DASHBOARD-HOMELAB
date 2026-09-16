@@ -653,3 +653,31 @@ export const incidentEvents = sqliteTable(
     check("incident_events_type_valid", sql`${t.eventType} IN ('opened','resolved','note')`),
   ],
 );
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpointHash: text("endpoint_hash").notNull(),
+    endpointCiphertext: text("endpoint_ciphertext").notNull(),
+    endpointIv: text("endpoint_iv").notNull(),
+    endpointAuthTag: text("endpoint_auth_tag").notNull(),
+    p256dhCiphertext: text("p256dh_ciphertext").notNull(),
+    p256dhIv: text("p256dh_iv").notNull(),
+    p256dhAuthTag: text("p256dh_auth_tag").notNull(),
+    authCiphertext: text("auth_ciphertext").notNull(),
+    authIv: text("auth_iv").notNull(),
+    authAuthTag: text("auth_auth_tag").notNull(),
+    keyVersion: integer("key_version").notNull(),
+    userAgent: text("user_agent"),
+    disabledAt: integer("disabled_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("push_subscriptions_user_endpoint_hash_uq").on(t.userId, t.endpointHash),
+    index("push_subscriptions_user_active_idx").on(t.userId, t.disabledAt),
+  ],
+);

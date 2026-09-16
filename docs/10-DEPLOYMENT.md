@@ -78,6 +78,10 @@ Points déploiement :
    (`isSecureContext`).
 3. Le shell offline ne contient aucune donnée métier ; ne pas élargir
    la allowlist de cache sans revue sécurité (voir `docs/09-SECURITY.md`).
+4. Web Push (opt-in) : définir `WEB_PUSH_VAPID_PUBLIC_KEY`,
+   `WEB_PUSH_VAPID_PRIVATE_KEY` et `WEB_PUSH_VAPID_SUBJECT` (ex.
+   `mailto:admin@example.com`). Sans ces trois valeurs, `push.subscribe`
+   échoue fermé ; aucune souscription automatique.
 
 ## 5. Services et réseau
 
@@ -237,7 +241,7 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5, 6, 7 ou 8, hash SHA-256. Secrets : ciphertext / iv / authTag /
+`schemaVersion` 5, 6, 7, 8 ou 9, hash SHA-256. Secrets : ciphertext / iv / authTag /
 keyVersion uniquement.
 
 Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
@@ -245,9 +249,9 @@ backup pré-restore sur disque → restore transactionnel → commit.
 
 `restore` exige `confirm: true`. Échec = rollback SQL. `audit_logs`,
 `auth_sessions`, `automation_runs`, `automation_runtime_state`,
-`notifications`, `incidents` et `incident_events` ne sont pas dans l'archive.
-Un restore purge les tables d'automation et de notification/incident
-éphémères.
+`notifications`, `incidents`, `incident_events` et `push_subscriptions`
+ne sont pas dans l'archive. Un restore purge les tables d'automation,
+de notification/incident et de Web Push éphémères.
 
 ## 13. Logs et shutdown
 

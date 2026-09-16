@@ -683,7 +683,7 @@ la transaction.
 
 | Route             | Permission      | Notes                                                                                                            |
 | ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 8. Rate limité. |
+| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 9. Rate limité. |
 | `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                          |
 | `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
 
@@ -733,6 +733,22 @@ Realtime : `notification.created` / `updated` / `dismissed` via abonnement
 `{ kind: "notifications" }` + filtre `ticket.userId === event.userId`.
 
 Jamais exposés : secrets, HTML, payloads bruts, stack traces, URLs externes.
+
+# Web Push — Phase 24.2
+
+Permissions : `notification.read.self` / `notification.manage.self`.
+Opt-in uniquement. Self-only. Origin/CSRF via tRPC existant.
+
+| Route                 | Permission                 | Notes                                                               |
+| --------------------- | -------------------------- | ------------------------------------------------------------------- |
+| `push.permissions`    | authentifié                | `{ canRead, canManage, vapidConfigured }`                           |
+| `push.vapidPublicKey` | `notification.read.self`   | Clé publique seulement ; `null` si VAPID incomplet                  |
+| `push.list`           | `notification.read.self`   | Abonnements actifs (hash + métadonnées), jamais endpoint/clés       |
+| `push.subscribe`      | `notification.manage.self` | Upsert par `endpoint_hash` ; max 10 actifs ; fail-closed sans VAPID |
+| `push.unsubscribe`    | `notification.manage.self` | Par `id` ou `endpoint`                                              |
+
+Delivery : uniquement depuis `notifications.createForUser` (create + coalesce).
+`push_subscriptions` hors backup. Payload lock-screen minimal.
 
 ## Incidents — Phase 23.2
 
