@@ -391,8 +391,9 @@ les tables d'automations. La migration `0008` ajoute `notifications`,
 `incidents` et `incident_events` (éphémères, hors backup). La migration
 `0009` ajoute `push_subscriptions` (éphémères, hors backup). Le restore
 d'une archive v5 complète OIDC puis les `automation_rules` vides. Le
-restore v6 complète `automation_rules` vides. Le restore v7/v8 est accepté
-tel quel. `audit_logs`, `auth_sessions`, `automation_runs`,
+restore v6 complète `automation_rules` vides. Le restore v7/v8/v9 est
+accepté (v7/v8 upgrade in-memory vers v9). Schéma 10+ rejeté.
+`audit_logs`, `auth_sessions`, `automation_runs`,
 `automation_runtime_state`, `notifications`, `incidents`,
 `incident_events` et `push_subscriptions` ne sont pas exportés.
 

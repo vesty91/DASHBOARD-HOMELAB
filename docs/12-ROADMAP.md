@@ -471,31 +471,36 @@ automation_runs / audit_logs.
 
 ## Phase 24 — Progressive Web App (secure)
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Objectifs :
+Livré :
 
-- PWA installable avec branding original Homelab Dashboard / Homelab
-  (jamais Homarr) ;
-- service worker sécurisé : jamais de cache HTML authentifié, ni
+- PWA installable (manifest, icônes, branding Homelab Dashboard — jamais
+  Homarr) ;
+- service worker sécurisé : pas de cache HTML authentifié ni
   API / tRPC / auth / realtime / notifications / intégrations /
-  automations / backup ;
-- page `offline.html` publique sans données privées ;
+  automations / backup ; network-first → `/offline.html` public ;
 - caches versionnés + purge à l’activation + taille bornée ;
-- CSP minimale (`worker-src` déjà OK, `manifest-src 'self'` optionnel) ;
-- pas de bibliothèque PWA volumineuse.
+- CSP `worker-src` / `manifest-src 'self'` ;
+- Web Push VAPID (opt-in) : migration `0009`, `push_subscriptions`
+  chiffrées AES-256-GCM, tRPC `push.*`, delivery depuis Notification
+  Center, SW `push` / `notificationclick`, payload lock-screen minimal ;
+- UX mobile : safe-area, cibles tactiles ≥ 44px, notification center
+  confortable, préférences push (`/account/security#push`) ;
+- pas de bouton Install universel (Chromium / Edge vs iOS Safari
+  documentés) ;
+- backup : `push_subscriptions` (+ `notifications` / `incidents` /
+  `incident_events`) exclus ;
+- tests unitaires, migration 8 → 9, E2E PWA / mobile / push.
 
-PR 24.1 : fondation PWA sécurisée (manifest, icônes, SW, offline shell,
-enregistrement, tests).
+Migrations : `0000`–`0009` (SQLite + PostgreSQL).
+Backup `formatVersion` 1 / `schemaVersion` 9 (compat 5/6/7/8 → 9).
 
-PR 24.2 : Web Push backend (migration `0009`, `schemaVersion` 9,
-souscriptions chiffrées, tRPC `push.*`, delivery depuis Notification
-Center, SW `push` / `notificationclick`).
+PRs : #75–#78 (+ close). Tag `phase-24-complete`. Minor produit
+`v1.4.0` (release séparée).
 
-PR 24.3 : Mobile UX (safe-area / touch targets shell, notification center
-confortable, préférences push enable / disable device / disable all,
-docs install Chromium vs iOS + limites iOS Web Push, E2E viewports
-375×812 / 390×844 / 430×932). **Pas** de bouton Install universel.
+Hors scope : bouton Install universel, bibliothèque PWA volumineuse,
+payload métier sur lock-screen, ITSM push.
 
 ## Règle
 

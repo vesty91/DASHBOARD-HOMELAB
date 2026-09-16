@@ -72,7 +72,7 @@ Shell mobile (Phase 24.3) :
 - notification center full-width confortable ;
 - préférences push sur `/account/security#push` ;
 - **pas** de bouton Install PWA universel (Chromium vs Safari/iOS documentés
-  dans `docs/09-SECURITY.md` / `docs/10-DEPLOYMENT.md`).
+  dans `docs/09-SECURITY.md` / `docs/10-DEPLOYMENT.md` / `docs/24-PWA.md`).
 
 ## 7. Loading
 

@@ -436,3 +436,12 @@ dismiss, badge, realtime user-scoped. Incidents disponibilité
 (open / resolve) + timeline. RBAC `notification.*.self` / `incident.read`.
 Backup exclut `notifications`, `incidents`, `incident_events`.
 Minor produit `1.3.0`. Voir `docs/23-NOTIFICATIONS.md`.
+
+# État Phase 24
+
+COMPLETE. PWA sécurisée (`0009`, schema 9) : manifest, SW sans cache
+HTML/API auth, offline shell public. Web Push VAPID opt-in
+(`push_subscriptions` chiffrées, tRPC `push.*`, delivery Notification
+Center). UX mobile (safe-area, touch targets) — pas de bouton Install
+universel. Backup exclut aussi `push_subscriptions`.
+Minor produit `1.4.0` (release suivante). Voir `docs/24-PWA.md`.

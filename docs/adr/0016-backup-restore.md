@@ -40,3 +40,15 @@ un échec d'effet secondaire ne défait pas le restore.
 
 La v1 Phase 14 n'acceptait que le schéma 5. La Phase 15 étend le vocabulaire au
 schéma 6 et accepte encore une archive v5 (upgrade in-memory). Voir ADR 0017.
+
+Évolutions ultérieures (toujours `formatVersion` 1) :
+
+- Phase 22 : `schemaVersion` 7 ;
+- Phase 23 : `schemaVersion` 8 — exclus aussi `notifications`,
+  `incidents`, `incident_events` ;
+- Phase 24 : `schemaVersion` 9 — exclus aussi `push_subscriptions`.
+
+Tables hors archive / purge restore (éphémères) : `audit_logs`,
+`auth_sessions`, `automation_runs`, `automation_runtime_state`,
+`notifications`, `incidents`, `incident_events`, `push_subscriptions`.
+Compat restore acceptée : 5 → 6 → 7 → 8 → 9. Schéma 10+ rejeté.
