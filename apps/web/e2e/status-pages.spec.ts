@@ -87,9 +87,7 @@ test("status pages: create private, services, publish, public, unpublish, mainte
   await page.getByTestId("status-maintenance-name").fill("E2E window");
   await page.getByTestId("status-maintenance-starts").fill(starts);
   await page.getByTestId("status-maintenance-ends").fill(ends);
-  await page
-    .getByTestId("status-maintenance-integration")
-    .selectOption({ label: "Public Ntfy" });
+  await page.getByTestId("status-maintenance-integration").selectOption({ label: "Public Ntfy" });
   await page.getByTestId("status-maintenance-schedule").click();
   await expect(page.getByText("Maintenance planifiée.")).toBeVisible();
   await expect(page.getByRole("link", { name: "E2E window" })).toBeVisible({
