@@ -21,6 +21,10 @@ import {
   createPostgresqlAutomationStore,
   createSqliteAutomationStore,
 } from "@dashboard/db/automation-runtime";
+import {
+  createPostgresqlNotificationStore,
+  createSqliteNotificationStore,
+} from "@dashboard/db/notification-runtime";
 
 const globalDatabase = globalThis as typeof globalThis & {
   dashboardDatabase?: ReturnType<typeof createDatabase>;
@@ -37,6 +41,7 @@ async function createDatabase() {
       appStore: createPostgresqlAppStore(client.pool),
       integrationStore: createPostgresqlIntegrationStore(client.pool),
       automationStore: createPostgresqlAutomationStore(client),
+      notificationStore: createPostgresqlNotificationStore(client),
       jobStore: createPostgresqlJobStore(client),
       backupStore: createPostgresqlBackupStore(client),
       securityStore: createPostgresqlSecurityStore(client.pool),
@@ -51,6 +56,7 @@ async function createDatabase() {
     appStore: createSqliteAppStore(client.sqlite),
     integrationStore: createSqliteIntegrationStore(client.sqlite),
     automationStore: createSqliteAutomationStore(client),
+    notificationStore: createSqliteNotificationStore(client),
     jobStore: createSqliteJobStore(client),
     backupStore: createSqliteBackupStore(client),
     securityStore: createSqliteSecurityStore(client.sqlite),

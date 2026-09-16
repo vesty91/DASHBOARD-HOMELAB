@@ -30,6 +30,12 @@ describe("backup runtime", () => {
     expect(BACKUP_TABLE_NAMES).toContain("automation_rules");
     expect(BACKUP_TABLE_NAMES).not.toContain("automation_runtime_state");
     expect(BACKUP_TABLE_NAMES).not.toContain("automation_runs");
+    expect(BACKUP_TABLE_NAMES).not.toContain("notifications");
+    expect(BACKUP_TABLE_NAMES).not.toContain("incidents");
+    expect(BACKUP_TABLE_NAMES).not.toContain("incident_events");
+    expect(TABLE_NAMES).toContain("notifications");
+    expect(TABLE_NAMES).toContain("incidents");
+    expect(TABLE_NAMES).toContain("incident_events");
   });
 
   it("round-trips a snapshot, keeps secrets encrypted, and rolls back failed restores", async () => {

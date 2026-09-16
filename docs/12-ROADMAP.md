@@ -441,6 +441,28 @@ produit `v1.2.0`.
 Hors scope : n8n générique, shell, eval, webhook/REST proxy, cron shell,
 Custom API write, Grafana/Prowlarr write.
 
+## Phase 23 — Notification Center & Incidents
+
+Statut : **IN PROGRESS**.
+
+Livrables prévus :
+
+- notifications in-app persistées (`0008`, schema 8) ;
+- cycle de vie incident (open / resolve) sur transitions de statut ;
+- unread / read / dismiss + badge ;
+- realtime user-scoped ;
+- severity + category fermées ;
+- déduplication + rétention worker ;
+- sources integration / automation / system ;
+- RBAC `notification.*.self` + revalidation d’accès source ;
+- UI Notification Center + timeline incidents ;
+- pas de payload brut / secrets ;
+- backup : notifications et incidents exclus (éphémères) ;
+- release SemVer minor.
+
+Hors scope : ITSM complet, e-mail obligatoire, remplacement de ntfy /
+automation_runs / audit_logs.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

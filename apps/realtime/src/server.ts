@@ -99,7 +99,7 @@ export async function startRealtime(options: RealtimeOptions): Promise<RealtimeH
     raw: unknown,
     send: (event: DomainEvent) => void,
   ): void {
-    const event = authorizedEvent(ticket.subscriptions, raw);
+    const event = authorizedEvent(ticket.subscriptions, raw, ticket.userId);
     if (!event) return;
     send(event);
   }

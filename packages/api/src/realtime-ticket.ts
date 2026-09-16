@@ -37,6 +37,7 @@ export const realtimeTicketInputSchema = z.object({
   boardIds: z.array(EVENT_RESOURCE_ID).max(REALTIME_TICKET_MAX_SUBSCRIPTIONS).optional(),
   integrationIds: z.array(EVENT_RESOURCE_ID).max(REALTIME_TICKET_MAX_SUBSCRIPTIONS).optional(),
   runtime: z.boolean().optional(),
+  notifications: z.boolean().optional(),
 });
 
 export type RealtimeTicketInput = z.infer<typeof realtimeTicketInputSchema>;
@@ -148,7 +149,11 @@ export async function resolveRealtimeSubscriptions(
 ): Promise<RealtimeSubscription[]> {
   const boardIds = uniqueIds(input.boardIds ?? []);
   const integrationIds = uniqueIds(input.integrationIds ?? []);
-  const requested = (input.runtime === true ? 1 : 0) + boardIds.length + integrationIds.length;
+  const requested =
+    (input.runtime === true ? 1 : 0) +
+    (input.notifications === true ? 1 : 0) +
+    boardIds.length +
+    integrationIds.length;
   if (requested > REALTIME_TICKET_MAX_SUBSCRIPTIONS) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Too many realtime subscriptions" });
   }
@@ -159,6 +164,13 @@ export async function resolveRealtimeSubscriptions(
     hasPermission(ctx.actor.subject, "settings.read")
   ) {
     subscriptions.push({ kind: "runtime" });
+  }
+  if (
+    input.notifications === true &&
+    ctx.actor.subject &&
+    hasPermission(ctx.actor.subject, "notification.read.self")
+  ) {
+    subscriptions.push({ kind: "notifications" });
   }
   for (const boardId of boardIds) {
     if (await ctx.boards.canSubscribeRealtime(boardId, ctx.actor)) {

@@ -112,6 +112,11 @@ import {
   automationRuleUpdateSchema,
   type AutomationService,
 } from "@dashboard/automations";
+import {
+  NotificationError,
+  notificationListQuerySchema,
+  type NotificationService,
+} from "@dashboard/notifications";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -167,6 +172,7 @@ export interface ApiContext {
   };
   backup: BackupService;
   automations: AutomationService;
+  notifications: NotificationService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -247,7 +253,8 @@ const mapError = (error: unknown): never => {
     error instanceof BoardError ||
     error instanceof AppError ||
     error instanceof IntegrationError ||
-    error instanceof AutomationError
+    error instanceof AutomationError ||
+    error instanceof NotificationError
   ) {
     const code =
       error.code === "UNAUTHORIZED"
@@ -1586,12 +1593,31 @@ export const automationsRouter = t.router({
     return procedure(() => ctx.automations.manualRun(input.id, ctx.actor));
   }),
 });
+export const notificationsRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.notifications.permissions(ctx.actor)),
+  list: t.procedure
+    .input(notificationListQuerySchema.optional())
+    .query(({ ctx, input }) => procedure(() => ctx.notifications.list(ctx.actor, input ?? {}))),
+  unreadCount: t.procedure.query(({ ctx }) =>
+    procedure(() => ctx.notifications.countUnread(ctx.actor)),
+  ),
+  markRead: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.notifications.markRead(input.id, ctx.actor))),
+  markAllRead: t.procedure.mutation(({ ctx }) =>
+    procedure(() => ctx.notifications.markAllRead(ctx.actor)),
+  ),
+  dismiss: t.procedure
+    .input(z.object({ id: z.uuid() }))
+    .mutation(({ ctx, input }) => procedure(() => ctx.notifications.dismiss(input.id, ctx.actor))),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
   widget: widgetRouter,
   integration: integrationsRouter,
   automation: automationsRouter,
+  notification: notificationsRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,

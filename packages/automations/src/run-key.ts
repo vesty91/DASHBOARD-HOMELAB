@@ -40,6 +40,12 @@ export function buildEventRunKey(automationId: string, event: DomainEvent): stri
     case "board.updated":
     case "board.deleted":
       return clampRunKey(`${prefix}:${sanitizeSegment(event.boardId)}`);
+    case "notification.created":
+    case "notification.updated":
+    case "notification.dismissed":
+      return clampRunKey(
+        `${prefix}:${sanitizeSegment(event.userId)}:${sanitizeSegment(event.notificationId)}`,
+      );
     default: {
       const _never: never = event;
       return _never;

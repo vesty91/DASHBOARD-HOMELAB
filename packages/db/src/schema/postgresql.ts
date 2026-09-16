@@ -529,3 +529,94 @@ export const automationRuns = pgTable(
     ),
   ],
 );
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    severity: text("severity").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id"),
+    sourceIntegrationId: uuid("source_integration_id").references(() => integrations.id, {
+      onDelete: "set null",
+    }),
+    dedupKey: text("dedup_key"),
+    destinationPath: text("destination_path"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    index("notifications_user_unread_idx").on(t.userId, t.readAt, t.dismissedAt),
+    index("notifications_user_dedup_idx").on(t.userId, t.dedupKey, t.createdAt),
+    index("notifications_expires_at_idx").on(t.expiresAt),
+    check(
+      "notifications_category_valid",
+      sql`${t.category} IN ('integration','automation','system','security','backup')`,
+    ),
+    check(
+      "notifications_severity_valid",
+      sql`${t.severity} IN ('info','success','warning','error','critical')`,
+    ),
+    check(
+      "notifications_source_type_valid",
+      sql`${t.sourceType} IN ('integration','automation','system','security','backup','incident')`,
+    ),
+  ],
+);
+export const incidents = pgTable(
+  "incidents",
+  {
+    id: uuid("id").primaryKey(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    severity: text("severity").notNull(),
+    status: text("status").notNull(),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
+    lastChangedAt: timestamp("last_changed_at", { withTimezone: true }).notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    openingEventId: text("opening_event_id"),
+    closingEventId: text("closing_event_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("incidents_open_integration_kind_uq")
+      .on(t.integrationId, t.kind)
+      .where(sql`${t.status} = 'open'`),
+    index("incidents_status_changed_idx").on(t.status, t.lastChangedAt),
+    index("incidents_integration_idx").on(t.integrationId),
+    check("incidents_kind_valid", sql`${t.kind} IN ('availability')`),
+    check(
+      "incidents_severity_valid",
+      sql`${t.severity} IN ('info','success','warning','error','critical')`,
+    ),
+    check("incidents_status_valid", sql`${t.status} IN ('open','resolved')`),
+  ],
+);
+export const incidentEvents = pgTable(
+  "incident_events",
+  {
+    id: uuid("id").primaryKey(),
+    incidentId: uuid("incident_id")
+      .notNull()
+      .references(() => incidents.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("incident_events_incident_created_idx").on(t.incidentId, t.createdAt),
+    check("incident_events_type_valid", sql`${t.eventType} IN ('opened','resolved','note')`),
+  ],
+);

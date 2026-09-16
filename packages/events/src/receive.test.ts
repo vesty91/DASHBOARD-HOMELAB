@@ -88,4 +88,24 @@ describe("canReceiveEvent", () => {
       false,
     );
   });
+
+  it("scopes notification events to the ticket user and notifications subscription", () => {
+    const notifications: RealtimeSubscription = { kind: "notifications" };
+    const event = {
+      type: "notification.created" as const,
+      userId: "user-1",
+      notificationId: "notif-1",
+      occurredAt,
+    };
+    expect(canReceiveEvent([notifications], event, "user-1")).toBe(true);
+    expect(canReceiveEvent([notifications], event, "user-2")).toBe(false);
+    expect(canReceiveEvent([{ kind: "runtime" }], event, "user-1")).toBe(false);
+    expect(
+      canReceiveEvent(
+        [notifications],
+        { type: "notification.dismissed", userId: "user-1", notificationId: "n2", occurredAt },
+        "user-1",
+      ),
+    ).toBe(true);
+  });
 });

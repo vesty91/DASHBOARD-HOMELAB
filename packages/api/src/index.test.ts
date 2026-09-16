@@ -91,6 +91,7 @@ function createCaller(
     | "jobs"
     | "backup"
     | "automations"
+    | "notifications"
     | "audit"
     | "sessions"
     | "oidc"
@@ -116,6 +117,7 @@ function createCaller(
     jobs?: ApiContext["jobs"];
     backup?: ApiContext["backup"];
     automations?: ApiContext["automations"];
+    notifications?: ApiContext["notifications"];
     audit?: ApiContext["audit"];
     sessions?: ApiContext["sessions"];
     oidc?: ApiContext["oidc"];
@@ -184,6 +186,22 @@ function createCaller(
         throw new Error("automations not stubbed");
       },
     } as unknown as ApiContext["automations"],
+    notifications: {
+      permissions: () => ({ canRead: false, canManage: false }),
+      list: async () => ({ items: [], nextCursor: null }),
+      countUnread: async () => 0,
+      markRead: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      markAllRead: async () => ({ updated: 0 }),
+      dismiss: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      createForUser: async () => {
+        throw new Error("notifications not stubbed");
+      },
+      purgeExpired: async () => 0,
+    } as unknown as ApiContext["notifications"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),
@@ -2308,7 +2326,7 @@ describe("backup tRPC router", () => {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 7,
+      schemaVersion: 8,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -2383,8 +2401,8 @@ describe("backup tRPC router", () => {
       preview: {
         format: "homelab-dashboard-backup",
         formatVersion: 1,
-        schemaVersion: 7,
-        databaseSchemaVersion: 7,
+        schemaVersion: 8,
+        databaseSchemaVersion: 8,
         appVersion: "0.1.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         compatible: true,

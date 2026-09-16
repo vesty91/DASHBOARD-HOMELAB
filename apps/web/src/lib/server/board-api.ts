@@ -8,6 +8,7 @@ import {
   type BoardApiContext,
 } from "@dashboard/api";
 import { createAutomationService } from "@dashboard/automations";
+import { createNotificationService } from "@dashboard/notifications";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
 import { createDockerService, MemoryDockerActionRateLimiter } from "@dashboard/docker";
@@ -603,6 +604,14 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   attachDataChangedEvents(customApi, "custom-api");
   attachDataChangedEvents(radarr, "radarr");
   attachDataChangedEvents(sonarr, "sonarr");
+  const integrations = createIntegrationService({
+    store: database.integrationStore,
+    registry: runtime.registry,
+    cache: runtime.cache,
+    rateLimiter: runtime.rateLimiter,
+    events: integrationMutationEvents(),
+    ...(keyring ? { keyring } : {}),
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -611,14 +620,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       boardMutationEvents(),
     ),
     apps,
-    integrations: createIntegrationService({
-      store: database.integrationStore,
-      registry: runtime.registry,
-      cache: runtime.cache,
-      rateLimiter: runtime.rateLimiter,
-      events: integrationMutationEvents(),
-      ...(keyring ? { keyring } : {}),
-    }),
+    integrations,
     docker,
     synology,
     jellyfin,
@@ -734,6 +736,26 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
       }),
       async audit(event) {
         await database.securityStore.recordAudit(event);
+      },
+    }),
+    notifications: createNotificationService({
+      store: database.notificationStore,
+      async integrationAccessible(viewerUserId, integrationId) {
+        const subject = await database.authStore.resolvePermissionSubject(viewerUserId);
+        if (!subject) return false;
+        if (subject.isSystemAdmin) return true;
+        try {
+          await integrations.get(integrationId, {
+            userId: viewerUserId,
+            subject,
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      async publish(event) {
+        await publish(event);
       },
     }),
     audit: {

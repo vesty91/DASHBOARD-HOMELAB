@@ -11,6 +11,7 @@
     "./integration-runtime": "./src/integration-runtime.ts",
     "./job-runtime": "./src/job-runtime.ts",
     "./automation-runtime": "./src/automation-runtime.ts",
+    "./notification-runtime": "./src/notification-runtime.ts",
     "./backup-runtime": "./src/backup-runtime.ts",
     "./security-runtime": "./src/security-runtime.ts",
     "./health": "./src/health.ts"
@@ -37,6 +38,7 @@
   "dependencies": {
     "@dashboard/auth": "workspace:*",
     "@dashboard/automations": "workspace:*",
+    "@dashboard/notifications": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "drizzle-orm": "0.45.2",

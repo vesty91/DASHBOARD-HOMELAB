@@ -60,6 +60,9 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("automation.run");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("notification.read.self");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("notification.manage.self");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("incident.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");
@@ -92,6 +95,11 @@ describe("permission resolver", () => {
     expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.manage")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "automation.run")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "notification.read.self")).toBe(true);
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "notification.manage.self")).toBe(
+      true,
+    );
+    expect(hasPermission({ ...active, isSystemAdmin: true }, "incident.read")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.start")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.shutdown")).toBe(true);
     expect(hasPermission({ ...active, isSystemAdmin: true }, "proxmox.reboot")).toBe(true);

@@ -111,6 +111,9 @@ importers:
       '@dashboard/monitoring':
         specifier: workspace:*
         version: link:../../packages/monitoring
+      '@dashboard/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
       '@dashboard/ntfy':
         specifier: workspace:*
         version: link:../../packages/ntfy
@@ -217,6 +220,9 @@ importers:
       '@dashboard/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
+      '@dashboard/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
       '@dashboard/ntfy':
         specifier: workspace:*
         version: link:../../packages/ntfy
@@ -290,6 +296,9 @@ importers:
       '@dashboard/monitoring':
         specifier: workspace:*
         version: link:../monitoring
+      '@dashboard/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@dashboard/ntfy':
         specifier: workspace:*
         version: link:../ntfy
@@ -494,6 +503,9 @@ importers:
       '@dashboard/backup':
         specifier: workspace:*
         version: link:../backup
+      '@dashboard/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@dashboard/permissions':
         specifier: workspace:*
         version: link:../permissions
@@ -648,6 +660,22 @@ importers:
 
   packages/monitoring:
     dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.25.11)(jiti@2.7.0)(tsx@4.23.13))
+
+  packages/notifications:
+    dependencies:
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
       zod:
         specifier: 4.4.3
         version: 4.4.3

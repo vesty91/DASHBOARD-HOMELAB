@@ -20,12 +20,12 @@ function actionConfig(integrationId: string) {
 }
 
 describe("SQLite automation persistence", () => {
-  it("creates rules disabled by default and bumps schema_version to 7", async () => {
+  it("creates rules disabled by default and bumps schema_version to 8", async () => {
     const { client, owner, store } = await setup();
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 7 });
+      ).toMatchObject({ schema_version: 8 });
       const created = await store.create({
         name: "Down alert",
         ownerUserId: owner.id,

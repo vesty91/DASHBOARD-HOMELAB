@@ -4,6 +4,7 @@ import type { RealtimeSubscription } from "./ticket";
 export function canReceiveEvent(
   subscriptions: readonly RealtimeSubscription[],
   event: DomainEvent,
+  ticketUserId?: string,
 ): boolean {
   switch (event.type) {
     case "job.heartbeat":
@@ -21,6 +22,13 @@ export function canReceiveEvent(
       return subscriptions.some(
         (subscription) =>
           subscription.kind === "integration" && subscription.id === event.integrationId,
+      );
+    case "notification.created":
+    case "notification.updated":
+    case "notification.dismissed":
+      return (
+        ticketUserId === event.userId &&
+        subscriptions.some((subscription) => subscription.kind === "notifications")
       );
     default: {
       const exhaustive: never = event;

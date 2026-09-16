@@ -83,7 +83,13 @@ function sqliteBindValue(value: unknown): string | number | null {
 }
 
 const POSTGRES_INSERT_BATCH = 200;
-const EPHEMERAL_RESTORE_TABLES = ["automation_runs", "automation_runtime_state"] as const;
+const EPHEMERAL_RESTORE_TABLES = [
+  "automation_runs",
+  "automation_runtime_state",
+  "notifications",
+  "incidents",
+  "incident_events",
+] as const;
 
 function postgresLockStatement(): ReturnType<typeof sql> {
   const tables = [...TABLE_DELETE_ORDER, ...EPHEMERAL_RESTORE_TABLES];

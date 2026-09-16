@@ -30,6 +30,7 @@
     "@dashboard/integrations": "workspace:*",
     "@dashboard/jellyfin": "workspace:*",
     "@dashboard/monitoring": "workspace:*",
+    "@dashboard/notifications": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/prometheus": "workspace:*",
