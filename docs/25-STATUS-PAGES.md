@@ -1,7 +1,7 @@
 # 25 — Status Pages (safe public projection)
 
 Phase 25. Migration `0010`. `schemaVersion` 10. Backup `formatVersion` 1.
-Tag `phase-25-complete`. Minor produit `v1.5.0` (après close).
+Tag `phase-25-complete`. Minor produit `v1.5.0`.
 
 ## Objectif
 

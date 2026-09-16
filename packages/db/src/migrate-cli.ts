@@ -30,7 +30,7 @@ export async function runProductionMigrateCli(
   if (config.DB_DRIVER !== "postgres") {
     throw new Error("MIGRATE_REQUIRES_POSTGRES");
   }
-  const version = env.APP_VERSION?.trim() || "1.4.0";
+  const version = env.APP_VERSION?.trim() || "1.5.0";
   console.log(JSON.stringify({ msg: "startup", service: "migrate", version }));
   await migrateProductionPostgresql({
     databaseUrl: config.DATABASE_URL,

@@ -517,8 +517,7 @@ Livrables :
 - backup `schemaVersion` 10 (compat 5–10) incluant la config status/maintenance ;
 - docs `docs/25-STATUS-PAGES.md`.
 
-PRs : #81–#83 (+ close). Tag `phase-25-complete`. Minor produit
-`v1.5.0` (après close).
+PRs : #81–#84. Tag `phase-25-complete`. Minor produit `v1.5.0`.
 
 Migrations : `0000`–`0010` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
