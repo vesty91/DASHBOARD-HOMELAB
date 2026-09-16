@@ -165,7 +165,9 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
-  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  // Status defaults to "Sauvegardé" — wait for the in-flight cycle so we don't race.
+  await expect(page.getByRole("status")).toHaveText("Sauvegarde…");
+  await expect(page.getByRole("status")).toHaveText("Sauvegardé");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
   await page.goto("/boards/phase-6-widgets/edit");
