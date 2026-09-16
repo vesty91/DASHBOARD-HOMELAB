@@ -14,6 +14,12 @@ import {
   createPushService,
   createWebPushSender,
 } from "@dashboard/notifications";
+import {
+  PUBLIC_STATUS_CACHE_TTL_MS,
+  createPublicStatusCache,
+  createStatusPageService,
+  type PublicStatusPageDto,
+} from "@dashboard/status-pages";
 import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
@@ -681,6 +687,10 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     },
     integrationAccessible,
   });
+  const statusPages = createStatusPageService({
+    store: database.statusPageStore,
+    publicCache: createPublicStatusCache<PublicStatusPageDto>(PUBLIC_STATUS_CACHE_TTL_MS),
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -810,6 +820,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     notifications,
     push,
     incidents,
+    statusPages,
     audit: {
       record: (event) => database.securityStore.recordAudit(event),
       list: (query) => database.securityStore.listAudit(query),

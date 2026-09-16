@@ -14,6 +14,7 @@
     "./notification-runtime": "./src/notification-runtime.ts",
     "./incident-runtime": "./src/incident-runtime.ts",
     "./push-subscription-runtime": "./src/push-subscription-runtime.ts",
+    "./status-page-runtime": "./src/status-page-runtime.ts",
     "./backup-runtime": "./src/backup-runtime.ts",
     "./security-runtime": "./src/security-runtime.ts",
     "./health": "./src/health.ts"
@@ -41,6 +42,7 @@
     "@dashboard/auth": "workspace:*",
     "@dashboard/automations": "workspace:*",
     "@dashboard/notifications": "workspace:*",
+    "@dashboard/status-pages": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "drizzle-orm": "0.45.2",

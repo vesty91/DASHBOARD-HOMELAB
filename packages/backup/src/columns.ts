@@ -23,6 +23,10 @@ export const BACKUP_TABLE_NAMES = [
   "oidc_group_mappings",
   "oidc_secrets",
   "automation_rules",
+  "status_pages",
+  "status_page_services",
+  "maintenance_windows",
+  "maintenance_window_targets",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLE_NAMES)[number];
@@ -52,6 +56,10 @@ export const TABLE_INSERT_ORDER = [
   "oidc_group_mappings",
   "oidc_secrets",
   "automation_rules",
+  "status_pages",
+  "status_page_services",
+  "maintenance_windows",
+  "maintenance_window_targets",
 ] as const satisfies readonly BackupTableName[];
 
 export const TABLE_DELETE_ORDER = [...TABLE_INSERT_ORDER].reverse();
@@ -211,6 +219,41 @@ export const BACKUP_COLUMNS = {
     "createdAt",
     "updatedAt",
   ],
+  status_pages: [
+    "id",
+    "name",
+    "slug",
+    "description",
+    "visibility",
+    "enabled",
+    "createdBy",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
+  status_page_services: [
+    "id",
+    "statusPageId",
+    "sourceIntegrationId",
+    "displayName",
+    "description",
+    "sortOrder",
+    "showIncidentHistory",
+    "createdAt",
+    "updatedAt",
+  ],
+  maintenance_windows: [
+    "id",
+    "name",
+    "description",
+    "startsAt",
+    "endsAt",
+    "status",
+    "createdBy",
+    "createdAt",
+    "updatedAt",
+  ],
+  maintenance_window_targets: ["maintenanceId", "integrationId"],
 } as const satisfies Record<BackupTableName, readonly string[]>;
 
 export const JSON_OBJECT_COLUMNS = new Set([
@@ -237,6 +280,8 @@ export const DATE_COLUMNS = new Set([
   "startedAt",
   "finishedAt",
   "lastEnabledAt",
+  "startsAt",
+  "endsAt",
 ]);
 
 export const BOOLEAN_COLUMNS = new Set([
@@ -248,6 +293,7 @@ export const BOOLEAN_COLUMNS = new Set([
   "oidcAutoLinkVerifiedEmail",
   "oidcAutoProvision",
   "oidcAllowLocalLogin",
+  "showIncidentHistory",
 ]);
 
 export const PREVIEW_REDACTED_COLUMNS = new Set(["ciphertext", "iv", "authTag", "passwordHash"]);

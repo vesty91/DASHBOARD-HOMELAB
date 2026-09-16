@@ -10,6 +10,7 @@ import {
   BackupError,
   buildArchive,
   emptyBackupTables,
+  BACKUP_SCHEMA_VERSION,
   type BackupRestoreResult,
 } from "@dashboard/backup";
 import { createInMemoryActionRateLimiter } from "@dashboard/auth";
@@ -94,6 +95,7 @@ function createCaller(
     | "notifications"
     | "push"
     | "incidents"
+    | "statusPages"
     | "audit"
     | "sessions"
     | "oidc"
@@ -122,6 +124,7 @@ function createCaller(
     notifications?: ApiContext["notifications"];
     push?: ApiContext["push"];
     incidents?: ApiContext["incidents"];
+    statusPages?: ApiContext["statusPages"];
     audit?: ApiContext["audit"];
     sessions?: ApiContext["sessions"];
     oidc?: ApiContext["oidc"];
@@ -228,6 +231,26 @@ function createCaller(
       },
       handleStatusChanged: async () => ({ action: "noop", incidentId: null }),
     } as unknown as ApiContext["incidents"],
+    statusPages: {
+      permissions: () => ({ canRead: false, canManage: false }),
+      list: async () => [],
+      get: async () => {
+        throw new Error("status pages not stubbed");
+      },
+      create: async () => {
+        throw new Error("status pages not stubbed");
+      },
+      update: async () => {
+        throw new Error("status pages not stubbed");
+      },
+      delete: async () => undefined,
+      replaceServices: async () => {
+        throw new Error("status pages not stubbed");
+      },
+      getPublicBySlug: async () => {
+        throw new Error("status pages not stubbed");
+      },
+    } as unknown as ApiContext["statusPages"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),
@@ -2352,7 +2375,7 @@ describe("backup tRPC router", () => {
   tables.server_settings = [
     {
       id: "global",
-      schemaVersion: 9,
+      schemaVersion: BACKUP_SCHEMA_VERSION,
       instanceName: null,
       onboardingCompleted: true,
       oidcEnabled: false,
@@ -2427,8 +2450,8 @@ describe("backup tRPC router", () => {
       preview: {
         format: "homelab-dashboard-backup",
         formatVersion: 1,
-        schemaVersion: 9,
-        databaseSchemaVersion: 9,
+        schemaVersion: BACKUP_SCHEMA_VERSION,
+        databaseSchemaVersion: BACKUP_SCHEMA_VERSION,
         appVersion: "0.1.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         compatible: true,
@@ -2457,6 +2480,10 @@ describe("backup tRPC router", () => {
           oidc_group_mappings: 0,
           oidc_secrets: 0,
           automation_rules: 0,
+          status_pages: 0,
+          status_page_services: 0,
+          maintenance_windows: 0,
+          maintenance_window_targets: 0,
         },
         encryptedSecretCount: 0,
         credentialCount: 0,

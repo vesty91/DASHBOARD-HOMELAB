@@ -31,9 +31,20 @@ export const TABLE_NAMES = [
   "incidents",
   "incident_events",
   "push_subscriptions",
+  "status_pages",
+  "status_page_services",
+  "maintenance_windows",
+  "maintenance_window_targets",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
+export const STATUS_PAGE_VISIBILITIES = ["private", "public"] as const;
+export const MAINTENANCE_WINDOW_STATUSES = [
+  "scheduled",
+  "active",
+  "completed",
+  "cancelled",
+] as const;
 export const USER_STATUSES = ["active", "disabled"] as const;
 export const INTEGRATION_STATUSES = ["unknown", "available", "unavailable"] as const;
 export const APP_HEALTH_STATUSES = ["unknown", "up", "down", "timeout", "error"] as const;
@@ -219,4 +230,39 @@ export const SCHEMA_CONTRACT = {
     "createdAt",
     "updatedAt",
   ],
+  status_pages: [
+    "id",
+    "name",
+    "slug",
+    "description",
+    "visibility",
+    "enabled",
+    "createdBy",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
+  status_page_services: [
+    "id",
+    "statusPageId",
+    "sourceIntegrationId",
+    "displayName",
+    "description",
+    "sortOrder",
+    "showIncidentHistory",
+    "createdAt",
+    "updatedAt",
+  ],
+  maintenance_windows: [
+    "id",
+    "name",
+    "description",
+    "startsAt",
+    "endsAt",
+    "status",
+    "createdBy",
+    "createdAt",
+    "updatedAt",
+  ],
+  maintenance_window_targets: ["maintenanceId", "integrationId"],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;

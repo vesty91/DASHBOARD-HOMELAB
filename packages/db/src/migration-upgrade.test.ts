@@ -25,6 +25,10 @@ const phase23NotificationMigration = new URL(
   import.meta.url,
 );
 const phase24PushMigration = new URL("../drizzle/sqlite/0009_flimsy_arachne.sql", import.meta.url);
+const phase25StatusPagesMigration = new URL(
+  "../drizzle/sqlite/0010_many_yellowjacket.sql",
+  import.meta.url,
+);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -489,6 +493,46 @@ describe("Phase 24 web push migration", () => {
           )
           .get()?.count,
       ).toBe(1);
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe("Phase 25 status pages migration", () => {
+  it("adds status page and maintenance tables and bumps schema_version to 10", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys=ON");
+    try {
+      database.exec(await readFile(phase2Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase3Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase4Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase5Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase6Migration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase13JobsMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase15SecurityMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase22AutomationMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase23NotificationMigration, "utf8"));
+      executeSqliteMigration(database, await readFile(phase24PushMigration, "utf8"));
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 9 });
+      executeSqliteMigration(database, await readFile(phase25StatusPagesMigration, "utf8"));
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 10 });
+      for (const table of [
+        "status_pages",
+        "status_page_services",
+        "maintenance_windows",
+        "maintenance_window_targets",
+      ]) {
+        expect(
+          database
+            .prepare("SELECT count(*) count FROM sqlite_master WHERE type='table' AND name=?")
+            .get(table)?.count,
+        ).toBe(1);
+      }
     } finally {
       database.close();
     }

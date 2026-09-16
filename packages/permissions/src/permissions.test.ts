@@ -63,6 +63,8 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("notification.read.self");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("notification.manage.self");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("incident.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("status-page.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("status-page.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");

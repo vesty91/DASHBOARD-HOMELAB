@@ -123,6 +123,18 @@ import {
   type NotificationService,
   type PushService,
 } from "@dashboard/notifications";
+import {
+  StatusPageError,
+  createStatusPageSchema,
+  deleteStatusPageSchema,
+  getPublicStatusPageSchema,
+  getStatusPageSchema,
+  replaceStatusPageServicesSchema,
+  updateStatusPageSchema,
+  PUBLIC_STATUS_RATE_LIMIT,
+  PUBLIC_STATUS_RATE_WINDOW_MS,
+  type StatusPageService,
+} from "@dashboard/status-pages";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -181,6 +193,7 @@ export interface ApiContext {
   notifications: NotificationService;
   push: PushService;
   incidents: IncidentService;
+  statusPages: StatusPageService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -262,7 +275,8 @@ const mapError = (error: unknown): never => {
     error instanceof AppError ||
     error instanceof IntegrationError ||
     error instanceof AutomationError ||
-    error instanceof NotificationError
+    error instanceof NotificationError ||
+    error instanceof StatusPageError
   ) {
     const code =
       error.code === "UNAUTHORIZED"
@@ -278,7 +292,7 @@ const mapError = (error: unknown): never => {
               ? "CONFLICT"
               : error.code === "SECRETS_NOT_CONFIGURED"
                 ? "PRECONDITION_FAILED"
-                : error.code === "RATE_LIMITED"
+                : error.code === "RATE_LIMITED" || error.code === "TOO_MANY_REQUESTS"
                   ? "TOO_MANY_REQUESTS"
                   : error.code === "TIMEOUT"
                     ? "TIMEOUT"
@@ -302,10 +316,21 @@ const mapError = (error: unknown): never => {
 const procedure = <T>(operation: () => Promise<T>) => operation().catch(mapError);
 
 const defaultSensitiveActionLimiter = createInMemoryActionRateLimiter(8, 60_000);
+const defaultPublicStatusLimiter = createInMemoryActionRateLimiter(
+  PUBLIC_STATUS_RATE_LIMIT,
+  PUBLIC_STATUS_RATE_WINDOW_MS,
+);
 
 function consumeSensitiveAction(ctx: ApiContext, action: string): void {
   const limiter = ctx.actionRateLimiter ?? defaultSensitiveActionLimiter;
   const key = `${action}:${ctx.actor.userId ?? "anonymous"}`;
+  if (!limiter.tryConsume(key))
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
+}
+
+function consumePublicStatusAction(ctx: ApiContext, slug: string): void {
+  const limiter = ctx.actionRateLimiter ?? defaultPublicStatusLimiter;
+  const key = `statusPage.publicGet:${ctx.actor.userId ?? "anonymous"}:${slug}`;
   if (!limiter.tryConsume(key))
     throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Rate limited" });
 }
@@ -1647,6 +1672,31 @@ export const incidentsRouter = t.router({
     .input(incidentTimelineQuerySchema)
     .query(({ ctx, input }) => procedure(() => ctx.incidents.timeline(ctx.actor, input))),
 });
+export const statusPageRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.statusPages.permissions(ctx.actor)),
+  list: t.procedure.query(({ ctx }) => procedure(() => ctx.statusPages.list(ctx.actor))),
+  get: t.procedure
+    .input(getStatusPageSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.statusPages.get(input.id, ctx.actor))),
+  create: t.procedure
+    .input(createStatusPageSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.statusPages.create(input, ctx.actor))),
+  update: t.procedure
+    .input(updateStatusPageSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.statusPages.update(input, ctx.actor))),
+  delete: t.procedure
+    .input(deleteStatusPageSchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.statusPages.delete(input, ctx.actor))),
+  replaceServices: t.procedure
+    .input(replaceStatusPageServicesSchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.statusPages.replaceServices(input, ctx.actor)),
+    ),
+  getPublic: t.procedure.input(getPublicStatusPageSchema).query(({ ctx, input }) => {
+    consumePublicStatusAction(ctx, input.slug);
+    return procedure(() => ctx.statusPages.getPublicBySlug(input.slug));
+  }),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -1656,6 +1706,7 @@ export const dashboardRouter = t.router({
   notification: notificationsRouter,
   push: pushRouter,
   incident: incidentsRouter,
+  statusPage: statusPageRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,

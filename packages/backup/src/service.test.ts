@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { BackupError, buildArchive, createBackupService, emptyBackupTables } from "./index";
+import {
+  BackupError,
+  BACKUP_SCHEMA_VERSION,
+  buildArchive,
+  createBackupService,
+  emptyBackupTables,
+} from "./index";
 
 describe("backup service", () => {
   it("validates without mutating and requires confirm before restore", async () => {
@@ -7,7 +13,7 @@ describe("backup service", () => {
     tables.server_settings = [
       {
         id: "global",
-        schemaVersion: 9,
+        schemaVersion: BACKUP_SCHEMA_VERSION,
         instanceName: null,
         onboardingCompleted: false,
         oidcEnabled: false,

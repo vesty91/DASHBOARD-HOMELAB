@@ -648,3 +648,84 @@ export const pushSubscriptions = pgTable(
     index("push_subscriptions_user_active_idx").on(t.userId, t.disabledAt),
   ],
 );
+export const statusPages = pgTable(
+  "status_pages",
+  {
+    id: uuid("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    visibility: text("visibility").notNull().default("private"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    configRevision: integer("config_revision").notNull().default(1),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("status_pages_slug_uq").on(t.slug),
+    index("status_pages_visibility_enabled_idx").on(t.visibility, t.enabled),
+    check("status_pages_visibility_valid", sql`${t.visibility} IN ('private', 'public')`),
+    check("status_pages_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const statusPageServices = pgTable(
+  "status_page_services",
+  {
+    id: uuid("id").primaryKey(),
+    statusPageId: uuid("status_page_id")
+      .notNull()
+      .references(() => statusPages.id, { onDelete: "cascade" }),
+    sourceIntegrationId: uuid("source_integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    showIncidentHistory: boolean("show_incident_history").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index("status_page_services_page_sort_idx").on(t.statusPageId, t.sortOrder),
+    uniqueIndex("status_page_services_page_integration_uq").on(
+      t.statusPageId,
+      t.sourceIntegrationId,
+    ),
+    check("status_page_services_sort_order_valid", sql`${t.sortOrder} >= 0`),
+  ],
+);
+export const maintenanceWindows = pgTable(
+  "maintenance_windows",
+  {
+    id: uuid("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    status: text("status").notNull().default("scheduled"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("maintenance_windows_status_starts_idx").on(t.status, t.startsAt),
+    check(
+      "maintenance_windows_status_valid",
+      sql`${t.status} IN ('scheduled','active','completed','cancelled')`,
+    ),
+    check("maintenance_windows_range_valid", sql`${t.endsAt} >= ${t.startsAt}`),
+  ],
+);
+export const maintenanceWindowTargets = pgTable(
+  "maintenance_window_targets",
+  {
+    maintenanceId: uuid("maintenance_id")
+      .notNull()
+      .references(() => maintenanceWindows.id, { onDelete: "cascade" }),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("maintenance_window_targets_uq").on(t.maintenanceId, t.integrationId),
+    index("maintenance_window_targets_integration_idx").on(t.integrationId),
+  ],
+);

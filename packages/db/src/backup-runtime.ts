@@ -41,6 +41,10 @@ const sqliteTables = {
   oidc_group_mappings: sqliteSchema.oidcGroupMappings,
   oidc_secrets: sqliteSchema.oidcSecrets,
   automation_rules: sqliteSchema.automationRules,
+  status_pages: sqliteSchema.statusPages,
+  status_page_services: sqliteSchema.statusPageServices,
+  maintenance_windows: sqliteSchema.maintenanceWindows,
+  maintenance_window_targets: sqliteSchema.maintenanceWindowTargets,
 } as const;
 
 const postgresqlTables = {
@@ -68,6 +72,10 @@ const postgresqlTables = {
   oidc_group_mappings: postgresqlSchema.oidcGroupMappings,
   oidc_secrets: postgresqlSchema.oidcSecrets,
   automation_rules: postgresqlSchema.automationRules,
+  status_pages: postgresqlSchema.statusPages,
+  status_page_services: postgresqlSchema.statusPageServices,
+  maintenance_windows: postgresqlSchema.maintenanceWindows,
+  maintenance_window_targets: postgresqlSchema.maintenanceWindowTargets,
 } as const;
 
 function toSnakeCase(column: string): string {

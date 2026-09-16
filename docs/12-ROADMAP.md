@@ -502,6 +502,26 @@ PRs : #75–#78 (+ close). Tag `phase-24-complete`. Minor produit
 Hors scope : bouton Install universel, bibliothèque PWA volumineuse,
 payload métier sur lock-screen, ITSM push.
 
+## Phase 25 — Status Pages (safe)
+
+Statut : **IN PROGRESS**.
+
+Livrables prévus :
+
+- package `@dashboard/status-pages` + migration `0010` (status pages **et**
+  maintenance windows / targets — pas de `0011` pour la maintenance) ;
+- projection publique sûre (pas d’IDs d’intégration, URL, secrets) ;
+- RBAC `status-page.read` / `status-page.manage` ;
+- tRPC `statusPage.*` + `getPublic` rate-limité + cache TTL 15s ;
+- backup `schemaVersion` 10 (compat 5–10) incluant la config status/maintenance ;
+- docs `docs/25-STATUS-PAGES.md`.
+
+PR 25.1 : core sûr (schéma, domain, API, tests).
+PR 25.2 : logique métier maintenance + UI.
+
+Migrations : `0000`–`0010` (SQLite + PostgreSQL).
+Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

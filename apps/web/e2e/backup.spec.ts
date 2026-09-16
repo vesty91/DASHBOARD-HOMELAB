@@ -39,7 +39,7 @@ test("exports a versioned backup and rejects an invalid file before mutation", a
   };
   expect(archive.manifest?.format).toBe("homelab-dashboard-backup");
   expect(archive.manifest?.formatVersion).toBe(1);
-  expect(archive.manifest?.schemaVersion).toBe(9);
+  expect(archive.manifest?.schemaVersion).toBe(10);
   await expect(page.getByText(/Manifest homelab-dashboard-backup v1/)).toBeVisible();
 
   const invalidPath = join(directory, "invalid.json");

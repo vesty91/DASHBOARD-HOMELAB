@@ -193,8 +193,10 @@ Tables éphémères hors archive (Phase 14+) : `audit_logs`, `auth_sessions`,
 `automation_runs`, `automation_runtime_state`. Phase 23 ajoute
 `notifications`, `incidents` et `incident_events` à cette exclusion.
 Phase 24 ajoute `push_subscriptions` (endpoints Web Push chiffrés) à
-cette exclusion. `schemaVersion` courant : **9** (compat restore
-5/6/7/8 → 9).
+cette exclusion. Phase 25 **inclut** au backup `status_pages`,
+`status_page_services`, `maintenance_windows` et
+`maintenance_window_targets` (config durable). `schemaVersion` courant :
+**10** (compat restore 5/6/7/8/9 → 10).
 
 ## 10. Rate limiting
 
@@ -205,9 +207,14 @@ Sur :
 - backup export / validate / restore (8 / min / acteur, RBAC d'abord) ;
 - OIDC save / mappings ;
 - révocation de sessions ;
-- test connection / actions Docker (existants).
+- test connection / actions Docker (existants) ;
+- lecture publique status pages (`statusPage.getPublic`, 60 / min / clé).
 
 Le rate limiter n'est pas un substitut au RBAC. Il est process-local (mémoire).
+
+Les status pages publiques n'exposent jamais `sourceIntegrationId`, URL,
+IP, credentials ni erreurs brutes. Opt-in strict :
+`visibility=public` **et** `enabled=true`.
 
 ## 11. Headers
 
