@@ -31,9 +31,7 @@ export function BoardMetaForm({
           name: String(data.get("name") ?? ""),
           description: String(data.get("description") ?? ""),
           visibility: String(data.get("visibility") ?? "private") as
-            | "private"
-            | "authenticated"
-            | "public",
+            "private" | "authenticated" | "public",
         });
       }}
     >
