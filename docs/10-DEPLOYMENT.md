@@ -14,7 +14,7 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.5.0` (Phase 25 minor). Les tags `phase-*` ne
+La version applicative est `1.5.0` (Phase 25 minor ; Phase 26 → `1.6.0`). Les tags `phase-*` ne
 publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
 `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
 `:tag` et `:sha-*` (ADR 0029).
@@ -219,18 +219,20 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 ## 10. Upgrade
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
-2. Lire `CHANGELOG.md`. Migrations `0000`–`0009` sont immuables.
-   Phase 25 ajoute `0010` (schema 10). L'upgrade 1.4.0 → 1.5.0 (schéma 10)
-   conserve users / boards / widgets / integrations / automations /
-   status pages / maintenance (éphémères restent hors backup).
+2. Lire `CHANGELOG.md`. Migrations `0000`–`0012` sont immuables une fois
+   publiées. Phase 26 ajoute `0011` (rollups) + `0012` (`service_slos`).
+   L'upgrade 1.5.0 → 1.6.0 (DB schéma 12, backup schéma 11) conserve users /
+   boards / widgets / integrations / automations / status pages / maintenance /
+   SLO (éphémères et rollups restent hors backup).
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
-5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant.
+5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant,
+   `/reliability` si permission.
 6. Rollback si nécessaire.
 
-Un backup schema v5…v9 est encore accepté (upgrade in-memory vers v10).
-v10 accepté. v11+ rejeté. `appVersion` 0.1.0 dans une archive
-v5–v10 reste valide.
+Un backup schema v5…v10 est encore accepté (upgrade in-memory vers v11).
+v11 accepté. v12+ rejeté. `appVersion` 0.1.0 dans une archive
+v5–v11 reste valide.
 
 ## 11. Rollback
 

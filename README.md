@@ -5,8 +5,8 @@ Dashboard self-hosted pour homelab et NAS. Version **1.5.0**.
 Le produit centralise les boards, les applications, les widgets, les intégrations
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
 les automations / alertes, le centre de notifications / incidents, les status
-pages / fenêtres de maintenance, la PWA / Web Push, la sauvegarde et l’OIDC.
-Les secrets et les appels d’API restent côté serveur.
+pages / fenêtres de maintenance, la fiabilité / SLO, la PWA / Web Push, la
+sauvegarde et l’OIDC. Les secrets et les appels d’API restent côté serveur.
 
 Identité originale. Homarr n’est qu’une référence fonctionnelle (`reference/homarr`,
 lecture seule).

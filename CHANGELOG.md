@@ -6,6 +6,13 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Reliability & SLO Analytics (Phase 26) : agrégats quotidiens
+  `service_reliability_daily`, objectifs `service_slos`, UI `/reliability`,
+  widget `reliability-status`, export CSV, RBAC `reliability.read` /
+  `slo.manage`. Migrations `0011`–`0012`, DB schema 12, backup schema 11.
+
 ## [1.5.0] — 2026-09-16
 
 Status Pages & Maintenance Windows (Phase 25). Minor backward-compatible.
