@@ -26,6 +26,8 @@ const SENSITIVE_PREFIXES = [
   "/automations",
   "/notifications",
   "/incidents",
+  "/status-pages",
+  "/status",
   "/backup",
 ];
 

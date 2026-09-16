@@ -17,6 +17,7 @@ export type ShellNav = {
   notifications: boolean;
   notificationManage: boolean;
   incidents: boolean;
+  statusPages: boolean;
   users: boolean;
   groups: boolean;
   account: boolean;
@@ -35,6 +36,7 @@ export async function getShellContext(): Promise<{ user: ShellUser | null; nav: 
         notifications: false,
         notificationManage: false,
         incidents: false,
+        statusPages: false,
         users: false,
         groups: false,
         account: false,
@@ -60,6 +62,11 @@ export async function getShellContext(): Promise<{ user: ShellUser | null; nav: 
       notifications: Boolean(subject && hasPermission(subject, "notification.read.self")),
       notificationManage: Boolean(subject && hasPermission(subject, "notification.manage.self")),
       incidents: Boolean(subject && hasPermission(subject, "incident.read")),
+      statusPages: Boolean(
+        subject &&
+        (hasPermission(subject, "status-page.read") ||
+          hasPermission(subject, "status-page.manage")),
+      ),
       users: Boolean(subject && hasPermission(subject, "user.read")),
       groups: Boolean(subject && hasPermission(subject, "group.read")),
       account: active,

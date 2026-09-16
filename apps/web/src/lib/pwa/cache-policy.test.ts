@@ -45,6 +45,9 @@ describe("PWA cache policy", () => {
       "/automations",
       "/notifications",
       "/incidents",
+      "/status-pages",
+      "/status",
+      "/status/homelab",
       "/backup",
     ];
     for (const path of denied) {

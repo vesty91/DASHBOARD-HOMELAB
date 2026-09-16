@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from "@dashboard/ui";
 import {
+  Activity,
   AppWindow,
   LayoutDashboard,
   LayoutGrid,
@@ -45,6 +46,7 @@ function contextFromPath(pathname: string): string | null {
   if (/^\/automations/.test(pathname)) return "Automations";
   if (/^\/notifications/.test(pathname)) return "Notifications";
   if (/^\/incidents/.test(pathname)) return "Incidents";
+  if (/^\/status-pages/.test(pathname)) return "Status pages";
   if (pathname.startsWith("/account")) return "Compte";
   return null;
 }
@@ -168,6 +170,7 @@ export function AppShell({
             {nav.integrations ? link("/integrations", "Intégrations", <Plug />) : null}
             {nav.automations ? link("/automations", "Automations", <Workflow />) : null}
             {nav.incidents ? link("/incidents", "Incidents", <TriangleAlert />) : null}
+            {nav.statusPages ? link("/status-pages", "Status pages", <Activity />) : null}
           </div>
           {showAdmin ? (
             <div className="shell-nav-section">
