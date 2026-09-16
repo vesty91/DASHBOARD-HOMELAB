@@ -2402,7 +2402,7 @@ describe("backup tRPC router", () => {
         format: "homelab-dashboard-backup",
         formatVersion: 1,
         schemaVersion: 8,
-        databaseSchemaVersion: 7,
+        databaseSchemaVersion: 8,
         appVersion: "0.1.0",
         createdAt: "2026-09-14T12:00:00.000Z",
         compatible: true,
