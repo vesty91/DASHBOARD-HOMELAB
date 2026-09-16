@@ -1,6 +1,7 @@
 # 25 — Status Pages (safe public projection)
 
 Phase 25. Migration `0010`. `schemaVersion` 10. Backup `formatVersion` 1.
+Tag `phase-25-complete`. Minor produit `v1.5.0` (après close).
 
 ## Objectif
 
@@ -72,11 +73,6 @@ Exclus (runtime / dérivé) : `notifications`, `incidents`, `incident_events`,
 `push_subscriptions`, …
 
 `BACKUP_SCHEMA_VERSION` = **10** ; compat restore **5–10**.
-
-## Hors scope PR 25.1 / 25.2
-
-- UI admin / page publique Next.js (timezone UI deferred — all instants are UTC)
-- historique d’incidents public riche
 
 ## UI (PR 25.3)
 

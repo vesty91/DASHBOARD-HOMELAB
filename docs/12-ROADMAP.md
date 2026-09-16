@@ -504,24 +504,27 @@ payload métier sur lock-screen, ITSM push.
 
 ## Phase 25 — Status Pages (safe)
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Livrables prévus :
+Livrables :
 
 - package `@dashboard/status-pages` + migration `0010` (status pages **et**
-  maintenance windows / targets — pas de `0011` pour la maintenance) ;
+  maintenance windows / targets — pas de `0011`) ;
 - projection publique sûre (pas d’IDs d’intégration, URL, secrets) ;
 - RBAC `status-page.read` / `status-page.manage` ;
 - tRPC `statusPage.*` + `getPublic` rate-limité + cache TTL 15s ;
+- UI admin `/status-pages*` + page publique `/status/[slug]` (`noindex`) ;
 - backup `schemaVersion` 10 (compat 5–10) incluant la config status/maintenance ;
 - docs `docs/25-STATUS-PAGES.md`.
 
-PR 25.1 : core sûr (schéma, domain, API, tests).
-PR 25.2 : logique métier maintenance (lifecycle UTC, notifications, worker tick ;
-sans UI ni migration `0011`).
-PR 25.3 : UI admin + page publique Next.js + E2E.
+PRs : #81–#83 (+ close). Tag `phase-25-complete`. Minor produit
+`v1.5.0` (après close).
+
 Migrations : `0000`–`0010` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
+
+Hors scope : indexation SEO volontaire, CAPTCHA public, SSE public dédié
+(polling borné accepté).
 
 ## Règle
 

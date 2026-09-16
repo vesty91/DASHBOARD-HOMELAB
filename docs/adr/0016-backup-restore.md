@@ -46,9 +46,12 @@ schéma 6 et accepte encore une archive v5 (upgrade in-memory). Voir ADR 0017.
 - Phase 22 : `schemaVersion` 7 ;
 - Phase 23 : `schemaVersion` 8 — exclus aussi `notifications`,
   `incidents`, `incident_events` ;
-- Phase 24 : `schemaVersion` 9 — exclus aussi `push_subscriptions`.
+- Phase 24 : `schemaVersion` 9 — exclus aussi `push_subscriptions` ;
+- Phase 25 : `schemaVersion` 10 — **inclut** `status_pages`,
+  `status_page_services`, `maintenance_windows`,
+  `maintenance_window_targets` (config durable).
 
 Tables hors archive / purge restore (éphémères) : `audit_logs`,
 `auth_sessions`, `automation_runs`, `automation_runtime_state`,
 `notifications`, `incidents`, `incident_events`, `push_subscriptions`.
-Compat restore acceptée : 5 → 6 → 7 → 8 → 9. Schéma 10+ rejeté.
+Compat restore acceptée : 5 → 6 → 7 → 8 → 9 → 10. Schéma 11+ rejeté.

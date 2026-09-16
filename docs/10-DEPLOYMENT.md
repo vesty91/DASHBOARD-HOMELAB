@@ -14,7 +14,8 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.4.0` (Phase 24 minor). Les tags `phase-*` ne
+La version applicative est `1.4.0` (Phase 24 minor ; Phase 25 close
+prépare `1.5.0`). Les tags `phase-*` ne
 publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
 `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
 `:tag` et `:sha-*` (ADR 0029).
@@ -219,20 +220,18 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 ## 10. Upgrade
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
-2. Lire `CHANGELOG.md`. Migrations `0000`–`0008` sont immuables.
-   Phase 24 ajoute `0009` (schema 9). L'upgrade 1.3.0 → 1.4.0 (schéma 9)
+2. Lire `CHANGELOG.md`. Migrations `0000`–`0009` sont immuables.
+   Phase 25 ajoute `0010` (schema 10). L'upgrade 1.4.0 → 1.5.0 (schéma 10)
    conserve users / boards / widgets / integrations / automations /
-   notifications (éphémères restent hors backup).
+   status pages / maintenance (éphémères restent hors backup).
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant.
 6. Rollback si nécessaire.
 
-Un backup schema v5 est encore accepté (upgrade in-memory vers v6 puis
-v7/v8/v9). v6 accepté (upgrade in-memory vers v7/v8/v9). v7 accepté
-(upgrade in-memory vers v8/v9). v8 accepté (upgrade in-memory vers v9).
-v9 accepté. v10+ rejeté. `appVersion` 0.1.0 dans une archive
-v5/v6/v7/v8/v9 reste valide.
+Un backup schema v5…v9 est encore accepté (upgrade in-memory vers v10).
+v10 accepté. v11+ rejeté. `appVersion` 0.1.0 dans une archive
+v5–v10 reste valide.
 
 ## 11. Rollback
 
@@ -249,8 +248,9 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5, 6, 7, 8 ou 9, hash SHA-256. Secrets : ciphertext / iv / authTag /
-keyVersion uniquement.
+`schemaVersion` 5–10, hash SHA-256. Secrets : ciphertext / iv / authTag /
+keyVersion uniquement. Phase 25 inclut la config status pages /
+maintenance.
 
 Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
 backup pré-restore sur disque → restore transactionnel → commit.
