@@ -12,6 +12,8 @@ const NOTIFICATION_EVENT_TYPES = [
 
 const MAX_BACKOFF_MS = 15_000;
 const WS_OPEN_TIMEOUT_MS = 1_500;
+/** Stop spinning when realtime is down (e.g. e2e without REALTIME_URL). */
+const MAX_FAILURES_BEFORE_OPEN = 3;
 
 function openWebSocket(token: string): Promise<WebSocket | null> {
   return new Promise((resolve) => {
@@ -54,6 +56,8 @@ export function useNotificationRealtime(enabled: boolean, onEvent: () => void): 
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     let backoffMs = 1_000;
+    let everOpened = false;
+    let failuresBeforeOpen = 0;
 
     function emit(): void {
       if (debounceTimer !== undefined) clearTimeout(debounceTimer);
@@ -62,8 +66,18 @@ export function useNotificationRealtime(enabled: boolean, onEvent: () => void): 
       }, 250);
     }
 
+    function markOpened(): void {
+      everOpened = true;
+      failuresBeforeOpen = 0;
+      backoffMs = 1_000;
+    }
+
     function scheduleReconnect(): void {
       if (closed) return;
+      if (!everOpened) {
+        failuresBeforeOpen += 1;
+        if (failuresBeforeOpen >= MAX_FAILURES_BEFORE_OPEN) return;
+      }
       const wait = backoffMs + Math.floor(Math.random() * 250);
       backoffMs = Math.min(MAX_BACKOFF_MS, backoffMs * 2);
       if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
@@ -88,7 +102,7 @@ export function useNotificationRealtime(enabled: boolean, onEvent: () => void): 
       }
       source = eventSource;
       eventSource.onopen = () => {
-        backoffMs = 1_000;
+        markOpened();
       };
       eventSource.onerror = () => {
         eventSource.close();
@@ -124,14 +138,15 @@ export function useNotificationRealtime(enabled: boolean, onEvent: () => void): 
         if (closed) return;
         attachSse(token);
       };
-      backoffMs = 1_000;
+      markOpened();
     }
 
     async function connect(): Promise<void> {
       if (closed) return;
       const ticket = await issueNotificationRealtimeTicketAction();
-      if (closed || !ticket) {
-        if (!closed) scheduleReconnect();
+      if (closed) return;
+      if (!ticket) {
+        // Unauthorized / unavailable — do not retry forever (starves other server actions).
         return;
       }
       const opened = await openWebSocket(ticket.token);

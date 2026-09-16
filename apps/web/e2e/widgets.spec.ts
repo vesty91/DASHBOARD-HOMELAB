@@ -165,6 +165,7 @@ test("widget engine clock, bookmarks, app tile, publicSafe and coordinator", asy
   await page.getByLabel("Visibilité").selectOption("public");
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
   await page.getByRole("button", { name: "Enregistrer les métadonnées" }).click();
+  await expect(page.getByText("Sauvegardé")).toBeVisible();
   await expect(page.getByLabel("Visibilité")).toHaveValue("public");
 
   await page.goto("/boards/phase-6-widgets/edit");
