@@ -100,8 +100,24 @@ ADMIN default-deny pour les deux.
 | `reliability.updateSlo`     | revision conflict                 |
 | `reliability.deleteSlo`     | revision conflict                 |
 | `reliability.evaluateSlo`   | window + error budget             |
+| `reliability.summarize`     | ≤50 keys, agrégat fenêtre unique  |
 
-## Hors scope 26.2
+## UI (PR 26.3)
 
-UI, widget, CSV (PR 26.3). Burn-rate multi-fenêtre / alerting `slo.budget.low`
-optionnel ultérieur.
+Routes Next.js (RSC + server actions, pas de client tRPC) :
+
+| Route                       | Contenu                                              |
+| --------------------------- | ---------------------------------------------------- |
+| `/reliability`              | vue d’ensemble (summarize 30 j, max 50 services)     |
+| `/reliability/[serviceKey]` | détail, table quotidienne, SVG, CRUD SLO, export CSV |
+
+Navigation : lien « Fiabilité » si `reliability.read`.
+
+Export CSV : échappement Excel (`=`, `+`, `-`, `@` en tête de cellule).
+
+Widget board `reliability-status` (`publicSafe: false`) : intégration,
+fenêtre 7/30/90 j, sparkline optionnelle ; résolu via `resolveReliabilityStatusViews`.
+
+## Hors scope 26.3
+
+Burn-rate multi-fenêtre / alerting `slo.budget.low` optionnel ultérieur.

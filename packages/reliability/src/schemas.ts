@@ -78,6 +78,11 @@ export const evaluateSloSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const summarizeReliabilitySchema = z.object({
+  serviceKeys: z.array(serviceKeySchema).max(50).optional(),
+  windowDays: sloWindowDaysSchema.default(30),
+});
+
 export type ListDailyReliabilityInput = z.infer<typeof listDailyReliabilitySchema>;
 export type RebuildReliabilityInput = z.infer<typeof rebuildReliabilitySchema>;
 export type CreateSloInput = z.infer<typeof createSloSchema>;
@@ -85,3 +90,4 @@ export type UpdateSloInput = z.infer<typeof updateSloSchema>;
 export type DeleteSloInput = z.infer<typeof deleteSloSchema>;
 export type ListSlosInput = z.infer<typeof listSlosSchema>;
 export type EvaluateSloInput = z.infer<typeof evaluateSloSchema>;
+export type SummarizeReliabilityInput = z.infer<typeof summarizeReliabilitySchema>;

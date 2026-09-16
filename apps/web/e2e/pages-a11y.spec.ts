@@ -38,6 +38,7 @@ test("main pages have no WCAG A/AA axe violations", async ({ page }) => {
     "/notifications",
     "/incidents",
     "/status-pages",
+    "/reliability",
     "/admin",
   ]) {
     await page.goto(path);

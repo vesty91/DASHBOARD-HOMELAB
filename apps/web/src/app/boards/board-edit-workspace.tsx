@@ -8,6 +8,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ReliabilityStatusView,
   ServiceStatusView,
   UptimeKumaStatusView,
   GrafanaStatusView,
@@ -26,6 +27,7 @@ import type {
   ImmichIntegrationOption,
   JellyfinIntegrationOption,
   PrometheusIntegrationOption,
+  ReliabilityIntegrationOption,
   ServiceStatusCatalogOption,
   UptimeKumaIntegrationOption,
   GrafanaIntegrationOption,
@@ -77,7 +79,9 @@ export function BoardEditWorkspace({
   sonarrViews = {},
   sonarrIntegrations = [],
   serviceStatusViews = {},
+  reliabilityStatusViews = {},
   serviceStatusCatalog = [],
+  reliabilityIntegrations = [],
   canReadApps,
 }: {
   snapshot: BoardSnapshot;
@@ -112,7 +116,9 @@ export function BoardEditWorkspace({
   sonarrViews?: Record<string, SonarrOverviewView>;
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
+  reliabilityStatusViews?: Record<string, ReliabilityStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
+  reliabilityIntegrations?: readonly ReliabilityIntegrationOption[];
   canReadApps: boolean;
 }) {
   const router = useRouter();
@@ -235,7 +241,9 @@ export function BoardEditWorkspace({
         sonarrViews={sonarrViews}
         sonarrIntegrations={sonarrIntegrations}
         serviceStatusViews={serviceStatusViews}
+        reliabilityStatusViews={reliabilityStatusViews}
         serviceStatusCatalog={serviceStatusCatalog}
+        reliabilityIntegrations={reliabilityIntegrations}
         canReadApps={canReadApps}
         conflict={conflict}
         conflictRef={conflictRef}

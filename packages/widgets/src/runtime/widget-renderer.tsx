@@ -15,6 +15,7 @@ import type { QbittorrentTransferView } from "../qbittorrent-transfer";
 import type { RadarrOverviewView } from "../radarr-overview";
 import type { SeerrRequestsView } from "../seerr-requests";
 import type { SonarrOverviewView } from "../sonarr-overview";
+import type { ReliabilityStatusView } from "../reliability-status";
 import type { ServiceStatusView } from "../service-status";
 import type { UptimeKumaStatusView } from "../uptime-kuma-status";
 import { builtInWidgetRegistry } from "../built-in";
@@ -36,6 +37,7 @@ import { QbittorrentTransferWidget } from "./qbittorrent-transfer-widget";
 import { RadarrOverviewWidget } from "./radarr-overview-widget";
 import { SeerrRequestsWidget } from "./seerr-requests-widget";
 import { SonarrOverviewWidget } from "./sonarr-overview-widget";
+import { ReliabilityStatusWidget } from "./reliability-status-widget";
 import { ServiceStatusWidget } from "./service-status-widget";
 import { UptimeKumaStatusWidget } from "./uptime-kuma-status-widget";
 import { WidgetBoundary } from "./widget-boundary";
@@ -91,6 +93,7 @@ function ReadyWidget({
   sonarrView,
   proxmoxView,
   serviceStatusView,
+  reliabilityStatusView,
   uptimeKumaView,
 }: {
   item: WidgetItemView;
@@ -109,6 +112,7 @@ function ReadyWidget({
   sonarrView: SonarrOverviewView | undefined;
   proxmoxView: ProxmoxResourcesView | undefined;
   serviceStatusView: ServiceStatusView | undefined;
+  reliabilityStatusView: ReliabilityStatusView | undefined;
   uptimeKumaView: UptimeKumaStatusView | undefined;
 }) {
   switch (item.widgetType) {
@@ -144,6 +148,8 @@ function ReadyWidget({
       return <SonarrOverviewWidget view={sonarrView} />;
     case "proxmox-resources":
       return <ProxmoxResourcesWidget view={proxmoxView} />;
+    case "reliability-status":
+      return <ReliabilityStatusWidget view={reliabilityStatusView} />;
     case "service-status":
       return <ServiceStatusWidget view={serviceStatusView} />;
     case "uptime-kuma-status":
@@ -170,6 +176,7 @@ export function WidgetRenderer({
   sonarrView,
   proxmoxView,
   serviceStatusView,
+  reliabilityStatusView,
   uptimeKumaView,
 }: {
   item: WidgetItemView;
@@ -188,6 +195,7 @@ export function WidgetRenderer({
   sonarrView?: SonarrOverviewView;
   proxmoxView?: ProxmoxResourcesView;
   serviceStatusView?: ServiceStatusView;
+  reliabilityStatusView?: ReliabilityStatusView;
   uptimeKumaView?: UptimeKumaStatusView;
 }) {
   const blocked = frameForStatus(item);
@@ -214,6 +222,7 @@ export function WidgetRenderer({
           sonarrView={sonarrView}
           proxmoxView={proxmoxView}
           serviceStatusView={serviceStatusView}
+          reliabilityStatusView={reliabilityStatusView}
           uptimeKumaView={uptimeKumaView}
         />
       </WidgetFrame>

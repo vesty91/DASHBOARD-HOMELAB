@@ -10,6 +10,7 @@ import {
 import {
   Activity,
   AppWindow,
+  Gauge,
   LayoutDashboard,
   LayoutGrid,
   Menu,
@@ -47,6 +48,7 @@ function contextFromPath(pathname: string): string | null {
   if (/^\/notifications/.test(pathname)) return "Notifications";
   if (/^\/incidents/.test(pathname)) return "Incidents";
   if (/^\/status-pages/.test(pathname)) return "Status pages";
+  if (/^\/reliability/.test(pathname)) return "Fiabilité";
   if (pathname.startsWith("/account")) return "Compte";
   return null;
 }
@@ -171,6 +173,7 @@ export function AppShell({
             {nav.automations ? link("/automations", "Automations", <Workflow />) : null}
             {nav.incidents ? link("/incidents", "Incidents", <TriangleAlert />) : null}
             {nav.statusPages ? link("/status-pages", "Status pages", <Activity />) : null}
+            {nav.reliability ? link("/reliability", "Fiabilité", <Gauge />) : null}
           </div>
           {showAdmin ? (
             <div className="shell-nav-section">

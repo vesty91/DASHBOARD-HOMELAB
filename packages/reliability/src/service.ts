@@ -20,6 +20,7 @@ import {
   listDailyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
+  summarizeReliabilitySchema,
   updateSloSchema,
   type CreateSloInput,
   type DeleteSloInput,
@@ -27,10 +28,11 @@ import {
   type ListDailyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
+  type SummarizeReliabilityInput,
   type UpdateSloInput,
 } from "./schemas";
-import { computeSloFromDaily } from "./slo-math";
-import type { ServiceSlo } from "./types";
+import { SLO_OBJECTIVE_BPS_MAX, computeSloFromDaily } from "./slo-math";
+import type { ReliabilityServiceSummary, ServiceSlo } from "./types";
 
 export type ReliabilityActor = {
   userId: string | null;
@@ -239,6 +241,95 @@ export function createReliabilityService(deps: {
         excludeMaintenance: slo.excludeMaintenance,
       });
       return { slo, computation, fromDateUtc: fromDate, toDateUtc: toDate };
+    },
+
+    async summarize(raw: SummarizeReliabilityInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = summarizeReliabilitySchema.parse(raw);
+      const nowMs = now().getTime();
+      const toDate = utcDateString(nowMs);
+      const fromDate = utcDateString(nowMs - (input.windowDays - 1) * MS_PER_DAY);
+
+      let serviceKeys = input.serviceKeys;
+      if (!serviceKeys || serviceKeys.length === 0) {
+        const presence = await deps.store.listIntegrationPresence();
+        serviceKeys = presence.map((item) => item.serviceKey).slice(0, 50);
+      }
+
+      if (serviceKeys.length === 0) {
+        return {
+          windowDays: input.windowDays,
+          fromDateUtc: fromDate,
+          toDateUtc: toDate,
+          services: [] as ReliabilityServiceSummary[],
+        };
+      }
+
+      const [days, slos] = await Promise.all([
+        deps.store.listDaily({
+          serviceKeys,
+          fromDateUtc: fromDate,
+          toDateUtc: toDate,
+          limit: input.windowDays,
+        }),
+        deps.store.listSlos({ serviceKeys, limit: 200 }),
+      ]);
+
+      const daysByKey = new Map<string, typeof days>();
+      for (const day of days) {
+        const bucket = daysByKey.get(day.serviceKey) ?? [];
+        bucket.push(day);
+        daysByKey.set(day.serviceKey, bucket);
+      }
+
+      const slosByKey = new Map<string, ServiceSlo[]>();
+      for (const slo of slos) {
+        const bucket = slosByKey.get(slo.serviceKey) ?? [];
+        bucket.push(slo);
+        slosByKey.set(slo.serviceKey, bucket);
+      }
+
+      const services: ReliabilityServiceSummary[] = serviceKeys.map((serviceKey) => {
+        const serviceDays = daysByKey.get(serviceKey) ?? [];
+        const serviceSlos = slosByKey.get(serviceKey) ?? [];
+        const enabledSlo = serviceSlos.find((entry) => entry.enabled) ?? serviceSlos[0] ?? null;
+
+        const computation = enabledSlo
+          ? computeSloFromDaily({
+              days: serviceDays,
+              windowDays: enabledSlo.windowDays,
+              objectiveBasisPoints: enabledSlo.objectiveBasisPoints,
+              excludeMaintenance: enabledSlo.excludeMaintenance,
+            })
+          : computeSloFromDaily({
+              days: serviceDays,
+              windowDays: input.windowDays,
+              objectiveBasisPoints: SLO_OBJECTIVE_BPS_MAX,
+              excludeMaintenance: true,
+            });
+
+        const availabilityBasisPoints = computation.availabilityBasisPoints;
+        const sloMet =
+          enabledSlo && availabilityBasisPoints !== null
+            ? availabilityBasisPoints >= enabledSlo.objectiveBasisPoints
+            : null;
+
+        return {
+          serviceKey,
+          days: serviceDays,
+          slo: enabledSlo,
+          availabilityBasisPoints,
+          sloMet,
+          remainingBudgetBasisPoints: enabledSlo ? computation.remainingBudgetBasisPoints : null,
+        };
+      });
+
+      return {
+        windowDays: input.windowDays,
+        fromDateUtc: fromDate,
+        toDateUtc: toDate,
+        services,
+      };
     },
 
     async tick(): Promise<{ upserted: number; deleted: number }> {

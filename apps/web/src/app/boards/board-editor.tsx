@@ -15,6 +15,7 @@ import type {
   ImmichStatsView,
   JellyfinSessionsView,
   PrometheusMetricView,
+  ReliabilityStatusView,
   ServiceStatusView,
   UptimeKumaStatusView,
   GrafanaStatusView,
@@ -37,6 +38,7 @@ import {
   immichStatsDraftConfig,
   jellyfinSessionsDraftConfig,
   prometheusMetricDraftConfig,
+  reliabilityStatusDefaultConfig,
   serviceStatusDefaultConfig,
   uptimeKumaStatusDraftConfig,
   grafanaStatusDraftConfig,
@@ -56,6 +58,7 @@ import {
   type ImmichIntegrationOption,
   type JellyfinIntegrationOption,
   type PrometheusIntegrationOption,
+  type ReliabilityIntegrationOption,
   type ServiceStatusCatalogOption,
   type UptimeKumaIntegrationOption,
   type GrafanaIntegrationOption,
@@ -103,6 +106,8 @@ function defaultConfig(widgetType: string): unknown {
       return beszelHostsDraftConfig;
     case "prometheus-metric":
       return prometheusMetricDraftConfig;
+    case "reliability-status":
+      return reliabilityStatusDefaultConfig;
     case "service-status":
       return serviceStatusDefaultConfig;
     case "uptime-kuma-status":
@@ -165,7 +170,9 @@ export function BoardEditor({
   sonarrViews = {},
   sonarrIntegrations = [],
   serviceStatusViews = {},
+  reliabilityStatusViews = {},
   serviceStatusCatalog = [],
+  reliabilityIntegrations = [],
   canReadApps,
   conflict,
   conflictRef,
@@ -206,7 +213,9 @@ export function BoardEditor({
   sonarrViews?: Record<string, SonarrOverviewView>;
   sonarrIntegrations?: readonly SonarrIntegrationOption[];
   serviceStatusViews?: Record<string, ServiceStatusView>;
+  reliabilityStatusViews?: Record<string, ReliabilityStatusView>;
   serviceStatusCatalog?: readonly ServiceStatusCatalogOption[];
+  reliabilityIntegrations?: readonly ReliabilityIntegrationOption[];
   canReadApps: boolean;
   conflict: boolean;
   conflictRef: MutableRefObject<boolean>;
@@ -705,6 +714,7 @@ export function BoardEditor({
                 beszelIntegrations={beszelIntegrations}
                 prometheusIntegrations={prometheusIntegrations}
                 serviceStatusCatalog={serviceStatusCatalog}
+                reliabilityIntegrations={reliabilityIntegrations}
                 uptimeKumaIntegrations={uptimeKumaIntegrations}
                 proxmoxIntegrations={proxmoxIntegrations}
                 grafanaIntegrations={grafanaIntegrations}
@@ -930,6 +940,9 @@ export function BoardEditor({
                     {...(serviceStatusViews[entry.id]
                       ? { serviceStatusView: serviceStatusViews[entry.id] }
                       : {})}
+                    {...(reliabilityStatusViews[entry.id]
+                      ? { reliabilityStatusView: reliabilityStatusViews[entry.id] }
+                      : {})}
                     {...(uptimeKumaViews[entry.id]
                       ? { uptimeKumaView: uptimeKumaViews[entry.id] }
                       : {})}
@@ -995,6 +1008,7 @@ export function BoardEditor({
             beszelIntegrations={beszelIntegrations}
             prometheusIntegrations={prometheusIntegrations}
             serviceStatusCatalog={serviceStatusCatalog}
+            reliabilityIntegrations={reliabilityIntegrations}
             uptimeKumaIntegrations={uptimeKumaIntegrations}
             proxmoxIntegrations={proxmoxIntegrations}
             grafanaIntegrations={grafanaIntegrations}

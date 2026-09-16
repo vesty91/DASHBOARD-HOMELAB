@@ -73,6 +73,7 @@ describe("widget registry", () => {
       "proxmox-resources",
       "qbittorrent-transfer",
       "radarr-overview",
+      "reliability-status",
       "seerr-requests",
       "service-status",
       "sonarr-overview",
@@ -87,6 +88,7 @@ describe("widget registry", () => {
     expect(registry.get("prowlarr-status")?.publicSafe).toBe(false);
     expect(registry.get("qbittorrent-transfer")?.publicSafe).toBe(false);
     expect(registry.get("radarr-overview")?.publicSafe).toBe(false);
+    expect(registry.get("reliability-status")?.publicSafe).toBe(false);
     expect(registry.get("seerr-requests")?.publicSafe).toBe(false);
     expect(registry.get("custom-api-value")?.publicSafe).toBe(false);
     expect(registry.get("sonarr-overview")?.publicSafe).toBe(false);

@@ -22,6 +22,7 @@ export {
   listDailyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
+  summarizeReliabilitySchema,
   serviceKeySchema,
   updateSloSchema,
   utcDateSchema,
@@ -31,6 +32,7 @@ export {
   type ListDailyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
+  type SummarizeReliabilityInput,
   type UpdateSloInput,
 } from "./schemas";
 export {
@@ -57,5 +59,6 @@ export type {
   ReliabilityBucket,
   ReliabilityInterval,
   ServicePresence,
+  ReliabilityServiceSummary,
   ServiceSlo,
 } from "./types";
