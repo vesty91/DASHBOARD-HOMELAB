@@ -683,7 +683,7 @@ la transaction.
 
 | Route             | Permission      | Notes                                                                                                            |
 | ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 7. Rate limité. |
+| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 8. Rate limité. |
 | `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                          |
 | `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
 
