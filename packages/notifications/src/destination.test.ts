@@ -8,6 +8,9 @@ describe("destination paths", () => {
     expect(safeDestinationPath("/notifications")).toBe("/notifications");
     expect(safeDestinationPath("/integrations/foo/edit")).toBe("/integrations/foo/edit");
     expect(assertSafeDestinationPath("/boards/home")).toBe("/boards/home");
+    expect(safeDestinationPath("/status-pages/maintenance/abc-123")).toBe(
+      "/status-pages/maintenance/abc-123",
+    );
   });
 
   it("rejects external, traversal, and query destinations", () => {

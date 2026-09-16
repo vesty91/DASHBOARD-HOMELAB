@@ -100,9 +100,31 @@ describe("status page runtime", () => {
       );
       const publicDto = await service.getPublicBySlug("lab-status");
       expect(publicDto.overallStatus).toBe("operational");
+      expect(publicDto.maintenances).toEqual([]);
       expect(JSON.stringify(publicDto)).not.toContain(integration.id);
       expect(JSON.stringify(publicDto)).not.toContain("secret.internal");
       expect(published.configRevision).toBe(withService.configRevision + 1);
+
+      const startsAt = new Date(Date.now() + 60_000);
+      const endsAt = new Date(Date.now() + 3_600_000);
+      const window = await service.maintenance.schedule(
+        {
+          name: "Probe maintenance",
+          description: null,
+          startsAt,
+          endsAt,
+          integrationIds: [integration.id],
+        },
+        actor,
+      );
+      expect(window.status).toBe("scheduled");
+      expect(window.integrationIds).toEqual([integration.id]);
+
+      const listed = await service.maintenance.list(actor);
+      expect(listed.some((entry) => entry.id === window.id)).toBe(true);
+
+      const cancelled = await service.maintenance.cancel(window.id, actor);
+      expect(cancelled.status).toBe("cancelled");
     } finally {
       client.close();
     }

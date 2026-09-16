@@ -148,7 +148,8 @@ function createMemoryStore(): StatusPageStorePort & {
     async listOpenAvailabilityIncidentIntegrationIds(ids) {
       return new Set(ids.filter((id) => openIncidents.has(id)));
     },
-    async listActiveMaintenanceIntegrationIds(ids) {
+    async listActiveMaintenanceIntegrationIds(ids, _now) {
+      void _now;
       return new Set(ids.filter((id) => activeMaintenance.has(id)));
     },
     async findIntegrationStatuses(ids) {
@@ -158,6 +159,30 @@ function createMemoryStore(): StatusPageStorePort & {
         if (found) map.set(id, found);
       }
       return map;
+    },
+    async listMaintenanceWindows() {
+      return [];
+    },
+    async findMaintenanceById() {
+      return null;
+    },
+    async listNonTerminalMaintenanceWindows() {
+      return [];
+    },
+    async listPublicMaintenancesForIntegrations() {
+      return [];
+    },
+    async listStatusPageIdsForIntegrations() {
+      return [];
+    },
+    async findExistingIntegrationIds(ids) {
+      return new Set(ids);
+    },
+    async createMaintenanceWindow() {
+      throw new StatusPageError("VALIDATION_ERROR", "not implemented in memory store");
+    },
+    async updateMaintenanceStatus() {
+      return null;
     },
   };
 }

@@ -73,8 +73,34 @@ Exclus (runtime / dérivé) : `notifications`, `incidents`, `incident_events`,
 
 `BACKUP_SCHEMA_VERSION` = **10** ; compat restore **5–10**.
 
-## Hors scope PR 25.1
+## Hors scope PR 25.1 / 25.2
 
-- UI admin / page publique Next.js
-- cycle de vie automatique des maintenance windows (PR 25.2)
+- UI admin / page publique Next.js (timezone UI deferred — all instants are UTC)
 - historique d’incidents public riche
+
+## Maintenance windows (PR 25.2)
+
+Lifecycle : `scheduled` → `active` → `completed`, or `cancelled`.
+
+- Status is **derived from the UTC clock** (`startsAt` / `endsAt`); clients cannot
+  force `active`.
+- Validation : `endsAt > startsAt`, duration 1 minute–14 days, start within
+  5 minutes past … 1 year future.
+- Targets : `maintenance_window_targets.integrationId` (no XOR).
+- Maintenance **never deletes incidents**; public display may prefer
+  `maintenance` when healthy, while open availability incidents still project
+  as `outage`.
+- Notifications (`createForUser`, category `system`) :
+  scheduled / starting / completed, destination `/status-pages/maintenance/:id`.
+- Worker tick reconciles stored status with the clock (idempotent CAS + dedupKey).
+
+API (manage / read) :
+
+| Route                            | Permission           |
+| -------------------------------- | -------------------- |
+| `statusPage.listMaintenance`     | `status-page.read`   |
+| `statusPage.getMaintenance`      | `status-page.read`   |
+| `statusPage.scheduleMaintenance` | `status-page.manage` |
+| `statusPage.cancelMaintenance`   | `status-page.manage` |
+
+Public DTO includes `maintenances[]` (scheduled/active only, no integration IDs).

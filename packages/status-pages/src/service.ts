@@ -1,5 +1,10 @@
 import { hasPermission, type PermissionSubject } from "@dashboard/permissions";
 import { StatusPageError } from "./errors";
+import {
+  createMaintenanceWindowService,
+  toPublicMaintenanceDto,
+  type MaintenanceNotificationPort,
+} from "./maintenance";
 import { pickOverallStatus, resolvePublicServiceStatus } from "./status-map";
 import type {
   ManagedStatusPageDto,
@@ -27,6 +32,7 @@ function assertPublicDtoSafe(dto: PublicStatusPageDto): void {
 export function toPublicStatusPageDto(
   snapshot: StatusPageSnapshot,
   serviceStatuses: readonly PublicStatusServiceDto[],
+  maintenances: PublicStatusPageDto["maintenances"] = [],
 ): PublicStatusPageDto {
   const dto: PublicStatusPageDto = {
     id: snapshot.page.id,
@@ -35,6 +41,7 @@ export function toPublicStatusPageDto(
     description: snapshot.page.description,
     overallStatus: pickOverallStatus(serviceStatuses.map((service) => service.status)),
     services: serviceStatuses,
+    maintenances,
     updatedAt: snapshot.page.updatedAt.toISOString(),
   };
   assertPublicDtoSafe(dto);
@@ -96,6 +103,7 @@ function requireStatusPagePermission(
 export async function projectServiceStatuses(
   store: StatusPageStorePort,
   services: readonly StatusPageServiceRecord[],
+  now: Date = new Date(),
 ): Promise<{
   publicServices: PublicStatusServiceDto[];
   managedServices: ManagedStatusServiceDto[];
@@ -104,7 +112,7 @@ export async function projectServiceStatuses(
   const [statuses, openIncidents, activeMaintenance] = await Promise.all([
     store.findIntegrationStatuses(integrationIds),
     store.listOpenAvailabilityIncidentIntegrationIds(integrationIds),
-    store.listActiveMaintenanceIntegrationIds(integrationIds),
+    store.listActiveMaintenanceIntegrationIds(integrationIds, now),
   ]);
 
   const publicServices: PublicStatusServiceDto[] = [];
@@ -146,6 +154,8 @@ export interface StatusPageServiceDeps {
     set(key: string, value: PublicStatusPageDto): void;
     invalidate(key: string): void;
   };
+  notifications?: MaintenanceNotificationPort;
+  listMaintenanceRecipientUserIds?: () => Promise<readonly string[]>;
   now?: () => Date;
 }
 
@@ -153,6 +163,17 @@ export type StatusPageService = ReturnType<typeof createStatusPageService>;
 
 export function createStatusPageService(deps: StatusPageServiceDeps) {
   const now = deps.now ?? (() => new Date());
+  const maintenance = createMaintenanceWindowService({
+    store: deps.store,
+    now,
+    ...(deps.notifications ? { notifications: deps.notifications } : {}),
+    ...(deps.listMaintenanceRecipientUserIds
+      ? { listRecipientUserIds: deps.listMaintenanceRecipientUserIds }
+      : {}),
+    ...(deps.publicCache
+      ? { publicCacheInvalidate: (pageId: string) => deps.publicCache?.invalidate(pageId) }
+      : {}),
+  });
 
   async function requireManagedSnapshot(id: string): Promise<StatusPageSnapshot> {
     const snapshot = await deps.store.findSnapshotById(id);
@@ -161,11 +182,12 @@ export function createStatusPageService(deps: StatusPageServiceDeps) {
   }
 
   async function toManaged(snapshot: StatusPageSnapshot): Promise<ManagedStatusPageDto> {
-    const projected = await projectServiceStatuses(deps.store, snapshot.services);
+    const projected = await projectServiceStatuses(deps.store, snapshot.services, now());
     return toManagedStatusPageDto(snapshot, projected.managedServices);
   }
 
   return {
+    maintenance,
     permissions(actor: StatusPageActor) {
       const subject = actor.subject;
       const active = Boolean(subject && subject.status === "active");
@@ -279,8 +301,18 @@ export function createStatusPageService(deps: StatusPageServiceDeps) {
       const cacheKey = snapshot.page.id;
       const cached = deps.publicCache?.get(cacheKey);
       if (cached) return cached;
-      const projected = await projectServiceStatuses(deps.store, snapshot.services);
-      const dto = toPublicStatusPageDto(snapshot, projected.publicServices);
+      const clock = now();
+      const projected = await projectServiceStatuses(deps.store, snapshot.services, clock);
+      const integrationIds = snapshot.services.map((service) => service.sourceIntegrationId);
+      const maintenanceSnapshots = await deps.store.listPublicMaintenancesForIntegrations(
+        integrationIds,
+        clock,
+      );
+      const maintenances = maintenanceSnapshots
+        .map((entry) => toPublicMaintenanceDto(entry, clock))
+        .filter((entry): entry is NonNullable<typeof entry> => entry != null)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      const dto = toPublicStatusPageDto(snapshot, projected.publicServices, maintenances);
       deps.publicCache?.set(cacheKey, dto);
       return dto;
     },

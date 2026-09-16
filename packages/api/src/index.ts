@@ -125,11 +125,14 @@ import {
 } from "@dashboard/notifications";
 import {
   StatusPageError,
+  cancelMaintenanceWindowSchema,
   createStatusPageSchema,
   deleteStatusPageSchema,
+  getMaintenanceWindowSchema,
   getPublicStatusPageSchema,
   getStatusPageSchema,
   replaceStatusPageServicesSchema,
+  scheduleMaintenanceWindowSchema,
   updateStatusPageSchema,
   PUBLIC_STATUS_RATE_LIMIT,
   PUBLIC_STATUS_RATE_WINDOW_MS,
@@ -1691,6 +1694,24 @@ export const statusPageRouter = t.router({
     .input(replaceStatusPageServicesSchema)
     .mutation(({ ctx, input }) =>
       procedure(() => ctx.statusPages.replaceServices(input, ctx.actor)),
+    ),
+  listMaintenance: t.procedure.query(({ ctx }) =>
+    procedure(() => ctx.statusPages.maintenance.list(ctx.actor)),
+  ),
+  getMaintenance: t.procedure
+    .input(getMaintenanceWindowSchema)
+    .query(({ ctx, input }) =>
+      procedure(() => ctx.statusPages.maintenance.get(input.id, ctx.actor)),
+    ),
+  scheduleMaintenance: t.procedure
+    .input(scheduleMaintenanceWindowSchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.statusPages.maintenance.schedule(input, ctx.actor)),
+    ),
+  cancelMaintenance: t.procedure
+    .input(cancelMaintenanceWindowSchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.statusPages.maintenance.cancel(input.id, ctx.actor)),
     ),
   getPublic: t.procedure.input(getPublicStatusPageSchema).query(({ ctx, input }) => {
     consumePublicStatusAction(ctx, input.slug);

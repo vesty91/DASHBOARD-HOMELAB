@@ -517,7 +517,8 @@ Livrables prévus :
 - docs `docs/25-STATUS-PAGES.md`.
 
 PR 25.1 : core sûr (schéma, domain, API, tests).
-PR 25.2 : logique métier maintenance + UI.
+PR 25.2 : logique métier maintenance (lifecycle UTC, notifications, worker tick ;
+sans UI ni migration `0011`).
 
 Migrations : `0000`–`0010` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 10 (compat 5/6/7/8/9 → 10).
