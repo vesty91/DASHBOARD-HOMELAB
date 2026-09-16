@@ -34,10 +34,18 @@ describe("backup runtime", () => {
     expect(BACKUP_TABLE_NAMES).not.toContain("incidents");
     expect(BACKUP_TABLE_NAMES).not.toContain("incident_events");
     expect(BACKUP_TABLE_NAMES).not.toContain("push_subscriptions");
+    expect(BACKUP_TABLE_NAMES).toContain("status_pages");
+    expect(BACKUP_TABLE_NAMES).toContain("status_page_services");
+    expect(BACKUP_TABLE_NAMES).toContain("maintenance_windows");
+    expect(BACKUP_TABLE_NAMES).toContain("maintenance_window_targets");
     expect(TABLE_NAMES).toContain("notifications");
     expect(TABLE_NAMES).toContain("incidents");
     expect(TABLE_NAMES).toContain("incident_events");
     expect(TABLE_NAMES).toContain("push_subscriptions");
+    expect(TABLE_NAMES).toContain("status_pages");
+    expect(TABLE_NAMES).toContain("status_page_services");
+    expect(TABLE_NAMES).toContain("maintenance_windows");
+    expect(TABLE_NAMES).toContain("maintenance_window_targets");
   });
 
   it("round-trips a snapshot, keeps secrets encrypted, and rolls back failed restores", async () => {

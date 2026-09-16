@@ -11,10 +11,12 @@ import {
   backupTablesSchema,
   backupTablesSchemaV5,
   backupTablesSchemaV6,
+  backupTablesSchemaV9,
   type BackupArchive,
   type BackupTables,
   type BackupTablesV5,
   type BackupTablesV6,
+  type BackupTablesV9,
 } from "./schema";
 
 function archiveBytes(value: unknown): number {
@@ -65,6 +67,10 @@ export function emptyBackupTables(): BackupTables {
     oidc_group_mappings: [],
     oidc_secrets: [],
     automation_rules: [],
+    status_pages: [],
+    status_page_services: [],
+    maintenance_windows: [],
+    maintenance_window_targets: [],
   };
 }
 
@@ -98,10 +104,20 @@ function upgradeV5Tables(tables: BackupTablesV5): BackupTablesV6 {
   };
 }
 
-function upgradeV6Tables(tables: BackupTablesV6): BackupTables {
+function upgradeV6Tables(tables: BackupTablesV6): BackupTablesV9 {
   return {
     ...tables,
     automation_rules: [],
+  };
+}
+
+function upgradeV9Tables(tables: BackupTablesV9): BackupTables {
+  return {
+    ...tables,
+    status_pages: [],
+    status_page_services: [],
+    maintenance_windows: [],
+    maintenance_window_targets: [],
   };
 }
 
@@ -180,7 +196,10 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     ) {
       throw new BackupError("HASH_MISMATCH", "Backup archive integrity check failed");
     }
-    return { manifest: manifest.data, tables: upgradeV6Tables(upgradeV5Tables(tables.data)) };
+    return {
+      manifest: manifest.data,
+      tables: upgradeV9Tables(upgradeV6Tables(upgradeV5Tables(tables.data))),
+    };
   }
   if (version === 6) {
     const tables = backupTablesSchemaV6.safeParse(record.tables);
@@ -198,7 +217,25 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     ) {
       throw new BackupError("HASH_MISMATCH", "Backup archive integrity check failed");
     }
-    return { manifest: manifest.data, tables: upgradeV6Tables(tables.data) };
+    return { manifest: manifest.data, tables: upgradeV9Tables(upgradeV6Tables(tables.data)) };
+  }
+  if (version === 7 || version === 8 || version === 9) {
+    const tables = backupTablesSchemaV9.safeParse(record.tables);
+    if (!tables.success) {
+      throw new BackupError("VALIDATION_ERROR", "Backup archive failed validation");
+    }
+    const archive = { manifest: manifest.data, tables: tables.data };
+    assertNoPlaintextSecrets(archive, "archive");
+    const hashed = hashCanonicalTables(tables.data);
+    const declared = manifest.data.files[0];
+    if (
+      !declared ||
+      hashed.bytes !== declared.bytes ||
+      !equalSha256(hashed.sha256, declared.sha256)
+    ) {
+      throw new BackupError("HASH_MISMATCH", "Backup archive integrity check failed");
+    }
+    return { manifest: manifest.data, tables: upgradeV9Tables(tables.data) };
   }
   const parsed = backupArchiveSchema.safeParse(parsedInput);
   if (!parsed.success) {

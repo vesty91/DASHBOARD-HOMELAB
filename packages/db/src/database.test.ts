@@ -195,6 +195,10 @@ describe("SQLite database foundation", () => {
       incidents: sqliteSchema.incidents,
       incident_events: sqliteSchema.incidentEvents,
       push_subscriptions: sqliteSchema.pushSubscriptions,
+      status_pages: sqliteSchema.statusPages,
+      status_page_services: sqliteSchema.statusPageServices,
+      maintenance_windows: sqliteSchema.maintenanceWindows,
+      maintenance_window_targets: sqliteSchema.maintenanceWindowTargets,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -229,6 +233,10 @@ describe("SQLite database foundation", () => {
       incidents: postgresqlSchema.incidents,
       incident_events: postgresqlSchema.incidentEvents,
       push_subscriptions: postgresqlSchema.pushSubscriptions,
+      status_pages: postgresqlSchema.statusPages,
+      status_page_services: postgresqlSchema.statusPageServices,
+      maintenance_windows: postgresqlSchema.maintenanceWindows,
+      maintenance_window_targets: postgresqlSchema.maintenanceWindowTargets,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

@@ -681,3 +681,95 @@ export const pushSubscriptions = sqliteTable(
     index("push_subscriptions_user_active_idx").on(t.userId, t.disabledAt),
   ],
 );
+export const statusPages = sqliteTable(
+  "status_pages",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    visibility: text("visibility", { enum: ["private", "public"] })
+      .notNull()
+      .default("private"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    configRevision: integer("config_revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("status_pages_slug_uq").on(t.slug),
+    index("status_pages_visibility_enabled_idx").on(t.visibility, t.enabled),
+    check("status_pages_visibility_valid", sql`${t.visibility} IN ('private', 'public')`),
+    check("status_pages_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const statusPageServices = sqliteTable(
+  "status_page_services",
+  {
+    id: text("id").primaryKey(),
+    statusPageId: text("status_page_id")
+      .notNull()
+      .references(() => statusPages.id, { onDelete: "cascade" }),
+    sourceIntegrationId: text("source_integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    showIncidentHistory: integer("show_incident_history", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("status_page_services_page_sort_idx").on(t.statusPageId, t.sortOrder),
+    uniqueIndex("status_page_services_page_integration_uq").on(
+      t.statusPageId,
+      t.sourceIntegrationId,
+    ),
+    check("status_page_services_sort_order_valid", sql`${t.sortOrder} >= 0`),
+  ],
+);
+export const maintenanceWindows = sqliteTable(
+  "maintenance_windows",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    status: text("status", {
+      enum: ["scheduled", "active", "completed", "cancelled"],
+    })
+      .notNull()
+      .default("scheduled"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("maintenance_windows_status_starts_idx").on(t.status, t.startsAt),
+    check(
+      "maintenance_windows_status_valid",
+      sql`${t.status} IN ('scheduled','active','completed','cancelled')`,
+    ),
+    check("maintenance_windows_range_valid", sql`${t.endsAt} >= ${t.startsAt}`),
+  ],
+);
+export const maintenanceWindowTargets = sqliteTable(
+  "maintenance_window_targets",
+  {
+    maintenanceId: text("maintenance_id")
+      .notNull()
+      .references(() => maintenanceWindows.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id")
+      .notNull()
+      .references(() => integrations.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("maintenance_window_targets_uq").on(t.maintenanceId, t.integrationId),
+    index("maintenance_window_targets_integration_idx").on(t.integrationId),
+  ],
+);

@@ -681,17 +681,18 @@ défaut). Les secrets d'intégration restent en ciphertext. Pas de mutation pend
 `validate`. `restore` exige `confirm: true` et prend un backup pré-restore avant
 la transaction.
 
-| Route             | Permission      | Notes                                                                                                            |
-| ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 9. Rate limité. |
-| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                          |
-| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                      |
+| Route             | Permission      | Notes                                                                                                             |
+| ----------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 10. Rate limité. |
+| `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                           |
+| `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                       |
 
 Jamais exposés en preview : ciphertext, iv, authTag, `passwordHash`. Jamais de secret
-en clair dans l'archive. Schéma ≠ 5, ≠ 6, ≠ 7, ≠ 8 et ≠ 9 → `INCOMPATIBLE_SCHEMA`.
+en clair dans l'archive. Schéma ≠ 5…10 → `INCOMPATIBLE_SCHEMA`.
 `audit_logs`, `auth_sessions`, `automation_runs`, `automation_runtime_state`,
 `notifications`, `incidents`, `incident_events` et `push_subscriptions` sont
-exclus de l'archive.
+exclus de l'archive. Inclus Phase 25 : `status_pages`, `status_page_services`,
+`maintenance_windows`, `maintenance_window_targets`.
 
 # Automations — Phase 22
 
@@ -764,6 +765,26 @@ Permission : `incident.read`. `ADMIN` default-deny. `SYSTEM_ADMIN` : catalogue.
 | `incident.timeline`    | `incident.read` | Events `opened` / `resolved` / `note`, résumés plain text |
 
 Jamais exposés : secrets, payloads bruts, stack traces, URLs externes.
+
+# Status Pages — Phase 25
+
+Permissions : `status-page.read` / `status-page.manage`. `ADMIN` default-deny.
+`SYSTEM_ADMIN` : catalogue. Lecture publique uniquement si
+`visibility=public` et `enabled=true`.
+
+| Route                        | Permission           | Notes                                                |
+| ---------------------------- | -------------------- | ---------------------------------------------------- |
+| `statusPage.permissions`     | authentifié          | `{ canRead, canManage }`                             |
+| `statusPage.list`            | `status-page.read`   | Pages gérées + services projetés                     |
+| `statusPage.get`             | `status-page.read`   | Détail managé (peut inclure `sourceIntegrationId`)   |
+| `statusPage.create`          | `status-page.manage` | Défaut `visibility=private`                          |
+| `statusPage.update`          | `status-page.manage` | CAS `expectedConfigRevision` → CONFLICT              |
+| `statusPage.delete`          | `status-page.manage` | CAS revision                                         |
+| `statusPage.replaceServices` | `status-page.manage` | Remplacement atomique + bump revision                |
+| `statusPage.getPublic`       | public (opt-in)      | Rate limité ; cache TTL 15s ; DTO sans ID/URL/secret |
+
+Jamais exposés en DTO public : `sourceIntegrationId`, URL, IP, credentials,
+erreurs brutes. Voir `docs/25-STATUS-PAGES.md`.
 
 # SSO / admin avancé — Phase 15
 
