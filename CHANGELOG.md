@@ -6,6 +6,31 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+Préparation minor **1.5.0** (Phase 25). Pas encore tagué / publié.
+
+Status Pages & Maintenance Windows (safe). Migration `0010`, backup
+`schemaVersion` 10.
+
+### Ajouté
+
+- Status pages (Phase 25.1) : `@dashboard/status-pages`, tables
+  `status_pages` / `status_page_services`, projection publique sans IDs
+  d’intégration / URL / secrets, RBAC `status-page.read` /
+  `status-page.manage`, tRPC `statusPage.*` + `getPublic` (rate limit +
+  cache TTL 15s).
+- Maintenance windows (Phase 25.2) : `maintenance_windows` /
+  `maintenance_window_targets`, lifecycle UTC dérivé, notifications
+  Notification Center, worker tick idempotent.
+- UI (Phase 25.3) : admin `/status-pages*`, publique `/status/[slug]`
+  (`robots: noindex`), PWA network-only pour le statut live.
+- Backup `schemaVersion` 10. Compat 5 → … → 10. Config status/maintenance
+  **incluse** ; runtime (notifications, incidents, push) toujours exclus.
+
+### Base de données
+
+- Migration `0010` (SQLite + PostgreSQL). `schemaVersion` 10.
+- Pas de migration `0011` (maintenance livrée dans `0010`).
+
 ## [1.4.0] — 2026-09-16
 
 Progressive Web App sécurisée & Web Push (Phase 24). Minor backward-compatible.

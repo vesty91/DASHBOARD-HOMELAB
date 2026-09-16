@@ -111,7 +111,7 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide (`schemaVersion` 9) ;
+- manifest valide (`schemaVersion` 10) ;
 - fichier invalide rejeté avant mutation.
 
 ### E2E-009 SSO admin
@@ -317,3 +317,13 @@ VAPID fail-closed sans clés. Backup : `push_subscriptions` absente de
 l’archive ; `schemaVersion` 9. E2E PWA / mobile / push : viewports
 375×812 / 390×844 / 430×932, préférences enable / disable device /
 disable all, pas de bouton Install universel.
+
+## 25. Status Pages & Maintenance (Phase 25)
+
+`packages/status-pages` et `packages/db` couvrent migration `0010`,
+visibilité private par défaut, DTO public sans fuite d’intégration,
+lifecycle maintenance UTC, rate limit / cache public, upgrade 9 → 10
+(SQLite / PostgreSQL). Backup : config status/maintenance **incluse** ;
+`schemaVersion` 10. E2E `apps/web/e2e/status-pages.spec.ts` : création,
+publish / unpublish, page publique sans session, maintenance, a11y /
+mobile, pas de métadonnées privées.
