@@ -236,37 +236,36 @@ export function ReliabilityDetail({
       <section className="ui-card ui-form-card">
         <h2 className="ui-section-title">Historique quotidien (UTC)</h2>
         {sortedDays.length === 0 ? (
-          <p>Aucune donnée quotidienne pour ce service.</p>
-        ) : (
-          <div className="ui-table-wrap">
-            <table className="ui-table" data-testid="reliability-daily-table">
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Observé</th>
-                  <th scope="col">Disponible</th>
-                  <th scope="col">Indisponible</th>
-                  <th scope="col">Maintenance</th>
-                  <th scope="col">Inconnu</th>
-                  <th scope="col">Incidents</th>
+          <p data-testid="reliability-daily-empty">Aucune donnée quotidienne pour ce service.</p>
+        ) : null}
+        <div className="ui-table-wrap">
+          <table className="ui-table" data-testid="reliability-daily-table">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Observé</th>
+                <th scope="col">Disponible</th>
+                <th scope="col">Indisponible</th>
+                <th scope="col">Maintenance</th>
+                <th scope="col">Inconnu</th>
+                <th scope="col">Incidents</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedDays.map((day) => (
+                <tr key={day.dateUtc} data-testid={`reliability-day-${day.dateUtc}`}>
+                  <td>{formatUtcDate(day.dateUtc)}</td>
+                  <td>{formatSeconds(day.observedSeconds)}</td>
+                  <td>{formatSeconds(day.availableSeconds)}</td>
+                  <td>{formatSeconds(day.unavailableSeconds + day.degradedSeconds)}</td>
+                  <td>{formatSeconds(day.maintenanceSeconds)}</td>
+                  <td>{formatSeconds(day.unknownSeconds)}</td>
+                  <td>{day.incidentCount}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {sortedDays.map((day) => (
-                  <tr key={day.dateUtc} data-testid={`reliability-day-${day.dateUtc}`}>
-                    <td>{formatUtcDate(day.dateUtc)}</td>
-                    <td>{formatSeconds(day.observedSeconds)}</td>
-                    <td>{formatSeconds(day.availableSeconds)}</td>
-                    <td>{formatSeconds(day.unavailableSeconds + day.degradedSeconds)}</td>
-                    <td>{formatSeconds(day.maintenanceSeconds)}</td>
-                    <td>{formatSeconds(day.unknownSeconds)}</td>
-                    <td>{day.incidentCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {confirmDeleteId ? (
