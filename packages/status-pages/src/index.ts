@@ -11,6 +11,34 @@ export {
   normalizeStatusPageSlug,
 } from "./slug";
 export {
+  MAINTENANCE_MAX_DURATION_MS,
+  MAINTENANCE_MAX_FUTURE_START_MS,
+  MAINTENANCE_MAX_PAST_START_MS,
+  MAINTENANCE_MIN_DURATION_MS,
+  MAINTENANCE_NAME_MAX,
+} from "./maintenance-constants";
+export {
+  deriveMaintenanceStatus,
+  isMaintenanceActiveNow,
+  rangesOverlap,
+} from "./maintenance-derive";
+export {
+  createMaintenanceWindowService,
+  toPublicMaintenanceDto,
+  type MaintenanceNotificationPort,
+  type MaintenanceServiceDeps,
+  type MaintenanceWindowService,
+} from "./maintenance";
+export {
+  cancelMaintenanceWindowSchema,
+  getMaintenanceWindowSchema,
+  maintenanceNameSchema,
+  scheduleMaintenanceWindowSchema,
+  validateMaintenanceWindowBounds,
+  type CancelMaintenanceWindowInput,
+  type ScheduleMaintenanceWindowInput,
+} from "./maintenance-schemas";
+export {
   configRevisionSchema,
   createStatusPageSchema,
   deleteStatusPageSchema,
@@ -53,11 +81,14 @@ export {
   STATUS_PAGE_VISIBILITIES,
   type IntegrationHealthStatus,
   type IntegrationStatusLookup,
+  type MaintenanceWindowDto,
   type MaintenanceWindowRecord,
+  type MaintenanceWindowSnapshot,
   type MaintenanceWindowStatus,
   type MaintenanceWindowTargetRecord,
   type ManagedStatusPageDto,
   type ManagedStatusServiceDto,
+  type PublicMaintenanceWindowDto,
   type PublicServiceStatus,
   type PublicStatusPageDto,
   type PublicStatusServiceDto,

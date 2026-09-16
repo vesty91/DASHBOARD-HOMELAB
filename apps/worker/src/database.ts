@@ -5,12 +5,14 @@ import {
   createPostgresqlIncidentStore,
   createPostgresqlJobStore,
   createPostgresqlNotificationStore,
+  createPostgresqlStatusPageStore,
   createSqliteAuthStore,
   createSqliteAutomationStore,
   createSqliteClient,
   createSqliteIncidentStore,
   createSqliteJobStore,
   createSqliteNotificationStore,
+  createSqliteStatusPageStore,
   parseDatabaseConfig,
   toAutomationSchedulerStore,
   type AutomationStore,
@@ -32,6 +34,7 @@ import {
 } from "@dashboard/notifications";
 import { hasPermission } from "@dashboard/permissions";
 import type { IntegrationStore } from "@dashboard/integrations";
+import { createStatusPageService, type MaintenanceWindowService } from "@dashboard/status-pages";
 import type { AutomationAuditSink } from "./actions";
 import { createJobRecorder } from "./jobs";
 import type { JobRecorder } from "./server";
@@ -43,6 +46,7 @@ export interface WorkerPersistence {
   notificationStore: NotificationStorePort;
   purgeNotifications: () => Promise<number>;
   incidents: IncidentService;
+  maintenance: Pick<MaintenanceWindowService, "tick">;
   integrationStore: IntegrationStore;
   audit: AutomationAuditSink;
   loadOwner: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -90,6 +94,37 @@ function buildIncidentService(input: {
   });
 }
 
+function buildMaintenanceService(input: {
+  notificationStore: NotificationStorePort;
+  statusPageStore: Parameters<typeof createStatusPageService>[0]["store"];
+  listUsers: () => Promise<ReadonlyArray<{ id: string; status: "active" | "disabled" }>>;
+  resolvePermissionSubject: (userId: string) => Promise<{
+    status: "active" | "disabled";
+    isSystemAdmin: boolean;
+    directPermissions?: readonly string[];
+    groupPermissions?: readonly string[];
+  } | null>;
+}): Pick<MaintenanceWindowService, "tick"> {
+  const notifications = createNotificationService({ store: input.notificationStore });
+  const statusPages = createStatusPageService({
+    store: input.statusPageStore,
+    notifications,
+    async listMaintenanceRecipientUserIds() {
+      const users = await input.listUsers();
+      const recipients: string[] = [];
+      for (const user of users) {
+        if (user.status !== "active") continue;
+        const subject = await input.resolvePermissionSubject(user.id);
+        if (!subject) continue;
+        if (subject.isSystemAdmin || hasPermission(subject, "status-page.manage"))
+          recipients.push(user.id);
+      }
+      return recipients;
+    },
+  });
+  return statusPages.maintenance;
+}
+
 export function createWorkerPersistenceFromEnv(
   env: Readonly<Record<string, string | undefined>>,
 ): WorkerPersistence | undefined {
@@ -112,6 +147,13 @@ export function createWorkerPersistenceFromEnv(
       incidents: buildIncidentService({
         notificationStore: notifications.notificationStore,
         incidentStore: createPostgresqlIncidentStore(client),
+        listUsers: () => auth.listUsers(),
+        resolvePermissionSubject: async (userId) =>
+          (await auth.resolvePermissionSubject(userId)) ?? null,
+      }),
+      maintenance: buildMaintenanceService({
+        notificationStore: notifications.notificationStore,
+        statusPageStore: createPostgresqlStatusPageStore(client),
         listUsers: () => auth.listUsers(),
         resolvePermissionSubject: async (userId) =>
           (await auth.resolvePermissionSubject(userId)) ?? null,
@@ -143,6 +185,13 @@ export function createWorkerPersistenceFromEnv(
     incidents: buildIncidentService({
       notificationStore: notifications.notificationStore,
       incidentStore: createSqliteIncidentStore(client),
+      listUsers: () => auth.listUsers(),
+      resolvePermissionSubject: async (userId) =>
+        (await auth.resolvePermissionSubject(userId)) ?? null,
+    }),
+    maintenance: buildMaintenanceService({
+      notificationStore: notifications.notificationStore,
+      statusPageStore: createSqliteStatusPageStore(client),
       listUsers: () => auth.listUsers(),
       resolvePermissionSubject: async (userId) =>
         (await auth.resolvePermissionSubject(userId)) ?? null,

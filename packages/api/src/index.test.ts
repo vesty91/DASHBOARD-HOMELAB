@@ -250,6 +250,19 @@ function createCaller(
       getPublicBySlug: async () => {
         throw new Error("status pages not stubbed");
       },
+      maintenance: {
+        list: async () => [],
+        get: async () => {
+          throw new Error("maintenance not stubbed");
+        },
+        schedule: async () => {
+          throw new Error("maintenance not stubbed");
+        },
+        cancel: async () => {
+          throw new Error("maintenance not stubbed");
+        },
+        tick: async () => ({ transitioned: 0 }),
+      },
     } as unknown as ApiContext["statusPages"],
     audit: {
       record: async () => undefined,

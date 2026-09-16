@@ -62,6 +62,33 @@ export interface MaintenanceWindowTargetRecord {
   integrationId: string;
 }
 
+export interface MaintenanceWindowSnapshot {
+  window: MaintenanceWindowRecord;
+  integrationIds: readonly string[];
+}
+
+export interface MaintenanceWindowDto {
+  id: string;
+  name: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  status: MaintenanceWindowStatus;
+  integrationIds: readonly string[];
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicMaintenanceWindowDto {
+  id: string;
+  name: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  status: Extract<MaintenanceWindowStatus, "scheduled" | "active">;
+}
+
 export interface StatusPageSnapshot {
   page: StatusPageRecord;
   services: readonly StatusPageServiceRecord[];
@@ -83,6 +110,7 @@ export interface PublicStatusPageDto {
   description: string | null;
   overallStatus: PublicServiceStatus;
   services: readonly PublicStatusServiceDto[];
+  maintenances: readonly PublicMaintenanceWindowDto[];
   updatedAt: string;
 }
 
@@ -170,10 +198,36 @@ export interface StatusPageStorePort {
   ): Promise<ReadonlySet<string>>;
   listActiveMaintenanceIntegrationIds(
     integrationIds: readonly string[],
+    now: Date,
   ): Promise<ReadonlySet<string>>;
   findIntegrationStatuses(
     integrationIds: readonly string[],
   ): Promise<ReadonlyMap<string, IntegrationStatusLookup>>;
+  listMaintenanceWindows(): Promise<MaintenanceWindowSnapshot[]>;
+  findMaintenanceById(id: string): Promise<MaintenanceWindowSnapshot | null>;
+  listNonTerminalMaintenanceWindows(): Promise<MaintenanceWindowSnapshot[]>;
+  listPublicMaintenancesForIntegrations(
+    integrationIds: readonly string[],
+    now: Date,
+  ): Promise<MaintenanceWindowSnapshot[]>;
+  listStatusPageIdsForIntegrations(integrationIds: readonly string[]): Promise<readonly string[]>;
+  findExistingIntegrationIds(ids: readonly string[]): Promise<ReadonlySet<string>>;
+  createMaintenanceWindow(input: {
+    name: string;
+    description: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    status: MaintenanceWindowStatus;
+    integrationIds: readonly string[];
+    createdBy: string | null;
+    now: Date;
+  }): Promise<MaintenanceWindowSnapshot>;
+  updateMaintenanceStatus(input: {
+    id: string;
+    fromStatuses: readonly MaintenanceWindowStatus[];
+    toStatus: MaintenanceWindowStatus;
+    now: Date;
+  }): Promise<MaintenanceWindowSnapshot | null>;
 }
 
 export const PUBLIC_STATUS_CACHE_TTL_MS = 15_000;

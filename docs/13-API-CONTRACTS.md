@@ -772,16 +772,20 @@ Permissions : `status-page.read` / `status-page.manage`. `ADMIN` default-deny.
 `SYSTEM_ADMIN` : catalogue. Lecture publique uniquement si
 `visibility=public` et `enabled=true`.
 
-| Route                        | Permission           | Notes                                                |
-| ---------------------------- | -------------------- | ---------------------------------------------------- |
-| `statusPage.permissions`     | authentifié          | `{ canRead, canManage }`                             |
-| `statusPage.list`            | `status-page.read`   | Pages gérées + services projetés                     |
-| `statusPage.get`             | `status-page.read`   | Détail managé (peut inclure `sourceIntegrationId`)   |
-| `statusPage.create`          | `status-page.manage` | Défaut `visibility=private`                          |
-| `statusPage.update`          | `status-page.manage` | CAS `expectedConfigRevision` → CONFLICT              |
-| `statusPage.delete`          | `status-page.manage` | CAS revision                                         |
-| `statusPage.replaceServices` | `status-page.manage` | Remplacement atomique + bump revision                |
-| `statusPage.getPublic`       | public (opt-in)      | Rate limité ; cache TTL 15s ; DTO sans ID/URL/secret |
+| Route                            | Permission           | Notes                                                |
+| -------------------------------- | -------------------- | ---------------------------------------------------- |
+| `statusPage.permissions`         | authentifié          | `{ canRead, canManage }`                             |
+| `statusPage.list`                | `status-page.read`   | Pages gérées + services projetés                     |
+| `statusPage.get`                 | `status-page.read`   | Détail managé (peut inclure `sourceIntegrationId`)   |
+| `statusPage.create`              | `status-page.manage` | Défaut `visibility=private`                          |
+| `statusPage.update`              | `status-page.manage` | CAS `expectedConfigRevision` → CONFLICT              |
+| `statusPage.delete`              | `status-page.manage` | CAS revision                                         |
+| `statusPage.replaceServices`     | `status-page.manage` | Remplacement atomique + bump revision                |
+| `statusPage.listMaintenance`     | `status-page.read`   | Fenêtres UTC + cibles `integrationId`                |
+| `statusPage.getMaintenance`      | `status-page.read`   | Détail ; status dérivé de l’horloge UTC              |
+| `statusPage.scheduleMaintenance` | `status-page.manage` | Valide durée / overlap ; notif `scheduled`           |
+| `statusPage.cancelMaintenance`   | `status-page.manage` | `scheduled`/`active` → `cancelled`                   |
+| `statusPage.getPublic`           | public (opt-in)      | Rate limité ; cache TTL 15s ; DTO + `maintenances[]` |
 
 Jamais exposés en DTO public : `sourceIntegrationId`, URL, IP, credentials,
 erreurs brutes. Voir `docs/25-STATUS-PAGES.md`.

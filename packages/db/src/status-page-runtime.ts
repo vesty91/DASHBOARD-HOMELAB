@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte, notInArray, sql } from "drizzle-orm";
 import {
   StatusPageError,
   type IntegrationHealthStatus,
   type IntegrationStatusLookup,
+  type MaintenanceWindowRecord,
+  type MaintenanceWindowSnapshot,
+  type MaintenanceWindowStatus,
   type StatusPageRecord,
   type StatusPageServiceRecord,
   type StatusPageSnapshot,
@@ -66,7 +69,31 @@ function toService(row: {
   };
 }
 
-function createStatusPageStore(adapters: {
+function toMaintenanceWindow(row: {
+  id: string;
+  name: string;
+  description: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  status: string;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): MaintenanceWindowRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    status: row.status as MaintenanceWindowStatus,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+type StatusPageStoreAdapters = {
   listPages(): Promise<StatusPageRecord[]>;
   findPageById(id: string): Promise<StatusPageRecord | null>;
   findPageBySlug(slug: string): Promise<StatusPageRecord | null>;
@@ -106,9 +133,40 @@ function createStatusPageStore(adapters: {
     now: Date;
   }): Promise<boolean>;
   listOpenAvailabilityIncidentIntegrationIds(integrationIds: readonly string[]): Promise<string[]>;
-  listActiveMaintenanceIntegrationIds(integrationIds: readonly string[]): Promise<string[]>;
+  listActiveMaintenanceIntegrationIds(
+    integrationIds: readonly string[],
+    now: Date,
+  ): Promise<string[]>;
   findIntegrationStatuses(integrationIds: readonly string[]): Promise<IntegrationStatusLookup[]>;
-}): StatusPageStorePort {
+  listMaintenanceWindows(): Promise<MaintenanceWindowSnapshot[]>;
+  findMaintenanceById(id: string): Promise<MaintenanceWindowSnapshot | null>;
+  listNonTerminalMaintenanceWindows(): Promise<MaintenanceWindowSnapshot[]>;
+  listPublicMaintenancesForIntegrations(
+    integrationIds: readonly string[],
+    now: Date,
+  ): Promise<MaintenanceWindowSnapshot[]>;
+  listStatusPageIdsForIntegrations(integrationIds: readonly string[]): Promise<string[]>;
+  findExistingIntegrationIds(ids: readonly string[]): Promise<string[]>;
+  insertMaintenanceWindow(input: {
+    id: string;
+    name: string;
+    description: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    status: MaintenanceWindowStatus;
+    integrationIds: readonly string[];
+    createdBy: string | null;
+    now: Date;
+  }): Promise<void>;
+  updateMaintenanceStatusRow(input: {
+    id: string;
+    fromStatuses: readonly MaintenanceWindowStatus[];
+    toStatus: MaintenanceWindowStatus;
+    now: Date;
+  }): Promise<boolean>;
+};
+
+function createStatusPageStore(adapters: StatusPageStoreAdapters): StatusPageStorePort {
   async function snapshotFromPage(
     page: StatusPageRecord | null,
   ): Promise<StatusPageSnapshot | null> {
@@ -196,9 +254,9 @@ function createStatusPageStore(adapters: {
       if (integrationIds.length === 0) return new Set();
       return new Set(await adapters.listOpenAvailabilityIncidentIntegrationIds(integrationIds));
     },
-    async listActiveMaintenanceIntegrationIds(integrationIds) {
+    async listActiveMaintenanceIntegrationIds(integrationIds, now) {
       if (integrationIds.length === 0) return new Set();
-      return new Set(await adapters.listActiveMaintenanceIntegrationIds(integrationIds));
+      return new Set(await adapters.listActiveMaintenanceIntegrationIds(integrationIds, now));
     },
     async findIntegrationStatuses(integrationIds) {
       const map = new Map<string, IntegrationStatusLookup>();
@@ -208,7 +266,62 @@ function createStatusPageStore(adapters: {
       }
       return map;
     },
+    listMaintenanceWindows: () => adapters.listMaintenanceWindows(),
+    findMaintenanceById: (id) => adapters.findMaintenanceById(id),
+    listNonTerminalMaintenanceWindows: () => adapters.listNonTerminalMaintenanceWindows(),
+    listPublicMaintenancesForIntegrations: (integrationIds, now) =>
+      adapters.listPublicMaintenancesForIntegrations(integrationIds, now),
+    listStatusPageIdsForIntegrations: (integrationIds) =>
+      adapters.listStatusPageIdsForIntegrations(integrationIds),
+    async findExistingIntegrationIds(ids) {
+      if (ids.length === 0) return new Set();
+      return new Set(await adapters.findExistingIntegrationIds(ids));
+    },
+    async createMaintenanceWindow(input) {
+      try {
+        const id = randomUUID();
+        await adapters.insertMaintenanceWindow({ ...input, id });
+        const created = await adapters.findMaintenanceById(id);
+        if (!created) throw new StatusPageError("NOT_FOUND", "Maintenance window not found");
+        return created;
+      } catch (error) {
+        if (error instanceof StatusPageError) throw error;
+        throw normalizeDatabaseError(error);
+      }
+    },
+    async updateMaintenanceStatus(input) {
+      try {
+        const ok = await adapters.updateMaintenanceStatusRow(input);
+        if (!ok) return null;
+        return adapters.findMaintenanceById(input.id);
+      } catch (error) {
+        if (error instanceof StatusPageError) throw error;
+        throw normalizeDatabaseError(error);
+      }
+    },
   };
+}
+
+function createMaintenanceHelpers(deps: {
+  listTargets(maintenanceId: string): Promise<string[]>;
+  listWindows(filter?: {
+    statuses?: readonly MaintenanceWindowStatus[];
+  }): Promise<MaintenanceWindowRecord[]>;
+}): {
+  hydrate(window: MaintenanceWindowRecord): Promise<MaintenanceWindowSnapshot>;
+  hydrateMany(windows: MaintenanceWindowRecord[]): Promise<MaintenanceWindowSnapshot[]>;
+} {
+  async function hydrate(window: MaintenanceWindowRecord): Promise<MaintenanceWindowSnapshot> {
+    return { window, integrationIds: await deps.listTargets(window.id) };
+  }
+  async function hydrateMany(
+    windows: MaintenanceWindowRecord[],
+  ): Promise<MaintenanceWindowSnapshot[]> {
+    const result: MaintenanceWindowSnapshot[] = [];
+    for (const window of windows) result.push(await hydrate(window));
+    return result;
+  }
+  return { hydrate, hydrateMany };
 }
 
 export function createSqliteStatusPageStore(client: SqliteClient): StatusPageStorePort {
@@ -248,6 +361,49 @@ export function createSqliteStatusPageStore(client: SqliteClient): StatusPageSto
       .orderBy(asc(services.sortOrder), asc(services.displayName))
       .all();
     return rows.map((row) => toService({ ...row, description: row.description ?? null }));
+  }
+
+  async function listTargets(maintenanceId: string): Promise<string[]> {
+    const rows = await db
+      .select({ integrationId: targets.integrationId })
+      .from(targets)
+      .where(eq(targets.maintenanceId, maintenanceId))
+      .all();
+    return rows.map((row) => row.integrationId);
+  }
+
+  async function listWindowRows(filter?: {
+    statuses?: readonly MaintenanceWindowStatus[];
+  }): Promise<MaintenanceWindowRecord[]> {
+    const rows = filter?.statuses
+      ? await db
+          .select()
+          .from(maintenance)
+          .where(inArray(maintenance.status, [...filter.statuses]))
+          .orderBy(asc(maintenance.startsAt))
+          .all()
+      : await db.select().from(maintenance).orderBy(asc(maintenance.startsAt)).all();
+    return rows.map((row) =>
+      toMaintenanceWindow({
+        ...row,
+        description: row.description ?? null,
+        createdBy: row.createdBy ?? null,
+      }),
+    );
+  }
+
+  const helpers = createMaintenanceHelpers({ listTargets, listWindows: listWindowRows });
+
+  async function findMaintenanceById(id: string): Promise<MaintenanceWindowSnapshot | null> {
+    const found = await db.select().from(maintenance).where(eq(maintenance.id, id)).get();
+    if (!found?.id) return null;
+    return helpers.hydrate(
+      toMaintenanceWindow({
+        ...found,
+        description: found.description ?? null,
+        createdBy: found.createdBy ?? null,
+      }),
+    );
   }
 
   return createStatusPageStore({
@@ -364,14 +520,18 @@ export function createSqliteStatusPageStore(client: SqliteClient): StatusPageSto
         .all();
       return rows.map((row) => row.integrationId);
     },
-    async listActiveMaintenanceIntegrationIds(integrationIds) {
+    async listActiveMaintenanceIntegrationIds(integrationIds, now) {
+      // Clock-derived active window: not cancelled/completed, startsAt <= now < endsAt.
+      // Stored status alone is never trusted for display.
       const rows = await db
         .select({ integrationId: targets.integrationId })
         .from(targets)
         .innerJoin(maintenance, eq(targets.maintenanceId, maintenance.id))
         .where(
           and(
-            eq(maintenance.status, "active"),
+            notInArray(maintenance.status, ["cancelled", "completed"]),
+            lte(maintenance.startsAt, now),
+            gt(maintenance.endsAt, now),
             inArray(targets.integrationId, [...integrationIds]),
           ),
         )
@@ -393,6 +553,117 @@ export function createSqliteStatusPageStore(client: SqliteClient): StatusPageSto
         status: row.status as IntegrationHealthStatus,
         baseUrl: row.baseUrl,
       }));
+    },
+    async listMaintenanceWindows() {
+      return helpers.hydrateMany(await listWindowRows());
+    },
+    findMaintenanceById,
+    async listNonTerminalMaintenanceWindows() {
+      return helpers.hydrateMany(await listWindowRows({ statuses: ["scheduled", "active"] }));
+    },
+    async listPublicMaintenancesForIntegrations(integrationIds, now) {
+      if (integrationIds.length === 0) return [];
+      const rows = await db
+        .select({
+          id: maintenance.id,
+          name: maintenance.name,
+          description: maintenance.description,
+          startsAt: maintenance.startsAt,
+          endsAt: maintenance.endsAt,
+          status: maintenance.status,
+          createdBy: maintenance.createdBy,
+          createdAt: maintenance.createdAt,
+          updatedAt: maintenance.updatedAt,
+        })
+        .from(maintenance)
+        .innerJoin(targets, eq(targets.maintenanceId, maintenance.id))
+        .where(
+          and(
+            notInArray(maintenance.status, ["cancelled", "completed"]),
+            gt(maintenance.endsAt, now),
+            inArray(targets.integrationId, [...integrationIds]),
+          ),
+        )
+        .orderBy(asc(maintenance.startsAt))
+        .all();
+      const unique = new Map<string, MaintenanceWindowRecord>();
+      for (const row of rows) {
+        if (unique.has(row.id)) continue;
+        unique.set(
+          row.id,
+          toMaintenanceWindow({
+            ...row,
+            description: row.description ?? null,
+            createdBy: row.createdBy ?? null,
+          }),
+        );
+      }
+      return helpers.hydrateMany([...unique.values()]);
+    },
+    async listStatusPageIdsForIntegrations(integrationIds) {
+      if (integrationIds.length === 0) return [];
+      const rows = await db
+        .select({ statusPageId: services.statusPageId })
+        .from(services)
+        .where(inArray(services.sourceIntegrationId, [...integrationIds]))
+        .all();
+      return [...new Set(rows.map((row) => row.statusPageId))];
+    },
+    async findExistingIntegrationIds(ids) {
+      const rows = await db
+        .select({ id: integrations.id })
+        .from(integrations)
+        .where(inArray(integrations.id, [...ids]))
+        .all();
+      return rows.map((row) => row.id);
+    },
+    async insertMaintenanceWindow(input) {
+      client.sqlite.exec("BEGIN");
+      try {
+        client.sqlite
+          .prepare(
+            `INSERT INTO maintenance_windows(
+               id, name, description, starts_at, ends_at, status, created_by, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            input.id,
+            input.name,
+            input.description,
+            input.startsAt.getTime(),
+            input.endsAt.getTime(),
+            input.status,
+            input.createdBy,
+            input.now.getTime(),
+            input.now.getTime(),
+          );
+        const insertTarget = client.sqlite.prepare(
+          "INSERT INTO maintenance_window_targets(maintenance_id, integration_id) VALUES (?, ?)",
+        );
+        for (const integrationId of input.integrationIds) {
+          insertTarget.run(input.id, integrationId);
+        }
+        client.sqlite.exec("COMMIT");
+      } catch (error) {
+        try {
+          client.sqlite.exec("ROLLBACK");
+        } catch (rollbackError) {
+          void rollbackError;
+        }
+        throw error;
+      }
+    },
+    async updateMaintenanceStatusRow(input) {
+      if (input.fromStatuses.length === 0) return false;
+      const placeholders = input.fromStatuses.map(() => "?").join(", ");
+      const result = client.sqlite
+        .prepare(
+          `UPDATE maintenance_windows
+           SET status = ?, updated_at = ?
+           WHERE id = ? AND status IN (${placeholders})`,
+        )
+        .run(input.toStatus, input.now.getTime(), input.id, ...input.fromStatuses);
+      return Number(result.changes) === 1;
     },
   });
 }
@@ -433,6 +704,47 @@ export function createPostgresqlStatusPageStore(client: PostgresqlClient): Statu
       .where(eq(services.statusPageId, statusPageId))
       .orderBy(asc(services.sortOrder), asc(services.displayName));
     return rows.map((row) => toService({ ...row, description: row.description ?? null }));
+  }
+
+  async function listTargets(maintenanceId: string): Promise<string[]> {
+    const rows = await db
+      .select({ integrationId: targets.integrationId })
+      .from(targets)
+      .where(eq(targets.maintenanceId, maintenanceId));
+    return rows.map((row) => row.integrationId);
+  }
+
+  async function listWindowRows(filter?: {
+    statuses?: readonly MaintenanceWindowStatus[];
+  }): Promise<MaintenanceWindowRecord[]> {
+    const rows = filter?.statuses
+      ? await db
+          .select()
+          .from(maintenance)
+          .where(inArray(maintenance.status, [...filter.statuses]))
+          .orderBy(asc(maintenance.startsAt))
+      : await db.select().from(maintenance).orderBy(asc(maintenance.startsAt));
+    return rows.map((row) =>
+      toMaintenanceWindow({
+        ...row,
+        description: row.description ?? null,
+        createdBy: row.createdBy ?? null,
+      }),
+    );
+  }
+
+  const helpers = createMaintenanceHelpers({ listTargets, listWindows: listWindowRows });
+
+  async function findMaintenanceById(id: string): Promise<MaintenanceWindowSnapshot | null> {
+    const [found] = await db.select().from(maintenance).where(eq(maintenance.id, id)).limit(1);
+    if (!found?.id) return null;
+    return helpers.hydrate(
+      toMaintenanceWindow({
+        ...found,
+        description: found.description ?? null,
+        createdBy: found.createdBy ?? null,
+      }),
+    );
   }
 
   return createStatusPageStore({
@@ -530,14 +842,16 @@ export function createPostgresqlStatusPageStore(client: PostgresqlClient): Statu
         );
       return rows.map((row) => row.integrationId);
     },
-    async listActiveMaintenanceIntegrationIds(integrationIds) {
+    async listActiveMaintenanceIntegrationIds(integrationIds, now) {
       const rows = await db
         .select({ integrationId: targets.integrationId })
         .from(targets)
         .innerJoin(maintenance, eq(targets.maintenanceId, maintenance.id))
         .where(
           and(
-            eq(maintenance.status, "active"),
+            notInArray(maintenance.status, ["cancelled", "completed"]),
+            lte(maintenance.startsAt, now),
+            gt(maintenance.endsAt, now),
             inArray(targets.integrationId, [...integrationIds]),
           ),
         );
@@ -557,6 +871,100 @@ export function createPostgresqlStatusPageStore(client: PostgresqlClient): Statu
         status: row.status as IntegrationHealthStatus,
         baseUrl: row.baseUrl,
       }));
+    },
+    async listMaintenanceWindows() {
+      return helpers.hydrateMany(await listWindowRows());
+    },
+    findMaintenanceById,
+    async listNonTerminalMaintenanceWindows() {
+      return helpers.hydrateMany(await listWindowRows({ statuses: ["scheduled", "active"] }));
+    },
+    async listPublicMaintenancesForIntegrations(integrationIds, now) {
+      if (integrationIds.length === 0) return [];
+      const rows = await db
+        .select({
+          id: maintenance.id,
+          name: maintenance.name,
+          description: maintenance.description,
+          startsAt: maintenance.startsAt,
+          endsAt: maintenance.endsAt,
+          status: maintenance.status,
+          createdBy: maintenance.createdBy,
+          createdAt: maintenance.createdAt,
+          updatedAt: maintenance.updatedAt,
+        })
+        .from(maintenance)
+        .innerJoin(targets, eq(targets.maintenanceId, maintenance.id))
+        .where(
+          and(
+            notInArray(maintenance.status, ["cancelled", "completed"]),
+            gt(maintenance.endsAt, now),
+            inArray(targets.integrationId, [...integrationIds]),
+          ),
+        )
+        .orderBy(asc(maintenance.startsAt));
+      const unique = new Map<string, MaintenanceWindowRecord>();
+      for (const row of rows) {
+        if (unique.has(row.id)) continue;
+        unique.set(
+          row.id,
+          toMaintenanceWindow({
+            ...row,
+            description: row.description ?? null,
+            createdBy: row.createdBy ?? null,
+          }),
+        );
+      }
+      return helpers.hydrateMany([...unique.values()]);
+    },
+    async listStatusPageIdsForIntegrations(integrationIds) {
+      if (integrationIds.length === 0) return [];
+      const rows = await db
+        .select({ statusPageId: services.statusPageId })
+        .from(services)
+        .where(inArray(services.sourceIntegrationId, [...integrationIds]));
+      return [...new Set(rows.map((row) => row.statusPageId))];
+    },
+    async findExistingIntegrationIds(ids) {
+      const rows = await db
+        .select({ id: integrations.id })
+        .from(integrations)
+        .where(inArray(integrations.id, [...ids]));
+      return rows.map((row) => row.id);
+    },
+    async insertMaintenanceWindow(input) {
+      await db.transaction(async (tx) => {
+        await tx.insert(maintenance).values({
+          id: input.id,
+          name: input.name,
+          description: input.description,
+          startsAt: input.startsAt,
+          endsAt: input.endsAt,
+          status: input.status,
+          createdBy: input.createdBy,
+          createdAt: input.now,
+          updatedAt: input.now,
+        });
+        if (input.integrationIds.length > 0) {
+          await tx.insert(targets).values(
+            input.integrationIds.map((integrationId) => ({
+              maintenanceId: input.id,
+              integrationId,
+            })),
+          );
+        }
+      });
+    },
+    async updateMaintenanceStatusRow(input) {
+      if (input.fromStatuses.length === 0) return false;
+      const updated = await db
+        .update(maintenance)
+        .set({ status: input.toStatus, updatedAt: input.now })
+        .where(
+          and(eq(maintenance.id, input.id), inArray(maintenance.status, [...input.fromStatuses])),
+        )
+        .returning({ id: maintenance.id });
+      return updated.length === 1;
     },
   });
 }

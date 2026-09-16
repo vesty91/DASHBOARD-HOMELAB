@@ -690,6 +690,19 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   const statusPages = createStatusPageService({
     store: database.statusPageStore,
     publicCache: createPublicStatusCache<PublicStatusPageDto>(PUBLIC_STATUS_CACHE_TTL_MS),
+    notifications,
+    async listMaintenanceRecipientUserIds() {
+      const users = await database.authStore.listUsers();
+      const recipients: string[] = [];
+      for (const user of users) {
+        if (user.status !== "active") continue;
+        const resolved = await database.authStore.resolvePermissionSubject(user.id);
+        if (!resolved) continue;
+        if (resolved.isSystemAdmin || hasPermission(resolved, "status-page.manage"))
+          recipients.push(user.id);
+      }
+      return recipients;
+    },
   });
   return {
     actor: { userId, subject },

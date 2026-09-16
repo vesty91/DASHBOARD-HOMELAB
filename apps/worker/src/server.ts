@@ -11,6 +11,7 @@ import {
 import { createConfiguredEventBus, type DomainEvent, type EventBus } from "@dashboard/events";
 import type { IntegrationStore } from "@dashboard/integrations";
 import type { IncidentService } from "@dashboard/notifications";
+import type { MaintenanceWindowService } from "@dashboard/status-pages";
 import { createProductionAutomationDispatcher } from "./bootstrap-actions";
 import type { AutomationAuditSink } from "./actions";
 
@@ -32,6 +33,7 @@ export interface WorkerOptions {
   jobs?: JobRecorder;
   purgeNotifications?: () => Promise<number>;
   incidents?: Pick<IncidentService, "handleStatusChanged">;
+  maintenance?: Pick<MaintenanceWindowService, "tick">;
   automations?: {
     store: AutomationSchedulerStore;
     loadOwner?: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -206,6 +208,13 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       if (options.purgeNotifications && running) {
         try {
           await options.purgeNotifications();
+        } catch {
+          void occurredAt;
+        }
+      }
+      if (options.maintenance && running) {
+        try {
+          await options.maintenance.tick();
         } catch {
           void occurredAt;
         }
