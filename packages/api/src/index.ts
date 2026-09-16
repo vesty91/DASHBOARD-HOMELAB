@@ -1733,9 +1733,7 @@ export const reliabilityRouter = t.router({
     .query(({ ctx, input }) => procedure(() => ctx.reliability.listDaily(input, ctx.actor))),
   rebuildRecent: t.procedure
     .input(rebuildReliabilitySchema)
-    .mutation(({ ctx, input }) =>
-      procedure(() => ctx.reliability.rebuildRecent(input, ctx.actor)),
-    ),
+    .mutation(({ ctx, input }) => procedure(() => ctx.reliability.rebuildRecent(input, ctx.actor))),
 });
 export const dashboardRouter = t.router({
   board: boardRouter,
