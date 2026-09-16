@@ -20,7 +20,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile
 
 FROM deps AS build
-ARG APP_VERSION=1.2.0
+ARG APP_VERSION=1.3.0
 ENV APP_VERSION=$APP_VERSION \
     NODE_ENV=production \
     AUTH_SECRET=build-only-placeholder-secret-32chars \
@@ -38,11 +38,11 @@ RUN groupadd --system --gid 10001 dashboard \
   && useradd --system --uid 10001 --gid dashboard --home /app --create-home dashboard
 WORKDIR /app
 ENV NODE_ENV=production \
-    APP_VERSION=1.2.0
+    APP_VERSION=1.3.0
 USER dashboard
 
 FROM runtime-base AS web
-ARG APP_VERSION=1.2.0
+ARG APP_VERSION=1.3.0
 USER root
 RUN mkdir -p /appdata/backups && chown -R dashboard:dashboard /appdata
 USER dashboard
@@ -60,7 +60,7 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=5 \
 CMD ["node", "apps/web/server.js"]
 
 FROM runtime-base AS worker
-ARG APP_VERSION=1.2.0
+ARG APP_VERSION=1.3.0
 ENV APP_VERSION=$APP_VERSION \
     WORKER_HOST=0.0.0.0 \
     WORKER_PORT=3001
@@ -72,7 +72,7 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
 CMD ["node", "worker.mjs"]
 
 FROM runtime-base AS realtime
-ARG APP_VERSION=1.2.0
+ARG APP_VERSION=1.3.0
 ENV APP_VERSION=$APP_VERSION \
     REALTIME_HOST=0.0.0.0 \
     REALTIME_PORT=3002
@@ -83,7 +83,7 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=5 \
 CMD ["node", "realtime.mjs"]
 
 FROM runtime-base AS migrate
-ARG APP_VERSION=1.2.0
+ARG APP_VERSION=1.3.0
 ENV APP_VERSION=$APP_VERSION \
     DB_DRIVER=postgres \
     MIGRATIONS_DIR=/migrations/postgresql

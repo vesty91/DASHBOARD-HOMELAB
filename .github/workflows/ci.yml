@@ -112,16 +112,16 @@ jobs:
           load: true
           set: |
             *.platform=linux/amd64
-            *.args.APP_VERSION=1.2.0
+            *.args.APP_VERSION=1.3.0
 
       - name: Production smoke
         env:
           SKIP_BUILD: "1"
-          APP_VERSION: "1.2.0"
+          APP_VERSION: "1.3.0"
         run: node scripts/production-smoke.mjs
 
       - name: HTTPS reverse-proxy smoke
         env:
           SKIP_BUILD: "1"
-          APP_VERSION: "1.2.0"
+          APP_VERSION: "1.3.0"
         run: node scripts/https-proxy-smoke.mjs

@@ -463,8 +463,8 @@ Livré :
 Migrations : `0000`–`0008` (SQLite + PostgreSQL).
 Backup `formatVersion` 1 / `schemaVersion` 8 (compat 5/6/7 → 8).
 
-PRs : #70–#72. Tag `phase-23-complete`. Minor produit `v1.3.0` (release
-suivante).
+PRs : #70–#72 (+ #73 close). Tag `phase-23-complete`. Minor produit
+`v1.3.0`.
 
 Hors scope : ITSM complet, e-mail obligatoire, remplacement de ntfy /
 automation_runs / audit_logs.
