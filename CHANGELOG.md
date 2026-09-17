@@ -6,13 +6,27 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-09-17
+
+SLO Burn-Rate Alerting (Phase 27). Minor backward-compatible.
+Migrations `0013`–`0014`, DB `schemaVersion` 14, backup `schemaVersion` 12.
+
 ### Ajouté
 
-- SLO Burn-Rate Alerting (Phase 27) : rollups horaires `service_reliability_hourly`,
-  moteur burn-rate (1h/6h/24h/3d, pairs fast/slow AND), politiques
-  `slo_alert_policies` (disabled by default), event `slo.burn-rate.changed`,
-  UI burn + alertes sur `/reliability`. Migrations `0013`–`0014`, DB schema 14,
-  backup schema 12. Voir `docs/27-SLO-ALERTING.md`.
+- Hourly reliability rollups (Phase 27.1) : `service_reliability_hourly`,
+  rebuild borné 48 h, rétention 2160 h, exclus du backup.
+- Burn-rate engine (Phase 27.2) : fenêtres fermées 1h/6h/24h/3d, pairs
+  fast (1h∧6h) / slow (24h∧3d) AND, états `healthy|warning|critical|insufficient-data`.
+- Alert policies (Phase 27.3) : `slo_alert_policies` (disabled by default),
+  cooldown/recovery, event `slo.burn-rate.changed` → Notification Center,
+  runtime state hors backup.
+- UI (Phase 27.4) : burn panels + CRUD politiques sur `/reliability/[serviceKey]`.
+
+### Base de données
+
+- Migrations `0013`–`0014` (SQLite + PostgreSQL). DB `schemaVersion` 14.
+- Backup `schemaVersion` 12 (inclut `service_slos` + `slo_alert_policies` ;
+  exclut rollups + `slo_alert_runtime_state`).
 
 ## [1.6.0] — 2026-09-16
 
