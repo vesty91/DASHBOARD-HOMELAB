@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TOPOLOGY_MAX_DEPTH, TOPOLOGY_MAX_NODES } from "./cycle";
 import { DEPENDENCY_RELATIONSHIPS } from "./types";
 
 const serviceKeySchema = z.string().uuid();
@@ -36,3 +37,9 @@ export type ListDependenciesInput = z.infer<typeof listDependenciesSchema>;
 export type CreateDependencyInput = z.infer<typeof createDependencySchema>;
 export type DeleteDependencyInput = z.infer<typeof deleteDependencySchema>;
 export type GetDependencyInput = z.infer<typeof getDependencySchema>;
+export const analyzeImpactSchema = z.object({
+  maxDepth: z.number().int().min(1).max(TOPOLOGY_MAX_DEPTH).optional(),
+  maxNodes: z.number().int().min(1).max(TOPOLOGY_MAX_NODES).optional(),
+});
+
+export type AnalyzeImpactInput = z.infer<typeof analyzeImpactSchema>;

@@ -1,19 +1,23 @@
-import { randomUUID } from "node:crypto";
-import { hasPermission, type PermissionSubject } from "@dashboard/permissions";
-import { wouldCreateCycle } from "./cycle";
+import { analyzeImpact } from "./impact";
+import type { ActualStatus } from "./impact";
 import { TopologyError } from "./errors";
 import type { TopologyStorePort } from "./ports";
 import {
+  analyzeImpactSchema,
   createDependencySchema,
   deleteDependencySchema,
   getDependencySchema,
   listDependenciesSchema,
+  type AnalyzeImpactInput,
   type CreateDependencyInput,
   type DeleteDependencyInput,
   type GetDependencyInput,
   type ListDependenciesInput,
 } from "./schemas";
 import type { TopologyActor } from "./types";
+import { wouldCreateCycle } from "./cycle";
+import { randomUUID } from "node:crypto";
+import { hasPermission } from "@dashboard/permissions";
 
 export type { TopologyActor };
 
@@ -103,9 +107,36 @@ export function createTopologyService(deps: { store: TopologyStorePort }) {
       if (!existing) throw new TopologyError("NOT_FOUND", "Dependency not found");
       await deps.store.deleteDependency(input.id);
     },
+
+    async analyzeImpact(raw: AnalyzeImpactInput | undefined, actor: TopologyActor) {
+      requireRead(actor);
+      const input = analyzeImpactSchema.parse(raw ?? {});
+      const [edges, integrationIds, unavailable] = await Promise.all([
+        deps.store.listDependencies({ limit: 1_000 }),
+        deps.store.listIntegrationIds(500),
+        deps.store.listOpenUnavailableServiceKeys(),
+      ]);
+      const unavailableSet = new Set(unavailable);
+      const actualByService = new Map<string, ActualStatus>();
+      for (const id of integrationIds) {
+        actualByService.set(id, unavailableSet.has(id) ? "unavailable" : "available");
+      }
+      for (const edge of edges) {
+        if (!actualByService.has(edge.upstreamServiceKey)) {
+          actualByService.set(edge.upstreamServiceKey, "unknown");
+        }
+        if (!actualByService.has(edge.downstreamServiceKey)) {
+          actualByService.set(edge.downstreamServiceKey, "unknown");
+        }
+      }
+      return analyzeImpact({
+        edges,
+        actualByService,
+        ...(input.maxDepth !== undefined ? { maxDepth: input.maxDepth } : {}),
+        ...(input.maxNodes !== undefined ? { maxNodes: input.maxNodes } : {}),
+      });
+    },
   };
 }
 
 export type TopologyService = ReturnType<typeof createTopologyService>;
-
-export type { PermissionSubject };

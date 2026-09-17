@@ -1,4 +1,4 @@
-import { eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import type { ServiceDependency, TopologyStorePort } from "@dashboard/topology";
 import * as sqliteSchema from "./schema/sqlite";
 import * as pgSchema from "./schema/postgresql";
@@ -35,6 +35,25 @@ export function createSqliteTopologyStore(client: SqliteClient): TopologyStorePo
         .where(eq(sqliteSchema.integrations.id, serviceKey))
         .limit(1);
       return rows.length > 0;
+    },
+    async listIntegrationIds(limit = 500) {
+      const rows = await db
+        .select({ id: sqliteSchema.integrations.id })
+        .from(sqliteSchema.integrations)
+        .limit(limit);
+      return rows.map((row) => row.id);
+    },
+    async listOpenUnavailableServiceKeys() {
+      const rows = await db
+        .select({ integrationId: sqliteSchema.incidents.integrationId })
+        .from(sqliteSchema.incidents)
+        .where(
+          and(
+            eq(sqliteSchema.incidents.kind, "availability"),
+            eq(sqliteSchema.incidents.status, "open"),
+          ),
+        );
+      return rows.map((row) => row.integrationId);
     },
     async listDependencies(input) {
       const limit = input?.limit ?? 500;
@@ -101,6 +120,22 @@ export function createPostgresqlTopologyStore(client: PostgresqlClient): Topolog
         .where(eq(pgSchema.integrations.id, serviceKey))
         .limit(1);
       return rows.length > 0;
+    },
+    async listIntegrationIds(limit = 500) {
+      const rows = await db
+        .select({ id: pgSchema.integrations.id })
+        .from(pgSchema.integrations)
+        .limit(limit);
+      return rows.map((row) => row.id);
+    },
+    async listOpenUnavailableServiceKeys() {
+      const rows = await db
+        .select({ integrationId: pgSchema.incidents.integrationId })
+        .from(pgSchema.incidents)
+        .where(
+          and(eq(pgSchema.incidents.kind, "availability"), eq(pgSchema.incidents.status, "open")),
+        );
+      return rows.map((row) => row.integrationId);
     },
     async listDependencies(input) {
       const limit = input?.limit ?? 500;

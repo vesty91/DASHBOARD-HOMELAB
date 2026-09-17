@@ -50,6 +50,10 @@ export function buildEventRunKey(automationId: string, event: DomainEvent): stri
       return clampRunKey(
         `${prefix}:${sanitizeSegment(event.sloId)}:${sanitizeSegment(event.state)}:${sanitizeSegment(event.window)}`,
       );
+    case "dependency.impact.changed":
+      return clampRunKey(
+        `${prefix}:${sanitizeSegment(event.serviceKey)}:${sanitizeSegment(event.impactStatus)}`,
+      );
     default: {
       const _never: never = event;
       return _never;

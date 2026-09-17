@@ -161,6 +161,7 @@ import {
   type ReliabilityService,
 } from "@dashboard/reliability";
 import {
+  analyzeImpactSchema,
   createDependencySchema,
   deleteDependencySchema,
   getDependencySchema,
@@ -1839,6 +1840,9 @@ export const topologyRouter = t.router({
   delete: t.procedure
     .input(deleteDependencySchema)
     .mutation(({ ctx, input }) => procedure(() => ctx.topology.deleteDependency(input, ctx.actor))),
+  analyzeImpact: t.procedure
+    .input(analyzeImpactSchema.optional())
+    .query(({ ctx, input }) => procedure(() => ctx.topology.analyzeImpact(input, ctx.actor))),
 });
 export const dashboardRouter = t.router({
   board: boardRouter,

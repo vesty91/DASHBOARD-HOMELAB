@@ -64,6 +64,11 @@ function eventFields(event: DomainEvent): Record<string, string> | null {
         burnState: event.state,
         window: event.window,
       };
+    case "dependency.impact.changed":
+      return {
+        serviceKey: event.serviceKey,
+        impactStatus: event.impactStatus,
+      };
     case "job.heartbeat":
     case "board.updated":
     case "board.deleted":
