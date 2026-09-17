@@ -119,6 +119,15 @@ Règles obligatoires :
 - Réponses push `404` / `410` → désactivation ; erreurs transitoires bornées
   (pas de retry infini).
 
+## 5quater. SLO burn-rate alerts (Phase 27)
+
+- Event registry fermé `slo.burn-rate.changed` (payload safe : pas de series,
+  PromQL, URLs, secrets, erreurs brutes).
+- Politiques désactivées par défaut ; cooldown + dedup anti-tempête.
+- Pas de remédiation auto ; permissions `reliability.read` / `slo.manage`
+  revalidées au tick worker.
+- Jamais `healthy` sans données éligibles (`insufficient-data`).
+
 ### Installation PWA (pas de bouton Install universel)
 
 - **Chromium / Edge** (desktop et Android) : installation via l’UI du

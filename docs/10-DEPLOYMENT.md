@@ -14,7 +14,7 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.6.0` (Phase 26 minor). Les tags `phase-*` ne
+La version applicative est `1.6.0` (Phase 26 minor ; Phase 27 → `1.7.0`). Les tags `phase-*` ne
 publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
 `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
 `:tag` et `:sha-*` (ADR 0029).
@@ -219,20 +219,20 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 ## 10. Upgrade
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
-2. Lire `CHANGELOG.md`. Migrations `0000`–`0012` sont immuables une fois
-   publiées. Phase 26 ajoute `0011` (rollups) + `0012` (`service_slos`).
-   L'upgrade 1.5.0 → 1.6.0 (DB schéma 12, backup schéma 11) conserve users /
+2. Lire `CHANGELOG.md`. Migrations `0000`–`0014` sont immuables une fois
+   publiées. Phase 27 ajoute `0013` (hourly) + `0014` (alert policies).
+   L'upgrade 1.6.0 → 1.7.0 (DB schéma 14, backup schéma 12) conserve users /
    boards / widgets / integrations / automations / status pages / maintenance /
-   SLO (éphémères et rollups restent hors backup).
+   SLO / alert policies (éphémères, rollups et runtime alert restent hors backup).
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant,
-   `/reliability` si permission.
+   `/reliability` si permission (burn-rate + politiques).
 6. Rollback si nécessaire.
 
-Un backup schema v5…v10 est encore accepté (upgrade in-memory vers v11).
-v11 accepté. v12+ rejeté. `appVersion` 0.1.0 dans une archive
-v5–v11 reste valide.
+Un backup schema v5…v11 est encore accepté (upgrade in-memory vers v12).
+v12 accepté. v13+ rejeté. `appVersion` 0.1.0 dans une archive
+v5–v12 reste valide.
 
 ## 11. Rollback
 
@@ -249,9 +249,9 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5–11, hash SHA-256. Secrets : ciphertext / iv / authTag /
-keyVersion uniquement. Phase 25 inclut la config status pages /
-maintenance.
+`schemaVersion` 5–12, hash SHA-256. Secrets : ciphertext / iv / authTag /
+keyVersion uniquement. Phase 27 inclut `service_slos` + `slo_alert_policies`
+(exclut rollups reliability + `slo_alert_runtime_state`).
 
 Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
 backup pré-restore sur disque → restore transactionnel → commit.

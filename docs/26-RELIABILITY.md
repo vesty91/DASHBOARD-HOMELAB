@@ -1,6 +1,6 @@
 # 26 — Reliability & SLO Analytics
 
-Phase 26 **COMPLETE**. Phase 27.1 ajoute les rollups horaires (migration `0013`).
+Phase 26 **COMPLETE**. Phase 27 (burn-rate alerting) : voir `docs/27-SLO-ALERTING.md`.
 Migrations `0011`–`0014`. DB `schemaVersion` **14**.
 Backup `formatVersion` 1 / `schemaVersion` **12** (SLO + alert policies ;
 rollups et runtime state exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
@@ -132,7 +132,9 @@ Pas de remédiation auto risquée. Dedup : même SLO + même état + cooldown.
 ## Backup
 
 - `service_reliability_daily` et `service_reliability_hourly` **exclus** (dérivés rejouables).
-- `service_slos` **inclus** → `BACKUP_SCHEMA_VERSION` **11** (compat 5–11).
+- `slo_alert_runtime_state` **exclu** (runtime).
+- `service_slos` + `slo_alert_policies` **inclus** → `BACKUP_SCHEMA_VERSION` **12**
+  (compat 5–12). DB `schemaVersion` **14** ≠ backup (volontaire).
 
 ## Permissions
 
@@ -145,28 +147,35 @@ ADMIN default-deny pour les deux.
 
 ## API
 
-| Route                       | Notes                             |
-| --------------------------- | --------------------------------- |
-| `reliability.permissions`   | `{ canRead, canManageSlo }`       |
-| `reliability.listDaily`     | ≤50 serviceKeys, ≤90 jours        |
-| `reliability.listHourly`    | ≤50 serviceKeys, ≤168 h           |
-| `reliability.rebuildRecent` | `settings.manage` ou SYSTEM_ADMIN |
-| `reliability.listSlos`      |                                   |
-| `reliability.getSlo`        |                                   |
-| `reliability.createSlo`     | `slo.manage`                      |
-| `reliability.updateSlo`     | revision conflict                 |
-| `reliability.deleteSlo`     | revision conflict                 |
-| `reliability.evaluateSlo`   | window + error budget             |
-| `reliability.summarize`     | ≤50 keys, agrégat fenêtre unique  |
+| Route                           | Notes                                               |
+| ------------------------------- | --------------------------------------------------- |
+| `reliability.permissions`       | `{ canRead, canManageSlo }`                         |
+| `reliability.listDaily`         | ≤50 serviceKeys, ≤90 jours                          |
+| `reliability.listHourly`        | ≤50 serviceKeys, ≤168 h                             |
+| `reliability.rebuildRecent`     | `settings.manage` ou SYSTEM_ADMIN                   |
+| `reliability.listSlos`          |                                                     |
+| `reliability.getSlo`            |                                                     |
+| `reliability.createSlo`         | `slo.manage`                                        |
+| `reliability.updateSlo`         | revision conflict                                   |
+| `reliability.deleteSlo`         | revision conflict                                   |
+| `reliability.evaluateSlo`       | window + error budget                               |
+| `reliability.summarize`         | ≤50 keys, agrégat fenêtre unique                    |
+| `reliability.evaluateBurnRate`  | fenêtres fermées 1h/6h/24h/3d ; pairs fast/slow AND |
+| `reliability.listAlertPolicies` |                                                     |
+| `reliability.getAlertPolicy`    |                                                     |
+| `reliability.getAlertRuntime`   | état runtime (cooldown / last notify)               |
+| `reliability.createAlertPolicy` | `slo.manage` ; disabled by default                  |
+| `reliability.updateAlertPolicy` | revision conflict                                   |
+| `reliability.deleteAlertPolicy` | revision conflict                                   |
 
-## UI (PR 26.3)
+## UI (PR 26.3 + Phase 27.4)
 
 Routes Next.js (RSC + server actions, pas de client tRPC) :
 
-| Route                       | Contenu                                              |
-| --------------------------- | ---------------------------------------------------- |
-| `/reliability`              | vue d’ensemble (summarize 30 j, max 50 services)     |
-| `/reliability/[serviceKey]` | détail, table quotidienne, SVG, CRUD SLO, export CSV |
+| Route                       | Contenu                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `/reliability`              | vue d’ensemble (summarize 30 j, max 50 services)                      |
+| `/reliability/[serviceKey]` | détail, rollups, CRUD SLO, burn-rate, politiques d’alerte, export CSV |
 
 Navigation : lien « Fiabilité » si `reliability.read`.
 
@@ -175,6 +184,6 @@ Export CSV : échappement Excel (`=`, `+`, `-`, `@` en tête de cellule).
 Widget board `reliability-status` (`publicSafe: false`) : intégration,
 fenêtre 7/30/90 j, sparkline optionnelle ; résolu via `resolveReliabilityStatusViews`.
 
-## Hors scope 26.3
+## Hors scope
 
-Burn-rate multi-fenêtre / alerting `slo.budget.low` optionnel ultérieur.
+PromQL arbitraire, TSDB haute fréquence, remédiation auto (voir Phase 27).
