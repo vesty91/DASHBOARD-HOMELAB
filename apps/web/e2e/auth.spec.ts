@@ -70,14 +70,22 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
       );
   fixtureDatabase.close();
   await page.reload();
+  await expect(page.locator(".grid-stack.board-editing")).toHaveAttribute(
+    "data-grid-ready",
+    "true",
+  );
   await expect(page.getByText("Fixture item")).toBeVisible();
   const item = page.locator(".grid-stack-item");
-  const box = await item.boundingBox();
-  if (!box) throw new Error("Grid fixture was not rendered");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 8 });
-  await page.mouse.up();
+  const content = item.locator(".grid-stack-item-content");
+  await content.focus();
+  await expect(content).toHaveAttribute("data-selected", "true");
+  const toolbar = page.getByRole("toolbar", { name: "Actions du widget sélectionné" });
+  await toolbar.getByRole("button", { name: "Déplacer" }).click();
+  await expect(toolbar.getByRole("button", { name: "Déplacer" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("ArrowRight");
   await expect
     .poll(
       () => {
@@ -101,19 +109,17 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
     "aria-pressed",
     "true",
   );
-  await page.locator(".grid-stack").scrollIntoViewIfNeeded();
-  const mobileBox = await item.boundingBox();
-  if (!mobileBox) throw new Error("Mobile grid fixture was not rendered");
-  await page.mouse.move(mobileBox.x + mobileBox.width / 2, mobileBox.y + mobileBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(
-    mobileBox.x + mobileBox.width / 2,
-    mobileBox.y + mobileBox.height / 2 + 160,
-    {
-      steps: 8,
-    },
+  await expect(page.locator(".grid-stack.board-editing")).toHaveAttribute(
+    "data-grid-ready",
+    "true",
   );
-  await page.mouse.up();
+  await content.focus();
+  await toolbar.getByRole("button", { name: "Déplacer" }).click();
+  await expect(toolbar.getByRole("button", { name: "Déplacer" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("ArrowDown");
   await page.getByRole("button", { name: "Desktop" }).click();
   await expect
     .poll(
@@ -133,7 +139,7 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
     .toBeGreaterThan(2);
   await expect(page.getByText("Sauvegardé")).toBeVisible({ timeout: 15_000 });
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Modifier Phase 4 Board" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "modifier Phase 4 Board" })).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/boards/phase-4-board");
