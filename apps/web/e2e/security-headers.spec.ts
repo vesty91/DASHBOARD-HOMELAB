@@ -27,7 +27,7 @@ test("health live stays 200 and keeps CSP without leaking secrets", async ({ req
   expect(headers["content-security-policy"]).not.toContain("unsafe-eval");
   const body = await response.json();
   expect(body.status).toBe("live");
-  expect(body.version).toBe("1.7.0");
+  expect(body.version).toBe("1.8.0");
   expect(JSON.stringify(body)).not.toMatch(/DATABASE_URL|REDIS_URL|AUTH_SECRET|postgresql:\/\//iu);
 });
 

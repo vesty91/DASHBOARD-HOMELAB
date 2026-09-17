@@ -14,10 +14,10 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.7.0` jusqu’à la release Phase 28 (`1.8.0`).
-Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver stables
-`vX.Y.Z` publient `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie
-uniquement `:tag` et `:sha-*` (ADR 0029).
+La version applicative est `1.8.0` (Phase 28 minor). Les tags `phase-*` ne
+publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
+`latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
+`:tag` et `:sha-*` (ADR 0029).
 
 ## 2. Prérequis
 

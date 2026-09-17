@@ -6,12 +6,27 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-09-17
+
+Service Topology & Impact Analysis (Phase 28). Minor backward-compatible.
+Migration `0015`, DB `schemaVersion` 15, backup `schemaVersion` 13.
+
 ### Ajouté
 
-- Service Topology & Impact Analysis (Phase 28) : `service_dependencies`,
-  impact engine, UI `/topology`, event `dependency.impact.changed`.
-  Migration `0015`, DB `schemaVersion` 15, backup `schemaVersion` 13.
-  Release produit prévue : `1.8.0`.
+- Dependency model (Phase 28.1) : `service_dependencies`, relation fermée
+  `depends_on`, rejet des cycles (DAG), permissions `topology.read` /
+  `topology.manage`, backup inclus.
+- Impact engine (Phase 28.2) : `actualStatus` vs `impactStatus`
+  (`none` | `at-risk` | `impacted`), `candidateRootCause` heuristique,
+  event `dependency.impact.changed`, automation allowlist.
+- UI (Phase 28.3) : `/topology` table + liste accessible, create/delete,
+  a11y / e2e / mobile.
+
+### Base de données
+
+- Migration `0015` (SQLite + PostgreSQL). DB `schemaVersion` 15.
+- Backup `schemaVersion` 13 (inclut `service_dependencies` ; exclut impact
+  dérivé / caches runtime).
 
 ## [1.7.0] — 2026-09-17
 

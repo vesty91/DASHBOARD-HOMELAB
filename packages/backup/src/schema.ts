@@ -4,7 +4,7 @@ export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
 export const BACKUP_SCHEMA_VERSION = 13;
 export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
-export const BACKUP_APP_VERSION = "1.7.0";
+export const BACKUP_APP_VERSION = "1.8.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
 const uuidSchema = z.uuid();
