@@ -142,6 +142,7 @@ import {
   ReliabilityError,
   createSloSchema,
   deleteSloSchema,
+  evaluateBurnRateSchema,
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
@@ -1764,6 +1765,9 @@ export const reliabilityRouter = t.router({
   evaluateSlo: t.procedure
     .input(evaluateSloSchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateSlo(input, ctx.actor))),
+  evaluateBurnRate: t.procedure
+    .input(evaluateBurnRateSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateBurnRate(input, ctx.actor))),
   summarize: t.procedure
     .input(summarizeReliabilitySchema.optional())
     .query(({ ctx, input }) =>

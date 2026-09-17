@@ -93,6 +93,28 @@ Entiers :
 - `consumed = max(0, eligible - available)`
 - `remainingBudgetBps` dérivé de remaining/allowed
 
+## Burn-rate (Phase 27.2)
+
+Fenêtres **fermées** uniquement (heure UTC courante exclue) : `1h`, `6h`, `24h`, `3d`.
+
+Formule :
+
+- `errorBudgetFraction = (100000 - objectiveBps) / 100000`
+- `badFraction = consumed / eligible` (politique unknown / maintenance Phase 26)
+- `burnRate = badFraction / errorBudgetFraction`
+
+Paires multi-fenêtre (AND) :
+
+- **fast** : 1h ∧ 6h
+- **slow** : 24h ∧ 3d
+
+États fermés : `healthy` | `warning` | `critical` | `insufficient-data`.
+Jamais `healthy` sans données éligibles.
+
+API : `reliability.evaluateBurnRate` (`reliability.read`).
+
+Seuils défaut moteur : warning `1`, critical `14.4` (surchargeables ; politiques persistées en 27.3).
+
 ## Backup
 
 - `service_reliability_daily` et `service_reliability_hourly` **exclus** (dérivés rejouables).
