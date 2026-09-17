@@ -58,7 +58,7 @@ describe("createTopologyService", () => {
   it("creates a dependency when authorized", async () => {
     const service = createTopologyService({ store: memoryStore([a, b]) });
     const created = await service.createDependency(
-      { upstreamServiceKey: a, downstreamServiceKey: b },
+      { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
       admin,
     );
     expect(created.upstreamServiceKey).toBe(a);
@@ -68,23 +68,35 @@ describe("createTopologyService", () => {
   it("rejects unknown services", async () => {
     const service = createTopologyService({ store: memoryStore([a]) });
     await expect(
-      service.createDependency({ upstreamServiceKey: a, downstreamServiceKey: b }, admin),
+      service.createDependency(
+        { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
+        admin,
+      ),
     ).rejects.toMatchObject({ code: "UNKNOWN_SERVICE" } satisfies Partial<TopologyError>);
   });
 
   it("rejects cycles", async () => {
     const store = memoryStore([a, b]);
     const service = createTopologyService({ store });
-    await service.createDependency({ upstreamServiceKey: a, downstreamServiceKey: b }, admin);
+    await service.createDependency(
+      { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
+      admin,
+    );
     await expect(
-      service.createDependency({ upstreamServiceKey: b, downstreamServiceKey: a }, admin),
+      service.createDependency(
+        { upstreamServiceKey: b, downstreamServiceKey: a, relationship: "depends_on" },
+        admin,
+      ),
     ).rejects.toMatchObject({ code: "CYCLE" });
   });
 
   it("rejects manage without permission", async () => {
     const service = createTopologyService({ store: memoryStore([a, b, c]) });
     await expect(
-      service.createDependency({ upstreamServiceKey: a, downstreamServiceKey: b }, viewer),
+      service.createDependency(
+        { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
+        viewer,
+      ),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
