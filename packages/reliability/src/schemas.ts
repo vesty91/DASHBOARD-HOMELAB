@@ -99,6 +99,26 @@ export const evaluateSloSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const evaluateBurnRateSchema = z
+  .object({
+    id: z.string().uuid(),
+    warningThreshold: z.number().positive().max(1_000_000).optional(),
+    criticalThreshold: z.number().positive().max(1_000_000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.warningThreshold !== undefined &&
+      value.criticalThreshold !== undefined &&
+      !(value.criticalThreshold > value.warningThreshold)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "criticalThreshold must be > warningThreshold",
+        path: ["criticalThreshold"],
+      });
+    }
+  });
+
 export const summarizeReliabilitySchema = z.object({
   serviceKeys: z.array(serviceKeySchema).max(50).optional(),
   windowDays: sloWindowDaysSchema.default(30),
@@ -112,4 +132,5 @@ export type UpdateSloInput = z.infer<typeof updateSloSchema>;
 export type DeleteSloInput = z.infer<typeof deleteSloSchema>;
 export type ListSlosInput = z.infer<typeof listSlosSchema>;
 export type EvaluateSloInput = z.infer<typeof evaluateSloSchema>;
+export type EvaluateBurnRateInput = z.infer<typeof evaluateBurnRateSchema>;
 export type SummarizeReliabilityInput = z.infer<typeof summarizeReliabilitySchema>;

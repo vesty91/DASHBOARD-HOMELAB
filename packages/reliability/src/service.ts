@@ -17,11 +17,19 @@ import {
   MS_PER_HOUR,
   assertRollupInvariants,
 } from "./aggregation";
+import {
+  BURN_RATE_WINDOWS_HOURS,
+  evaluateBurnRate,
+  listClosedUtcHours,
+  type BurnRateWindowHours,
+  type HourlyBucketInput,
+} from "./burn-rate";
 import { ReliabilityError } from "./errors";
 import type { ReliabilityStorePort } from "./ports";
 import {
   createSloSchema,
   deleteSloSchema,
+  evaluateBurnRateSchema,
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
@@ -32,6 +40,7 @@ import {
   updateSloSchema,
   type CreateSloInput,
   type DeleteSloInput,
+  type EvaluateBurnRateInput,
   type EvaluateSloInput,
   type ListDailyReliabilityInput,
   type ListHourlyReliabilityInput,
@@ -311,6 +320,69 @@ export function createReliabilityService(deps: {
         excludeMaintenance: slo.excludeMaintenance,
       });
       return { slo, computation, fromDateUtc: fromDate, toDateUtc: toDate };
+    },
+
+    async evaluateBurnRate(raw: EvaluateBurnRateInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = evaluateBurnRateSchema.parse(raw);
+      const slo = await requireSlo(input.id);
+      const nowMs = now().getTime();
+      const closedHours = listClosedUtcHours({ asOfMs: nowMs, windowHours: 72 });
+      const fromHourUtc = closedHours[0]!;
+      const toHourUtc = closedHours[closedHours.length - 1]!;
+      const rows = await deps.store.listHourly({
+        serviceKeys: [slo.serviceKey],
+        fromHourUtc,
+        toHourUtc,
+        limit: 72,
+      });
+      const byHour = new Map(rows.map((row) => [row.hourUtc, row]));
+
+      const hoursByWindow: Partial<Record<BurnRateWindowHours, HourlyBucketInput[]>> = {};
+      for (const windowHours of BURN_RATE_WINDOWS_HOURS) {
+        const needed = listClosedUtcHours({ asOfMs: nowMs, windowHours });
+        hoursByWindow[windowHours] = needed.map((hourUtc) => {
+          const row = byHour.get(hourUtc);
+          if (!row) {
+            return {
+              observedSeconds: 0,
+              availableSeconds: 0,
+              degradedSeconds: 0,
+              unavailableSeconds: 0,
+              maintenanceSeconds: 0,
+              unknownSeconds: 0,
+            };
+          }
+          return {
+            observedSeconds: row.observedSeconds,
+            availableSeconds: row.availableSeconds,
+            degradedSeconds: row.degradedSeconds,
+            unavailableSeconds: row.unavailableSeconds,
+            maintenanceSeconds: row.maintenanceSeconds,
+            unknownSeconds: row.unknownSeconds,
+          };
+        });
+      }
+
+      const evaluation = evaluateBurnRate({
+        hoursByWindow,
+        objectiveBasisPoints: slo.objectiveBasisPoints,
+        excludeMaintenance: slo.excludeMaintenance,
+        ...(input.warningThreshold !== undefined
+          ? { warningThreshold: input.warningThreshold }
+          : {}),
+        ...(input.criticalThreshold !== undefined
+          ? { criticalThreshold: input.criticalThreshold }
+          : {}),
+      });
+
+      return {
+        slo,
+        evaluation,
+        fromHourUtc,
+        toHourUtc,
+        closedHourCount: closedHours.length,
+      };
     },
 
     async summarize(raw: SummarizeReliabilityInput, actor: ReliabilityActor) {

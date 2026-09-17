@@ -27,6 +27,7 @@ export { ReliabilityError, isReliabilityError } from "./errors";
 export {
   createSloSchema,
   deleteSloSchema,
+  evaluateBurnRateSchema,
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
@@ -39,6 +40,7 @@ export {
   utcDateSchema,
   type CreateSloInput,
   type DeleteSloInput,
+  type EvaluateBurnRateInput,
   type EvaluateSloInput,
   type ListDailyReliabilityInput,
   type ListHourlyReliabilityInput,
@@ -53,6 +55,25 @@ export {
   type ReliabilityActor,
 } from "./service";
 export type { ReliabilityStorePort } from "./ports";
+export {
+  BURN_RATE_WINDOWS_HOURS,
+  BURN_RATE_WINDOW_LABELS,
+  DEFAULT_BURN_CRITICAL_THRESHOLD,
+  DEFAULT_BURN_PAIRS,
+  DEFAULT_BURN_WARNING_THRESHOLD,
+  aggregateBucketsForBurn,
+  classifyBurnAgainstThresholds,
+  classifyBurnPair,
+  computeBurnRateForWindow,
+  evaluateBurnRate,
+  listClosedUtcHours,
+  type BurnRateEvaluation,
+  type BurnRatePairResult,
+  type BurnRateState,
+  type BurnRateWindowHours,
+  type BurnRateWindowResult,
+  type HourlyBucketInput,
+} from "./burn-rate";
 export {
   SLO_OBJECTIVE_BPS_MAX,
   SLO_OBJECTIVE_BPS_MIN,

@@ -790,21 +790,23 @@ Permissions : `status-page.read` / `status-page.manage`. `ADMIN` default-deny.
 Jamais exposés en DTO public : `sourceIntegrationId`, URL, IP, credentials,
 erreurs brutes. Voir `docs/25-STATUS-PAGES.md`.
 
-# Reliability / SLO — Phase 26
+# Reliability / SLO — Phase 26–27
 
-Agrégats quotidiens + objectifs SLO. Voir `docs/26-RELIABILITY.md`.
+Agrégats quotidiens/horaires + objectifs SLO + burn-rate. Voir `docs/26-RELIABILITY.md`.
 
-| Route                       | Permission                                            | Notes                                          |
-| --------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
-| `reliability.permissions`   | authentifié                                           | `{ canRead, canManageSlo }`                    |
-| `reliability.listDaily`     | `reliability.read`                                    | ≤50 keys, ≤90 jours                            |
-| `reliability.rebuildRecent` | `reliability.read` + `settings.manage` / SYSTEM_ADMIN | rebuild borné                                  |
-| `reliability.listSlos`      | `reliability.read`                                    |                                                |
-| `reliability.getSlo`        | `reliability.read`                                    |                                                |
-| `reliability.createSlo`     | `slo.manage`                                          | objective 90_000–99_999 bps ; fenêtres 7/30/90 |
-| `reliability.updateSlo`     | `slo.manage`                                          | CAS `expectedConfigRevision`                   |
-| `reliability.deleteSlo`     | `slo.manage`                                          | CAS revision                                   |
-| `reliability.evaluateSlo`   | `reliability.read`                                    | availability + error budget (math entière)     |
+| Route                          | Permission                                            | Notes                                                      |
+| ------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------- |
+| `reliability.permissions`      | authentifié                                           | `{ canRead, canManageSlo }`                                |
+| `reliability.listDaily`        | `reliability.read`                                    | ≤50 keys, ≤90 jours                                        |
+| `reliability.listHourly`       | `reliability.read`                                    | ≤50 keys, ≤168 h                                           |
+| `reliability.rebuildRecent`    | `reliability.read` + `settings.manage` / SYSTEM_ADMIN | rebuild borné                                              |
+| `reliability.listSlos`         | `reliability.read`                                    |                                                            |
+| `reliability.getSlo`           | `reliability.read`                                    |                                                            |
+| `reliability.createSlo`        | `slo.manage`                                          | objective 90_000–99_999 bps ; fenêtres 7/30/90             |
+| `reliability.updateSlo`        | `slo.manage`                                          | CAS `expectedConfigRevision`                               |
+| `reliability.deleteSlo`        | `slo.manage`                                          | CAS revision                                               |
+| `reliability.evaluateSlo`      | `reliability.read`                                    | availability + error budget (math entière)                 |
+| `reliability.evaluateBurnRate` | `reliability.read`                                    | fenêtres fermées 1h/6h/24h/3d ; pairs fast/slow AND        |
 
 # SSO / admin avancé — Phase 15
 

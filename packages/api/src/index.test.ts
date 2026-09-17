@@ -285,6 +285,9 @@ function createCaller(
       evaluateSlo: async () => {
         throw new Error("slo not stubbed");
       },
+      evaluateBurnRate: async () => {
+        throw new Error("burn rate not stubbed");
+      },
       tick: async () => ({ upserted: 0, deleted: 0, hourlyUpserted: 0, hourlyDeleted: 0 }),
     } as unknown as ApiContext["reliability"],
     audit: {
