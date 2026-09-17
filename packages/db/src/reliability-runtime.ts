@@ -8,6 +8,8 @@ import {
   type ReliabilityStorePort,
   type ServicePresence,
   type ServiceSlo,
+  type SloAlertPolicy,
+  type SloAlertRuntimeState,
 } from "@dashboard/reliability";
 import { normalizeDatabaseError } from "./errors";
 import type { PostgresqlClient } from "./client/postgresql";
@@ -86,6 +88,52 @@ function toSlo(row: {
   };
 }
 
+function toAlertPolicy(row: {
+  id: string;
+  sloId: string;
+  enabled: boolean;
+  warningThreshold: number;
+  criticalThreshold: number;
+  cooldownSeconds: number;
+  notifyOnRecovery: boolean;
+  configRevision: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): SloAlertPolicy {
+  return {
+    id: row.id,
+    sloId: row.sloId,
+    enabled: row.enabled,
+    warningThreshold: row.warningThreshold,
+    criticalThreshold: row.criticalThreshold,
+    cooldownSeconds: row.cooldownSeconds,
+    notifyOnRecovery: row.notifyOnRecovery,
+    configRevision: row.configRevision,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function toAlertRuntime(row: {
+  sloId: string;
+  lastState: string;
+  lastNotifiedState: string | null;
+  lastNotifiedAt: Date | null;
+  lastTransitionAt: Date | null;
+  lastBurnRate: number | null;
+  updatedAt: Date;
+}): SloAlertRuntimeState {
+  return {
+    sloId: row.sloId,
+    lastState: row.lastState as SloAlertRuntimeState["lastState"],
+    lastNotifiedState: row.lastNotifiedState as SloAlertRuntimeState["lastNotifiedState"],
+    lastNotifiedAt: row.lastNotifiedAt,
+    lastTransitionAt: row.lastTransitionAt,
+    lastBurnRate: row.lastBurnRate,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function throwReliabilityDatabaseError(error: unknown): never {
   const normalized = normalizeDatabaseError(error);
   if (normalized.code === "UNIQUE_CONSTRAINT") {
@@ -144,6 +192,52 @@ function createReliabilityStore(adapters: {
     now: Date;
   }): Promise<ServiceSlo>;
   deleteSlo(id: string, expectedConfigRevision: number): Promise<void>;
+  listAlertPolicies(input?: {
+    sloIds?: readonly string[];
+    limit?: number;
+  }): Promise<SloAlertPolicy[]>;
+  listEnabledAlertPolicies(): Promise<
+    Array<
+      SloAlertPolicy & {
+        serviceKey: string;
+        objectiveBasisPoints: number;
+        excludeMaintenance: boolean;
+      }
+    >
+  >;
+  getAlertPolicy(id: string): Promise<SloAlertPolicy | null>;
+  getAlertPolicyBySloId(sloId: string): Promise<SloAlertPolicy | null>;
+  createAlertPolicy(input: {
+    id: string;
+    sloId: string;
+    enabled: boolean;
+    warningThreshold: number;
+    criticalThreshold: number;
+    cooldownSeconds: number;
+    notifyOnRecovery: boolean;
+    now: Date;
+  }): Promise<SloAlertPolicy>;
+  updateAlertPolicy(input: {
+    id: string;
+    expectedConfigRevision: number;
+    enabled?: boolean;
+    warningThreshold?: number;
+    criticalThreshold?: number;
+    cooldownSeconds?: number;
+    notifyOnRecovery?: boolean;
+    now: Date;
+  }): Promise<SloAlertPolicy>;
+  deleteAlertPolicy(id: string, expectedConfigRevision: number): Promise<void>;
+  getAlertRuntime(sloId: string): Promise<SloAlertRuntimeState | null>;
+  upsertAlertRuntime(input: {
+    sloId: string;
+    lastState: SloAlertRuntimeState["lastState"];
+    lastNotifiedState: SloAlertRuntimeState["lastNotifiedState"];
+    lastNotifiedAt: Date | null;
+    lastTransitionAt: Date | null;
+    lastBurnRate: number | null;
+    now: Date;
+  }): Promise<void>;
 }): ReliabilityStorePort {
   return {
     listIntegrationPresence: () => adapters.listIntegrationPresence(),
@@ -161,6 +255,16 @@ function createReliabilityStore(adapters: {
     createSlo: (input) => adapters.createSlo(input),
     updateSlo: (input) => adapters.updateSlo(input),
     deleteSlo: (id, expectedConfigRevision) => adapters.deleteSlo(id, expectedConfigRevision),
+    listAlertPolicies: (input) => adapters.listAlertPolicies(input),
+    listEnabledAlertPolicies: () => adapters.listEnabledAlertPolicies(),
+    getAlertPolicy: (id) => adapters.getAlertPolicy(id),
+    getAlertPolicyBySloId: (sloId) => adapters.getAlertPolicyBySloId(sloId),
+    createAlertPolicy: (input) => adapters.createAlertPolicy(input),
+    updateAlertPolicy: (input) => adapters.updateAlertPolicy(input),
+    deleteAlertPolicy: (id, expectedConfigRevision) =>
+      adapters.deleteAlertPolicy(id, expectedConfigRevision),
+    getAlertRuntime: (sloId) => adapters.getAlertRuntime(sloId),
+    upsertAlertRuntime: (input) => adapters.upsertAlertRuntime(input),
   };
 }
 
@@ -497,6 +601,195 @@ export function createSqliteReliabilityStore(client: SqliteClient): ReliabilityS
         throwReliabilityDatabaseError(error);
       }
     },
+    async listAlertPolicies(input) {
+      const filters = [];
+      if (input?.sloIds && input.sloIds.length > 0) {
+        filters.push(inArray(schema.sloAlertPolicies.sloId, [...input.sloIds]));
+      }
+      let query = db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .orderBy(asc(schema.sloAlertPolicies.createdAt));
+      if (filters.length > 0) {
+        query = query.where(and(...filters)) as typeof query;
+      }
+      if (input?.limit !== undefined) {
+        query = query.limit(input.limit) as typeof query;
+      }
+      const rows = await query;
+      return rows.map(toAlertPolicy);
+    },
+    async listEnabledAlertPolicies() {
+      const rows = await db
+        .select({
+          policy: schema.sloAlertPolicies,
+          serviceKey: schema.serviceSlos.serviceKey,
+          objectiveBasisPoints: schema.serviceSlos.objectiveBasisPoints,
+          excludeMaintenance: schema.serviceSlos.excludeMaintenance,
+        })
+        .from(schema.sloAlertPolicies)
+        .innerJoin(schema.serviceSlos, eq(schema.sloAlertPolicies.sloId, schema.serviceSlos.id))
+        .where(eq(schema.sloAlertPolicies.enabled, true));
+      return rows.map((row) => ({
+        ...toAlertPolicy(row.policy),
+        serviceKey: row.serviceKey,
+        objectiveBasisPoints: row.objectiveBasisPoints,
+        excludeMaintenance: row.excludeMaintenance,
+      }));
+    },
+    async getAlertPolicy(id) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .where(eq(schema.sloAlertPolicies.id, id))
+        .limit(1);
+      return rows[0] ? toAlertPolicy(rows[0]) : null;
+    },
+    async getAlertPolicyBySloId(sloId) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .where(eq(schema.sloAlertPolicies.sloId, sloId))
+        .limit(1);
+      return rows[0] ? toAlertPolicy(rows[0]) : null;
+    },
+    async createAlertPolicy(input) {
+      try {
+        await db
+          .insert(schema.sloAlertPolicies)
+          .values({
+            id: input.id,
+            sloId: input.sloId,
+            enabled: input.enabled,
+            warningThreshold: input.warningThreshold,
+            criticalThreshold: input.criticalThreshold,
+            cooldownSeconds: input.cooldownSeconds,
+            notifyOnRecovery: input.notifyOnRecovery,
+            configRevision: 1,
+            createdAt: input.now,
+            updatedAt: input.now,
+          })
+          .run();
+      } catch (error) {
+        throwReliabilityDatabaseError(error);
+      }
+      const created = await db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .where(eq(schema.sloAlertPolicies.id, input.id))
+        .limit(1);
+      if (!created[0]) throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+      return toAlertPolicy(created[0]);
+    },
+    async updateAlertPolicy(input) {
+      try {
+        await db
+          .update(schema.sloAlertPolicies)
+          .set({
+            ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+            ...(input.warningThreshold !== undefined
+              ? { warningThreshold: input.warningThreshold }
+              : {}),
+            ...(input.criticalThreshold !== undefined
+              ? { criticalThreshold: input.criticalThreshold }
+              : {}),
+            ...(input.cooldownSeconds !== undefined
+              ? { cooldownSeconds: input.cooldownSeconds }
+              : {}),
+            ...(input.notifyOnRecovery !== undefined
+              ? { notifyOnRecovery: input.notifyOnRecovery }
+              : {}),
+            configRevision: sql`${schema.sloAlertPolicies.configRevision} + 1`,
+            updatedAt: input.now,
+          })
+          .where(
+            and(
+              eq(schema.sloAlertPolicies.id, input.id),
+              eq(schema.sloAlertPolicies.configRevision, input.expectedConfigRevision),
+            ),
+          )
+          .run();
+        const updated = await db
+          .select()
+          .from(schema.sloAlertPolicies)
+          .where(eq(schema.sloAlertPolicies.id, input.id))
+          .limit(1);
+        const row = updated[0];
+        if (!row || row.configRevision !== input.expectedConfigRevision + 1) {
+          await assertSloRevisionOrThrow(Boolean(row), false);
+          throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+        }
+        return toAlertPolicy(row);
+      } catch (error) {
+        if (error instanceof ReliabilityError) throw error;
+        throwReliabilityDatabaseError(error);
+      }
+    },
+    async deleteAlertPolicy(id, expectedConfigRevision) {
+      try {
+        const existing = await db
+          .select()
+          .from(schema.sloAlertPolicies)
+          .where(eq(schema.sloAlertPolicies.id, id))
+          .limit(1);
+        await db
+          .delete(schema.sloAlertPolicies)
+          .where(
+            and(
+              eq(schema.sloAlertPolicies.id, id),
+              eq(schema.sloAlertPolicies.configRevision, expectedConfigRevision),
+            ),
+          )
+          .run();
+        if (!existing[0]) {
+          throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+        }
+        const stillThere = await db
+          .select()
+          .from(schema.sloAlertPolicies)
+          .where(eq(schema.sloAlertPolicies.id, id))
+          .limit(1);
+        if (stillThere[0]) {
+          await assertSloRevisionOrThrow(true, false);
+        }
+      } catch (error) {
+        if (error instanceof ReliabilityError) throw error;
+        throwReliabilityDatabaseError(error);
+      }
+    },
+    async getAlertRuntime(sloId) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertRuntimeState)
+        .where(eq(schema.sloAlertRuntimeState.sloId, sloId))
+        .limit(1);
+      return rows[0] ? toAlertRuntime(rows[0]) : null;
+    },
+    async upsertAlertRuntime(input) {
+      await db
+        .insert(schema.sloAlertRuntimeState)
+        .values({
+          sloId: input.sloId,
+          lastState: input.lastState,
+          lastNotifiedState: input.lastNotifiedState,
+          lastNotifiedAt: input.lastNotifiedAt,
+          lastTransitionAt: input.lastTransitionAt,
+          lastBurnRate: input.lastBurnRate,
+          updatedAt: input.now,
+        })
+        .onConflictDoUpdate({
+          target: schema.sloAlertRuntimeState.sloId,
+          set: {
+            lastState: input.lastState,
+            lastNotifiedState: input.lastNotifiedState,
+            lastNotifiedAt: input.lastNotifiedAt,
+            lastTransitionAt: input.lastTransitionAt,
+            lastBurnRate: input.lastBurnRate,
+            updatedAt: input.now,
+          },
+        })
+        .run();
+    },
   });
 }
 
@@ -827,6 +1120,181 @@ export function createPostgresqlReliabilityStore(client: PostgresqlClient): Reli
         if (error instanceof ReliabilityError) throw error;
         throwReliabilityDatabaseError(error);
       }
+    },
+    async listAlertPolicies(input) {
+      const filters = [];
+      if (input?.sloIds && input.sloIds.length > 0) {
+        filters.push(inArray(schema.sloAlertPolicies.sloId, [...input.sloIds]));
+      }
+      let query = db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .orderBy(asc(schema.sloAlertPolicies.createdAt));
+      if (filters.length > 0) {
+        query = query.where(and(...filters)) as typeof query;
+      }
+      if (input?.limit !== undefined) {
+        query = query.limit(input.limit) as typeof query;
+      }
+      const rows = await query;
+      return rows.map(toAlertPolicy);
+    },
+    async listEnabledAlertPolicies() {
+      const rows = await db
+        .select({
+          policy: schema.sloAlertPolicies,
+          serviceKey: schema.serviceSlos.serviceKey,
+          objectiveBasisPoints: schema.serviceSlos.objectiveBasisPoints,
+          excludeMaintenance: schema.serviceSlos.excludeMaintenance,
+        })
+        .from(schema.sloAlertPolicies)
+        .innerJoin(schema.serviceSlos, eq(schema.sloAlertPolicies.sloId, schema.serviceSlos.id))
+        .where(eq(schema.sloAlertPolicies.enabled, true));
+      return rows.map((row) => ({
+        ...toAlertPolicy(row.policy),
+        serviceKey: row.serviceKey,
+        objectiveBasisPoints: row.objectiveBasisPoints,
+        excludeMaintenance: row.excludeMaintenance,
+      }));
+    },
+    async getAlertPolicy(id) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .where(eq(schema.sloAlertPolicies.id, id))
+        .limit(1);
+      return rows[0] ? toAlertPolicy(rows[0]) : null;
+    },
+    async getAlertPolicyBySloId(sloId) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertPolicies)
+        .where(eq(schema.sloAlertPolicies.sloId, sloId))
+        .limit(1);
+      return rows[0] ? toAlertPolicy(rows[0]) : null;
+    },
+    async createAlertPolicy(input) {
+      try {
+        const inserted = await db
+          .insert(schema.sloAlertPolicies)
+          .values({
+            id: input.id,
+            sloId: input.sloId,
+            enabled: input.enabled,
+            warningThreshold: input.warningThreshold,
+            criticalThreshold: input.criticalThreshold,
+            cooldownSeconds: input.cooldownSeconds,
+            notifyOnRecovery: input.notifyOnRecovery,
+            configRevision: 1,
+            createdAt: input.now,
+            updatedAt: input.now,
+          })
+          .returning();
+        return toAlertPolicy(inserted[0]!);
+      } catch (error) {
+        throwReliabilityDatabaseError(error);
+      }
+    },
+    async updateAlertPolicy(input) {
+      try {
+        const updatedRows = await db
+          .update(schema.sloAlertPolicies)
+          .set({
+            ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+            ...(input.warningThreshold !== undefined
+              ? { warningThreshold: input.warningThreshold }
+              : {}),
+            ...(input.criticalThreshold !== undefined
+              ? { criticalThreshold: input.criticalThreshold }
+              : {}),
+            ...(input.cooldownSeconds !== undefined
+              ? { cooldownSeconds: input.cooldownSeconds }
+              : {}),
+            ...(input.notifyOnRecovery !== undefined
+              ? { notifyOnRecovery: input.notifyOnRecovery }
+              : {}),
+            configRevision: sql`${schema.sloAlertPolicies.configRevision} + 1`,
+            updatedAt: input.now,
+          })
+          .where(
+            and(
+              eq(schema.sloAlertPolicies.id, input.id),
+              eq(schema.sloAlertPolicies.configRevision, input.expectedConfigRevision),
+            ),
+          )
+          .returning();
+        if (updatedRows.length !== 1) {
+          const rows = await db
+            .select()
+            .from(schema.sloAlertPolicies)
+            .where(eq(schema.sloAlertPolicies.id, input.id))
+            .limit(1);
+          await assertSloRevisionOrThrow(Boolean(rows[0]), false);
+        }
+        return toAlertPolicy(updatedRows[0]!);
+      } catch (error) {
+        if (error instanceof ReliabilityError) throw error;
+        throwReliabilityDatabaseError(error);
+      }
+    },
+    async deleteAlertPolicy(id, expectedConfigRevision) {
+      try {
+        const existing = await db
+          .select()
+          .from(schema.sloAlertPolicies)
+          .where(eq(schema.sloAlertPolicies.id, id))
+          .limit(1);
+        const deletedRows = await db
+          .delete(schema.sloAlertPolicies)
+          .where(
+            and(
+              eq(schema.sloAlertPolicies.id, id),
+              eq(schema.sloAlertPolicies.configRevision, expectedConfigRevision),
+            ),
+          )
+          .returning({ id: schema.sloAlertPolicies.id });
+        if (deletedRows.length !== 1) {
+          if (!existing[0]) {
+            throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+          }
+          await assertSloRevisionOrThrow(true, false);
+        }
+      } catch (error) {
+        if (error instanceof ReliabilityError) throw error;
+        throwReliabilityDatabaseError(error);
+      }
+    },
+    async getAlertRuntime(sloId) {
+      const rows = await db
+        .select()
+        .from(schema.sloAlertRuntimeState)
+        .where(eq(schema.sloAlertRuntimeState.sloId, sloId))
+        .limit(1);
+      return rows[0] ? toAlertRuntime(rows[0]) : null;
+    },
+    async upsertAlertRuntime(input) {
+      await db
+        .insert(schema.sloAlertRuntimeState)
+        .values({
+          sloId: input.sloId,
+          lastState: input.lastState,
+          lastNotifiedState: input.lastNotifiedState,
+          lastNotifiedAt: input.lastNotifiedAt,
+          lastTransitionAt: input.lastTransitionAt,
+          lastBurnRate: input.lastBurnRate,
+          updatedAt: input.now,
+        })
+        .onConflictDoUpdate({
+          target: schema.sloAlertRuntimeState.sloId,
+          set: {
+            lastState: input.lastState,
+            lastNotifiedState: input.lastNotifiedState,
+            lastNotifiedAt: input.lastNotifiedAt,
+            lastTransitionAt: input.lastTransitionAt,
+            lastBurnRate: input.lastBurnRate,
+            updatedAt: input.now,
+          },
+        });
     },
   });
 }

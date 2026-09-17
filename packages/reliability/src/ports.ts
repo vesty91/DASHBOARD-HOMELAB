@@ -6,6 +6,10 @@ import type {
   ServicePresence,
   ServiceSlo,
 } from "./types";
+import type { BurnRateState } from "./burn-rate";
+import type { SloAlertPolicy, SloAlertRuntimeState } from "./slo-alerts";
+
+export type { SloAlertPolicy, SloAlertRuntimeState };
 
 export type ReliabilityStorePort = {
   listIntegrationPresence(): Promise<ServicePresence[]>;
@@ -51,4 +55,50 @@ export type ReliabilityStorePort = {
     now: Date;
   }): Promise<ServiceSlo>;
   deleteSlo(id: string, expectedConfigRevision: number): Promise<void>;
+  listAlertPolicies(input?: {
+    sloIds?: readonly string[];
+    limit?: number;
+  }): Promise<SloAlertPolicy[]>;
+  listEnabledAlertPolicies(): Promise<
+    Array<
+      SloAlertPolicy & {
+        serviceKey: string;
+        objectiveBasisPoints: number;
+        excludeMaintenance: boolean;
+      }
+    >
+  >;
+  getAlertPolicy(id: string): Promise<SloAlertPolicy | null>;
+  getAlertPolicyBySloId(sloId: string): Promise<SloAlertPolicy | null>;
+  createAlertPolicy(input: {
+    id: string;
+    sloId: string;
+    enabled: boolean;
+    warningThreshold: number;
+    criticalThreshold: number;
+    cooldownSeconds: number;
+    notifyOnRecovery: boolean;
+    now: Date;
+  }): Promise<SloAlertPolicy>;
+  updateAlertPolicy(input: {
+    id: string;
+    expectedConfigRevision: number;
+    enabled?: boolean;
+    warningThreshold?: number;
+    criticalThreshold?: number;
+    cooldownSeconds?: number;
+    notifyOnRecovery?: boolean;
+    now: Date;
+  }): Promise<SloAlertPolicy>;
+  deleteAlertPolicy(id: string, expectedConfigRevision: number): Promise<void>;
+  getAlertRuntime(sloId: string): Promise<SloAlertRuntimeState | null>;
+  upsertAlertRuntime(input: {
+    sloId: string;
+    lastState: BurnRateState;
+    lastNotifiedState: BurnRateState | null;
+    lastNotifiedAt: Date | null;
+    lastTransitionAt: Date | null;
+    lastBurnRate: number | null;
+    now: Date;
+  }): Promise<void>;
 };

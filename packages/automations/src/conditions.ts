@@ -18,6 +18,10 @@ export const CONDITION_FIELDS = [
   "integrationId",
   "errorCode",
   "jobType",
+  "serviceKey",
+  "sloId",
+  "burnState",
+  "window",
 ] as const;
 export type ConditionField = (typeof CONDITION_FIELDS)[number];
 
@@ -59,12 +63,17 @@ const FIELD_TYPES: Record<ConditionField, FieldType> = {
   integrationId: "string",
   errorCode: "string",
   jobType: "string",
+  serviceKey: "string",
+  sloId: "string",
+  burnState: "string",
+  window: "string",
 };
 
 const EVENT_FIELDS: Record<AutomationEventType, readonly ConditionField[]> = {
   "integration.status.changed": ["status", "integrationType", "integrationId"],
   "integration.data.changed": ["integrationType", "integrationId"],
   "job.failed": ["errorCode", "jobType"],
+  "slo.burn-rate.changed": ["serviceKey", "sloId", "burnState", "window"],
 };
 
 const STATUS_TRANSITION_FIELDS: readonly ConditionField[] = [

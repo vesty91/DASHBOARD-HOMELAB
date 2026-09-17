@@ -140,17 +140,22 @@ import {
 } from "@dashboard/status-pages";
 import {
   ReliabilityError,
+  createAlertPolicySchema,
   createSloSchema,
+  deleteAlertPolicySchema,
   deleteSloSchema,
   evaluateBurnRateSchema,
   evaluateSloSchema,
+  getAlertPolicySchema,
   getSloSchema,
+  listAlertPoliciesSchema,
   listDailyReliabilitySchema,
   listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
   type SummarizeReliabilityInput,
+  updateAlertPolicySchema,
   updateSloSchema,
   type ReliabilityService,
 } from "@dashboard/reliability";
@@ -1768,6 +1773,27 @@ export const reliabilityRouter = t.router({
   evaluateBurnRate: t.procedure
     .input(evaluateBurnRateSchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateBurnRate(input, ctx.actor))),
+  listAlertPolicies: t.procedure
+    .input(listAlertPoliciesSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.listAlertPolicies(input, ctx.actor))),
+  getAlertPolicy: t.procedure
+    .input(getAlertPolicySchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.getAlertPolicy(input, ctx.actor))),
+  createAlertPolicy: t.procedure
+    .input(createAlertPolicySchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.reliability.createAlertPolicy(input, ctx.actor)),
+    ),
+  updateAlertPolicy: t.procedure
+    .input(updateAlertPolicySchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.reliability.updateAlertPolicy(input, ctx.actor)),
+    ),
+  deleteAlertPolicy: t.procedure
+    .input(deleteAlertPolicySchema)
+    .mutation(({ ctx, input }) =>
+      procedure(() => ctx.reliability.deleteAlertPolicy(input, ctx.actor)),
+    ),
   summarize: t.procedure
     .input(summarizeReliabilitySchema.optional())
     .query(({ ctx, input }) =>

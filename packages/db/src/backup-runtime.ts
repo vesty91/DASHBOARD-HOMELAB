@@ -46,6 +46,7 @@ const sqliteTables = {
   maintenance_windows: sqliteSchema.maintenanceWindows,
   maintenance_window_targets: sqliteSchema.maintenanceWindowTargets,
   service_slos: sqliteSchema.serviceSlos,
+  slo_alert_policies: sqliteSchema.sloAlertPolicies,
 } as const;
 
 const postgresqlTables = {
@@ -78,6 +79,7 @@ const postgresqlTables = {
   maintenance_windows: postgresqlSchema.maintenanceWindows,
   maintenance_window_targets: postgresqlSchema.maintenanceWindowTargets,
   service_slos: postgresqlSchema.serviceSlos,
+  slo_alert_policies: postgresqlSchema.sloAlertPolicies,
 } as const;
 
 function toSnakeCase(column: string): string {

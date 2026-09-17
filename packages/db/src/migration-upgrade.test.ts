@@ -41,6 +41,10 @@ const phase27HourlyMigration = new URL(
   "../drizzle/sqlite/0013_mushy_captain_midlands.sql",
   import.meta.url,
 );
+const phase27AlertMigration = new URL(
+  "../drizzle/sqlite/0014_boring_millenium_guard.sql",
+  import.meta.url,
+);
 
 describe("Phase 2 to Phase 3 migration", () => {
   it("preserves users and boards while adding auth tables", async () => {
@@ -646,6 +650,17 @@ describe("Phase 26 reliability migration", () => {
         database
           .prepare(
             "SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='service_reliability_hourly'",
+          )
+          .get()?.count,
+      ).toBe(1);
+      executeSqliteMigration(database, await readFile(phase27AlertMigration, "utf8"));
+      expect(
+        database.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
+      ).toMatchObject({ schema_version: 14 });
+      expect(
+        database
+          .prepare(
+            "SELECT count(*) count FROM sqlite_master WHERE type='table' AND name='slo_alert_policies'",
           )
           .get()?.count,
       ).toBe(1);

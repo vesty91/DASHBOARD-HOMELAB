@@ -952,6 +952,22 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
           ["service_reliability_hourly"],
         ),
       ).toMatchObject({ rows: [{ count: 1 }] });
+      await executePostgresqlMigration(
+        client.pool,
+        await readFile(
+          new URL("../drizzle/postgresql/0014_superb_vance_astro.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(
+        await client.pool.query("select schema_version from server_settings where id='global'"),
+      ).toMatchObject({ rows: [{ schema_version: 14 }] });
+      expect(
+        await client.pool.query(
+          "select count(*)::int count from information_schema.tables where table_schema='public' and table_name=$1",
+          ["slo_alert_policies"],
+        ),
+      ).toMatchObject({ rows: [{ count: 1 }] });
     } finally {
       await client.close();
     }
@@ -976,7 +992,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(created.enabled).toBe(false);
       expect(
         await client.pool.query("select schema_version from server_settings where id='global'"),
-      ).toMatchObject({ rows: [{ schema_version: 13 }] });
+      ).toMatchObject({ rows: [{ schema_version: 14 }] });
       const updated = await store.update(created.id, {
         expectedConfigRevision: 1,
         name: "Down alert v2",

@@ -46,6 +46,10 @@ export function buildEventRunKey(automationId: string, event: DomainEvent): stri
       return clampRunKey(
         `${prefix}:${sanitizeSegment(event.userId)}:${sanitizeSegment(event.notificationId)}`,
       );
+    case "slo.burn-rate.changed":
+      return clampRunKey(
+        `${prefix}:${sanitizeSegment(event.sloId)}:${sanitizeSegment(event.state)}:${sanitizeSegment(event.window)}`,
+      );
     default: {
       const _never: never = event;
       return _never;

@@ -38,6 +38,7 @@ import { hasPermission } from "@dashboard/permissions";
 import type { IntegrationStore } from "@dashboard/integrations";
 import { createStatusPageService, type MaintenanceWindowService } from "@dashboard/status-pages";
 import { createReliabilityService, type ReliabilityService } from "@dashboard/reliability";
+import type { DomainEvent } from "@dashboard/events";
 import type { AutomationAuditSink } from "./actions";
 import { createJobRecorder } from "./jobs";
 import type { JobRecorder } from "./server";
@@ -54,6 +55,7 @@ export interface WorkerPersistence {
   integrationStore: IntegrationStore;
   audit: AutomationAuditSink;
   loadOwner: (userId: string) => Promise<AutomationOwnerRecord | null>;
+  bindDomainEventPublisher: (publish: (event: DomainEvent) => Promise<void>) => void;
   close: () => Promise<void>;
 }
 
@@ -129,6 +131,58 @@ function buildMaintenanceService(input: {
   return statusPages.maintenance;
 }
 
+function buildReliabilityService(input: {
+  store: Parameters<typeof createReliabilityService>[0]["store"];
+  notificationStore: NotificationStorePort;
+  listUsers: () => Promise<ReadonlyArray<{ id: string; status: "active" | "disabled" }>>;
+  resolvePermissionSubject: (userId: string) => Promise<{
+    status: "active" | "disabled";
+    isSystemAdmin: boolean;
+    directPermissions?: readonly string[];
+    groupPermissions?: readonly string[];
+  } | null>;
+  publishRef: { current: (event: DomainEvent) => Promise<void> };
+}): Pick<ReliabilityService, "tick"> {
+  const notifications = createNotificationService({ store: input.notificationStore });
+  return createReliabilityService({
+    store: input.store,
+    alerts: {
+      async listRecipientUserIds() {
+        const users = await input.listUsers();
+        const recipients: string[] = [];
+        for (const user of users) {
+          if (user.status !== "active") continue;
+          const subject = await input.resolvePermissionSubject(user.id);
+          if (!subject) continue;
+          if (
+            subject.isSystemAdmin ||
+            hasPermission(subject, "reliability.read") ||
+            hasPermission(subject, "slo.manage")
+          ) {
+            recipients.push(user.id);
+          }
+        }
+        return recipients;
+      },
+      async createNotification(payload) {
+        await notifications.createForUser({
+          userId: payload.userId,
+          title: payload.title,
+          body: payload.body,
+          severity: payload.severity,
+          category: payload.category,
+          dedupKey: payload.dedupKey,
+          sourceType: payload.sourceType,
+          sourceId: payload.sourceId,
+        });
+      },
+      async publishEvent(event) {
+        await input.publishRef.current(event);
+      },
+    },
+  });
+}
+
 export function createWorkerPersistenceFromEnv(
   env: Readonly<Record<string, string | undefined>>,
 ): WorkerPersistence | undefined {
@@ -137,6 +191,12 @@ export function createWorkerPersistenceFromEnv(
     DB_DRIVER: env.DB_DRIVER ?? "sqlite",
     DATABASE_URL: env.DATABASE_URL,
   });
+  const publishRef: { current: (event: DomainEvent) => Promise<void> } = {
+    current: async () => undefined,
+  };
+  const bindDomainEventPublisher = (publish: (event: DomainEvent) => Promise<void>) => {
+    publishRef.current = publish;
+  };
   if (config.DB_DRIVER === "postgres") {
     const client = createPostgresqlClient(config.DATABASE_URL);
     const automations = createPostgresqlAutomationStore(client);
@@ -162,9 +222,15 @@ export function createWorkerPersistenceFromEnv(
         resolvePermissionSubject: async (userId) =>
           (await auth.resolvePermissionSubject(userId)) ?? null,
       }),
-      reliability: createReliabilityService({
+      reliability: buildReliabilityService({
         store: createPostgresqlReliabilityStore(client),
+        notificationStore: notifications.notificationStore,
+        listUsers: () => auth.listUsers(),
+        resolvePermissionSubject: async (userId) =>
+          (await auth.resolvePermissionSubject(userId)) ?? null,
+        publishRef,
       }),
+      bindDomainEventPublisher,
       integrationStore: createPostgresqlIntegrationStore(client.pool),
       audit: {
         async record(event) {
@@ -203,9 +269,15 @@ export function createWorkerPersistenceFromEnv(
       resolvePermissionSubject: async (userId) =>
         (await auth.resolvePermissionSubject(userId)) ?? null,
     }),
-    reliability: createReliabilityService({
+    reliability: buildReliabilityService({
       store: createSqliteReliabilityStore(client),
+      notificationStore: notifications.notificationStore,
+      listUsers: () => auth.listUsers(),
+      resolvePermissionSubject: async (userId) =>
+        (await auth.resolvePermissionSubject(userId)) ?? null,
+      publishRef,
     }),
+    bindDomainEventPublisher,
     integrationStore: createSqliteIntegrationStore(client.sqlite),
     audit: {
       async record(event) {

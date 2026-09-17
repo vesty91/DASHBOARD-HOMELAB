@@ -14,6 +14,7 @@ const worker = await startWorker({
         incidents: persistence.incidents,
         maintenance: persistence.maintenance,
         reliability: persistence.reliability,
+        bindDomainEventPublisher: persistence.bindDomainEventPublisher,
         automations: {
           store: persistence.schedulerStore,
           loadOwner: persistence.loadOwner,

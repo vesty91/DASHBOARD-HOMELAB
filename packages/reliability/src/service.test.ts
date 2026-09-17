@@ -26,6 +26,21 @@ function emptyStore(): ReliabilityStorePort {
     deleteSlo: async () => {
       throw new Error("not implemented");
     },
+    listAlertPolicies: async () => [],
+    listEnabledAlertPolicies: async () => [],
+    getAlertPolicy: async () => null,
+    getAlertPolicyBySloId: async () => null,
+    createAlertPolicy: async () => {
+      throw new Error("not implemented");
+    },
+    updateAlertPolicy: async () => {
+      throw new Error("not implemented");
+    },
+    deleteAlertPolicy: async () => {
+      throw new Error("not implemented");
+    },
+    getAlertRuntime: async () => null,
+    upsertAlertRuntime: async () => undefined,
   };
 }
 

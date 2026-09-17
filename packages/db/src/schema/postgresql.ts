@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -807,5 +808,54 @@ export const serviceSlos = pgTable(
     ),
     check("service_slos_window_days_valid", sql`${t.windowDays} IN (7, 30, 90)`),
     check("service_slos_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const sloAlertPolicies = pgTable(
+  "slo_alert_policies",
+  {
+    id: uuid("id").primaryKey(),
+    sloId: uuid("slo_id")
+      .notNull()
+      .references(() => serviceSlos.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    warningThreshold: doublePrecision("warning_threshold").notNull(),
+    criticalThreshold: doublePrecision("critical_threshold").notNull(),
+    cooldownSeconds: integer("cooldown_seconds").notNull().default(3600),
+    notifyOnRecovery: boolean("notify_on_recovery").notNull().default(true),
+    configRevision: integer("config_revision").notNull().default(1),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("slo_alert_policies_slo_id_uq").on(t.sloId),
+    check("slo_alert_policies_warning_positive", sql`${t.warningThreshold} > 0`),
+    check(
+      "slo_alert_policies_critical_gt_warning",
+      sql`${t.criticalThreshold} > ${t.warningThreshold}`,
+    ),
+    check(
+      "slo_alert_policies_cooldown_range",
+      sql`${t.cooldownSeconds} >= 60 AND ${t.cooldownSeconds} <= 86400`,
+    ),
+    check("slo_alert_policies_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const sloAlertRuntimeState = pgTable(
+  "slo_alert_runtime_state",
+  {
+    sloId: uuid("slo_id")
+      .primaryKey()
+      .references(() => serviceSlos.id, { onDelete: "cascade" }),
+    lastState: text("last_state").notNull(),
+    lastNotifiedState: text("last_notified_state"),
+    lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
+    lastTransitionAt: timestamp("last_transition_at", { withTimezone: true }),
+    lastBurnRate: doublePrecision("last_burn_rate"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    check(
+      "slo_alert_runtime_state_valid",
+      sql`${t.lastState} IN ('healthy', 'warning', 'critical', 'insufficient-data')`,
+    ),
   ],
 );

@@ -288,7 +288,27 @@ function createCaller(
       evaluateBurnRate: async () => {
         throw new Error("burn rate not stubbed");
       },
-      tick: async () => ({ upserted: 0, deleted: 0, hourlyUpserted: 0, hourlyDeleted: 0 }),
+      listAlertPolicies: async () => [],
+      getAlertPolicy: async () => {
+        throw new Error("alert policy not stubbed");
+      },
+      createAlertPolicy: async () => {
+        throw new Error("alert policy not stubbed");
+      },
+      updateAlertPolicy: async () => {
+        throw new Error("alert policy not stubbed");
+      },
+      deleteAlertPolicy: async () => {
+        throw new Error("alert policy not stubbed");
+      },
+      tick: async () => ({
+        upserted: 0,
+        deleted: 0,
+        hourlyUpserted: 0,
+        hourlyDeleted: 0,
+        alertsEvaluated: 0,
+        alertsNotified: 0,
+      }),
     } as unknown as ApiContext["reliability"],
     audit: {
       record: async () => undefined,
@@ -2524,6 +2544,7 @@ describe("backup tRPC router", () => {
           maintenance_windows: 0,
           maintenance_window_targets: 0,
           service_slos: 0,
+          slo_alert_policies: 0,
         },
         encryptedSecretCount: 0,
         credentialCount: 0,
