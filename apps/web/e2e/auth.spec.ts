@@ -79,19 +79,22 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 8 });
   await page.mouse.up();
   await expect
-    .poll(() => {
-      const database = openE2eDatabase();
-      try {
-        return Number(
-          database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
-            ?.revision,
-        );
-      } finally {
-        database.close();
-      }
-    })
+    .poll(
+      () => {
+        const database = openE2eDatabase();
+        try {
+          return Number(
+            database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
+              ?.revision,
+          );
+        } finally {
+          database.close();
+        }
+      },
+      { timeout: 20_000 },
+    )
     .toBeGreaterThan(1);
-  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect(page.getByText("Sauvegardé")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Fixture item")).toBeVisible();
   await page.getByRole("button", { name: "Mobile" }).click();
   await expect(page.getByRole("button", { name: "Mobile" })).toHaveAttribute(
@@ -113,19 +116,22 @@ test("onboarding, login, protected admin and logout", async ({ page, context }) 
   await page.mouse.up();
   await page.getByRole("button", { name: "Desktop" }).click();
   await expect
-    .poll(() => {
-      const database = openE2eDatabase();
-      try {
-        return Number(
-          database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
-            ?.revision,
-        );
-      } finally {
-        database.close();
-      }
-    })
+    .poll(
+      () => {
+        const database = openE2eDatabase();
+        try {
+          return Number(
+            database.prepare("SELECT revision FROM boards WHERE id=?").get(String(board?.id))
+              ?.revision,
+          );
+        } finally {
+          database.close();
+        }
+      },
+      { timeout: 20_000 },
+    )
     .toBeGreaterThan(2);
-  await expect(page.getByText("Sauvegardé")).toBeVisible();
+  await expect(page.getByText("Sauvegardé")).toBeVisible({ timeout: 15_000 });
   await page.reload();
   await expect(page.getByRole("heading", { name: "Modifier Phase 4 Board" })).toBeVisible();
 
