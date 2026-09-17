@@ -30,6 +30,9 @@ export function canReceiveEvent(
         ticketUserId === event.userId &&
         subscriptions.some((subscription) => subscription.kind === "notifications")
       );
+    case "slo.burn-rate.changed":
+      // Delivered to automation bus subscribers; not a realtime UI subscription yet.
+      return false;
     default: {
       const exhaustive: never = event;
       void exhaustive;

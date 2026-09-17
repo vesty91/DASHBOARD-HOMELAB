@@ -119,6 +119,63 @@ export const evaluateBurnRateSchema = z
     }
   });
 
+export const createAlertPolicySchema = z
+  .object({
+    sloId: z.string().uuid(),
+    enabled: z.boolean().default(false),
+    warningThreshold: z.number().positive().max(1_000_000).default(1),
+    criticalThreshold: z.number().positive().max(1_000_000).default(14.4),
+    cooldownSeconds: z.number().int().min(60).max(86_400).default(3600),
+    notifyOnRecovery: z.boolean().default(true),
+  })
+  .superRefine((value, ctx) => {
+    if (!(value.criticalThreshold > value.warningThreshold)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "criticalThreshold must be > warningThreshold",
+        path: ["criticalThreshold"],
+      });
+    }
+  });
+
+export const updateAlertPolicySchema = z
+  .object({
+    id: z.string().uuid(),
+    expectedConfigRevision: z.number().int().positive(),
+    enabled: z.boolean().optional(),
+    warningThreshold: z.number().positive().max(1_000_000).optional(),
+    criticalThreshold: z.number().positive().max(1_000_000).optional(),
+    cooldownSeconds: z.number().int().min(60).max(86_400).optional(),
+    notifyOnRecovery: z.boolean().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.warningThreshold !== undefined &&
+      value.criticalThreshold !== undefined &&
+      !(value.criticalThreshold > value.warningThreshold)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "criticalThreshold must be > warningThreshold",
+        path: ["criticalThreshold"],
+      });
+    }
+  });
+
+export const deleteAlertPolicySchema = z.object({
+  id: z.string().uuid(),
+  expectedConfigRevision: z.number().int().positive(),
+});
+
+export const getAlertPolicySchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const listAlertPoliciesSchema = z.object({
+  sloIds: z.array(z.string().uuid()).max(50).optional(),
+  limit: z.number().int().min(1).max(200).default(100),
+});
+
 export const summarizeReliabilitySchema = z.object({
   serviceKeys: z.array(serviceKeySchema).max(50).optional(),
   windowDays: sloWindowDaysSchema.default(30),
@@ -133,4 +190,8 @@ export type DeleteSloInput = z.infer<typeof deleteSloSchema>;
 export type ListSlosInput = z.infer<typeof listSlosSchema>;
 export type EvaluateSloInput = z.infer<typeof evaluateSloSchema>;
 export type EvaluateBurnRateInput = z.infer<typeof evaluateBurnRateSchema>;
+export type CreateAlertPolicyInput = z.infer<typeof createAlertPolicySchema>;
+export type UpdateAlertPolicyInput = z.infer<typeof updateAlertPolicySchema>;
+export type DeleteAlertPolicyInput = z.infer<typeof deleteAlertPolicySchema>;
+export type ListAlertPoliciesInput = z.infer<typeof listAlertPoliciesSchema>;
 export type SummarizeReliabilityInput = z.infer<typeof summarizeReliabilitySchema>;

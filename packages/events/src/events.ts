@@ -12,6 +12,7 @@ export const DOMAIN_EVENT_TYPES = [
   "notification.created",
   "notification.updated",
   "notification.dismissed",
+  "slo.burn-rate.changed",
 ] as const;
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number];
 
@@ -98,6 +99,16 @@ export const domainEventSchema = z.discriminatedUnion("type", [
     type: z.literal("notification.dismissed"),
     userId: EVENT_RESOURCE_ID,
     notificationId: EVENT_RESOURCE_ID,
+    occurredAt: isoDate,
+  }),
+  z.object({
+    type: z.literal("slo.burn-rate.changed"),
+    serviceKey: EVENT_RESOURCE_ID,
+    sloId: EVENT_RESOURCE_ID,
+    state: z.enum(["healthy", "warning", "critical", "insufficient-data"]),
+    burnRate: z.number().finite().nullable(),
+    budgetRemaining: z.number().finite().nullable(),
+    window: z.enum(["fast", "slow"]),
     occurredAt: isoDate,
   }),
 ]);

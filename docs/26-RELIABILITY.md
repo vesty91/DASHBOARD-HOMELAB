@@ -1,9 +1,9 @@
 # 26 — Reliability & SLO Analytics
 
 Phase 26 **COMPLETE**. Phase 27.1 ajoute les rollups horaires (migration `0013`).
-Migrations `0011`–`0013`. DB `schemaVersion` **13**.
-Backup `formatVersion` 1 / `schemaVersion` **11** (SLO config durable ;
-rollups exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
+Migrations `0011`–`0014`. DB `schemaVersion` **14**.
+Backup `formatVersion` 1 / `schemaVersion` **12** (SLO + alert policies ;
+rollups et runtime state exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
 
 ## Objectif
 
@@ -114,6 +114,20 @@ Jamais `healthy` sans données éligibles.
 API : `reliability.evaluateBurnRate` (`reliability.read`).
 
 Seuils défaut moteur : warning `1`, critical `14.4` (surchargeables ; politiques persistées en 27.3).
+
+## Alert policies (Phase 27.3)
+
+Table `slo_alert_policies` (migration `0014`, DB `schemaVersion` **14**) :
+
+- `enabled` défaut **false**
+- seuils warning/critical, cooldown 60–86400 s, `notifyOnRecovery`
+- une politique par SLO (`sloId` unique)
+- backup **inclus** → backup `schemaVersion` **12**
+
+Table `slo_alert_runtime_state` : dérivée (last state / cooldown) — **exclue** du backup.
+
+Event fermé `slo.burn-rate.changed` (payload safe) → Notification Center (+ automation event allowlist).
+Pas de remédiation auto risquée. Dedup : même SLO + même état + cooldown.
 
 ## Backup
 

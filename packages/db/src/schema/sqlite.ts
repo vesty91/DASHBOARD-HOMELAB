@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable(
   "users",
@@ -852,5 +860,59 @@ export const serviceSlos = sqliteTable(
     ),
     check("service_slos_window_days_valid", sql`${t.windowDays} IN (7, 30, 90)`),
     check("service_slos_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const sloAlertPolicies = sqliteTable(
+  "slo_alert_policies",
+  {
+    id: text("id").primaryKey(),
+    sloId: text("slo_id")
+      .notNull()
+      .references(() => serviceSlos.id, { onDelete: "cascade" }),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    warningThreshold: real("warning_threshold").notNull(),
+    criticalThreshold: real("critical_threshold").notNull(),
+    cooldownSeconds: integer("cooldown_seconds").notNull().default(3600),
+    notifyOnRecovery: integer("notify_on_recovery", { mode: "boolean" }).notNull().default(true),
+    configRevision: integer("config_revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("slo_alert_policies_slo_id_uq").on(t.sloId),
+    check("slo_alert_policies_warning_positive", sql`${t.warningThreshold} > 0`),
+    check(
+      "slo_alert_policies_critical_gt_warning",
+      sql`${t.criticalThreshold} > ${t.warningThreshold}`,
+    ),
+    check(
+      "slo_alert_policies_cooldown_range",
+      sql`${t.cooldownSeconds} >= 60 AND ${t.cooldownSeconds} <= 86400`,
+    ),
+    check("slo_alert_policies_config_revision_positive", sql`${t.configRevision} > 0`),
+  ],
+);
+export const sloAlertRuntimeState = sqliteTable(
+  "slo_alert_runtime_state",
+  {
+    sloId: text("slo_id")
+      .primaryKey()
+      .references(() => serviceSlos.id, { onDelete: "cascade" }),
+    lastState: text("last_state", {
+      enum: ["healthy", "warning", "critical", "insufficient-data"],
+    }).notNull(),
+    lastNotifiedState: text("last_notified_state", {
+      enum: ["healthy", "warning", "critical", "insufficient-data"],
+    }),
+    lastNotifiedAt: integer("last_notified_at", { mode: "timestamp_ms" }),
+    lastTransitionAt: integer("last_transition_at", { mode: "timestamp_ms" }),
+    lastBurnRate: real("last_burn_rate"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    check(
+      "slo_alert_runtime_state_valid",
+      sql`${t.lastState} IN ('healthy', 'warning', 'critical', 'insufficient-data')`,
+    ),
   ],
 );

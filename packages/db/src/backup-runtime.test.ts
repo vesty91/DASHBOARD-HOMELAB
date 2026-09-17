@@ -39,6 +39,8 @@ describe("backup runtime", () => {
     expect(BACKUP_TABLE_NAMES).toContain("maintenance_windows");
     expect(BACKUP_TABLE_NAMES).toContain("maintenance_window_targets");
     expect(BACKUP_TABLE_NAMES).toContain("service_slos");
+    expect(BACKUP_TABLE_NAMES).toContain("slo_alert_policies");
+    expect(BACKUP_TABLE_NAMES).not.toContain("slo_alert_runtime_state");
     expect(BACKUP_TABLE_NAMES).not.toContain("service_reliability_daily");
     expect(BACKUP_TABLE_NAMES).not.toContain("service_reliability_hourly");
     expect(TABLE_NAMES).toContain("notifications");

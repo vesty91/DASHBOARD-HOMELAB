@@ -57,6 +57,13 @@ function eventFields(event: DomainEvent): Record<string, string> | null {
         jobType: event.jobType,
         errorCode: event.errorCode,
       };
+    case "slo.burn-rate.changed":
+      return {
+        serviceKey: event.serviceKey,
+        sloId: event.sloId,
+        burnState: event.state,
+        window: event.window,
+      };
     case "job.heartbeat":
     case "board.updated":
     case "board.deleted":

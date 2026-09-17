@@ -36,6 +36,7 @@ export interface WorkerOptions {
   incidents?: Pick<IncidentService, "handleStatusChanged">;
   maintenance?: Pick<MaintenanceWindowService, "tick">;
   reliability?: Pick<ReliabilityService, "tick">;
+  bindDomainEventPublisher?: (publish: (event: DomainEvent) => Promise<void>) => void;
   automations?: {
     store: AutomationSchedulerStore;
     loadOwner?: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -71,6 +72,9 @@ function heartbeat(now: Date): DomainEvent {
 export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHandle> {
   const intervalMs = Math.min(60_000, Math.max(5_000, options.intervalMs ?? DEFAULT_INTERVAL_MS));
   const bus = options.bus ?? (await createConfiguredEventBus(options.redisUrl));
+  options.bindDomainEventPublisher?.(async (event) => {
+    await bus.publish(event);
+  });
   const now = options.now ?? (() => new Date());
   let lastHeartbeatAt: string | null = null;
   let lastErrorCode: "INTERNAL_ERROR" | null = null;

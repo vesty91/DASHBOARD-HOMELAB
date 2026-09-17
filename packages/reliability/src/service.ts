@@ -27,34 +27,69 @@ import {
 import { ReliabilityError } from "./errors";
 import type { ReliabilityStorePort } from "./ports";
 import {
+  createAlertPolicySchema,
   createSloSchema,
+  deleteAlertPolicySchema,
   deleteSloSchema,
   evaluateBurnRateSchema,
   evaluateSloSchema,
+  getAlertPolicySchema,
   getSloSchema,
+  listAlertPoliciesSchema,
   listDailyReliabilitySchema,
   listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
+  updateAlertPolicySchema,
   updateSloSchema,
+  type CreateAlertPolicyInput,
   type CreateSloInput,
+  type DeleteAlertPolicyInput,
   type DeleteSloInput,
   type EvaluateBurnRateInput,
   type EvaluateSloInput,
+  type ListAlertPoliciesInput,
   type ListDailyReliabilityInput,
   type ListHourlyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
   type SummarizeReliabilityInput,
+  type UpdateAlertPolicyInput,
   type UpdateSloInput,
 } from "./schemas";
+import { decideSloAlert, formatSloAlertNotification } from "./slo-alerts";
 import { SLO_OBJECTIVE_BPS_MAX, computeSloFromDaily } from "./slo-math";
 import type { ReliabilityServiceSummary, ServiceSlo } from "./types";
 
 export type ReliabilityActor = {
   userId: string | null;
   subject: PermissionSubject | null;
+};
+
+export type ReliabilityAlertSideEffects = {
+  listRecipientUserIds: () => Promise<string[]>;
+  createNotification: (input: {
+    userId: string;
+    title: string;
+    body: string;
+    severity: "info" | "warning" | "critical";
+    dedupKey: string;
+    category: "system";
+    sourceType: "system";
+    sourceId: string;
+  }) => Promise<void>;
+  publishEvent: (event: {
+    type: "slo.burn-rate.changed";
+    serviceKey: string;
+    sloId: string;
+    state: "healthy" | "warning" | "critical" | "insufficient-data";
+    burnRate: number | null;
+    budgetRemaining: number | null;
+    window: "fast" | "slow";
+    occurredAt: string;
+  }) => Promise<void>;
+  dryRun?: boolean;
 };
 
 function requireRead(actor: ReliabilityActor): asserts actor is ReliabilityActor & {
@@ -83,9 +118,139 @@ export function createReliabilityService(deps: {
   store: ReliabilityStorePort;
   now?: () => Date;
   createId?: () => string;
+  alerts?: ReliabilityAlertSideEffects;
 }) {
   const now = deps.now ?? (() => new Date());
   const createId = deps.createId ?? (() => randomUUID());
+
+  async function computeBurnEvaluation(input: {
+    serviceKey: string;
+    objectiveBasisPoints: number;
+    excludeMaintenance: boolean;
+    warningThreshold: number;
+    criticalThreshold: number;
+    nowMs: number;
+  }) {
+    const closedHours = listClosedUtcHours({ asOfMs: input.nowMs, windowHours: 72 });
+    const fromHourUtc = closedHours[0]!;
+    const toHourUtc = closedHours[closedHours.length - 1]!;
+    const rows = await deps.store.listHourly({
+      serviceKeys: [input.serviceKey],
+      fromHourUtc,
+      toHourUtc,
+      limit: 72,
+    });
+    const byHour = new Map(rows.map((row) => [row.hourUtc, row]));
+    const hoursByWindow: Partial<Record<BurnRateWindowHours, HourlyBucketInput[]>> = {};
+    for (const windowHours of BURN_RATE_WINDOWS_HOURS) {
+      const needed = listClosedUtcHours({ asOfMs: input.nowMs, windowHours });
+      hoursByWindow[windowHours] = needed.map((hourUtc) => {
+        const row = byHour.get(hourUtc);
+        if (!row) {
+          return {
+            observedSeconds: 0,
+            availableSeconds: 0,
+            degradedSeconds: 0,
+            unavailableSeconds: 0,
+            maintenanceSeconds: 0,
+            unknownSeconds: 0,
+          };
+        }
+        return {
+          observedSeconds: row.observedSeconds,
+          availableSeconds: row.availableSeconds,
+          degradedSeconds: row.degradedSeconds,
+          unavailableSeconds: row.unavailableSeconds,
+          maintenanceSeconds: row.maintenanceSeconds,
+          unknownSeconds: row.unknownSeconds,
+        };
+      });
+    }
+    return evaluateBurnRate({
+      hoursByWindow,
+      objectiveBasisPoints: input.objectiveBasisPoints,
+      excludeMaintenance: input.excludeMaintenance,
+      warningThreshold: input.warningThreshold,
+      criticalThreshold: input.criticalThreshold,
+    });
+  }
+
+  async function processAlertPolicies(nowMs: number): Promise<{
+    evaluated: number;
+    notified: number;
+  }> {
+    const policies = await deps.store.listEnabledAlertPolicies();
+    let notified = 0;
+    for (const policy of policies) {
+      const evaluation = await computeBurnEvaluation({
+        serviceKey: policy.serviceKey,
+        objectiveBasisPoints: policy.objectiveBasisPoints,
+        excludeMaintenance: policy.excludeMaintenance,
+        warningThreshold: policy.warningThreshold,
+        criticalThreshold: policy.criticalThreshold,
+        nowMs,
+      });
+      const previous = await deps.store.getAlertRuntime(policy.sloId);
+      const decision = decideSloAlert({
+        sloId: policy.sloId,
+        policy,
+        previous,
+        nextState: evaluation.state,
+        burnRate: evaluation.pairs.fast.burnRate ?? evaluation.pairs.slow.burnRate,
+        nowMs,
+      });
+      await deps.store.upsertAlertRuntime({
+        ...decision.nextRuntime,
+        now: new Date(nowMs),
+      });
+      if (!decision.shouldNotify || !deps.alerts) continue;
+      if (deps.alerts.dryRun) continue;
+      if (decision.action === "none" || decision.action === "record-only") continue;
+
+      const windowLabel =
+        evaluation.pairs.fast.state === decision.nextState
+          ? "fast"
+          : evaluation.pairs.slow.state === decision.nextState
+            ? "slow"
+            : "fast";
+      const message = formatSloAlertNotification({
+        action: decision.action,
+        serviceKey: policy.serviceKey,
+        state: decision.nextState,
+        burnRate: decision.nextRuntime.lastBurnRate,
+        windowLabel,
+      });
+      const recipients = await deps.alerts.listRecipientUserIds();
+      const dedupKey = `slo-burn:${policy.sloId}:${decision.nextState}:${Math.floor(nowMs / 60_000)}`;
+      for (const userId of recipients) {
+        await deps.alerts.createNotification({
+          userId,
+          title: message.title,
+          body: message.body,
+          severity: message.severity,
+          dedupKey,
+          category: "system",
+          sourceType: "system",
+          sourceId: policy.sloId,
+        });
+      }
+      const budgetRemaining =
+        evaluation.pairs.fast.short.budgetRemainingFraction ??
+        evaluation.pairs.slow.short.budgetRemainingFraction;
+      await deps.alerts.publishEvent({
+        type: "slo.burn-rate.changed",
+        serviceKey: policy.serviceKey,
+        sloId: policy.sloId,
+        state: decision.nextState,
+        burnRate: decision.nextRuntime.lastBurnRate,
+        budgetRemaining,
+        window: windowLabel,
+        occurredAt: new Date(nowMs).toISOString(),
+      });
+      notified += 1;
+    }
+    return { evaluated: policies.length, notified };
+  }
 
   async function rebuildWindow(input: {
     days: number;
@@ -328,61 +493,92 @@ export function createReliabilityService(deps: {
       const slo = await requireSlo(input.id);
       const nowMs = now().getTime();
       const closedHours = listClosedUtcHours({ asOfMs: nowMs, windowHours: 72 });
-      const fromHourUtc = closedHours[0]!;
-      const toHourUtc = closedHours[closedHours.length - 1]!;
-      const rows = await deps.store.listHourly({
-        serviceKeys: [slo.serviceKey],
-        fromHourUtc,
-        toHourUtc,
-        limit: 72,
-      });
-      const byHour = new Map(rows.map((row) => [row.hourUtc, row]));
-
-      const hoursByWindow: Partial<Record<BurnRateWindowHours, HourlyBucketInput[]>> = {};
-      for (const windowHours of BURN_RATE_WINDOWS_HOURS) {
-        const needed = listClosedUtcHours({ asOfMs: nowMs, windowHours });
-        hoursByWindow[windowHours] = needed.map((hourUtc) => {
-          const row = byHour.get(hourUtc);
-          if (!row) {
-            return {
-              observedSeconds: 0,
-              availableSeconds: 0,
-              degradedSeconds: 0,
-              unavailableSeconds: 0,
-              maintenanceSeconds: 0,
-              unknownSeconds: 0,
-            };
-          }
-          return {
-            observedSeconds: row.observedSeconds,
-            availableSeconds: row.availableSeconds,
-            degradedSeconds: row.degradedSeconds,
-            unavailableSeconds: row.unavailableSeconds,
-            maintenanceSeconds: row.maintenanceSeconds,
-            unknownSeconds: row.unknownSeconds,
-          };
-        });
-      }
-
-      const evaluation = evaluateBurnRate({
-        hoursByWindow,
+      const evaluation = await computeBurnEvaluation({
+        serviceKey: slo.serviceKey,
         objectiveBasisPoints: slo.objectiveBasisPoints,
         excludeMaintenance: slo.excludeMaintenance,
+        warningThreshold: input.warningThreshold ?? 1,
+        criticalThreshold: input.criticalThreshold ?? 14.4,
+        nowMs,
+      });
+      return {
+        slo,
+        evaluation,
+        fromHourUtc: closedHours[0]!,
+        toHourUtc: closedHours[closedHours.length - 1]!,
+        closedHourCount: closedHours.length,
+      };
+    },
+
+    async listAlertPolicies(raw: ListAlertPoliciesInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = listAlertPoliciesSchema.parse(raw);
+      return deps.store.listAlertPolicies({
+        ...(input.sloIds !== undefined ? { sloIds: input.sloIds } : {}),
+        limit: input.limit,
+      });
+    },
+
+    async getAlertPolicy(raw: { id: string }, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = getAlertPolicySchema.parse(raw);
+      const policy = await deps.store.getAlertPolicy(input.id);
+      if (!policy) throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+      return policy;
+    },
+
+    async createAlertPolicy(raw: CreateAlertPolicyInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = createAlertPolicySchema.parse(raw);
+      await requireSlo(input.sloId);
+      const existing = await deps.store.getAlertPolicyBySloId(input.sloId);
+      if (existing) {
+        throw new ReliabilityError("CONFLICT", "Alert policy already exists for SLO");
+      }
+      return deps.store.createAlertPolicy({
+        id: createId(),
+        sloId: input.sloId,
+        enabled: input.enabled,
+        warningThreshold: input.warningThreshold,
+        criticalThreshold: input.criticalThreshold,
+        cooldownSeconds: input.cooldownSeconds,
+        notifyOnRecovery: input.notifyOnRecovery,
+        now: now(),
+      });
+    },
+
+    async updateAlertPolicy(raw: UpdateAlertPolicyInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = updateAlertPolicySchema.parse(raw);
+      const existing = await deps.store.getAlertPolicy(input.id);
+      if (!existing) throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
+      const warningThreshold = input.warningThreshold ?? existing.warningThreshold;
+      const criticalThreshold = input.criticalThreshold ?? existing.criticalThreshold;
+      if (!(criticalThreshold > warningThreshold)) {
+        throw new ReliabilityError("VALIDATION", "criticalThreshold must be > warningThreshold");
+      }
+      return deps.store.updateAlertPolicy({
+        id: input.id,
+        expectedConfigRevision: input.expectedConfigRevision,
+        ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
         ...(input.warningThreshold !== undefined
           ? { warningThreshold: input.warningThreshold }
           : {}),
         ...(input.criticalThreshold !== undefined
           ? { criticalThreshold: input.criticalThreshold }
           : {}),
+        ...(input.cooldownSeconds !== undefined ? { cooldownSeconds: input.cooldownSeconds } : {}),
+        ...(input.notifyOnRecovery !== undefined
+          ? { notifyOnRecovery: input.notifyOnRecovery }
+          : {}),
+        now: now(),
       });
+    },
 
-      return {
-        slo,
-        evaluation,
-        fromHourUtc,
-        toHourUtc,
-        closedHourCount: closedHours.length,
-      };
+    async deleteAlertPolicy(raw: DeleteAlertPolicyInput, actor: ReliabilityActor) {
+      requireSloManage(actor);
+      const input = deleteAlertPolicySchema.parse(raw);
+      await deps.store.deleteAlertPolicy(input.id, input.expectedConfigRevision);
     },
 
     async summarize(raw: SummarizeReliabilityInput, actor: ReliabilityActor) {
@@ -479,6 +675,8 @@ export function createReliabilityService(deps: {
       deleted: number;
       hourlyUpserted: number;
       hourlyDeleted: number;
+      alertsEvaluated: number;
+      alertsNotified: number;
     }> {
       const nowMs = now().getTime();
       const rebuilt = await rebuildWindow({ days: 2, nowMs });
@@ -490,11 +688,14 @@ export function createReliabilityService(deps: {
       const deleted = await deps.store.deleteOlderThan(cutoff);
       const hourlyCutoff = utcHourString(nowMs - RELIABILITY_HOURLY_RETENTION_HOURS * MS_PER_HOUR);
       const hourlyDeleted = await deps.store.deleteHourlyOlderThan(hourlyCutoff);
+      const alerts = await processAlertPolicies(nowMs);
       return {
         upserted: rebuilt.upserted,
         deleted,
         hourlyUpserted: hourlyRebuilt.upserted,
         hourlyDeleted,
+        alertsEvaluated: alerts.evaluated,
+        alertsNotified: alerts.notified,
       };
     },
   };

@@ -36,6 +36,8 @@ export const TABLE_NAMES = [
   "maintenance_windows",
   "maintenance_window_targets",
   "service_slos",
+  "slo_alert_policies",
+  "slo_alert_runtime_state",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
@@ -276,6 +278,27 @@ export const SCHEMA_CONTRACT = {
     "enabled",
     "configRevision",
     "createdAt",
+    "updatedAt",
+  ],
+  slo_alert_policies: [
+    "id",
+    "sloId",
+    "enabled",
+    "warningThreshold",
+    "criticalThreshold",
+    "cooldownSeconds",
+    "notifyOnRecovery",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
+  slo_alert_runtime_state: [
+    "sloId",
+    "lastState",
+    "lastNotifiedState",
+    "lastNotifiedAt",
+    "lastTransitionAt",
+    "lastBurnRate",
     "updatedAt",
   ],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;

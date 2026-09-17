@@ -20,6 +20,7 @@ try {
     "0011_normal_mac_gargan.sql",
     "0012_tranquil_mindworm.sql",
     "0013_mushy_captain_midlands.sql",
+    "0014_boring_millenium_guard.sql",
   ])
     database.exec(
       await readFile(

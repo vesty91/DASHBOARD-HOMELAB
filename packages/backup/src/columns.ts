@@ -28,6 +28,7 @@ export const BACKUP_TABLE_NAMES = [
   "maintenance_windows",
   "maintenance_window_targets",
   "service_slos",
+  "slo_alert_policies",
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLE_NAMES)[number];
@@ -62,6 +63,7 @@ export const TABLE_INSERT_ORDER = [
   "maintenance_windows",
   "maintenance_window_targets",
   "service_slos",
+  "slo_alert_policies",
 ] as const satisfies readonly BackupTableName[];
 
 export const TABLE_DELETE_ORDER = [...TABLE_INSERT_ORDER].reverse();
@@ -264,6 +266,18 @@ export const BACKUP_COLUMNS = {
     "windowDays",
     "excludeMaintenance",
     "enabled",
+    "configRevision",
+    "createdAt",
+    "updatedAt",
+  ],
+  slo_alert_policies: [
+    "id",
+    "sloId",
+    "enabled",
+    "warningThreshold",
+    "criticalThreshold",
+    "cooldownSeconds",
+    "notifyOnRecovery",
     "configRevision",
     "createdAt",
     "updatedAt",

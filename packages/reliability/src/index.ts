@@ -25,36 +25,53 @@ export {
 } from "./aggregation";
 export { ReliabilityError, isReliabilityError } from "./errors";
 export {
+  createAlertPolicySchema,
   createSloSchema,
+  deleteAlertPolicySchema,
   deleteSloSchema,
   evaluateBurnRateSchema,
   evaluateSloSchema,
+  getAlertPolicySchema,
   getSloSchema,
+  listAlertPoliciesSchema,
   listDailyReliabilitySchema,
   listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
   serviceKeySchema,
+  updateAlertPolicySchema,
   updateSloSchema,
   utcDateSchema,
+  type CreateAlertPolicyInput,
   type CreateSloInput,
+  type DeleteAlertPolicyInput,
   type DeleteSloInput,
   type EvaluateBurnRateInput,
   type EvaluateSloInput,
+  type ListAlertPoliciesInput,
   type ListDailyReliabilityInput,
   type ListHourlyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
   type SummarizeReliabilityInput,
+  type UpdateAlertPolicyInput,
   type UpdateSloInput,
 } from "./schemas";
 export {
   createReliabilityService,
   type ReliabilityService,
   type ReliabilityActor,
+  type ReliabilityAlertSideEffects,
 } from "./service";
-export type { ReliabilityStorePort } from "./ports";
+export type { ReliabilityStorePort, SloAlertPolicy, SloAlertRuntimeState } from "./ports";
+export {
+  decideSloAlert,
+  formatSloAlertNotification,
+  isAlertingState,
+  type SloAlertDecision,
+  type SloAlertDecisionAction,
+} from "./slo-alerts";
 export {
   BURN_RATE_WINDOWS_HOURS,
   BURN_RATE_WINDOW_LABELS,

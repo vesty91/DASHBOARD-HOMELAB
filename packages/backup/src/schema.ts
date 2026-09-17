@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 11;
-export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11] as const;
+export const BACKUP_SCHEMA_VERSION = 12;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11, 12] as const;
 export const BACKUP_APP_VERSION = "1.6.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -392,6 +392,30 @@ const serviceSloRowSchema = z
   })
   .strict();
 
+const sloAlertPolicyRowSchema = z
+  .object({
+    id: uuidSchema,
+    sloId: uuidSchema,
+    enabled: z.boolean(),
+    warningThreshold: z.number().positive(),
+    criticalThreshold: z.number().positive(),
+    cooldownSeconds: z.number().int().min(60).max(86_400),
+    notifyOnRecovery: z.boolean(),
+    configRevision: z.number().int().positive(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!(value.criticalThreshold > value.warningThreshold)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "criticalThreshold must be > warningThreshold",
+        path: ["criticalThreshold"],
+      });
+    }
+  });
+
 export const backupTablesSchemaV6 = z
   .object({
     users: z.array(userRowSchema).max(10_000),
@@ -431,8 +455,12 @@ export const backupTablesSchemaV10 = backupTablesSchemaV9.extend({
   maintenance_window_targets: z.array(maintenanceWindowTargetRowSchema).max(10_000),
 });
 
-export const backupTablesSchema = backupTablesSchemaV10.extend({
+export const backupTablesSchemaV11 = backupTablesSchemaV10.extend({
   service_slos: z.array(serviceSloRowSchema).max(2_000),
+});
+
+export const backupTablesSchema = backupTablesSchemaV11.extend({
+  slo_alert_policies: z.array(sloAlertPolicyRowSchema).max(2_000),
 });
 
 export const backupManifestSchema = z
@@ -446,6 +474,7 @@ export const backupManifestSchema = z
       z.literal(8),
       z.literal(9),
       z.literal(10),
+      z.literal(11),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     databaseSchemaVersion: z.union([
@@ -455,6 +484,7 @@ export const backupManifestSchema = z
       z.literal(8),
       z.literal(9),
       z.literal(10),
+      z.literal(11),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     appVersion: z.string().min(1).max(40),
@@ -520,6 +550,7 @@ export type BackupTablesV5 = z.infer<typeof backupTablesSchemaV5>;
 export type BackupTablesV6 = z.infer<typeof backupTablesSchemaV6>;
 export type BackupTablesV9 = z.infer<typeof backupTablesSchemaV9>;
 export type BackupTablesV10 = z.infer<typeof backupTablesSchemaV10>;
+export type BackupTablesV11 = z.infer<typeof backupTablesSchemaV11>;
 export type BackupTables = z.infer<typeof backupTablesSchema>;
 export type BackupManifest = z.infer<typeof backupManifestSchema>;
 export type BackupArchive = z.infer<typeof backupArchiveSchema>;
