@@ -1,5 +1,6 @@
 import type {
   DailyReliabilityRollup,
+  HourlyReliabilityRollup,
   IncidentIntervalInput,
   MaintenanceIntervalInput,
   ReliabilityBucket,
@@ -7,9 +8,12 @@ import type {
 } from "./types";
 
 export const RELIABILITY_RETENTION_DAYS = 730;
+export const RELIABILITY_HOURLY_RETENTION_HOURS = 2160;
 export const RELIABILITY_REBUILD_DEFAULT_DAYS = 7;
 export const RELIABILITY_REBUILD_MAX_DAYS = 90;
+export const RELIABILITY_REBUILD_DEFAULT_HOURS = 48;
 export const MS_PER_DAY = 86_400_000;
+export const MS_PER_HOUR = 3_600_000;
 
 /** Bucket precedence (highest first). Mutually exclusive accounting. */
 export const BUCKET_PRECEDENCE: readonly ReliabilityBucket[] = [
@@ -32,6 +36,10 @@ export function utcDateString(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export function utcHourString(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 13);
+}
+
 export function utcDayStartMs(dateUtc: string): number {
   const parsed = Date.parse(`${dateUtc}T00:00:00.000Z`);
   if (Number.isNaN(parsed)) throw new Error(`INVALID_UTC_DATE:${dateUtc}`);
@@ -40,6 +48,16 @@ export function utcDayStartMs(dateUtc: string): number {
 
 export function utcDayEndMs(dateUtc: string): number {
   return utcDayStartMs(dateUtc) + MS_PER_DAY;
+}
+
+export function utcHourStartMs(hourUtc: string): number {
+  const parsed = Date.parse(`${hourUtc}:00:00.000Z`);
+  if (Number.isNaN(parsed)) throw new Error(`INVALID_UTC_HOUR:${hourUtc}`);
+  return parsed;
+}
+
+export function utcHourEndMs(hourUtc: string): number {
+  return utcHourStartMs(hourUtc) + MS_PER_HOUR;
 }
 
 export function listUtcDatesInclusive(fromDateUtc: string, toDateUtc: string): string[] {
@@ -51,6 +69,17 @@ export function listUtcDatesInclusive(fromDateUtc: string, toDateUtc: string): s
     dates.push(utcDateString(cursor));
   }
   return dates;
+}
+
+export function listUtcHoursInclusive(fromHourUtc: string, toHourUtc: string): string[] {
+  const start = utcHourStartMs(fromHourUtc);
+  const end = utcHourStartMs(toHourUtc);
+  if (end < start) return [];
+  const hours: string[] = [];
+  for (let cursor = start; cursor <= end; cursor += MS_PER_HOUR) {
+    hours.push(utcHourString(cursor));
+  }
+  return hours;
 }
 
 export function clampRebuildDays(days: number): number {
@@ -104,17 +133,20 @@ function prefer(a: ReliabilityBucket, b: ReliabilityBucket): ReliabilityBucket {
 
 type Segment = { startMs: number; endMs: number; bucket: ReliabilityBucket };
 
-/**
- * Paint intervals onto a day window with mutual-exclusion precedence.
- * Baseline for an observable service is `available`; before observability is `unknown`.
- */
-export function accountDayBuckets(input: {
-  dateUtc: string;
+type WindowBucketInput = {
+  windowStartMs: number;
+  windowEndExclusiveMs: number;
   nowMs: number;
   observableFromMs: number;
   incidents: readonly { startsAtMs: number; endsAtMs: number }[];
   maintenances: readonly { startsAtMs: number; endsAtMs: number }[];
-}): {
+};
+
+/**
+ * Paint intervals onto a time window with mutual-exclusion precedence.
+ * Baseline for an observable service is `available`; before observability is `unknown`.
+ */
+export function accountWindowBuckets(input: WindowBucketInput): {
   observedSeconds: number;
   availableSeconds: number;
   degradedSeconds: number;
@@ -122,27 +154,30 @@ export function accountDayBuckets(input: {
   maintenanceSeconds: number;
   unknownSeconds: number;
 } {
-  const dayStart = utcDayStartMs(input.dateUtc);
-  const dayEndExclusive = Math.min(utcDayEndMs(input.dateUtc), input.nowMs);
-  if (dayEndExclusive <= dayStart) {
+  const windowStart = input.windowStartMs;
+  const windowEndExclusive = Math.min(input.windowEndExclusiveMs, input.nowMs);
+  if (windowEndExclusive <= windowStart) {
     return { observedSeconds: 0, ...emptyBuckets() };
   }
 
-  const cuts = new Set<number>([dayStart, dayEndExclusive]);
-  const observableStart = Math.max(dayStart, Math.min(dayEndExclusive, input.observableFromMs));
+  const cuts = new Set<number>([windowStart, windowEndExclusive]);
+  const observableStart = Math.max(
+    windowStart,
+    Math.min(windowEndExclusive, input.observableFromMs),
+  );
   cuts.add(observableStart);
 
   for (const interval of input.incidents) {
-    const start = Math.max(dayStart, interval.startsAtMs);
-    const end = Math.min(dayEndExclusive, interval.endsAtMs);
+    const start = Math.max(windowStart, interval.startsAtMs);
+    const end = Math.min(windowEndExclusive, interval.endsAtMs);
     if (end > start) {
       cuts.add(start);
       cuts.add(end);
     }
   }
   for (const interval of input.maintenances) {
-    const start = Math.max(dayStart, interval.startsAtMs);
-    const end = Math.min(dayEndExclusive, interval.endsAtMs);
+    const start = Math.max(windowStart, interval.startsAtMs);
+    const end = Math.min(windowEndExclusive, interval.endsAtMs);
     if (end > start) {
       cuts.add(start);
       cuts.add(end);
@@ -156,7 +191,7 @@ export function accountDayBuckets(input: {
   for (let i = 0; i < points.length - 1; i += 1) {
     const start = points[i]!;
     const end = points[i + 1]!;
-    if (end <= start || start < dayStart || end > dayEndExclusive) continue;
+    if (end <= start || start < windowStart || end > windowEndExclusive) continue;
     const mid = start + (end - start) / 2;
     let bucket: ReliabilityBucket = mid < input.observableFromMs ? "unknown" : "available";
 
@@ -179,6 +214,43 @@ export function accountDayBuckets(input: {
   return { observedSeconds, ...buckets };
 }
 
+/**
+ * Paint intervals onto a day window with mutual-exclusion precedence.
+ */
+export function accountDayBuckets(input: {
+  dateUtc: string;
+  nowMs: number;
+  observableFromMs: number;
+  incidents: readonly { startsAtMs: number; endsAtMs: number }[];
+  maintenances: readonly { startsAtMs: number; endsAtMs: number }[];
+}): ReturnType<typeof accountWindowBuckets> {
+  return accountWindowBuckets({
+    windowStartMs: utcDayStartMs(input.dateUtc),
+    windowEndExclusiveMs: utcDayEndMs(input.dateUtc),
+    nowMs: input.nowMs,
+    observableFromMs: input.observableFromMs,
+    incidents: input.incidents,
+    maintenances: input.maintenances,
+  });
+}
+
+export function accountHourBuckets(input: {
+  hourUtc: string;
+  nowMs: number;
+  observableFromMs: number;
+  incidents: readonly { startsAtMs: number; endsAtMs: number }[];
+  maintenances: readonly { startsAtMs: number; endsAtMs: number }[];
+}): ReturnType<typeof accountWindowBuckets> {
+  return accountWindowBuckets({
+    windowStartMs: utcHourStartMs(input.hourUtc),
+    windowEndExclusiveMs: utcHourEndMs(input.hourUtc),
+    nowMs: input.nowMs,
+    observableFromMs: input.observableFromMs,
+    incidents: input.incidents,
+    maintenances: input.maintenances,
+  });
+}
+
 export function countIncidentsTouchingDay(
   dateUtc: string,
   incidents: readonly IncidentIntervalInput[],
@@ -191,6 +263,22 @@ export function countIncidentsTouchingDay(
     if (incident.serviceKey !== serviceKey) continue;
     const end = incident.resolvedAtMs ?? Number.POSITIVE_INFINITY;
     if (incident.openedAtMs < dayEnd && end > dayStart) ids.add(incident.id);
+  }
+  return ids.size;
+}
+
+export function countIncidentsTouchingHour(
+  hourUtc: string,
+  incidents: readonly IncidentIntervalInput[],
+  serviceKey: string,
+): number {
+  const hourStart = utcHourStartMs(hourUtc);
+  const hourEnd = utcHourEndMs(hourUtc);
+  const ids = new Set<string>();
+  for (const incident of incidents) {
+    if (incident.serviceKey !== serviceKey) continue;
+    const end = incident.resolvedAtMs ?? Number.POSITIVE_INFINITY;
+    if (incident.openedAtMs < hourEnd && end > hourStart) ids.add(incident.id);
   }
   return ids.size;
 }
@@ -248,7 +336,74 @@ export function buildDailyRollup(input: {
   };
 }
 
-export function assertRollupInvariants(rollup: DailyReliabilityRollup): void {
+export function buildHourlyRollup(input: {
+  id: string;
+  serviceKey: string;
+  hourUtc: string;
+  nowMs: number;
+  presence: ServicePresence;
+  incidents: readonly IncidentIntervalInput[];
+  maintenances: readonly MaintenanceIntervalInput[];
+  updatedAt?: Date;
+}): HourlyReliabilityRollup {
+  const serviceIncidents = input.incidents
+    .filter((item) => item.serviceKey === input.serviceKey)
+    .map((item) => ({
+      startsAtMs: item.openedAtMs,
+      endsAtMs: item.resolvedAtMs ?? input.nowMs,
+    }));
+  const serviceMaintenances = input.maintenances
+    .filter((item) => item.serviceKey === input.serviceKey && !item.cancelled)
+    .map((item) => ({
+      startsAtMs: item.startsAtMs,
+      endsAtMs: item.endsAtMs,
+    }));
+
+  const buckets = accountHourBuckets({
+    hourUtc: input.hourUtc,
+    nowMs: input.nowMs,
+    observableFromMs: input.presence.observableFromMs,
+    incidents: serviceIncidents,
+    maintenances: serviceMaintenances,
+  });
+
+  const sum =
+    buckets.availableSeconds +
+    buckets.degradedSeconds +
+    buckets.unavailableSeconds +
+    buckets.maintenanceSeconds +
+    buckets.unknownSeconds;
+  if (sum > buckets.observedSeconds) {
+    throw new Error(
+      `RELIABILITY_BUCKET_OVERFLOW:${input.serviceKey}:${input.hourUtc}:${sum}/${buckets.observedSeconds}`,
+    );
+  }
+
+  return {
+    id: input.id,
+    serviceKey: input.serviceKey,
+    hourUtc: input.hourUtc,
+    ...buckets,
+    incidentCount: countIncidentsTouchingHour(input.hourUtc, input.incidents, input.serviceKey),
+    updatedAt: input.updatedAt ?? new Date(input.nowMs),
+  };
+}
+
+type RollupInvariantFields = {
+  serviceKey: string;
+  observedSeconds: number;
+  availableSeconds: number;
+  degradedSeconds: number;
+  unavailableSeconds: number;
+  maintenanceSeconds: number;
+  unknownSeconds: number;
+  incidentCount: number;
+  dateUtc?: string;
+  hourUtc?: string;
+};
+
+export function assertRollupInvariants(rollup: RollupInvariantFields): void {
+  const label = rollup.dateUtc ?? rollup.hourUtc ?? "?";
   const fields = [
     rollup.observedSeconds,
     rollup.availableSeconds,
@@ -260,7 +415,7 @@ export function assertRollupInvariants(rollup: DailyReliabilityRollup): void {
   ];
   for (const value of fields) {
     if (!Number.isInteger(value) || value < 0) {
-      throw new Error(`RELIABILITY_NEGATIVE_OR_FLOAT:${rollup.serviceKey}:${rollup.dateUtc}`);
+      throw new Error(`RELIABILITY_NEGATIVE_OR_FLOAT:${rollup.serviceKey}:${label}`);
     }
   }
   const sum =
@@ -270,7 +425,7 @@ export function assertRollupInvariants(rollup: DailyReliabilityRollup): void {
     rollup.maintenanceSeconds +
     rollup.unknownSeconds;
   if (sum > rollup.observedSeconds) {
-    throw new Error(`RELIABILITY_BUCKET_OVERFLOW:${rollup.serviceKey}:${rollup.dateUtc}`);
+    throw new Error(`RELIABILITY_BUCKET_OVERFLOW:${rollup.serviceKey}:${label}`);
   }
 }
 

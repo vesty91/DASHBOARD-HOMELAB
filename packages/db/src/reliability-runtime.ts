@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import {
   ReliabilityError,
   type DailyReliabilityRollup,
+  type HourlyReliabilityRollup,
   type IncidentIntervalInput,
   type MaintenanceIntervalInput,
   type ReliabilityStorePort,
@@ -14,10 +15,9 @@ import type { SqliteClient } from "./client/sqlite";
 import * as postgresqlSchema from "./schema/postgresql";
 import * as sqliteSchema from "./schema/sqlite";
 
-function toRollup(row: {
+type RollupRow = {
   id: string;
   serviceKey: string;
-  dateUtc: string;
   observedSeconds: number;
   availableSeconds: number;
   degradedSeconds: number;
@@ -26,11 +26,29 @@ function toRollup(row: {
   unknownSeconds: number;
   incidentCount: number;
   updatedAt: Date;
-}): DailyReliabilityRollup {
+};
+
+function toDailyRollup(row: RollupRow & { dateUtc: string }): DailyReliabilityRollup {
   return {
     id: row.id,
     serviceKey: row.serviceKey,
     dateUtc: row.dateUtc,
+    observedSeconds: row.observedSeconds,
+    availableSeconds: row.availableSeconds,
+    degradedSeconds: row.degradedSeconds,
+    unavailableSeconds: row.unavailableSeconds,
+    maintenanceSeconds: row.maintenanceSeconds,
+    unknownSeconds: row.unknownSeconds,
+    incidentCount: row.incidentCount,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function toHourlyRollup(row: RollupRow & { hourUtc: string }): HourlyReliabilityRollup {
+  return {
+    id: row.id,
+    serviceKey: row.serviceKey,
+    hourUtc: row.hourUtc,
     observedSeconds: row.observedSeconds,
     availableSeconds: row.availableSeconds,
     degradedSeconds: row.degradedSeconds,
@@ -95,6 +113,14 @@ function createReliabilityStore(adapters: {
     limit: number;
   }): Promise<DailyReliabilityRollup[]>;
   deleteOlderThan(dateUtcExclusive: string): Promise<number>;
+  upsertHourly(rows: readonly HourlyReliabilityRollup[]): Promise<void>;
+  listHourly(input: {
+    serviceKeys: readonly string[];
+    fromHourUtc: string;
+    toHourUtc: string;
+    limit: number;
+  }): Promise<HourlyReliabilityRollup[]>;
+  deleteHourlyOlderThan(hourUtcExclusive: string): Promise<number>;
   listSlos(input?: { serviceKeys?: readonly string[]; limit?: number }): Promise<ServiceSlo[]>;
   getSlo(id: string): Promise<ServiceSlo | null>;
   createSlo(input: {
@@ -127,6 +153,9 @@ function createReliabilityStore(adapters: {
     upsertDaily: (rows) => adapters.upsertDaily(rows),
     listDaily: (input) => adapters.listDaily(input),
     deleteOlderThan: (dateUtcExclusive) => adapters.deleteOlderThan(dateUtcExclusive),
+    upsertHourly: (rows) => adapters.upsertHourly(rows),
+    listHourly: (input) => adapters.listHourly(input),
+    deleteHourlyOlderThan: (hourUtcExclusive) => adapters.deleteHourlyOlderThan(hourUtcExclusive),
     listSlos: (input) => adapters.listSlos(input),
     getSlo: (id) => adapters.getSlo(id),
     createSlo: (input) => adapters.createSlo(input),
@@ -291,12 +320,76 @@ export function createSqliteReliabilityStore(client: SqliteClient): ReliabilityS
           asc(schema.serviceReliabilityDaily.dateUtc),
         )
         .limit(input.limit);
-      return rows.map(toRollup);
+      return rows.map(toDailyRollup);
     },
     async deleteOlderThan(dateUtcExclusive) {
       await db
         .delete(schema.serviceReliabilityDaily)
         .where(lt(schema.serviceReliabilityDaily.dateUtc, dateUtcExclusive));
+      return 0;
+    },
+    async upsertHourly(rows) {
+      if (rows.length === 0) return;
+      try {
+        for (const row of rows) {
+          await db
+            .insert(schema.serviceReliabilityHourly)
+            .values({
+              id: row.id,
+              serviceKey: row.serviceKey,
+              hourUtc: row.hourUtc,
+              observedSeconds: row.observedSeconds,
+              availableSeconds: row.availableSeconds,
+              degradedSeconds: row.degradedSeconds,
+              unavailableSeconds: row.unavailableSeconds,
+              maintenanceSeconds: row.maintenanceSeconds,
+              unknownSeconds: row.unknownSeconds,
+              incidentCount: row.incidentCount,
+              updatedAt: row.updatedAt,
+            })
+            .onConflictDoUpdate({
+              target: [
+                schema.serviceReliabilityHourly.serviceKey,
+                schema.serviceReliabilityHourly.hourUtc,
+              ],
+              set: {
+                observedSeconds: row.observedSeconds,
+                availableSeconds: row.availableSeconds,
+                degradedSeconds: row.degradedSeconds,
+                unavailableSeconds: row.unavailableSeconds,
+                maintenanceSeconds: row.maintenanceSeconds,
+                unknownSeconds: row.unknownSeconds,
+                incidentCount: row.incidentCount,
+                updatedAt: row.updatedAt,
+              },
+            });
+        }
+      } catch (error) {
+        throw normalizeDatabaseError(error);
+      }
+    },
+    async listHourly(input) {
+      const rows = await db
+        .select()
+        .from(schema.serviceReliabilityHourly)
+        .where(
+          and(
+            inArray(schema.serviceReliabilityHourly.serviceKey, [...input.serviceKeys]),
+            gte(schema.serviceReliabilityHourly.hourUtc, input.fromHourUtc),
+            lte(schema.serviceReliabilityHourly.hourUtc, input.toHourUtc),
+          ),
+        )
+        .orderBy(
+          asc(schema.serviceReliabilityHourly.serviceKey),
+          asc(schema.serviceReliabilityHourly.hourUtc),
+        )
+        .limit(input.limit);
+      return rows.map(toHourlyRollup);
+    },
+    async deleteHourlyOlderThan(hourUtcExclusive) {
+      await db
+        .delete(schema.serviceReliabilityHourly)
+        .where(lt(schema.serviceReliabilityHourly.hourUtc, hourUtcExclusive));
       return 0;
     },
     async listSlos(input) {
@@ -563,12 +656,76 @@ export function createPostgresqlReliabilityStore(client: PostgresqlClient): Reli
           asc(schema.serviceReliabilityDaily.dateUtc),
         )
         .limit(input.limit);
-      return rows.map(toRollup);
+      return rows.map(toDailyRollup);
     },
     async deleteOlderThan(dateUtcExclusive) {
       const result = await db
         .delete(schema.serviceReliabilityDaily)
         .where(lt(schema.serviceReliabilityDaily.dateUtc, dateUtcExclusive));
+      return Number(result.rowCount ?? 0);
+    },
+    async upsertHourly(rows) {
+      if (rows.length === 0) return;
+      try {
+        for (const row of rows) {
+          await db
+            .insert(schema.serviceReliabilityHourly)
+            .values({
+              id: row.id,
+              serviceKey: row.serviceKey,
+              hourUtc: row.hourUtc,
+              observedSeconds: row.observedSeconds,
+              availableSeconds: row.availableSeconds,
+              degradedSeconds: row.degradedSeconds,
+              unavailableSeconds: row.unavailableSeconds,
+              maintenanceSeconds: row.maintenanceSeconds,
+              unknownSeconds: row.unknownSeconds,
+              incidentCount: row.incidentCount,
+              updatedAt: row.updatedAt,
+            })
+            .onConflictDoUpdate({
+              target: [
+                schema.serviceReliabilityHourly.serviceKey,
+                schema.serviceReliabilityHourly.hourUtc,
+              ],
+              set: {
+                observedSeconds: row.observedSeconds,
+                availableSeconds: row.availableSeconds,
+                degradedSeconds: row.degradedSeconds,
+                unavailableSeconds: row.unavailableSeconds,
+                maintenanceSeconds: row.maintenanceSeconds,
+                unknownSeconds: row.unknownSeconds,
+                incidentCount: row.incidentCount,
+                updatedAt: row.updatedAt,
+              },
+            });
+        }
+      } catch (error) {
+        throw normalizeDatabaseError(error);
+      }
+    },
+    async listHourly(input) {
+      const rows = await db
+        .select()
+        .from(schema.serviceReliabilityHourly)
+        .where(
+          and(
+            inArray(schema.serviceReliabilityHourly.serviceKey, [...input.serviceKeys]),
+            gte(schema.serviceReliabilityHourly.hourUtc, input.fromHourUtc),
+            lte(schema.serviceReliabilityHourly.hourUtc, input.toHourUtc),
+          ),
+        )
+        .orderBy(
+          asc(schema.serviceReliabilityHourly.serviceKey),
+          asc(schema.serviceReliabilityHourly.hourUtc),
+        )
+        .limit(input.limit);
+      return rows.map(toHourlyRollup);
+    },
+    async deleteHourlyOlderThan(hourUtcExclusive) {
+      const result = await db
+        .delete(schema.serviceReliabilityHourly)
+        .where(lt(schema.serviceReliabilityHourly.hourUtc, hourUtcExclusive));
       return Number(result.rowCount ?? 0);
     },
     async listSlos(input) {

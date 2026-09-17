@@ -15,6 +15,20 @@ export type DailyReliabilityRollup = {
   updatedAt: Date;
 };
 
+export type HourlyReliabilityRollup = {
+  id: string;
+  serviceKey: string;
+  hourUtc: string;
+  observedSeconds: number;
+  availableSeconds: number;
+  degradedSeconds: number;
+  unavailableSeconds: number;
+  maintenanceSeconds: number;
+  unknownSeconds: number;
+  incidentCount: number;
+  updatedAt: Date;
+};
+
 export type ReliabilityInterval = {
   startsAtMs: number;
   endsAtMs: number;

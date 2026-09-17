@@ -40,6 +40,7 @@ describe("backup runtime", () => {
     expect(BACKUP_TABLE_NAMES).toContain("maintenance_window_targets");
     expect(BACKUP_TABLE_NAMES).toContain("service_slos");
     expect(BACKUP_TABLE_NAMES).not.toContain("service_reliability_daily");
+    expect(BACKUP_TABLE_NAMES).not.toContain("service_reliability_hourly");
     expect(TABLE_NAMES).toContain("notifications");
     expect(TABLE_NAMES).toContain("incidents");
     expect(TABLE_NAMES).toContain("incident_events");

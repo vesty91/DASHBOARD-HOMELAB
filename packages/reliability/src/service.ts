@@ -1,13 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { hasPermission, type PermissionSubject } from "@dashboard/permissions";
 import {
+  RELIABILITY_HOURLY_RETENTION_HOURS,
   RELIABILITY_RETENTION_DAYS,
+  RELIABILITY_REBUILD_DEFAULT_HOURS,
   buildDailyRollup,
+  buildHourlyRollup,
   clampRebuildDays,
   listUtcDatesInclusive,
+  listUtcHoursInclusive,
   utcDateString,
   utcDayStartMs,
+  utcHourStartMs,
+  utcHourString,
   MS_PER_DAY,
+  MS_PER_HOUR,
   assertRollupInvariants,
 } from "./aggregation";
 import { ReliabilityError } from "./errors";
@@ -18,6 +25,7 @@ import {
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
+  listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
@@ -26,6 +34,7 @@ import {
   type DeleteSloInput,
   type EvaluateSloInput,
   type ListDailyReliabilityInput,
+  type ListHourlyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
   type SummarizeReliabilityInput,
@@ -113,6 +122,50 @@ export function createReliabilityService(deps: {
     return { days, upserted: rows.length };
   }
 
+  async function rebuildHourlyWindow(input: {
+    hours: number;
+    serviceKeys?: readonly string[];
+    nowMs?: number;
+  }): Promise<{ hours: number; upserted: number }> {
+    const hours = Math.max(1, Math.floor(input.hours));
+    const nowMs = input.nowMs ?? now().getTime();
+    const toHour = utcHourString(nowMs);
+    const fromHour = utcHourString(nowMs - (hours - 1) * MS_PER_HOUR);
+    const hourKeys = listUtcHoursInclusive(fromHour, toHour);
+    const fromMs = utcHourStartMs(fromHour);
+    const toMs = utcHourStartMs(toHour) + MS_PER_HOUR;
+
+    const presence = await deps.store.listIntegrationPresence();
+    const filtered =
+      input.serviceKeys && input.serviceKeys.length > 0
+        ? presence.filter((item) => input.serviceKeys!.includes(item.serviceKey))
+        : presence;
+
+    const [incidents, maintenances] = await Promise.all([
+      deps.store.listIncidentsBetween(fromMs - MS_PER_HOUR, toMs),
+      deps.store.listMaintenancesBetween(fromMs - MS_PER_HOUR, toMs),
+    ]);
+
+    const rows = [];
+    for (const service of filtered) {
+      for (const hourUtc of hourKeys) {
+        const rollup = buildHourlyRollup({
+          id: createId(),
+          serviceKey: service.serviceKey,
+          hourUtc,
+          nowMs,
+          presence: service,
+          incidents,
+          maintenances,
+        });
+        assertRollupInvariants(rollup);
+        rows.push(rollup);
+      }
+    }
+    await deps.store.upsertHourly(rows);
+    return { hours, upserted: rows.length };
+  }
+
   async function requireSlo(id: string): Promise<ServiceSlo> {
     const slo = await deps.store.getSlo(id);
     if (!slo) throw new ReliabilityError("NOT_FOUND", "SLO not found");
@@ -145,6 +198,23 @@ export function createReliabilityService(deps: {
         serviceKeys: input.serviceKeys,
         fromDateUtc: input.fromDateUtc,
         toDateUtc: input.toDateUtc,
+        limit: input.limit,
+      });
+    },
+
+    async listHourly(raw: ListHourlyReliabilityInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = listHourlyReliabilitySchema.parse(raw);
+      const fromMs = utcHourStartMs(input.fromHourUtc);
+      const toMs = utcHourStartMs(input.toHourUtc);
+      const spanHours = Math.floor((toMs - fromMs) / MS_PER_HOUR) + 1;
+      if (spanHours > 168) {
+        throw new ReliabilityError("QUERY_TOO_BROAD", "hour range max 168 hours");
+      }
+      return deps.store.listHourly({
+        serviceKeys: input.serviceKeys,
+        fromHourUtc: input.fromHourUtc,
+        toHourUtc: input.toHourUtc,
         limit: input.limit,
       });
     },
@@ -332,11 +402,28 @@ export function createReliabilityService(deps: {
       };
     },
 
-    async tick(): Promise<{ upserted: number; deleted: number }> {
-      const rebuilt = await rebuildWindow({ days: 2 });
-      const cutoff = utcDateString(now().getTime() - RELIABILITY_RETENTION_DAYS * MS_PER_DAY);
+    async tick(): Promise<{
+      upserted: number;
+      deleted: number;
+      hourlyUpserted: number;
+      hourlyDeleted: number;
+    }> {
+      const nowMs = now().getTime();
+      const rebuilt = await rebuildWindow({ days: 2, nowMs });
+      const hourlyRebuilt = await rebuildHourlyWindow({
+        hours: RELIABILITY_REBUILD_DEFAULT_HOURS,
+        nowMs,
+      });
+      const cutoff = utcDateString(nowMs - RELIABILITY_RETENTION_DAYS * MS_PER_DAY);
       const deleted = await deps.store.deleteOlderThan(cutoff);
-      return { upserted: rebuilt.upserted, deleted };
+      const hourlyCutoff = utcHourString(nowMs - RELIABILITY_HOURLY_RETENTION_HOURS * MS_PER_HOUR);
+      const hourlyDeleted = await deps.store.deleteHourlyOlderThan(hourlyCutoff);
+      return {
+        upserted: rebuilt.upserted,
+        deleted,
+        hourlyUpserted: hourlyRebuilt.upserted,
+        hourlyDeleted,
+      };
     },
   };
 }

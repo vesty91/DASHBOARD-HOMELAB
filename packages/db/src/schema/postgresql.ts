@@ -757,6 +757,34 @@ export const serviceReliabilityDaily = pgTable(
     check("service_reliability_daily_incident_nonneg", sql`${t.incidentCount} >= 0`),
   ],
 );
+/** Hourly UTC rollups; excluded from backup. */
+export const serviceReliabilityHourly = pgTable(
+  "service_reliability_hourly",
+  {
+    id: uuid("id").primaryKey(),
+    serviceKey: text("service_key").notNull(),
+    hourUtc: text("hour_utc").notNull(),
+    observedSeconds: integer("observed_seconds").notNull(),
+    availableSeconds: integer("available_seconds").notNull(),
+    degradedSeconds: integer("degraded_seconds").notNull(),
+    unavailableSeconds: integer("unavailable_seconds").notNull(),
+    maintenanceSeconds: integer("maintenance_seconds").notNull(),
+    unknownSeconds: integer("unknown_seconds").notNull(),
+    incidentCount: integer("incident_count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_reliability_hourly_service_hour_uq").on(t.serviceKey, t.hourUtc),
+    index("service_reliability_hourly_hour_idx").on(t.hourUtc),
+    check("service_reliability_hourly_observed_nonneg", sql`${t.observedSeconds} >= 0`),
+    check("service_reliability_hourly_available_nonneg", sql`${t.availableSeconds} >= 0`),
+    check("service_reliability_hourly_degraded_nonneg", sql`${t.degradedSeconds} >= 0`),
+    check("service_reliability_hourly_unavailable_nonneg", sql`${t.unavailableSeconds} >= 0`),
+    check("service_reliability_hourly_maintenance_nonneg", sql`${t.maintenanceSeconds} >= 0`),
+    check("service_reliability_hourly_unknown_nonneg", sql`${t.unknownSeconds} >= 0`),
+    check("service_reliability_hourly_incident_nonneg", sql`${t.incidentCount} >= 0`),
+  ],
+);
 export const serviceSlos = pgTable(
   "service_slos",
   {
