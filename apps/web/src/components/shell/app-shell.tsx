@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Menu,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
   Plug,
@@ -49,6 +50,7 @@ function contextFromPath(pathname: string): string | null {
   if (/^\/incidents/.test(pathname)) return "Incidents";
   if (/^\/status-pages/.test(pathname)) return "Status pages";
   if (/^\/reliability/.test(pathname)) return "Fiabilité";
+  if (/^\/topology/.test(pathname)) return "Topologie";
   if (pathname.startsWith("/account")) return "Compte";
   return null;
 }
@@ -174,6 +176,7 @@ export function AppShell({
             {nav.incidents ? link("/incidents", "Incidents", <TriangleAlert />) : null}
             {nav.statusPages ? link("/status-pages", "Status pages", <Activity />) : null}
             {nav.reliability ? link("/reliability", "Fiabilité", <Gauge />) : null}
+            {nav.topology ? link("/topology", "Topologie", <Network />) : null}
           </div>
           {showAdmin ? (
             <div className="shell-nav-section">
@@ -231,6 +234,7 @@ export function AppShell({
                   <DropdownItem href="/notifications">Notifications</DropdownItem>
                 ) : null}
                 {nav.incidents ? <DropdownItem href="/incidents">Incidents</DropdownItem> : null}
+                {nav.topology ? <DropdownItem href="/topology">Topologie</DropdownItem> : null}
                 <DropdownItem
                   onSelect={() => {
                     void revokeCurrentSessionAction().finally(() => {
