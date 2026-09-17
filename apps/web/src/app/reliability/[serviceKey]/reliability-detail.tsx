@@ -535,7 +535,7 @@ function BurnAlertCard({
             });
           }}
         >
-          <p data-testid={`reliability-alert-enabled-label-${slo.id}`}>
+          <p data-testid={`reliability-alert-status-label-${slo.id}`}>
             Politique : {enabled ? "activée" : "désactivée"}
           </p>
           <label className="ui-field ui-checkbox">

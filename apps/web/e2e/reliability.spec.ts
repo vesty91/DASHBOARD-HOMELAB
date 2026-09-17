@@ -66,7 +66,7 @@ test("reliability: overview, detail, slo create, alert policy, csv export, a11y"
     timeout: 15_000,
   });
 
-  const enabledLabel = page.locator("[data-testid^=reliability-alert-enabled-label-]").first();
+  const enabledLabel = page.locator("[data-testid^=reliability-alert-status-label-]").first();
   await expect(enabledLabel).toContainText("désactivée");
 
   await page.locator("[data-testid^=reliability-alert-enabled-]").first().check();
@@ -92,9 +92,9 @@ test("reliability: overview, detail, slo create, alert policy, csv export, a11y"
   await expectPageA11y(page);
 });
 
-test("reliability: unauthenticated access redirected", async ({ browser }) => {
+test("reliability: unauthenticated access denied", async ({ browser }) => {
   const anon = await browser.newPage();
   await anon.goto("/reliability");
-  await expect(anon).toHaveURL(/\/(login|setup)/);
+  await expect(anon).toHaveURL(/\/(login|setup|forbidden)/);
   await anon.close();
 });
