@@ -1,5 +1,6 @@
 import type {
   DailyReliabilityRollup,
+  HourlyReliabilityRollup,
   IncidentIntervalInput,
   MaintenanceIntervalInput,
   ServicePresence,
@@ -19,6 +20,14 @@ export type ReliabilityStorePort = {
     limit: number;
   }): Promise<DailyReliabilityRollup[]>;
   deleteOlderThan(dateUtcExclusive: string): Promise<number>;
+  upsertHourly(rows: readonly HourlyReliabilityRollup[]): Promise<void>;
+  listHourly(input: {
+    serviceKeys: readonly string[];
+    fromHourUtc: string;
+    toHourUtc: string;
+    limit: number;
+  }): Promise<HourlyReliabilityRollup[]>;
+  deleteHourlyOlderThan(hourUtcExclusive: string): Promise<number>;
   listSlos(input?: { serviceKeys?: readonly string[]; limit?: number }): Promise<ServiceSlo[]>;
   getSlo(id: string): Promise<ServiceSlo | null>;
   createSlo(input: {

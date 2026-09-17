@@ -552,6 +552,19 @@ Backup `formatVersion` 1 / `schemaVersion` **11** (compat 5–11 ; inclut
 Hors scope : PromQL arbitraire, store haute fréquence, burn-rate multi-fenêtre
 avancé, alerting `slo.budget.low` (optionnel ultérieur).
 
+## Phase 27 — SLO Burn-Rate Alerting
+
+Statut : **IN PROGRESS**.
+
+Livrables prévus :
+
+- rollups horaires UTC `service_reliability_hourly` (migration suivante) ;
+- moteur burn-rate (fenêtres fermées 1h / 6h / 24h / 3d) ;
+- politiques d’alerte SLO (disabled by default) + cooldown / recovery ;
+- event `slo.burn-rate.changed` → Notification Center (+ automation safe) ;
+- UI `/reliability` étendue ;
+- pas de PromQL, pas de TSDB, pas de remédiation auto risquée.
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

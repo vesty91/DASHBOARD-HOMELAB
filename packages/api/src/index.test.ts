@@ -268,6 +268,7 @@ function createCaller(
     reliability: {
       permissions: () => ({ canRead: false, canManageSlo: false }),
       listDaily: async () => [],
+      listHourly: async () => [],
       rebuildRecent: async () => ({ days: 0, upserted: 0 }),
       summarize: async () => [],
       listSlos: async () => [],
@@ -284,7 +285,7 @@ function createCaller(
       evaluateSlo: async () => {
         throw new Error("slo not stubbed");
       },
-      tick: async () => ({ upserted: 0, deleted: 0 }),
+      tick: async () => ({ upserted: 0, deleted: 0, hourlyUpserted: 0, hourlyDeleted: 0 }),
     } as unknown as ApiContext["reliability"],
     audit: {
       record: async () => undefined,

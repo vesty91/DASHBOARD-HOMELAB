@@ -12,6 +12,9 @@ function emptyStore(): ReliabilityStorePort {
     upsertDaily: async () => undefined,
     listDaily: async () => [],
     deleteOlderThan: async () => 0,
+    upsertHourly: async () => undefined,
+    listHourly: async () => [],
+    deleteHourlyOlderThan: async () => 0,
     listSlos: async () => [],
     getSlo: async () => null,
     createSlo: async () => {

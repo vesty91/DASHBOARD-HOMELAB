@@ -5,6 +5,10 @@ export const utcDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "UTC date required (YYYY-MM-DD)");
 
+export const utcHourSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}$/, "UTC hour required (YYYY-MM-DDTHH)");
+
 export const serviceKeySchema = z
   .string()
   .min(1)
@@ -24,6 +28,23 @@ export const listDailyReliabilitySchema = z
         code: "custom",
         message: "toDateUtc must be >= fromDateUtc",
         path: ["toDateUtc"],
+      });
+    }
+  });
+
+export const listHourlyReliabilitySchema = z
+  .object({
+    serviceKeys: z.array(serviceKeySchema).min(1).max(50),
+    fromHourUtc: utcHourSchema,
+    toHourUtc: utcHourSchema,
+    limit: z.number().int().min(1).max(168).default(168),
+  })
+  .superRefine((value, ctx) => {
+    if (value.toHourUtc < value.fromHourUtc) {
+      ctx.addIssue({
+        code: "custom",
+        message: "toHourUtc must be >= fromHourUtc",
+        path: ["toHourUtc"],
       });
     }
   });
@@ -84,6 +105,7 @@ export const summarizeReliabilitySchema = z.object({
 });
 
 export type ListDailyReliabilityInput = z.infer<typeof listDailyReliabilitySchema>;
+export type ListHourlyReliabilityInput = z.infer<typeof listHourlyReliabilitySchema>;
 export type RebuildReliabilityInput = z.infer<typeof rebuildReliabilitySchema>;
 export type CreateSloInput = z.infer<typeof createSloSchema>;
 export type UpdateSloInput = z.infer<typeof updateSloSchema>;

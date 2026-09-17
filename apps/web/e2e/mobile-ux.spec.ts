@@ -125,10 +125,17 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByRole("button", { name: /Installer/i })).toHaveCount(0);
 
       await loginAdmin(page);
+      await expect(page.getByRole("button", { name: "Ouvrir la navigation" })).toBeVisible();
       await assertNoHorizontalOverflow(page);
 
-      await page.getByRole("button", { name: "Ouvrir la navigation" }).click();
-      await expect(page.locator(".shell")).toHaveAttribute("data-mobile-open", "true");
+      // Pathname-settling after login can reset mobileOpen; retry until the drawer stays open.
+      await expect(async () => {
+        const shell = page.locator(".shell");
+        if ((await shell.getAttribute("data-mobile-open")) !== "true") {
+          await page.getByRole("button", { name: "Ouvrir la navigation" }).click();
+        }
+        await expect(shell).toHaveAttribute("data-mobile-open", "true");
+      }).toPass({ timeout: 15_000 });
       await expect(page.locator("#navigation-principale")).toBeVisible();
       await expect(page.getByRole("link", { name: "Boards" })).toBeVisible();
       // Prefer the in-drawer close control — the backdrop sits under the sidebar.

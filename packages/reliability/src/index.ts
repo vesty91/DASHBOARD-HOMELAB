@@ -1,17 +1,27 @@
 export {
   BUCKET_PRECEDENCE,
   MS_PER_DAY,
+  MS_PER_HOUR,
+  RELIABILITY_HOURLY_RETENTION_HOURS,
   RELIABILITY_REBUILD_DEFAULT_DAYS,
+  RELIABILITY_REBUILD_DEFAULT_HOURS,
   RELIABILITY_REBUILD_MAX_DAYS,
   RELIABILITY_RETENTION_DAYS,
   accountDayBuckets,
+  accountHourBuckets,
+  accountWindowBuckets,
   assertRollupInvariants,
   buildDailyRollup,
+  buildHourlyRollup,
   clampRebuildDays,
   listUtcDatesInclusive,
+  listUtcHoursInclusive,
   utcDateString,
   utcDayEndMs,
   utcDayStartMs,
+  utcHourEndMs,
+  utcHourStartMs,
+  utcHourString,
 } from "./aggregation";
 export { ReliabilityError, isReliabilityError } from "./errors";
 export {
@@ -20,6 +30,7 @@ export {
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
+  listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
@@ -30,6 +41,7 @@ export {
   type DeleteSloInput,
   type EvaluateSloInput,
   type ListDailyReliabilityInput,
+  type ListHourlyReliabilityInput,
   type ListSlosInput,
   type RebuildReliabilityInput,
   type SummarizeReliabilityInput,
@@ -54,6 +66,7 @@ export {
 } from "./slo-math";
 export type {
   DailyReliabilityRollup,
+  HourlyReliabilityRollup,
   IncidentIntervalInput,
   MaintenanceIntervalInput,
   ReliabilityBucket,

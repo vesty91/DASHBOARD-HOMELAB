@@ -1,6 +1,7 @@
 # 26 — Reliability & SLO Analytics
 
-Phase 26 **COMPLETE**. Migrations `0011`–`0012`. DB `schemaVersion` **12**.
+Phase 26 **COMPLETE**. Phase 27.1 ajoute les rollups horaires (migration `0013`).
+Migrations `0011`–`0013`. DB `schemaVersion` **13**.
 Backup `formatVersion` 1 / `schemaVersion` **11** (SLO config durable ;
 rollups exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
 
@@ -39,11 +40,30 @@ Somme des buckets ≤ `observedSeconds`. Pas de double comptage.
 - Source : `incidents` + `maintenance_windows` (+ targets)
 - Fenêtre défaut **7** jours, max **90**
 - Upsert idempotent (overwrite du jour)
-- Worker `reliability.tick()` : rebuild 2 jours + rétention
+- Worker `reliability.tick()` : rebuild 2 jours quotidiens + 48 h horaires + rétention
 
 ## Rétention
 
-730 jours (2 ans). Au-delà : delete.
+- Quotidien : 730 jours (2 ans). Au-delà : delete.
+- Horaire : 2160 h (90 j). Au-delà : delete.
+
+## Table `service_reliability_hourly` (0013 — Phase 27.1)
+
+| Colonne           | Rôle                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| `serviceKey`      | Clé opaque stable (= `integrations.id`)                                  |
+| `hourUtc`         | Heure UTC `YYYY-MM-DDTHH`                                                |
+| buckets           | Même précédence que le quotidien (secondes exclusives)                   |
+| `observedSeconds` | Secondes observées de l’heure (≤ 3600 ; heure courante tronquée à `now`) |
+| `incidentCount`   | Incidents availability touchant l’heure                                  |
+
+Unique `(serviceKey, hourUtc)`.
+
+Logique d’agrégation partagée via `accountWindowBuckets` (refactor depuis `accountDayBuckets`).
+
+Worker `reliability.tick()` : rebuild **48** dernières heures + purge au-delà de **2160** h.
+
+API `reliability.listHourly` : ≤50 `serviceKeys`, fenêtre max **168** h (7 j).
 
 ## SLO / error budget (0012 — PR 26.2)
 
@@ -75,7 +95,7 @@ Entiers :
 
 ## Backup
 
-- `service_reliability_daily` **exclu** (dérivé rejouable).
+- `service_reliability_daily` et `service_reliability_hourly` **exclus** (dérivés rejouables).
 - `service_slos` **inclus** → `BACKUP_SCHEMA_VERSION` **11** (compat 5–11).
 
 ## Permissions
@@ -93,6 +113,7 @@ ADMIN default-deny pour les deux.
 | --------------------------- | --------------------------------- |
 | `reliability.permissions`   | `{ canRead, canManageSlo }`       |
 | `reliability.listDaily`     | ≤50 serviceKeys, ≤90 jours        |
+| `reliability.listHourly`    | ≤50 serviceKeys, ≤168 h           |
 | `reliability.rebuildRecent` | `settings.manage` ou SYSTEM_ADMIN |
 | `reliability.listSlos`      |                                   |
 | `reliability.getSlo`        |                                   |

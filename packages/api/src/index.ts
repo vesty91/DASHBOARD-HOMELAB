@@ -145,6 +145,7 @@ import {
   evaluateSloSchema,
   getSloSchema,
   listDailyReliabilitySchema,
+  listHourlyReliabilitySchema,
   listSlosSchema,
   rebuildReliabilitySchema,
   summarizeReliabilitySchema,
@@ -1739,6 +1740,9 @@ export const reliabilityRouter = t.router({
   listDaily: t.procedure
     .input(listDailyReliabilitySchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.listDaily(input, ctx.actor))),
+  listHourly: t.procedure
+    .input(listHourlyReliabilitySchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.listHourly(input, ctx.actor))),
   rebuildRecent: t.procedure
     .input(rebuildReliabilitySchema)
     .mutation(({ ctx, input }) => procedure(() => ctx.reliability.rebuildRecent(input, ctx.actor))),

@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   accountDayBuckets,
+  accountHourBuckets,
   assertRollupInvariants,
   buildDailyRollup,
+  buildHourlyRollup,
   clampRebuildDays,
   listUtcDatesInclusive,
+  listUtcHoursInclusive,
   utcDayEndMs,
   utcDayStartMs,
+  utcHourEndMs,
+  utcHourStartMs,
+  utcHourString,
 } from "./aggregation";
 
 const SERVICE = "svc-1";
@@ -142,5 +148,66 @@ describe("reliability aggregation", () => {
       maintenances: [],
     });
     expect(result.observedSeconds).toBe(86_400);
+  });
+
+  it("accounts a full UTC hour as available", () => {
+    const hour = "2030-05-01T14";
+    const result = accountHourBuckets({
+      hourUtc: hour,
+      nowMs: utcHourEndMs(hour),
+      observableFromMs: utcHourStartMs(hour) - 1,
+      incidents: [],
+      maintenances: [],
+    });
+    expect(result.observedSeconds).toBe(3600);
+    expect(result.availableSeconds).toBe(3600);
+  });
+
+  it("splits outage across hour boundaries without double count", () => {
+    const h0 = "2030-06-01T22";
+    const h1 = "2030-06-01T23";
+    const open = utcHourStartMs(h0) + 30 * 60_000;
+    const resolve = utcHourStartMs(h1) + 30 * 60_000;
+    const a = accountHourBuckets({
+      hourUtc: h0,
+      nowMs: utcHourEndMs(h1),
+      observableFromMs: 0,
+      incidents: [{ startsAtMs: open, endsAtMs: resolve }],
+      maintenances: [],
+    });
+    const b = accountHourBuckets({
+      hourUtc: h1,
+      nowMs: utcHourEndMs(h1),
+      observableFromMs: 0,
+      incidents: [{ startsAtMs: open, endsAtMs: resolve }],
+      maintenances: [],
+    });
+    expect(a.unavailableSeconds).toBe(30 * 60);
+    expect(b.unavailableSeconds).toBe(30 * 60);
+    expect(a.unavailableSeconds + b.unavailableSeconds).toBe(3600);
+  });
+
+  it("builds hourly rollups and lists utc hours", () => {
+    const hour = "2030-07-01T08";
+    const open = utcHourStartMs(hour) + 900_000;
+    const close = open + 600_000;
+    const rollup = buildHourlyRollup({
+      id: "h1",
+      serviceKey: SERVICE,
+      hourUtc: hour,
+      nowMs: utcHourEndMs(hour),
+      presence: { serviceKey: SERVICE, observableFromMs: 0 },
+      incidents: [{ id: "i1", serviceKey: SERVICE, openedAtMs: open, resolvedAtMs: close }],
+      maintenances: [],
+    });
+    expect(rollup.unavailableSeconds).toBe(600);
+    expect(rollup.incidentCount).toBe(1);
+    assertRollupInvariants(rollup);
+    expect(listUtcHoursInclusive("2030-07-01T08", "2030-07-01T10")).toEqual([
+      "2030-07-01T08",
+      "2030-07-01T09",
+      "2030-07-01T10",
+    ]);
+    expect(utcHourString(utcHourStartMs(hour))).toBe(hour);
   });
 });
