@@ -31,6 +31,7 @@ export function canReceiveEvent(
         subscriptions.some((subscription) => subscription.kind === "notifications")
       );
     case "slo.burn-rate.changed":
+    case "dependency.impact.changed":
       // Delivered to automation bus subscribers; not a realtime UI subscription yet.
       return false;
     default: {

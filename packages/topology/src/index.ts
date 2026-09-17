@@ -1,4 +1,13 @@
 export {
+  analyzeImpact,
+  ACTUAL_STATUSES,
+  IMPACT_STATUSES,
+  type ActualStatus,
+  type ImpactStatus,
+  type ImpactAnalysis,
+  type ServiceImpactView,
+} from "./impact";
+export {
   wouldCreateCycle,
   buildDownstreamAdjacency,
   TOPOLOGY_MAX_DEPTH,
@@ -7,10 +16,12 @@ export {
 export { TopologyError } from "./errors";
 export type { TopologyStorePort } from "./ports";
 export {
+  analyzeImpactSchema,
   createDependencySchema,
   deleteDependencySchema,
   getDependencySchema,
   listDependenciesSchema,
+  type AnalyzeImpactInput,
   type CreateDependencyInput,
   type DeleteDependencyInput,
   type GetDependencyInput,

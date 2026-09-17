@@ -10,6 +10,12 @@ function memoryStore(existingKeys: string[]): TopologyStorePort {
     async integrationExists(serviceKey) {
       return existingKeys.includes(serviceKey);
     },
+    async listIntegrationIds() {
+      return [...existingKeys];
+    },
+    async listOpenUnavailableServiceKeys() {
+      return [];
+    },
     async listDependencies() {
       return [...rows];
     },
@@ -96,6 +102,39 @@ describe("createTopologyService", () => {
       service.createDependency(
         { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
         viewer,
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("analyzes impact for readers using open unavailable incidents", async () => {
+    const store = memoryStore([a, b, c]);
+    store.listOpenUnavailableServiceKeys = async () => [a];
+    const service = createTopologyService({ store });
+    await service.createDependency(
+      { upstreamServiceKey: a, downstreamServiceKey: b, relationship: "depends_on" },
+      admin,
+    );
+    await service.createDependency(
+      { upstreamServiceKey: b, downstreamServiceKey: c, relationship: "depends_on" },
+      admin,
+    );
+    const result = await service.analyzeImpact({}, viewer);
+    const byKey = Object.fromEntries(result.services.map((row) => [row.serviceKey, row]));
+    expect(byKey[a]?.actualStatus).toBe("unavailable");
+    expect(byKey[b]?.impactStatus).toBe("impacted");
+    expect(byKey[c]?.impactStatus).toBe("impacted");
+    expect(result.candidateRootCause).toBe(a);
+  });
+
+  it("rejects impact analysis without topology.read", async () => {
+    const service = createTopologyService({ store: memoryStore([a, b]) });
+    await expect(
+      service.analyzeImpact(
+        {},
+        {
+          userId: "00000000-0000-4000-8000-000000000099",
+          subject: { status: "active", isSystemAdmin: false, directPermissions: [] },
+        },
       ),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });

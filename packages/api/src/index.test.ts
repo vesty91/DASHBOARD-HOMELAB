@@ -322,6 +322,11 @@ function createCaller(
         throw new Error("dependency not stubbed");
       },
       deleteDependency: async () => undefined,
+      analyzeImpact: async () => ({
+        services: [],
+        candidateRootCause: null,
+        truncated: false,
+      }),
     } as unknown as ApiContext["topology"],
     audit: {
       record: async () => undefined,

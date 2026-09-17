@@ -8,6 +8,7 @@ export const AUTOMATION_EVENT_TYPES = [
   "integration.data.changed",
   "job.failed",
   "slo.burn-rate.changed",
+  "dependency.impact.changed",
 ] as const;
 export type AutomationEventType = (typeof AUTOMATION_EVENT_TYPES)[number];
 
