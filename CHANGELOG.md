@@ -6,6 +6,13 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Service Topology & Impact Analysis (Phase 28) : `service_dependencies`,
+  impact engine, UI `/topology`, event `dependency.impact.changed`.
+  Migration `0015`, DB `schemaVersion` 15, backup `schemaVersion` 13.
+  Release produit prévue : `1.8.0`.
+
 ## [1.7.0] — 2026-09-17
 
 SLO Burn-Rate Alerting (Phase 27). Minor backward-compatible.

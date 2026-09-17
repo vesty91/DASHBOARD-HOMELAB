@@ -576,15 +576,25 @@ Hors scope : PromQL, TSDB, remédiation auto risquée.
 
 ## Phase 28 — Service Topology & Impact Analysis
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Objectifs :
+Livrables :
 
-- graphe de dépendances explicite (curaté manuellement) ;
-- blast radius / impact analysis ;
-- candidats root-cause déterministes (jamais assertifs) ;
-- UI `/topology` ;
-- pas de scan LAN, pas d’auto-discovery, pas d’actions destructives inférées.
+- table `service_dependencies` (migration `0015`, relation fermée `depends_on`, DAG) ;
+- package `@dashboard/topology` : CRUD + cycle reject + impact engine ;
+- `actualStatus` vs `impactStatus` (`none` | `at-risk` | `impacted`) ;
+- `candidateRootCause` heuristique (jamais assertif) ;
+- event `dependency.impact.changed` (payload safe) + automation allowlist ;
+- UI `/topology` (table + liste accessible, create/delete, a11y/e2e) ;
+- docs `docs/28-TOPOLOGY.md`.
+
+PRs : #97–#99 (+ close). Tag `phase-28-complete`. Minor produit `v1.8.0`.
+
+Migrations : `0000`–`0015` (SQLite + PostgreSQL). DB `schemaVersion` **15**.
+Backup `formatVersion` 1 / `schemaVersion` **13** (compat 5–13 ; inclut
+`service_dependencies` ; exclut impact dérivé / caches runtime).
+
+Hors scope : scan LAN, auto-discovery, remédiation auto, overwrite status réel.
 
 ## Règle
 

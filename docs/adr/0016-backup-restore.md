@@ -52,8 +52,14 @@ schéma 6 et accepte encore une archive v5 (upgrade in-memory). Voir ADR 0017.
   `maintenance_window_targets` (config durable).
 - Phase 26.2 : `schemaVersion` 11 — **inclut** `service_slos` ;
   exclus `service_reliability_daily` (dérivé).
+- Phase 27.3 : `schemaVersion` 12 — **inclut** `slo_alert_policies` ;
+  exclus rollups hourly + `slo_alert_runtime_state`.
+- Phase 28.1 : `schemaVersion` 13 — **inclut** `service_dependencies` ;
+  exclus impact dérivé / caches runtime.
 
 Tables hors archive / purge restore (éphémères) : `audit_logs`,
 `auth_sessions`, `automation_runs`, `automation_runtime_state`,
-`notifications`, `incidents`, `incident_events`, `push_subscriptions`.
-Compat restore acceptée : 5 → 6 → 7 → 8 → 9 → 10 → 11. Schéma 12+ rejeté.
+`notifications`, `incidents`, `incident_events`, `push_subscriptions`,
+`service_reliability_daily`, `service_reliability_hourly`,
+`slo_alert_runtime_state`.
+Compat restore acceptée : 5 → … → 13. Schéma 14+ rejeté.

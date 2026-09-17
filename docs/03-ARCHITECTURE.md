@@ -468,3 +468,11 @@ COMPLETE. SLO burn-rate alerting (`0013`–`0014`, DB schema 14) : rollups
 horaires, moteur burn-rate multi-fenêtre, `slo_alert_policies` (backup schema
 12), event `slo.burn-rate.changed`, UI étendue. Minor produit `1.7.0`.
 Voir `docs/27-SLO-ALERTING.md`.
+
+# État Phase 28
+
+COMPLETE. Topologie / impact (`0015`, DB schema 15) : package
+`@dashboard/topology`, dépendances curatées `depends_on` (DAG), impact
+`actualStatus` vs `impactStatus`, `candidateRootCause` heuristique, event
+`dependency.impact.changed`, UI `/topology`. Backup schema **13** (inclut
+`service_dependencies`). Minor produit `1.8.0`. Voir `docs/28-TOPOLOGY.md`.

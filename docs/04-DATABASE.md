@@ -378,8 +378,8 @@ Le manifest doit contenir :
 {
   "format": "homelab-dashboard-backup",
   "formatVersion": 1,
-  "schemaVersion": 11,
-  "databaseSchemaVersion": 10,
+  "schemaVersion": 13,
+  "databaseSchemaVersion": 15,
   "appVersion": "1.7.0",
   "createdAt": "...",
   "files": [{ "name": "tables.json", "sha256": "...", "bytes": 0 }]
