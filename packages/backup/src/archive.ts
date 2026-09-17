@@ -14,6 +14,7 @@ import {
   backupTablesSchemaV9,
   backupTablesSchemaV10,
   backupTablesSchemaV11,
+  backupTablesSchemaV12,
   type BackupArchive,
   type BackupTables,
   type BackupTablesV5,
@@ -21,6 +22,7 @@ import {
   type BackupTablesV9,
   type BackupTablesV10,
   type BackupTablesV11,
+  type BackupTablesV12,
 } from "./schema";
 
 function archiveBytes(value: unknown): number {
@@ -77,6 +79,7 @@ export function emptyBackupTables(): BackupTables {
     maintenance_window_targets: [],
     service_slos: [],
     slo_alert_policies: [],
+    service_dependencies: [],
   };
 }
 
@@ -134,10 +137,17 @@ function upgradeV10Tables(tables: BackupTablesV10): BackupTablesV11 {
   };
 }
 
-function upgradeV11Tables(tables: BackupTablesV11): BackupTables {
+function upgradeV11Tables(tables: BackupTablesV11): BackupTablesV12 {
   return {
     ...tables,
     slo_alert_policies: [],
+  };
+}
+
+function upgradeV12Tables(tables: BackupTablesV12): BackupTables {
+  return {
+    ...tables,
+    service_dependencies: [],
   };
 }
 
@@ -224,8 +234,10 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     assertHash(tables.data, manifest.data.files[0]);
     return {
       manifest: manifest.data,
-      tables: upgradeV11Tables(
-        upgradeV10Tables(upgradeV9Tables(upgradeV6Tables(upgradeV5Tables(tables.data)))),
+      tables: upgradeV12Tables(
+        upgradeV11Tables(
+          upgradeV10Tables(upgradeV9Tables(upgradeV6Tables(upgradeV5Tables(tables.data)))),
+        ),
       ),
     };
   }
@@ -239,7 +251,9 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     assertHash(tables.data, manifest.data.files[0]);
     return {
       manifest: manifest.data,
-      tables: upgradeV11Tables(upgradeV10Tables(upgradeV9Tables(upgradeV6Tables(tables.data)))),
+      tables: upgradeV12Tables(
+        upgradeV11Tables(upgradeV10Tables(upgradeV9Tables(upgradeV6Tables(tables.data)))),
+      ),
     };
   }
   if (version === 7 || version === 8 || version === 9) {
@@ -252,7 +266,7 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     assertHash(tables.data, manifest.data.files[0]);
     return {
       manifest: manifest.data,
-      tables: upgradeV11Tables(upgradeV10Tables(upgradeV9Tables(tables.data))),
+      tables: upgradeV12Tables(upgradeV11Tables(upgradeV10Tables(upgradeV9Tables(tables.data)))),
     };
   }
   if (version === 10) {
@@ -265,7 +279,7 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     assertHash(tables.data, manifest.data.files[0]);
     return {
       manifest: manifest.data,
-      tables: upgradeV11Tables(upgradeV10Tables(tables.data)),
+      tables: upgradeV12Tables(upgradeV11Tables(upgradeV10Tables(tables.data))),
     };
   }
   if (version === 11) {
@@ -276,7 +290,20 @@ export function parseBackupArchive(input: unknown): BackupArchive {
     const archive = { manifest: manifest.data, tables: tables.data };
     assertNoPlaintextSecrets(archive, "archive");
     assertHash(tables.data, manifest.data.files[0]);
-    return { manifest: manifest.data, tables: upgradeV11Tables(tables.data) };
+    return {
+      manifest: manifest.data,
+      tables: upgradeV12Tables(upgradeV11Tables(tables.data)),
+    };
+  }
+  if (version === 12) {
+    const tables = backupTablesSchemaV12.safeParse(record.tables);
+    if (!tables.success) {
+      throw new BackupError("VALIDATION_ERROR", "Backup archive failed validation");
+    }
+    const archive = { manifest: manifest.data, tables: tables.data };
+    assertNoPlaintextSecrets(archive, "archive");
+    assertHash(tables.data, manifest.data.files[0]);
+    return { manifest: manifest.data, tables: upgradeV12Tables(tables.data) };
   }
   const parsed = backupArchiveSchema.safeParse(parsedInput);
   if (!parsed.success) {

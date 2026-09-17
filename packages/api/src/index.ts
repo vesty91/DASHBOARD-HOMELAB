@@ -160,6 +160,14 @@ import {
   updateSloSchema,
   type ReliabilityService,
 } from "@dashboard/reliability";
+import {
+  createDependencySchema,
+  deleteDependencySchema,
+  getDependencySchema,
+  listDependenciesSchema,
+  TopologyError,
+  type TopologyService,
+} from "@dashboard/topology";
 import { requireServiceStatusActor } from "./service-status";
 import { realtimeTicketInputSchema, resolveRealtimeSubscriptions } from "./realtime-ticket";
 
@@ -220,6 +228,7 @@ export interface ApiContext {
   incidents: IncidentService;
   statusPages: StatusPageService;
   reliability: ReliabilityService;
+  topology: TopologyService;
   audit: {
     record(event: AuditEventInput): Promise<void>;
     list(query: {
@@ -303,7 +312,8 @@ const mapError = (error: unknown): never => {
     error instanceof AutomationError ||
     error instanceof NotificationError ||
     error instanceof StatusPageError ||
-    error instanceof ReliabilityError
+    error instanceof ReliabilityError ||
+    error instanceof TopologyError
   ) {
     const code =
       error.code === "UNAUTHORIZED"
@@ -1811,6 +1821,25 @@ export const reliabilityRouter = t.router({
       ),
     ),
 });
+export const topologyRouter = t.router({
+  permissions: t.procedure.query(({ ctx }) => ctx.topology.permissions(ctx.actor)),
+  list: t.procedure
+    .input(listDependenciesSchema.optional())
+    .query(({ ctx, input }) =>
+      procedure(() =>
+        ctx.topology.listDependencies(listDependenciesSchema.parse(input ?? {}), ctx.actor),
+      ),
+    ),
+  get: t.procedure
+    .input(getDependencySchema)
+    .query(({ ctx, input }) => procedure(() => ctx.topology.getDependency(input, ctx.actor))),
+  create: t.procedure
+    .input(createDependencySchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.topology.createDependency(input, ctx.actor))),
+  delete: t.procedure
+    .input(deleteDependencySchema)
+    .mutation(({ ctx, input }) => procedure(() => ctx.topology.deleteDependency(input, ctx.actor))),
+});
 export const dashboardRouter = t.router({
   board: boardRouter,
   app: appsRouter,
@@ -1822,6 +1851,7 @@ export const dashboardRouter = t.router({
   incident: incidentsRouter,
   statusPage: statusPageRouter,
   reliability: reliabilityRouter,
+  topology: topologyRouter,
   docker: dockerRouter,
   synology: synologyRouter,
   jellyfin: jellyfinRouter,

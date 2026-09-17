@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT = "homelab-dashboard-backup";
 export const BACKUP_FORMAT_VERSION = 1;
-export const BACKUP_SCHEMA_VERSION = 12;
-export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11, 12] as const;
+export const BACKUP_SCHEMA_VERSION = 13;
+export const BACKUP_COMPATIBLE_SCHEMA_VERSIONS = [5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 export const BACKUP_APP_VERSION = "1.7.0";
 export const MAX_BACKUP_ARCHIVE_BYTES = 8 * 1024 * 1024;
 
@@ -416,6 +416,27 @@ const sloAlertPolicyRowSchema = z
     }
   });
 
+const serviceDependencyRowSchema = z
+  .object({
+    id: uuidSchema,
+    upstreamServiceKey: uuidSchema,
+    downstreamServiceKey: uuidSchema,
+    relationship: z.literal("depends_on"),
+    createdBy: uuidSchema.nullable(),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.upstreamServiceKey === value.downstreamServiceKey) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Self-dependency is not allowed",
+        path: ["downstreamServiceKey"],
+      });
+    }
+  });
+
 export const backupTablesSchemaV6 = z
   .object({
     users: z.array(userRowSchema).max(10_000),
@@ -459,8 +480,12 @@ export const backupTablesSchemaV11 = backupTablesSchemaV10.extend({
   service_slos: z.array(serviceSloRowSchema).max(2_000),
 });
 
-export const backupTablesSchema = backupTablesSchemaV11.extend({
+export const backupTablesSchemaV12 = backupTablesSchemaV11.extend({
   slo_alert_policies: z.array(sloAlertPolicyRowSchema).max(2_000),
+});
+
+export const backupTablesSchema = backupTablesSchemaV12.extend({
+  service_dependencies: z.array(serviceDependencyRowSchema).max(5_000),
 });
 
 export const backupManifestSchema = z
@@ -475,6 +500,7 @@ export const backupManifestSchema = z
       z.literal(9),
       z.literal(10),
       z.literal(11),
+      z.literal(12),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     databaseSchemaVersion: z.union([
@@ -485,6 +511,7 @@ export const backupManifestSchema = z
       z.literal(9),
       z.literal(10),
       z.literal(11),
+      z.literal(12),
       z.literal(BACKUP_SCHEMA_VERSION),
     ]),
     appVersion: z.string().min(1).max(40),
@@ -551,6 +578,7 @@ export type BackupTablesV6 = z.infer<typeof backupTablesSchemaV6>;
 export type BackupTablesV9 = z.infer<typeof backupTablesSchemaV9>;
 export type BackupTablesV10 = z.infer<typeof backupTablesSchemaV10>;
 export type BackupTablesV11 = z.infer<typeof backupTablesSchemaV11>;
+export type BackupTablesV12 = z.infer<typeof backupTablesSchemaV12>;
 export type BackupTables = z.infer<typeof backupTablesSchema>;
 export type BackupManifest = z.infer<typeof backupManifestSchema>;
 export type BackupArchive = z.infer<typeof backupArchiveSchema>;

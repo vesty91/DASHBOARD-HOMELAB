@@ -21,6 +21,7 @@ import {
   type PublicStatusPageDto,
 } from "@dashboard/status-pages";
 import { createReliabilityService } from "@dashboard/reliability";
+import { createTopologyService } from "@dashboard/topology";
 import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
@@ -708,6 +709,9 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   const reliability = createReliabilityService({
     store: database.reliabilityStore,
   });
+  const topology = createTopologyService({
+    store: database.topologyStore,
+  });
   return {
     actor: { userId, subject },
     boards: createBoardService(
@@ -839,6 +843,7 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
     incidents,
     statusPages,
     reliability,
+    topology,
     audit: {
       record: (event) => database.securityStore.recordAudit(event),
       list: (query) => database.securityStore.listAudit(query),

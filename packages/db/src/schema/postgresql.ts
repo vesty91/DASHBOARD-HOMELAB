@@ -859,3 +859,29 @@ export const sloAlertRuntimeState = pgTable(
     ),
   ],
 );
+/** Manual curated dependency edges. Included in backup. */
+export const serviceDependencies = pgTable(
+  "service_dependencies",
+  {
+    id: uuid("id").primaryKey(),
+    upstreamServiceKey: text("upstream_service_key").notNull(),
+    downstreamServiceKey: text("downstream_service_key").notNull(),
+    relationship: text("relationship").notNull().default("depends_on"),
+    createdBy: uuid("created_by"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("service_dependencies_edge_uq").on(
+      t.upstreamServiceKey,
+      t.downstreamServiceKey,
+      t.relationship,
+    ),
+    index("service_dependencies_upstream_idx").on(t.upstreamServiceKey),
+    index("service_dependencies_downstream_idx").on(t.downstreamServiceKey),
+    check("service_dependencies_relationship_valid", sql`${t.relationship} IN ('depends_on')`),
+    check(
+      "service_dependencies_no_self_loop",
+      sql`${t.upstreamServiceKey} <> ${t.downstreamServiceKey}`,
+    ),
+  ],
+);

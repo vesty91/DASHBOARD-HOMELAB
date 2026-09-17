@@ -97,6 +97,7 @@ function createCaller(
     | "incidents"
     | "statusPages"
     | "reliability"
+    | "topology"
     | "audit"
     | "sessions"
     | "oidc"
@@ -311,6 +312,17 @@ function createCaller(
         alertsNotified: 0,
       }),
     } as unknown as ApiContext["reliability"],
+    topology: {
+      permissions: () => ({ canRead: false, canManage: false }),
+      listDependencies: async () => [],
+      getDependency: async () => {
+        throw new Error("dependency not stubbed");
+      },
+      createDependency: async () => {
+        throw new Error("dependency not stubbed");
+      },
+      deleteDependency: async () => undefined,
+    } as unknown as ApiContext["topology"],
     audit: {
       record: async () => undefined,
       list: async () => ({ items: [], nextCursor: null }),
@@ -2546,6 +2558,7 @@ describe("backup tRPC router", () => {
           maintenance_window_targets: 0,
           service_slos: 0,
           slo_alert_policies: 0,
+          service_dependencies: 0,
         },
         encryptedSecretCount: 0,
         credentialCount: 0,

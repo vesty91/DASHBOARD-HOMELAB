@@ -576,11 +576,15 @@ Hors scope : PromQL, TSDB, remédiation auto risquée.
 
 ## Phase 28 — Service Topology & Impact Analysis
 
-Statut : **PLANNED** (ne démarre qu’après release `v1.7.0` GHCR green).
+Statut : **IN PROGRESS**.
 
-Objectifs prévus : graphe de dépendances curaté, blast radius, impact analysis,
-candidats root-cause déterministes, UI `/topology` — sans scan LAN ni
-auto-discovery.
+Objectifs :
+
+- graphe de dépendances explicite (curaté manuellement) ;
+- blast radius / impact analysis ;
+- candidats root-cause déterministes (jamais assertifs) ;
+- UI `/topology` ;
+- pas de scan LAN, pas d’auto-discovery, pas d’actions destructives inférées.
 
 ## Règle
 

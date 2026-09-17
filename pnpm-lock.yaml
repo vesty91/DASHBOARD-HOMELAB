@@ -153,6 +153,9 @@ importers:
       '@dashboard/synology':
         specifier: workspace:*
         version: link:../../packages/synology
+      '@dashboard/topology':
+        specifier: workspace:*
+        version: link:../../packages/topology
       '@dashboard/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -350,6 +353,9 @@ importers:
       '@dashboard/synology':
         specifier: workspace:*
         version: link:../synology
+      '@dashboard/topology':
+        specifier: workspace:*
+        version: link:../topology
       '@dashboard/uptime-kuma':
         specifier: workspace:*
         version: link:../uptime-kuma
@@ -536,6 +542,9 @@ importers:
       '@dashboard/status-pages':
         specifier: workspace:*
         version: link:../status-pages
+      '@dashboard/topology':
+        specifier: workspace:*
+        version: link:../topology
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.15.5)(pg@8.16.3)
@@ -977,6 +986,22 @@ importers:
       '@dashboard/secrets':
         specifier: workspace:*
         version: link:../secrets
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(jsdom@26.1.0)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.25.11)(jiti@2.7.0)(tsx@4.23.13))
+
+  packages/topology:
+    dependencies:
+      '@dashboard/permissions':
+        specifier: workspace:*
+        version: link:../permissions
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
       '@types/node':
         specifier: 26.2.0
         version: 26.2.0
