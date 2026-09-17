@@ -67,6 +67,8 @@ describe("permission resolver", () => {
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("status-page.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("reliability.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("slo.manage");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("topology.read");
+    expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("topology.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("oidc.manage");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("audit.read");
     expect(DEFAULT_ROLE_PERMISSIONS.ADMIN).not.toContain("session.manage");

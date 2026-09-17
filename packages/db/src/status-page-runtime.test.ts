@@ -13,7 +13,7 @@ describe("status page runtime", () => {
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 14 });
+      ).toMatchObject({ schema_version: 15 });
 
       const users = createSqliteRepositories(client);
       const owner = await users.users.create({ username: "status-owner" });

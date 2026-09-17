@@ -38,6 +38,7 @@ export const TABLE_NAMES = [
   "service_slos",
   "slo_alert_policies",
   "slo_alert_runtime_state",
+  "service_dependencies",
 ] as const;
 
 export const BOARD_VISIBILITIES = ["private", "authenticated", "public"] as const;
@@ -299,6 +300,15 @@ export const SCHEMA_CONTRACT = {
     "lastNotifiedAt",
     "lastTransitionAt",
     "lastBurnRate",
+    "updatedAt",
+  ],
+  service_dependencies: [
+    "id",
+    "upstreamServiceKey",
+    "downstreamServiceKey",
+    "relationship",
+    "createdBy",
+    "createdAt",
     "updatedAt",
   ],
 } as const satisfies Record<(typeof TABLE_NAMES)[number], readonly string[]>;

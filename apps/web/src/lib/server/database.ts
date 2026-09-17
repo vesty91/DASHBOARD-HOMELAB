@@ -41,6 +41,10 @@ import {
   createPostgresqlReliabilityStore,
   createSqliteReliabilityStore,
 } from "@dashboard/db/reliability-runtime";
+import {
+  createPostgresqlTopologyStore,
+  createSqliteTopologyStore,
+} from "@dashboard/db/topology-runtime";
 
 const globalDatabase = globalThis as typeof globalThis & {
   dashboardDatabase?: ReturnType<typeof createDatabase>;
@@ -62,6 +66,7 @@ async function createDatabase() {
       pushSubscriptionStore: createPostgresqlPushSubscriptionStore(client),
       statusPageStore: createPostgresqlStatusPageStore(client),
       reliabilityStore: createPostgresqlReliabilityStore(client),
+      topologyStore: createPostgresqlTopologyStore(client),
       jobStore: createPostgresqlJobStore(client),
       backupStore: createPostgresqlBackupStore(client),
       securityStore: createPostgresqlSecurityStore(client.pool),
@@ -81,6 +86,7 @@ async function createDatabase() {
     pushSubscriptionStore: createSqlitePushSubscriptionStore(client),
     statusPageStore: createSqliteStatusPageStore(client),
     reliabilityStore: createSqliteReliabilityStore(client),
+    topologyStore: createSqliteTopologyStore(client),
     jobStore: createSqliteJobStore(client),
     backupStore: createSqliteBackupStore(client),
     securityStore: createSqliteSecurityStore(client.sqlite),

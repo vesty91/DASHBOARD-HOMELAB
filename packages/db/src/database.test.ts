@@ -202,6 +202,7 @@ describe("SQLite database foundation", () => {
       service_slos: sqliteSchema.serviceSlos,
       slo_alert_policies: sqliteSchema.sloAlertPolicies,
       slo_alert_runtime_state: sqliteSchema.sloAlertRuntimeState,
+      service_dependencies: sqliteSchema.serviceDependencies,
     };
     const postgresTables = {
       users: postgresqlSchema.users,
@@ -243,6 +244,7 @@ describe("SQLite database foundation", () => {
       service_slos: postgresqlSchema.serviceSlos,
       slo_alert_policies: postgresqlSchema.sloAlertPolicies,
       slo_alert_runtime_state: postgresqlSchema.sloAlertRuntimeState,
+      service_dependencies: postgresqlSchema.serviceDependencies,
     };
     for (const tableName of TABLE_NAMES) {
       const expected = SCHEMA_CONTRACT[tableName];

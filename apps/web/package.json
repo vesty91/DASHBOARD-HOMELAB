@@ -32,6 +32,7 @@
     "@dashboard/notifications": "workspace:*",
     "@dashboard/status-pages": "workspace:*",
     "@dashboard/reliability": "workspace:*",
+    "@dashboard/topology": "workspace:*",
     "@dashboard/ntfy": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "@dashboard/prometheus": "workspace:*",

@@ -16,6 +16,7 @@
     "./push-subscription-runtime": "./src/push-subscription-runtime.ts",
     "./status-page-runtime": "./src/status-page-runtime.ts",
     "./reliability-runtime": "./src/reliability-runtime.ts",
+    "./topology-runtime": "./src/topology-runtime.ts",
     "./backup-runtime": "./src/backup-runtime.ts",
     "./security-runtime": "./src/security-runtime.ts",
     "./health": "./src/health.ts"
@@ -45,6 +46,7 @@
     "@dashboard/notifications": "workspace:*",
     "@dashboard/status-pages": "workspace:*",
     "@dashboard/reliability": "workspace:*",
+    "@dashboard/topology": "workspace:*",
     "@dashboard/backup": "workspace:*",
     "@dashboard/permissions": "workspace:*",
     "drizzle-orm": "0.45.2",

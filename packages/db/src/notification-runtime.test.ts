@@ -22,7 +22,7 @@ describe("SQLite notification persistence", () => {
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 14 });
+      ).toMatchObject({ schema_version: 15 });
       const first = await service.createForUser({
         userId: user.id,
         category: "system",

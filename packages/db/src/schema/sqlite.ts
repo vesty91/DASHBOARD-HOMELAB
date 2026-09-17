@@ -916,3 +916,32 @@ export const sloAlertRuntimeState = sqliteTable(
     ),
   ],
 );
+/** Manual curated dependency edges. Included in backup. */
+export const serviceDependencies = sqliteTable(
+  "service_dependencies",
+  {
+    id: text("id").primaryKey(),
+    upstreamServiceKey: text("upstream_service_key").notNull(),
+    downstreamServiceKey: text("downstream_service_key").notNull(),
+    relationship: text("relationship", { enum: ["depends_on"] })
+      .notNull()
+      .default("depends_on"),
+    createdBy: text("created_by"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_dependencies_edge_uq").on(
+      t.upstreamServiceKey,
+      t.downstreamServiceKey,
+      t.relationship,
+    ),
+    index("service_dependencies_upstream_idx").on(t.upstreamServiceKey),
+    index("service_dependencies_downstream_idx").on(t.downstreamServiceKey),
+    check("service_dependencies_relationship_valid", sql`${t.relationship} IN ('depends_on')`),
+    check(
+      "service_dependencies_no_self_loop",
+      sql`${t.upstreamServiceKey} != ${t.downstreamServiceKey}`,
+    ),
+  ],
+);
