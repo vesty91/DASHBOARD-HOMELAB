@@ -25,7 +25,7 @@ describe("SQLite automation persistence", () => {
     try {
       expect(
         client.sqlite.prepare("SELECT schema_version FROM server_settings WHERE id='global'").get(),
-      ).toMatchObject({ schema_version: 14 });
+      ).toMatchObject({ schema_version: 15 });
       const created = await store.create({
         name: "Down alert",
         ownerUserId: owner.id,

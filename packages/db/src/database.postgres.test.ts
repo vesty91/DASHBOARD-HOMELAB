@@ -1008,7 +1008,7 @@ describe.skipIf(!connectionString)("PostgreSQL database foundation", () => {
       expect(created.enabled).toBe(false);
       expect(
         await client.pool.query("select schema_version from server_settings where id='global'"),
-      ).toMatchObject({ rows: [{ schema_version: 14 }] });
+      ).toMatchObject({ rows: [{ schema_version: 15 }] });
       const updated = await store.update(created.id, {
         expectedConfigRevision: 1,
         name: "Down alert v2",
