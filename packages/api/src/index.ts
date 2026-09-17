@@ -1775,7 +1775,9 @@ export const reliabilityRouter = t.router({
     .query(({ ctx, input }) => procedure(() => ctx.reliability.evaluateBurnRate(input, ctx.actor))),
   listAlertPolicies: t.procedure
     .input(listAlertPoliciesSchema)
-    .query(({ ctx, input }) => procedure(() => ctx.reliability.listAlertPolicies(input, ctx.actor))),
+    .query(({ ctx, input }) =>
+      procedure(() => ctx.reliability.listAlertPolicies(input, ctx.actor)),
+    ),
   getAlertPolicy: t.procedure
     .input(getAlertPolicySchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.getAlertPolicy(input, ctx.actor))),
