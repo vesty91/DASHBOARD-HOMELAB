@@ -6,6 +6,14 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+### Ajouté
+
+- SLO Burn-Rate Alerting (Phase 27) : rollups horaires `service_reliability_hourly`,
+  moteur burn-rate (1h/6h/24h/3d, pairs fast/slow AND), politiques
+  `slo_alert_policies` (disabled by default), event `slo.burn-rate.changed`,
+  UI burn + alertes sur `/reliability`. Migrations `0013`–`0014`, DB schema 14,
+  backup schema 12. Voir `docs/27-SLO-ALERTING.md`.
+
 ## [1.6.0] — 2026-09-16
 
 Reliability & SLO Analytics (Phase 26). Minor backward-compatible.

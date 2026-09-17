@@ -812,6 +812,10 @@ Agrégats quotidiens/horaires + objectifs SLO + burn-rate. Voir `docs/26-RELIABI
 | `reliability.createAlertPolicy` | `slo.manage`                                          | disabled by default                                 |
 | `reliability.updateAlertPolicy` | `slo.manage`                                          | CAS revision                                        |
 | `reliability.deleteAlertPolicy` | `slo.manage`                                          | CAS revision                                        |
+| `reliability.getAlertRuntime`   | `reliability.read`                                    | last state / cooldown (pas de secrets)              |
+
+Event automation allowlist : `slo.burn-rate.changed` (payload safe).
+Voir aussi `docs/27-SLO-ALERTING.md`.
 
 # SSO / admin avancé — Phase 15
 

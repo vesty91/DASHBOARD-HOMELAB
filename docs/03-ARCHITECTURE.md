@@ -461,3 +461,10 @@ COMPLETE. Fiabilité / SLO (`0011`–`0012`, DB schema 12) : package
 `@dashboard/reliability`, rollups quotidiens dérivés (hors backup), objectifs
 `service_slos` (backup schema 11), UI `/reliability`, widget
 `reliability-status`. Minor produit `1.6.0`. Voir `docs/26-RELIABILITY.md`.
+
+# État Phase 27
+
+COMPLETE. SLO burn-rate alerting (`0013`–`0014`, DB schema 14) : rollups
+horaires, moteur burn-rate multi-fenêtre, `slo_alert_policies` (backup schema
+12), event `slo.burn-rate.changed`, UI étendue. Minor produit `1.7.0`.
+Voir `docs/27-SLO-ALERTING.md`.

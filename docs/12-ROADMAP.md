@@ -554,16 +554,33 @@ avancé, alerting `slo.budget.low` (optionnel ultérieur).
 
 ## Phase 27 — SLO Burn-Rate Alerting
 
-Statut : **IN PROGRESS**.
+Statut : **COMPLETE**.
 
-Livrables prévus :
+Livrables :
 
-- rollups horaires UTC `service_reliability_hourly` (migration suivante) ;
-- moteur burn-rate (fenêtres fermées 1h / 6h / 24h / 3d) ;
-- politiques d’alerte SLO (disabled by default) + cooldown / recovery ;
-- event `slo.burn-rate.changed` → Notification Center (+ automation safe) ;
-- UI `/reliability` étendue ;
-- pas de PromQL, pas de TSDB, pas de remédiation auto risquée.
+- rollups horaires UTC `service_reliability_hourly` (migration `0013`) ;
+- moteur burn-rate (fenêtres fermées 1h / 6h / 24h / 3d ; pairs fast/slow AND) ;
+- politiques `slo_alert_policies` + runtime (migration `0014`, disabled default) ;
+- event `slo.burn-rate.changed` → Notification Center (+ automation allowlist) ;
+- UI `/reliability` : burn panels + CRUD politiques ;
+- docs `docs/27-SLO-ALERTING.md`.
+
+PRs : #91–#94 (+ close). Tag `phase-27-complete`. Minor produit `v1.7.0`.
+
+Migrations : `0000`–`0014` (SQLite + PostgreSQL). DB `schemaVersion` **14**.
+Backup `formatVersion` 1 / `schemaVersion` **12** (compat 5–12 ; inclut
+`service_slos` + `slo_alert_policies` ; exclut rollups daily/hourly +
+`slo_alert_runtime_state`).
+
+Hors scope : PromQL, TSDB, remédiation auto risquée.
+
+## Phase 28 — Service Topology & Impact Analysis
+
+Statut : **PLANNED** (ne démarre qu’après release `v1.7.0` GHCR green).
+
+Objectifs prévus : graphe de dépendances curaté, blast radius, impact analysis,
+candidats root-cause déterministes, UI `/topology` — sans scan LAN ni
+auto-discovery.
 
 ## Règle
 
