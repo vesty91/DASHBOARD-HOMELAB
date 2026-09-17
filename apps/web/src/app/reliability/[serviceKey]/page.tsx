@@ -44,13 +44,64 @@ export default async function ReliabilityServicePage({
     slos.map(async (slo) => caller.reliability.evaluateSlo({ id: slo.id })),
   );
 
+  const policies =
+    slos.length > 0
+      ? await caller.reliability.listAlertPolicies({
+          sloIds: slos.map((slo) => slo.id),
+          limit: 50,
+        })
+      : [];
+  const policyBySloId = new Map(policies.map((policy) => [policy.sloId, policy]));
+
+  const burnEntries = await Promise.all(
+    slos.map(async (slo) => {
+      const [burn, runtime] = await Promise.all([
+        caller.reliability.evaluateBurnRate({ id: slo.id }),
+        caller.reliability.getAlertRuntime({ sloId: slo.id }),
+      ]);
+      const policy = policyBySloId.get(slo.id);
+      return [
+        slo.id,
+        {
+          evaluation: burn.evaluation,
+          policy: policy
+            ? {
+                id: policy.id,
+                sloId: policy.sloId,
+                enabled: policy.enabled,
+                warningThreshold: policy.warningThreshold,
+                criticalThreshold: policy.criticalThreshold,
+                cooldownSeconds: policy.cooldownSeconds,
+                notifyOnRecovery: policy.notifyOnRecovery,
+                configRevision: policy.configRevision,
+                createdAt: policy.createdAt.toISOString(),
+                updatedAt: policy.updatedAt.toISOString(),
+              }
+            : null,
+          runtime: runtime
+            ? {
+                sloId: runtime.sloId,
+                lastState: runtime.lastState,
+                lastNotifiedState: runtime.lastNotifiedState,
+                lastNotifiedAt: runtime.lastNotifiedAt?.toISOString() ?? null,
+                lastTransitionAt: runtime.lastTransitionAt?.toISOString() ?? null,
+                lastBurnRate: runtime.lastBurnRate,
+                updatedAt: runtime.updatedAt.toISOString(),
+              }
+            : null,
+        },
+      ] as const;
+    }),
+  );
+  const burnBySloId = Object.fromEntries(burnEntries);
+
   const serviceLabel = `${integration.name} (${integration.type})`;
 
   return (
     <PageContainer wide>
       <PageHeader
         title={serviceLabel}
-        description="Rollups quotidiens UTC, objectifs SLO et export CSV."
+        description="Rollups quotidiens UTC, objectifs SLO, burn-rate et politiques d’alerte."
         actions={
           <Link className="ui-btn ui-btn-ghost" href="/reliability">
             Retour
@@ -63,6 +114,7 @@ export default async function ReliabilityServicePage({
         days={days}
         slos={slos}
         evaluations={evaluations}
+        burnBySloId={burnBySloId}
         canManageSlo={permissions.canManageSlo}
       />
     </PageContainer>

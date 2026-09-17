@@ -171,6 +171,10 @@ export const getAlertPolicySchema = z.object({
   id: z.string().uuid(),
 });
 
+export const getAlertRuntimeSchema = z.object({
+  sloId: z.string().uuid(),
+});
+
 export const listAlertPoliciesSchema = z.object({
   sloIds: z.array(z.string().uuid()).max(50).optional(),
   limit: z.number().int().min(1).max(200).default(100),
@@ -194,4 +198,5 @@ export type CreateAlertPolicyInput = z.infer<typeof createAlertPolicySchema>;
 export type UpdateAlertPolicyInput = z.infer<typeof updateAlertPolicySchema>;
 export type DeleteAlertPolicyInput = z.infer<typeof deleteAlertPolicySchema>;
 export type ListAlertPoliciesInput = z.infer<typeof listAlertPoliciesSchema>;
+export type GetAlertRuntimeInput = z.infer<typeof getAlertRuntimeSchema>;
 export type SummarizeReliabilityInput = z.infer<typeof summarizeReliabilitySchema>;

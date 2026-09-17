@@ -32,7 +32,9 @@ async function ensureIntegration(page: Page) {
   await expect(page).toHaveURL(/\/integrations\/.+\/edit/);
 }
 
-test("reliability: overview, detail, slo create, csv export, a11y", async ({ page }) => {
+test("reliability: overview, detail, slo create, alert policy, csv export, a11y", async ({
+  page,
+}) => {
   await loginAdmin(page);
   await ensureIntegration(page);
 
@@ -55,6 +57,26 @@ test("reliability: overview, detail, slo create, csv export, a11y", async ({ pag
   await expect(page.getByText("Objectif SLO créé.")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("reliability-slo-table")).toContainText("E2E availability");
 
+  await expect(page.getByTestId("reliability-burn-section")).toBeVisible();
+  await expect(page.locator("[data-testid^=reliability-burn-card-]").first()).toBeVisible();
+
+  const createPolicy = page.locator("[data-testid^=reliability-alert-create-]").first();
+  await createPolicy.click();
+  await expect(page.getByText("Politique d’alerte créée (désactivée).")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const enabledLabel = page.locator("[data-testid^=reliability-alert-enabled-label-]").first();
+  await expect(enabledLabel).toContainText("désactivée");
+
+  await page.locator("[data-testid^=reliability-alert-enabled-]").first().check();
+  await page.locator("[data-testid^=reliability-alert-warning-]").first().fill("2");
+  await page.locator("[data-testid^=reliability-alert-critical-]").first().fill("10");
+  await page.locator("[data-testid^=reliability-alert-cooldown-]").first().fill("600");
+  await page.locator("[data-testid^=reliability-alert-save-]").first().click();
+  await expect(page.getByText("Politique d’alerte mise à jour.")).toBeVisible({ timeout: 15_000 });
+  await expect(enabledLabel).toContainText("activée");
+
   const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("reliability-export-csv").click();
   const download = await downloadPromise;
@@ -64,4 +86,15 @@ test("reliability: overview, detail, slo create, csv export, a11y", async ({ pag
   await page.goto("/reliability");
   await expect(page.getByRole("heading", { name: "Fiabilité" })).toBeVisible();
   await expectPageA11y(page);
+
+  await page.getByRole("link", { name: "Voir" }).first().click();
+  await expect(page.getByTestId("reliability-burn-section")).toBeVisible();
+  await expectPageA11y(page);
+});
+
+test("reliability: unauthenticated access redirected", async ({ browser }) => {
+  const anon = await browser.newPage();
+  await anon.goto("/reliability");
+  await expect(anon).toHaveURL(/\/(login|setup)/);
+  await anon.close();
 });

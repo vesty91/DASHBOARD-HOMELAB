@@ -147,6 +147,7 @@ import {
   evaluateBurnRateSchema,
   evaluateSloSchema,
   getAlertPolicySchema,
+  getAlertRuntimeSchema,
   getSloSchema,
   listAlertPoliciesSchema,
   listDailyReliabilitySchema,
@@ -1781,6 +1782,9 @@ export const reliabilityRouter = t.router({
   getAlertPolicy: t.procedure
     .input(getAlertPolicySchema)
     .query(({ ctx, input }) => procedure(() => ctx.reliability.getAlertPolicy(input, ctx.actor))),
+  getAlertRuntime: t.procedure
+    .input(getAlertRuntimeSchema)
+    .query(({ ctx, input }) => procedure(() => ctx.reliability.getAlertRuntime(input, ctx.actor))),
   createAlertPolicy: t.procedure
     .input(createAlertPolicySchema)
     .mutation(({ ctx, input }) =>

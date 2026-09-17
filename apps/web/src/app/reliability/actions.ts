@@ -115,3 +115,80 @@ export async function rebuildReliabilityAction(input?: {
     return { ok: false, ...mapError(error) };
   }
 }
+
+export async function createAlertPolicyAction(input: {
+  sloId: string;
+  serviceKey: string;
+  enabled?: boolean;
+  warningThreshold?: number;
+  criticalThreshold?: number;
+  cooldownSeconds?: number;
+  notifyOnRecovery?: boolean;
+}): Promise<ReliabilitySloCreateResult> {
+  try {
+    const created = await (
+      await getBoardCaller()
+    ).reliability.createAlertPolicy({
+      sloId: input.sloId,
+      enabled: input.enabled ?? false,
+      warningThreshold: input.warningThreshold ?? 1,
+      criticalThreshold: input.criticalThreshold ?? 14.4,
+      cooldownSeconds: input.cooldownSeconds ?? 3600,
+      notifyOnRecovery: input.notifyOnRecovery ?? true,
+    });
+    revalidateReliabilityPaths(input.serviceKey);
+    return { ok: true, id: created.id };
+  } catch (error) {
+    return { ok: false, ...mapError(error) };
+  }
+}
+
+export async function updateAlertPolicyAction(input: {
+  id: string;
+  expectedConfigRevision: number;
+  serviceKey: string;
+  enabled?: boolean;
+  warningThreshold?: number;
+  criticalThreshold?: number;
+  cooldownSeconds?: number;
+  notifyOnRecovery?: boolean;
+}): Promise<ReliabilityActionResult> {
+  try {
+    await (
+      await getBoardCaller()
+    ).reliability.updateAlertPolicy({
+      id: input.id,
+      expectedConfigRevision: input.expectedConfigRevision,
+      ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+      ...(input.warningThreshold !== undefined ? { warningThreshold: input.warningThreshold } : {}),
+      ...(input.criticalThreshold !== undefined
+        ? { criticalThreshold: input.criticalThreshold }
+        : {}),
+      ...(input.cooldownSeconds !== undefined ? { cooldownSeconds: input.cooldownSeconds } : {}),
+      ...(input.notifyOnRecovery !== undefined ? { notifyOnRecovery: input.notifyOnRecovery } : {}),
+    });
+    revalidateReliabilityPaths(input.serviceKey);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, ...mapError(error) };
+  }
+}
+
+export async function deleteAlertPolicyAction(input: {
+  id: string;
+  expectedConfigRevision: number;
+  serviceKey: string;
+}): Promise<ReliabilityActionResult> {
+  try {
+    await (
+      await getBoardCaller()
+    ).reliability.deleteAlertPolicy({
+      id: input.id,
+      expectedConfigRevision: input.expectedConfigRevision,
+    });
+    revalidateReliabilityPaths(input.serviceKey);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, ...mapError(error) };
+  }
+}
