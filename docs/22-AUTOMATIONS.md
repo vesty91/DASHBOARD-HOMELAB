@@ -38,7 +38,8 @@ Moteur déclaratif livré :
 
 - schedule : `interval` (minimum 1 minute) et cron 5 champs **UTC** ;
 - event : `integration.status.changed`, `integration.data.changed`, `job.failed`,
-  `slo.burn-rate.changed` (Phase 27.3, payload safe) ;
+  `slo.burn-rate.changed` (Phase 27.3, payload safe),
+  `dependency.impact.changed` (Phase 28.2, payload safe) ;
 - status-transition : `from` / `to` sur `integration.status.changed` + `lastObservedStatus` ;
 - conditions : `eq` `neq` `lt` `lte` `gt` `gte` `contains` `and` `or` ;
 - champs fermés par trigger ;

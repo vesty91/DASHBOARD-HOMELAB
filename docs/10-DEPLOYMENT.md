@@ -14,10 +14,10 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.7.0` (Phase 27 minor). Les tags `phase-*` ne
-publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
-`latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
-`:tag` et `:sha-*` (ADR 0029).
+La version applicative est `1.7.0` jusqu’à la release Phase 28 (`1.8.0`).
+Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver stables
+`vX.Y.Z` publient `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie
+uniquement `:tag` et `:sha-*` (ADR 0029).
 
 ## 2. Prérequis
 
@@ -219,20 +219,21 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
 ## 10. Upgrade
 
 1. Export backup UI (`backup.manage`) + copie volume `appdata` / dump Postgres.
-2. Lire `CHANGELOG.md`. Migrations `0000`–`0014` sont immuables une fois
-   publiées. Phase 27 ajoute `0013` (hourly) + `0014` (alert policies).
-   L'upgrade 1.6.0 → 1.7.0 (DB schéma 14, backup schéma 12) conserve users /
+2. Lire `CHANGELOG.md`. Migrations `0000`–`0015` sont immuables une fois
+   publiées. Phase 28 ajoute `0015` (`service_dependencies`).
+   L'upgrade 1.7.0 → 1.8.0 (DB schéma 15, backup schéma 13) conserve users /
    boards / widgets / integrations / automations / status pages / maintenance /
-   SLO / alert policies (éphémères, rollups et runtime alert restent hors backup).
+   SLO / alert policies / dépendances topologie (éphémères, rollups, runtime
+   alert et impact dérivé restent hors backup).
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant,
-   `/reliability` si permission (burn-rate + politiques).
+   `/reliability` et `/topology` si permissions.
 6. Rollback si nécessaire.
 
-Un backup schema v5…v11 est encore accepté (upgrade in-memory vers v12).
-v12 accepté. v13+ rejeté. `appVersion` 0.1.0 dans une archive
-v5–v12 reste valide.
+Un backup schema v5…v12 est encore accepté (upgrade in-memory vers v13).
+v13 accepté. v14+ rejeté. `appVersion` 0.1.0 dans une archive
+v5–v13 reste valide.
 
 ## 11. Rollback
 
@@ -249,9 +250,10 @@ Ne pas prétendre qu'un `migrate down` existe.
 ## 12. Backup / restore (Phase 14 réel)
 
 Format : JSON `homelab-dashboard-backup`, `formatVersion` 1,
-`schemaVersion` 5–12, hash SHA-256. Secrets : ciphertext / iv / authTag /
-keyVersion uniquement. Phase 27 inclut `service_slos` + `slo_alert_policies`
-(exclut rollups reliability + `slo_alert_runtime_state`).
+`schemaVersion` 5–13, hash SHA-256. Secrets : ciphertext / iv / authTag /
+keyVersion uniquement. Phase 27–28 inclut `service_slos` +
+`slo_alert_policies` + `service_dependencies` (exclut rollups reliability,
+`slo_alert_runtime_state`, impact dérivé).
 
 Pipeline : export → manifeste + hashes → `validate`/`preview` sans mutation →
 backup pré-restore sur disque → restore transactionnel → commit.

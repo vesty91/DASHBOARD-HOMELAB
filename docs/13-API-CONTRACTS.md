@@ -683,7 +683,7 @@ la transaction.
 
 | Route             | Permission      | Notes                                                                                                             |
 | ----------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 11. Rate limité. |
+| `backup.export`   | `backup.manage` | Mutation (plus de query GET). Archive `{ manifest, tables }`. `formatVersion` 1, `schemaVersion` 13. Rate limité. |
 | `backup.validate` | `backup.manage` | Preview (comptages, versions). Rejette table/colonne/clé inconnue avant toute mutation.                           |
 | `backup.restore`  | `backup.manage` | Input `{ archive, confirm: true }`. Backup pré-restore, restore transactionnel, puis cache.                       |
 
@@ -816,6 +816,22 @@ Agrégats quotidiens/horaires + objectifs SLO + burn-rate. Voir `docs/26-RELIABI
 
 Event automation allowlist : `slo.burn-rate.changed` (payload safe).
 Voir aussi `docs/27-SLO-ALERTING.md`.
+
+# Topology / Impact — Phase 28
+
+Dépendances curatées + analyse d’impact. Voir `docs/28-TOPOLOGY.md`.
+
+| Route                    | Permission        | Notes                                                          |
+| ------------------------ | ----------------- | -------------------------------------------------------------- |
+| `topology.permissions`   | authentifié       | `{ canRead, canManage }`                                       |
+| `topology.list`          | `topology.read`   | ≤1000 arêtes ; filtres `serviceKeys` optionnels                |
+| `topology.get`           | `topology.read`   |                                                                |
+| `topology.create`        | `topology.manage` | `depends_on` ; rejette self-loop / cycle / unknown / duplicate |
+| `topology.delete`        | `topology.manage` |                                                                |
+| `topology.analyzeImpact` | `topology.read`   | `actualStatus` vs `impactStatus` ; `candidateRootCause`        |
+
+Event automation allowlist : `dependency.impact.changed` (payload safe).
+Jamais exposés : IP, hostname, secrets, PromQL, status pages publiques.
 
 # SSO / admin avancé — Phase 15
 

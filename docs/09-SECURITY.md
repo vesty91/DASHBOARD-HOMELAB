@@ -128,6 +128,17 @@ Règles obligatoires :
   revalidées au tick worker.
 - Jamais `healthy` sans données éligibles (`insufficient-data`).
 
+## 5quinquies. Service topology (Phase 28)
+
+- Dépendances curatées uniquement (`depends_on`) ; cycles refusés ; bornes
+  depth/nodes.
+- Permissions `topology.read` / `topology.manage` serveur (pas d’ADMIN
+  par défaut).
+- `actualStatus` jamais écrasé par l’impact ; `candidateRootCause` non assertif.
+- Event `dependency.impact.changed` payload safe ; pas de scan LAN /
+  auto-discovery / remédiation.
+- Backup inclut `service_dependencies` ; exclut impact dérivé.
+
 ### Installation PWA (pas de bouton Install universel)
 
 - **Chromium / Edge** (desktop et Android) : installation via l’UI du
@@ -204,8 +215,10 @@ Tables éphémères hors archive (Phase 14+) : `audit_logs`, `auth_sessions`,
 Phase 24 ajoute `push_subscriptions` (endpoints Web Push chiffrés) à
 cette exclusion. Phase 25 **inclut** au backup `status_pages`,
 `status_page_services`, `maintenance_windows` et
-`maintenance_window_targets` (config durable). `schemaVersion` courant :
-**11** (compat restore 5–11).
+`maintenance_window_targets` (config durable). Phase 26–27 : `service_slos` +
+`slo_alert_policies` (rollups / runtime exclus). Phase 28 **inclut**
+`service_dependencies` (impact dérivé exclus). `schemaVersion` backup courant :
+**13** (compat restore 5–13). DB `schemaVersion` **15** ≠ backup (volontaire).
 
 ## 10. Rate limiting
 

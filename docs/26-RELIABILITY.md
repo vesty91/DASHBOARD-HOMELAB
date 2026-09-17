@@ -1,9 +1,11 @@
 # 26 — Reliability & SLO Analytics
 
 Phase 26 **COMPLETE**. Phase 27 (burn-rate alerting) : voir `docs/27-SLO-ALERTING.md`.
-Migrations `0011`–`0014`. DB `schemaVersion` **14**.
-Backup `formatVersion` 1 / `schemaVersion` **12** (SLO + alert policies ;
-rollups et runtime state exclus). Tag `phase-26-complete`. Minor produit `v1.6.0`.
+Phase 28 (topology) : voir `docs/28-TOPOLOGY.md`.
+Migrations `0011`–`0015`. DB `schemaVersion` **15**.
+Backup `formatVersion` 1 / `schemaVersion` **13** (SLO + alert policies +
+dépendances ; rollups / runtime / impact dérivé exclus).
+Tag `phase-26-complete`. Minor produit `v1.6.0`.
 
 ## Objectif
 

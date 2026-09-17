@@ -6,8 +6,8 @@ Le produit centralise les boards, les applications, les widgets, les intégratio
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
 les automations / alertes, le centre de notifications / incidents, les status
 pages / fenêtres de maintenance, la fiabilité / SLO / burn-rate alerting, la
-PWA / Web Push, la sauvegarde et l’OIDC. Les secrets et les appels d’API restent
-côté serveur.
+topologie / impact, la PWA / Web Push, la sauvegarde et l’OIDC. Les secrets et
+les appels d’API restent côté serveur.
 
 Identité originale. Homarr n’est qu’une référence fonctionnelle (`reference/homarr`,
 lecture seule).
