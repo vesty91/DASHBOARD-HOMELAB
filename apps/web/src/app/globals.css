@@ -1157,6 +1157,31 @@ a.ui-btn-ghost:hover {
   overflow-wrap: anywhere;
 }
 
+.topology-panel .topology-list-title {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.topology-edge-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.topology-root-marker {
+  color: var(--muted-foreground);
+  font-size: 0.85em;
+}
+
+@media (max-width: 720px) {
+  .topology-panel .ui-table-wrap {
+    overflow-x: auto;
+  }
+}
+
 .shell-content {
   padding: 1.35rem 1.75rem max(2rem, env(safe-area-inset-bottom, 0px));
   padding-left: max(1.75rem, env(safe-area-inset-left, 0px));

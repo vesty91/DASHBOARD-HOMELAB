@@ -48,6 +48,8 @@ describe("PWA cache policy", () => {
       "/status-pages",
       "/status",
       "/status/homelab",
+      "/reliability",
+      "/topology",
       "/backup",
     ];
     for (const path of denied) {

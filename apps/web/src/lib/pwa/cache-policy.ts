@@ -27,6 +27,8 @@ const SENSITIVE_PATH_PREFIXES = [
   "/incidents",
   "/status-pages",
   "/status",
+  "/reliability",
+  "/topology",
   "/backup",
 ] as const;
 
