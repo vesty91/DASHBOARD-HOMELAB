@@ -1,10 +1,44 @@
-import type { SloWindowDays } from "@dashboard/reliability";
+import type { BurnRateState, SloWindowDays } from "@dashboard/reliability";
 
 export const SLO_WINDOW_LABELS: Record<SloWindowDays, string> = {
   7: "7 jours",
   30: "30 jours",
   90: "90 jours",
 };
+
+export const BURN_STATE_LABELS: Record<BurnRateState, string> = {
+  healthy: "Sain",
+  warning: "Avertissement",
+  critical: "Critique",
+  "insufficient-data": "Données insuffisantes",
+};
+
+export function burnStateTone(state: BurnRateState): "success" | "warning" | "danger" | "neutral" {
+  switch (state) {
+    case "healthy":
+      return "success";
+    case "warning":
+      return "warning";
+    case "critical":
+      return "danger";
+    case "insufficient-data":
+      return "neutral";
+    default: {
+      const _never: never = state;
+      return _never;
+    }
+  }
+}
+
+export function formatBurnRate(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  return `${value.toFixed(2)}×`;
+}
+
+export function formatBudgetRemaining(fraction: number | null): string {
+  if (fraction === null || !Number.isFinite(fraction)) return "—";
+  return `${(fraction * 100).toFixed(1)} %`;
+}
 
 export function formatBasisPoints(bps: number | null): string {
   if (bps === null) return "—";
@@ -30,6 +64,17 @@ export function formatUtcDate(dateUtc: string): string {
     dateStyle: "medium",
     timeZone: "UTC",
   }).format(new Date(parsed));
+}
+
+export function formatUtcDateTime(value: Date | string | null): string {
+  if (!value) return "—";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (!Number.isFinite(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 export function sloStatusLabel(met: boolean | null): string {

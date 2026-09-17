@@ -34,6 +34,7 @@ import {
   evaluateBurnRateSchema,
   evaluateSloSchema,
   getAlertPolicySchema,
+  getAlertRuntimeSchema,
   getSloSchema,
   listAlertPoliciesSchema,
   listDailyReliabilitySchema,
@@ -49,6 +50,7 @@ import {
   type DeleteSloInput,
   type EvaluateBurnRateInput,
   type EvaluateSloInput,
+  type GetAlertRuntimeInput,
   type ListAlertPoliciesInput,
   type ListDailyReliabilityInput,
   type ListHourlyReliabilityInput,
@@ -525,6 +527,12 @@ export function createReliabilityService(deps: {
       const policy = await deps.store.getAlertPolicy(input.id);
       if (!policy) throw new ReliabilityError("NOT_FOUND", "Alert policy not found");
       return policy;
+    },
+
+    async getAlertRuntime(raw: GetAlertRuntimeInput, actor: ReliabilityActor) {
+      requireRead(actor);
+      const input = getAlertRuntimeSchema.parse(raw);
+      return deps.store.getAlertRuntime(input.sloId);
     },
 
     async createAlertPolicy(raw: CreateAlertPolicyInput, actor: ReliabilityActor) {

@@ -292,6 +292,7 @@ function createCaller(
       getAlertPolicy: async () => {
         throw new Error("alert policy not stubbed");
       },
+      getAlertRuntime: async () => null,
       createAlertPolicy: async () => {
         throw new Error("alert policy not stubbed");
       },
