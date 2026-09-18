@@ -386,18 +386,25 @@ Le manifest doit contenir :
 }
 ```
 
-La v1 accepte les schémas Drizzle 5, 6, 7, 8, 9 et 10. La migration `0007` ajoute
-les tables d'automations. La migration `0008` ajoute `notifications`,
-`incidents` et `incident_events` (éphémères, hors backup). La migration
-`0009` ajoute `push_subscriptions` (éphémères, hors backup). La migration
-`0010` ajoute `status_pages`, `status_page_services`, `maintenance_windows`
-et `maintenance_window_targets` (**inclus** au backup). Le restore
-d'une archive v5 complète OIDC puis les `automation_rules` vides. Le
-restore v6 complète `automation_rules` vides. Le restore v7/v8/v9
-complète les tables status/maintenance vides. Schéma 11+ rejeté.
+Backup courant : `formatVersion` 1, `schemaVersion` **13**,
+`databaseSchemaVersion` **15** (≠ volontairement : tables dérivées / runtime
+hors archive). Compat restore : schémas archive **5–13** (upgrade in-memory) ;
+**14+** rejeté.
+
+Historique migrations utiles au backup :
+
+- `0007` : automations ;
+- `0008` : `notifications` / `incidents` / `incident_events` (éphémères, hors backup) ;
+- `0009` : `push_subscriptions` (éphémères, hors backup) ;
+- `0010` : status pages / maintenance (**inclus**) ;
+- `0011`–`0012` : reliability / SLO ;
+- `0013`–`0014` : hourly rollups + SLO alert policies (rollups / runtime hors backup) ;
+- `0015` : `service_dependencies` (**inclus** ; impact dérivé hors backup).
+
 `audit_logs`, `auth_sessions`, `automation_runs`,
 `automation_runtime_state`, `notifications`, `incidents`,
-`incident_events` et `push_subscriptions` ne sont pas exportés.
+`incident_events`, `push_subscriptions`, rollups reliability,
+`slo_alert_runtime_state` et caches d’impact ne sont pas exportés.
 
 ## 8. Implémentation Phase 2
 

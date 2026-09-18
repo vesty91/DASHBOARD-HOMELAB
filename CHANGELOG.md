@@ -6,6 +6,12 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
+### Phase 29 (en cours)
+
+Production Acceptance & Stabilization — patch cible `1.8.1`.
+Réconciliation docs / contrats (DB 15, backup 13). Hotfixes post-`v1.8.0`
+`#102` / `#103` inclus dans `1.8.1` uniquement (tag `v1.8.0` inchangé).
+
 ## [1.8.0] — 2026-09-17
 
 Service Topology & Impact Analysis (Phase 28). Minor backward-compatible.

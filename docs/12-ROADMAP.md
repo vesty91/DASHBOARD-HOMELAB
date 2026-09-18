@@ -596,6 +596,24 @@ Backup `formatVersion` 1 / `schemaVersion` **13** (compat 5–13 ; inclut
 
 Hors scope : scan LAN, auto-discovery, remédiation auto, overwrite status réel.
 
+## Phase 29 — Production Acceptance & Stabilization
+
+Statut : **IN PROGRESS**.
+
+Objectifs :
+
+- acceptance production (pas d’expansion fonctionnelle) ;
+- réconciliation documentation / contrats schéma ;
+- stabilisation CI / E2E / Lighthouse ;
+- vérification hotfixes post-`v1.8.0` (`#102` / `#103`) ;
+- validation chaîne migrations `0000`–`0015` (DB **15**) ;
+- validation contrat backup (`formatVersion` 1, `schemaVersion` **13**) ;
+- validation flux images GHCR production ;
+- clôture éventuelle du gap d’émission `dependency.impact.changed` si présent ;
+- release patch **`v1.8.1`** (ne pas déplacer `v1.8.0`).
+
+État de départ : `main` @ `0c16cde` (ahead de `v1.8.0` @ `f771890`).
+
 ## Règle
 
 Ne jamais ouvrir la phase N+1 si les gates qualité critiques de N sont rouges.

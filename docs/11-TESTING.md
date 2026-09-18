@@ -111,7 +111,7 @@ Tester :
 ### E2E-008 backup
 
 - export ;
-- manifest valide (`schemaVersion` 11) ;
+- manifest valide (`schemaVersion` 13, backup courant) ;
 - fichier invalide rejeté avant mutation.
 
 ### E2E-009 SSO admin
