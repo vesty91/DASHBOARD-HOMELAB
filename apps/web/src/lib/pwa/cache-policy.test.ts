@@ -12,7 +12,7 @@ import {
 
 describe("PWA cache policy", () => {
   it("versions cache names and bounds static cache size", () => {
-    expect(PWA_CACHE_VERSION).toBe("v1");
+    expect(PWA_CACHE_VERSION).toBe("v2");
     expect(PWA_SHELL_CACHE).toContain(PWA_CACHE_VERSION);
     expect(PWA_STATIC_CACHE).toContain(PWA_CACHE_VERSION);
     expect(PWA_STATIC_CACHE_MAX_ENTRIES).toBeGreaterThan(0);
@@ -22,6 +22,7 @@ describe("PWA cache policy", () => {
   it("allows only static shell assets", () => {
     expect(isAllowedStaticAsset("/_next/static/chunks/app.js")).toBe(true);
     expect(isAllowedStaticAsset("/icons/icon-192.png")).toBe(true);
+    expect(isAllowedStaticAsset("/branding/restor-pc-logo.png")).toBe(true);
     expect(isAllowedStaticAsset("/offline.html")).toBe(true);
     expect(isAllowedStaticAsset("/manifest.webmanifest")).toBe(true);
     expect(isAllowedStaticAsset("/favicon.ico")).toBe(true);

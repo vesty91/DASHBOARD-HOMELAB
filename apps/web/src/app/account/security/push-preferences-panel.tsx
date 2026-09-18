@@ -281,7 +281,7 @@ export function PushPreferencesPanel() {
       <h2 className="ui-section-title">Notifications push</h2>
       <p className="ui-muted">
         Opt-in uniquement. Les payloads lock-screen restent minimaux par défaut (titre générique «
-        Homelab Dashboard », sans titres métier, emails ni détails sensibles).
+        Restor_Pc », sans titres métier, emails ni détails sensibles).
       </p>
       <p className="ui-muted">
         Installation PWA : Chromium / Edge propose l’installation via l’UI du navigateur ; sur iOS

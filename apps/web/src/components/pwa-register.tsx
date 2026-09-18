@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /**
- * Registers the secure Homelab Dashboard service worker.
+ * Registers the secure Restor_Pc service worker.
  * Skips when Service Worker API is missing or the page is not a secure context.
  */
 export function PwaRegister() {

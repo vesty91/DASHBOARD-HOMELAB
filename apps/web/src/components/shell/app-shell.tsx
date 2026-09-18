@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { revokeCurrentSessionAction } from "@/app/logout-action";
@@ -148,14 +149,15 @@ export function AppShell({
           : {})}
       >
         <div className="shell-brand">
-          <span className="shell-brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-          </span>
+          <Image
+            className="shell-brand-logo"
+            src="/icons/icon-192.png"
+            width={28}
+            height={28}
+            alt=""
+          />
           <span className="shell-brand-copy">
-            Homelab
+            Restor_Pc
             <small>Dashboard</small>
           </span>
           <IconButton

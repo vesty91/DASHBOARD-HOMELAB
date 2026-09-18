@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101318" />
-    <title>Hors ligne — Homelab Dashboard</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <title>Hors ligne — Restor_Pc</title>
     <style>
       :root {
         color-scheme: dark;
@@ -47,27 +48,11 @@
         font-weight: 650;
         letter-spacing: -0.03em;
       }
-      .mark {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 3px;
-        width: 1.7rem;
-        height: 1.7rem;
-        padding: 3px;
+      .brand img {
+        width: 1.85rem;
+        height: 1.85rem;
         border-radius: 7px;
-        background: rgb(79 125 255 / 0.16);
         flex: none;
-      }
-      .mark span {
-        display: block;
-        border-radius: 2px;
-        background: var(--accent);
-      }
-      .mark span:nth-child(2) {
-        opacity: 0.55;
-      }
-      .mark span:nth-child(3) {
-        opacity: 0.7;
       }
       h1 {
         margin: 0 0 0.5rem;
@@ -98,18 +83,13 @@
   <body>
     <main>
       <div class="brand">
-        <span class="mark" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </span>
-        Homelab
+        <img src="/icons/icon-192.png" width="30" height="30" alt="" />
+        Restor_Pc
       </div>
       <h1>Vous êtes hors ligne</h1>
       <p>
-        Homelab Dashboard n’est pas disponible sans connexion. Aucune donnée privée n’est conservée
-        hors ligne. Réessayez lorsque le réseau revient.
+        Restor_Pc n’est pas disponible sans connexion. Aucune donnée privée n’est conservée hors
+        ligne. Réessayez lorsque le réseau revient.
       </p>
       <button type="button" onclick="location.reload()">Réessayer</button>
     </main>

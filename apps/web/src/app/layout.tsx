@@ -13,9 +13,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  applicationName: "Homelab Dashboard",
-  title: "Homelab Dashboard",
-  description: "Tableau de bord homelab self-hosted",
+  applicationName: "Restor_Pc",
+  title: "Restor_Pc — Dashboard Homelab",
+  description: "Dashboard homelab self-hosted Restor_Pc",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Homelab",
+    title: "Restor_Pc",
     statusBarStyle: "black-translucent",
   },
 };

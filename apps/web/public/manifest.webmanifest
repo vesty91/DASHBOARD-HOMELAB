@@ -1,7 +1,7 @@
 {
-  "name": "Homelab Dashboard",
-  "short_name": "Homelab",
-  "description": "Tableau de bord homelab self-hosted",
+  "name": "Restor_Pc — Dashboard Homelab",
+  "short_name": "Restor_Pc",
+  "description": "Dashboard homelab self-hosted Restor_Pc",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

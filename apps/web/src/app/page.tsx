@@ -36,8 +36,8 @@ export default async function HomePage() {
     const onboarded = await authStore.isOnboardingCompleted();
     return (
       <PublicAuthLayout
-        title="Homelab Dashboard"
-        description="Tableau de bord self-hosted pour votre homelab."
+        title="Bienvenue"
+        description="Dashboard self-hosted Restor_Pc pour votre homelab."
       >
         {onboarded ? (
           <Link className="ui-btn ui-btn-primary" href="/login">

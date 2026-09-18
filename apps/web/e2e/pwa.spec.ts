@@ -1,5 +1,15 @@
 import { expect, test } from "@playwright/test";
 
+test("login shows Restor_Pc branding assets", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("img", { name: "Restor_Pc — Dashboard Homelab" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
+  await expect(page.getByText("Accédez à votre dashboard Restor_Pc.")).toBeVisible();
+  await page.getByLabel("Identifiant").focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Mot de passe")).toBeFocused();
+});
+
 test("serves installable PWA manifest with original branding", async ({ request }) => {
   const response = await request.get("/manifest.webmanifest");
   expect(response.ok()).toBeTruthy();
@@ -10,8 +20,8 @@ test("serves installable PWA manifest with original branding", async ({ request 
     short_name?: string;
     icons?: Array<{ src: string; sizes: string; purpose?: string }>;
   };
-  expect(manifest.name).toBe("Homelab Dashboard");
-  expect(manifest.short_name).toBe("Homelab");
+  expect(manifest.name).toBe("Restor_Pc — Dashboard Homelab");
+  expect(manifest.short_name).toBe("Restor_Pc");
   expect(JSON.stringify(manifest).toLowerCase()).not.toContain("homarr");
   expect(manifest.icons?.some((icon) => icon.src === "/icons/icon-192.png")).toBe(true);
   expect(manifest.icons?.some((icon) => icon.src === "/icons/icon-512.png")).toBe(true);
@@ -25,6 +35,8 @@ test("serves installable PWA manifest with original branding", async ({ request 
     "/icons/icon-192.png",
     "/icons/icon-512.png",
     "/icons/icon-maskable-512.png",
+    "/branding/restor-pc-logo.png",
+    "/branding/login-background.webp",
     "/offline.html",
     "/sw.js",
   ]) {
