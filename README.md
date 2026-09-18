@@ -1,7 +1,7 @@
 # Homelab Dashboard
 
-Dashboard self-hosted pour homelab et NAS. Version **1.8.0** (patch **1.8.1**
-en cours — Phase 29).
+Dashboard self-hosted pour homelab et NAS. Version **1.8.0** (patch **1.8.1** —
+Phase 29 complete).
 
 Le produit centralise les boards, les applications, les widgets, les intégrations
 (Docker Socket Proxy, Synology, médias, monitoring, *arr, Custom API), le RBAC,
@@ -15,13 +15,13 @@ lecture seule).
 
 ## État courant (contrats)
 
-| Contrat                | Valeur                                             |
-| ---------------------- | -------------------------------------------------- |
-| Version produit        | `1.8.0` (tag `v1.8.0`) ; patch `1.8.1` en Phase 29 |
-| Migrations DB          | `0000`–`0015` (SQLite + PostgreSQL)                |
-| DB `schemaVersion`     | **15**                                             |
-| Backup `formatVersion` | **1**                                              |
-| Backup `schemaVersion` | **13** (compat restore 5–13)                       |
+| Contrat                | Valeur                                            |
+| ---------------------- | ------------------------------------------------- |
+| Version produit        | `1.8.0` (tag `v1.8.0`) ; patch `1.8.1` (Phase 29) |
+| Migrations DB          | `0000`–`0015` (SQLite + PostgreSQL)               |
+| DB `schemaVersion`     | **15**                                            |
+| Backup `formatVersion` | **1**                                             |
+| Backup `schemaVersion` | **13** (compat restore 5–13)                      |
 
 `DB schemaVersion` et `backup schemaVersion` **diffèrent volontairement** :
 les tables dérivées / runtime (rollups reliability, `slo_alert_runtime_state`,
@@ -85,6 +85,7 @@ SQLite en local. PostgreSQL en production. Migrations `0000`–`0015`
 | Reliability / SLO   | `docs/26-RELIABILITY.md`                      |
 | Burn-rate alerting  | `docs/27-SLO-ALERTING.md`                     |
 | Topologie / impact  | `docs/28-TOPOLOGY.md`                         |
+| Acceptance prod     | `docs/29-PRODUCTION-ACCEPTANCE.md`            |
 | Notes de version    | `CHANGELOG.md`                                |
 | Semver              | `docs/adr/0029-semver-and-v1-release.md`      |
 

@@ -6,11 +6,27 @@ Voir ADR 0029.
 
 ## [Unreleased]
 
-### Phase 29 (en cours)
+## [1.8.1] — 2026-09-18
 
-Production Acceptance & Stabilization — patch cible `1.8.1`.
-Réconciliation docs / contrats (DB 15, backup 13). Hotfixes post-`v1.8.0`
-`#102` / `#103` inclus dans `1.8.1` uniquement (tag `v1.8.0` inchangé).
+Production Acceptance & Stabilization (Phase 29). Patch.
+
+### Corrigé
+
+- Auth E2E layout : path clavier (`#103`) ; timeouts insuffisants (`#102`).
+- Axe `document-title` après soft navigation (poll titre + metadata
+  reliability/topology).
+- Lighthouse `public-home` : warm-up cold compile avant mesure ; migrations
+  LH alignées `0000`–`0015`.
+- Émission manquante `dependency.impact.changed` (transitions only).
+
+### Documentation
+
+- Contrats README / DB / backup réconciliés (DB 15 ≠ backup 13).
+- `docs/29-PRODUCTION-ACCEPTANCE.md` ; Phase 29 COMPLETE.
+
+### Base de données
+
+- Aucune migration. DB `schemaVersion` 15. Backup `schemaVersion` 13.
 
 ## [1.8.0] — 2026-09-17
 
