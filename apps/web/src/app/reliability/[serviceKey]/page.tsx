@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { TRPCError } from "@trpc/server";
 import { PageContainer, PageHeader } from "@dashboard/ui";
 import { MS_PER_DAY, utcDateString } from "@dashboard/reliability";
@@ -7,6 +8,17 @@ import { getBoardCaller } from "@/lib/server/board-api";
 import { ReliabilityDetail } from "./reliability-detail";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ serviceKey: string }>;
+}): Promise<Metadata> {
+  const { serviceKey } = await params;
+  return {
+    title: `Fiabilité · ${serviceKey.slice(0, 8)}`,
+  };
+}
 
 export default async function ReliabilityServicePage({
   params,
