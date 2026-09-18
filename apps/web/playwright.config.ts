@@ -18,7 +18,7 @@ export default defineConfig({
       AUTH_SECRET: "phase-3-e2e-secret-value-at-least-32-characters",
       SECRET_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       APP_URL: "http://localhost:3000",
-      APP_VERSION: "1.8.0",
+      APP_VERSION: "1.8.1",
     },
   },
   projects: [
