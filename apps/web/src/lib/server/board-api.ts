@@ -21,7 +21,7 @@ import {
   type PublicStatusPageDto,
 } from "@dashboard/status-pages";
 import { createReliabilityService } from "@dashboard/reliability";
-import { createTopologyService } from "@dashboard/topology";
+import { createTopologyService, createImpactEventReconciler } from "@dashboard/topology";
 import { hasPermission } from "@dashboard/permissions";
 import { createWebAutomationDispatcher } from "./automation-dispatch";
 import { createAppService } from "@dashboard/apps";
@@ -709,8 +709,15 @@ export async function createBoardApiContext(): Promise<BoardApiContext> {
   const reliability = createReliabilityService({
     store: database.reliabilityStore,
   });
+  const impactReconciler = createImpactEventReconciler({
+    store: database.topologyStore,
+    publishEvent: async (event) => {
+      await publish(event);
+    },
+  });
   const topology = createTopologyService({
     store: database.topologyStore,
+    impactReconciler,
   });
   return {
     actor: { userId, subject },

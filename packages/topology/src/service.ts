@@ -1,5 +1,7 @@
 import { analyzeImpact } from "./impact";
 import type { ActualStatus } from "./impact";
+import { computeImpactAnalysis } from "./impact-events";
+import type { ImpactEventReconciler } from "./impact-events";
 import { TopologyError } from "./errors";
 import type { TopologyStorePort } from "./ports";
 import {
@@ -33,7 +35,23 @@ function requireManage(actor: TopologyActor) {
   }
 }
 
-export function createTopologyService(deps: { store: TopologyStorePort }) {
+export function createTopologyService(deps: {
+  store: TopologyStorePort;
+  /** Optional: emit dependency.impact.changed after graph mutations. */
+  impactReconciler?: ImpactEventReconciler;
+}) {
+  async function afterGraphMutation() {
+    if (!deps.impactReconciler) return;
+    try {
+      // Graph edits must compare against "none" when snapshot is cold so a
+      // create/delete under an existing outage still emits transitions once.
+      await deps.impactReconciler.reconcile({ seedIfEmpty: false });
+    } catch (error) {
+      // Graph mutation already committed; impact emit is best-effort.
+      void error;
+    }
+  }
+
   return {
     permissions(actor: TopologyActor) {
       const subject = actor.subject;
@@ -84,7 +102,7 @@ export function createTopologyService(deps: { store: TopologyStorePort }) {
         throw new TopologyError("CONFLICT", "Dependency already exists");
       }
       try {
-        return await deps.store.createDependency({
+        const created = await deps.store.createDependency({
           id: randomUUID(),
           upstreamServiceKey: input.upstreamServiceKey,
           downstreamServiceKey: input.downstreamServiceKey,
@@ -92,6 +110,8 @@ export function createTopologyService(deps: { store: TopologyStorePort }) {
           createdBy: actor.userId,
           now: new Date(),
         });
+        await afterGraphMutation();
+        return created;
       } catch (error) {
         if (error instanceof Error && /unique|UNIQUE/i.test(error.message)) {
           throw new TopologyError("CONFLICT", "Dependency already exists");
@@ -106,11 +126,15 @@ export function createTopologyService(deps: { store: TopologyStorePort }) {
       const existing = await deps.store.getDependency(input.id);
       if (!existing) throw new TopologyError("NOT_FOUND", "Dependency not found");
       await deps.store.deleteDependency(input.id);
+      await afterGraphMutation();
     },
 
     async analyzeImpact(raw: AnalyzeImpactInput | undefined, actor: TopologyActor) {
       requireRead(actor);
       const input = analyzeImpactSchema.parse(raw ?? {});
+      if (input.maxDepth === undefined && input.maxNodes === undefined) {
+        return computeImpactAnalysis(deps.store);
+      }
       const [edges, integrationIds, unavailable] = await Promise.all([
         deps.store.listDependencies({ limit: 1_000 }),
         deps.store.listIntegrationIds(500),

@@ -7,6 +7,7 @@ import {
   createPostgresqlNotificationStore,
   createPostgresqlStatusPageStore,
   createPostgresqlReliabilityStore,
+  createPostgresqlTopologyStore,
   createSqliteAuthStore,
   createSqliteAutomationStore,
   createSqliteClient,
@@ -15,6 +16,7 @@ import {
   createSqliteNotificationStore,
   createSqliteStatusPageStore,
   createSqliteReliabilityStore,
+  createSqliteTopologyStore,
   parseDatabaseConfig,
   toAutomationSchedulerStore,
   type AutomationStore,
@@ -38,6 +40,7 @@ import { hasPermission } from "@dashboard/permissions";
 import type { IntegrationStore } from "@dashboard/integrations";
 import { createStatusPageService, type MaintenanceWindowService } from "@dashboard/status-pages";
 import { createReliabilityService, type ReliabilityService } from "@dashboard/reliability";
+import { createImpactEventReconciler, type ImpactEventReconciler } from "@dashboard/topology";
 import type { DomainEvent } from "@dashboard/events";
 import type { AutomationAuditSink } from "./actions";
 import { createJobRecorder } from "./jobs";
@@ -52,6 +55,7 @@ export interface WorkerPersistence {
   incidents: IncidentService;
   maintenance: Pick<MaintenanceWindowService, "tick">;
   reliability: Pick<ReliabilityService, "tick">;
+  impactReconciler: ImpactEventReconciler;
   integrationStore: IntegrationStore;
   audit: AutomationAuditSink;
   loadOwner: (userId: string) => Promise<AutomationOwnerRecord | null>;
@@ -230,6 +234,12 @@ export function createWorkerPersistenceFromEnv(
           (await auth.resolvePermissionSubject(userId)) ?? null,
         publishRef,
       }),
+      impactReconciler: createImpactEventReconciler({
+        store: createPostgresqlTopologyStore(client),
+        publishEvent: async (event) => {
+          await publishRef.current(event);
+        },
+      }),
       bindDomainEventPublisher,
       integrationStore: createPostgresqlIntegrationStore(client.pool),
       audit: {
@@ -276,6 +286,12 @@ export function createWorkerPersistenceFromEnv(
       resolvePermissionSubject: async (userId) =>
         (await auth.resolvePermissionSubject(userId)) ?? null,
       publishRef,
+    }),
+    impactReconciler: createImpactEventReconciler({
+      store: createSqliteTopologyStore(client),
+      publishEvent: async (event) => {
+        await publishRef.current(event);
+      },
     }),
     bindDomainEventPublisher,
     integrationStore: createSqliteIntegrationStore(client.sqlite),

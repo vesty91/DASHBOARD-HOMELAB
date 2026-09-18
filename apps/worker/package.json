@@ -24,6 +24,7 @@
     "@dashboard/sonarr": "workspace:*",
     "@dashboard/status-pages": "workspace:*",
     "@dashboard/reliability": "workspace:*",
+    "@dashboard/topology": "workspace:*",
     "tsx": "4.23.13"
   },
   "devDependencies": {

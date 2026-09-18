@@ -52,9 +52,16 @@ Règles :
 - traversal BFS borné (depth + nodes) → `truncated` si limite atteinte ;
 - n’altère **pas** les calculs SLO / burn-rate.
 
-Event optionnel fermé `dependency.impact.changed` — payload safe :
+Event fermé `dependency.impact.changed` — payload safe :
 
 `serviceKey`, `impactStatus`, `candidateRootCause`, `occurredAt`.
+
+Émission (Phase 29) :
+
+- worker : sur `integration.status.changed` (transitions only) ;
+- API : après create/delete de dépendance ;
+- snapshot in-memory : cold start seed sans émission (anti-storm restart) ;
+- pas d’émission si `impactStatus` inchangé ; dry-run sans side-effect.
 
 Automation allowlist : conditions `serviceKey` / `impactStatus`.
 

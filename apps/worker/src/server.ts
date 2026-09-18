@@ -13,6 +13,7 @@ import type { IntegrationStore } from "@dashboard/integrations";
 import type { IncidentService } from "@dashboard/notifications";
 import type { MaintenanceWindowService } from "@dashboard/status-pages";
 import type { ReliabilityService } from "@dashboard/reliability";
+import type { ImpactEventReconciler } from "@dashboard/topology";
 import { createProductionAutomationDispatcher } from "./bootstrap-actions";
 import type { AutomationAuditSink } from "./actions";
 
@@ -36,6 +37,7 @@ export interface WorkerOptions {
   incidents?: Pick<IncidentService, "handleStatusChanged">;
   maintenance?: Pick<MaintenanceWindowService, "tick">;
   reliability?: Pick<ReliabilityService, "tick">;
+  impactReconciler?: Pick<ImpactEventReconciler, "reconcile">;
   bindDomainEventPublisher?: (publish: (event: DomainEvent) => Promise<void>) => void;
   automations?: {
     store: AutomationSchedulerStore;
@@ -124,6 +126,16 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       if (event.type !== "integration.status.changed") return;
       void incidentEngine.handleStatusChanged(event).catch(() => {
         void event.integrationId;
+      });
+    });
+  }
+  let unsubscribeImpact: (() => void) | null = null;
+  if (options.impactReconciler) {
+    const impact = options.impactReconciler;
+    unsubscribeImpact = bus.subscribe((event) => {
+      if (event.type !== "integration.status.changed") return;
+      void impact.reconcile({ occurredAt: event.occurredAt }).catch((error) => {
+        void error;
       });
     });
   }
@@ -252,6 +264,7 @@ export async function startWorker(options: WorkerOptions = {}): Promise<WorkerHa
       clearInterval(timer);
       unsubscribeEvents?.();
       unsubscribeIncidents?.();
+      unsubscribeImpact?.();
       if (scheduler) await scheduler.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

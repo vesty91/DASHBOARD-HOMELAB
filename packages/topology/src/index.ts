@@ -33,3 +33,10 @@ export {
   type DependencyRelationship,
   type ServiceDependency,
 } from "./types";
+export {
+  computeImpactAnalysis,
+  createImpactEventReconciler,
+  diffImpactTransitions,
+  type DependencyImpactChangedEvent,
+  type ImpactEventReconciler,
+} from "./impact-events";
