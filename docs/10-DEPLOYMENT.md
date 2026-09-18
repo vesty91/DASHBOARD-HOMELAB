@@ -14,7 +14,10 @@ Architectures visées : `linux/amd64` et `linux/arm64` (Buildx, GHCR).
 Les tags `phase-*` ne publient pas `latest`. Seuls les tags semver `vX.Y.Z`
 publient les images.
 
-La version applicative est `1.8.0` (Phase 28 minor). Les tags `phase-*` ne
+La version applicative publiée est `1.8.0` (Phase 28 minor, tag `v1.8.0`).
+`main` peut être **ahead** de ce tag (hotfixes E2E `#102` / `#103`) ; ces
+correctifs sont packagés dans le patch **`1.8.1`** (Phase 29). Ne jamais
+déplacer `v1.8.0`. Les tags `phase-*` ne
 publient pas `latest`. Seuls les tags semver stables `vX.Y.Z` publient
 `latest` / `X.Y` / `X`. Un prerelease `vX.Y.Z-rc.N` publie uniquement
 `:tag` et `:sha-*` (ADR 0029).
@@ -225,6 +228,9 @@ volontairement nulle. Ne pas réintroduire une confiance aveugle.
    boards / widgets / integrations / automations / status pages / maintenance /
    SLO / alert policies / dépendances topologie (éphémères, rollups, runtime
    alert et impact dérivé restent hors backup).
+   L'upgrade **1.8.0 → 1.8.1** est un patch sans migration : même schéma DB 15 /
+   backup 13 ; il inclut les hotfixes E2E post-`v1.8.0` (`#102` / `#103`).
+   Remplacer les quatre images au tag `1.8.1` ; ne pas retagger `v1.8.0`.
 3. `docker compose pull` (ou rebuild) des **quatre** images même tag.
 4. `docker compose up` : `migrate` applique le journal Drizzle une fois.
 5. Vérifier `GET /health/ready` = 200, onboarding/login, un board existant,
