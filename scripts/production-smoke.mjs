@@ -145,6 +145,7 @@ try {
   await waitFor("http://127.0.0.1:3000/health/live", 200, "web live with DB down");
   await waitFor("http://127.0.0.1:3000/health/ready", 503, "web ready with DB down");
   await compose(["start", "postgres"]);
+  await compose(["up", "-d", "--wait", "postgres"]);
   await waitFor("http://127.0.0.1:3000/health/ready", 200, "web ready after DB return");
   console.log("production smoke ok");
 } finally {
