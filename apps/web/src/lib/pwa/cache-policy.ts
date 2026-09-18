@@ -1,5 +1,5 @@
 /** Cache version — bump when shell assets or offline page change. */
-export const PWA_CACHE_VERSION = "v1";
+export const PWA_CACHE_VERSION = "v2";
 
 export const PWA_SHELL_CACHE = `homelab-shell-${PWA_CACHE_VERSION}`;
 export const PWA_STATIC_CACHE = `homelab-static-${PWA_CACHE_VERSION}`;
@@ -61,6 +61,7 @@ export function isAllowedStaticAsset(pathname: string): boolean {
   const path = normalizePathname(pathname);
   if (path.startsWith("/_next/static/")) return true;
   if (path.startsWith("/icons/")) return true;
+  if (path.startsWith("/branding/")) return true;
   if (ALLOWED_SHELL_PATHS.has(path)) return true;
   return false;
 }

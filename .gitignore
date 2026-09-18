@@ -8,6 +8,9 @@ playwright-report/
 test-results/
 lighthouse-reports/
 
+# Local source drop for branding assets (published copies live under apps/web/public/branding)
+/images/
+
 # Environment / secrets
 .env
 .env.local

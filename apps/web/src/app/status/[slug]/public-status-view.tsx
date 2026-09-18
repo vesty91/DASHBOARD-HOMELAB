@@ -73,7 +73,7 @@ export function PublicStatusView({ initial }: { initial: PublicStatusPageDto }) 
   return (
     <div className="public-status" data-testid="public-status-page">
       <header className="public-status-header">
-        <p className="public-status-brand">Homelab</p>
+        <p className="public-status-brand">Restor_Pc</p>
         <h1>{page.name}</h1>
         {page.description ? <p className="ui-muted">{page.description}</p> : null}
         <div className="public-status-overall" aria-live="polite">

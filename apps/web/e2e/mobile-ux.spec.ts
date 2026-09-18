@@ -120,7 +120,7 @@ for (const viewport of VIEWPORTS) {
       await mockPushManager(page);
 
       await page.goto("/login");
-      await expect(page.getByRole("heading", { name: /Connexion|Homelab/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Connexion|Bienvenue/i })).toBeVisible();
       await assertNoHorizontalOverflow(page);
       await expect(page.getByRole("button", { name: /Installer/i })).toHaveCount(0);
 

@@ -10,7 +10,7 @@ export default async function LoginPage({
   const params = await searchParams;
   const config = await (await getBoardCaller()).oidc.publicConfig();
   return (
-    <PublicAuthLayout title="Connexion" description="Accédez à votre tableau de bord homelab.">
+    <PublicAuthLayout title="Connexion" description="Accédez à votre dashboard Restor_Pc.">
       <LoginForm
         oidcEnabled={config.enabled}
         oidcDisplayName={config.displayName}
