@@ -33,7 +33,7 @@ const env = {
   POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || randomBytes(18).toString("base64url"),
   POSTGRES_USER: process.env.POSTGRES_USER || "dashboard",
   POSTGRES_DB: process.env.POSTGRES_DB || "dashboard",
-  APP_VERSION: process.env.APP_VERSION || "1.8.0",
+  APP_VERSION: process.env.APP_VERSION || "1.8.1",
   WEB_PORT: process.env.WEB_PORT || "3000",
   PROXY_HTTP_PORT: httpPort,
   PROXY_HTTPS_PORT: httpsPort,
@@ -387,6 +387,10 @@ try {
   await waitFor(`${publicOrigin}/health/live`, 200, "https live with DB down", ca);
   await waitFor(`${publicOrigin}/health/ready`, 503, "https ready with DB down", ca);
   await compose(["start", "postgres"]);
+  // Wait until Postgres is healthy again before asserting app readiness —
+  // compose start returns before accept; CI can otherwise stay on 503 for the
+  // whole SMOKE_TIMEOUT_MS window.
+  await compose(["up", "-d", "--wait", "postgres"]);
   await waitFor(`${publicOrigin}/health/ready`, 200, "https ready after DB return", ca);
 
   console.log("https reverse-proxy smoke ok");
