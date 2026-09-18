@@ -20,20 +20,38 @@ const repoRoot = dirname(scriptsDir);
 const webRoot = join(repoRoot, "apps", "web");
 const reportsDir = join(repoRoot, "lighthouse-reports");
 const sqlitePath = join(webRoot, ".lh-ci.sqlite");
-const port = Number(process.env.LIGHTHOUSE_PORT ?? 4173);
-const baseUrl = `http://127.0.0.1:${port}`;
 const adminPassword = "correct horse battery staple";
+const SQLITE_MIGRATIONS = [
+  "0000_last_spyke.sql",
+  "0001_sharp_doomsday.sql",
+  "0002_wooden_callisto.sql",
+  "0003_loud_titanium_man.sql",
+  "0004_green_tenebrous.sql",
+  "0005_wandering_mac_gargan.sql",
+  "0006_exotic_sugar_man.sql",
+  "0007_dashing_smasher.sql",
+  "0008_reflective_norman_osborn.sql",
+  "0009_flimsy_arachne.sql",
+  "0010_many_yellowjacket.sql",
+  "0011_normal_mac_gargan.sql",
+  "0012_tranquil_mindworm.sql",
+  "0013_mushy_captain_midlands.sql",
+  "0014_boring_millenium_guard.sql",
+  "0015_great_wendell_rand.sql",
+];
 
-const webEnv = {
-  ...process.env,
-  NODE_ENV: "development",
-  DB_DRIVER: "sqlite",
-  DATABASE_URL: "./.lh-ci.sqlite",
-  AUTH_SECRET: "phase-20-lighthouse-secret-value-at-least-32-ch",
-  SECRET_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  APP_URL: baseUrl,
-  PORT: String(port),
-};
+function buildWebEnv(port) {
+  return {
+    ...process.env,
+    NODE_ENV: "development",
+    DB_DRIVER: "sqlite",
+    DATABASE_URL: "./.lh-ci.sqlite",
+    AUTH_SECRET: "phase-20-lighthouse-secret-value-at-least-32-ch",
+    SECRET_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    APP_URL: `http://127.0.0.1:${port}`,
+    PORT: String(port),
+  };
+}
 
 async function freePort() {
   return new Promise((resolve, reject) => {
@@ -55,16 +73,7 @@ async function prepareSqlite() {
   const database = new DatabaseSync(sqlitePath);
   try {
     database.exec("PRAGMA foreign_keys=ON");
-    for (const name of [
-      "0000_last_spyke.sql",
-      "0001_sharp_doomsday.sql",
-      "0002_wooden_callisto.sql",
-      "0003_loud_titanium_man.sql",
-      "0004_green_tenebrous.sql",
-      "0005_wandering_mac_gargan.sql",
-      "0006_exotic_sugar_man.sql",
-      "0007_dashing_smasher.sql",
-    ]) {
+    for (const name of SQLITE_MIGRATIONS) {
       database.exec(
         await readFile(join(repoRoot, "packages", "db", "drizzle", "sqlite", name), "utf8"),
       );
@@ -74,7 +83,7 @@ async function prepareSqlite() {
   }
 }
 
-function startWeb() {
+function startWeb(port, webEnv) {
   const nextBin = createRequire(join(webRoot, "package.json")).resolve("next/dist/bin/next");
   const child = spawn(process.execPath, [nextBin, "dev", "-p", String(port), "-H", "127.0.0.1"], {
     cwd: webRoot,
@@ -91,7 +100,7 @@ function startWeb() {
   return child;
 }
 
-async function waitForServer() {
+async function waitForServer(baseUrl) {
   const deadline = Date.now() + 90_000;
   let last = "no-response";
   while (Date.now() < deadline) {
@@ -105,6 +114,36 @@ async function waitForServer() {
     await delay(400);
   }
   throw new Error(`lighthouse web server did not become ready (last: ${last})`);
+}
+
+/**
+ * Compile cold Next routes before Lighthouse measures them.
+ * /health/live readiness alone leaves `/` and `/setup` uncompiled.
+ */
+async function warmUpPages(baseUrl, paths) {
+  for (const path of paths) {
+    const deadline = Date.now() + 90_000;
+    let last = "no-response";
+    let ok = false;
+    while (Date.now() < deadline) {
+      try {
+        const response = await fetch(`${baseUrl}${path}`, { redirect: "manual" });
+        last = String(response.status);
+        if (response.status >= 200 && response.status < 500) {
+          // Drain body so Next finishes streaming/compiling.
+          await response.arrayBuffer();
+          ok = true;
+          break;
+        }
+      } catch (error) {
+        last = error instanceof Error ? error.message : "error";
+      }
+      await delay(400);
+    }
+    if (!ok) {
+      throw new Error(`lighthouse warm-up failed for ${path} (last: ${last})`);
+    }
+  }
 }
 
 async function launchChrome(debugPort) {
@@ -179,7 +218,7 @@ function summarize(label, lhr) {
   };
 }
 
-async function completeOnboarding() {
+async function completeOnboarding(baseUrl) {
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
@@ -199,7 +238,7 @@ async function completeOnboarding() {
   }
 }
 
-async function loginCookieHeader() {
+async function loginCookieHeader(baseUrl) {
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
@@ -236,10 +275,16 @@ const web = { current: null };
 const chrome = { current: null };
 
 try {
+  const port = Number(process.env.LIGHTHOUSE_PORT) || (await freePort());
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const webEnv = buildWebEnv(port);
+
   await prepareSqlite();
   await mkdir(reportsDir, { recursive: true });
-  web.current = startWeb();
-  await waitForServer();
+  web.current = startWeb(port, webEnv);
+  await waitForServer(baseUrl);
+  // Warm compile public routes before measuring — avoids cold-dev public-home flake.
+  await warmUpPages(baseUrl, ["/", "/setup"]);
   const debugPort = await freePort();
   chrome.current = await launchChrome(debugPort);
 
@@ -252,13 +297,13 @@ try {
   await writeReports("setup", setup);
   runs.push(summarize("setup", setup.lhr));
 
-  await completeOnboarding();
+  await completeOnboarding(baseUrl);
 
   const login = await audit(debugPort, `${baseUrl}/login`);
   await writeReports("login", login);
   runs.push(summarize("login", login.lhr));
 
-  const cookieHeader = await loginCookieHeader();
+  const cookieHeader = await loginCookieHeader(baseUrl);
   const boards = await audit(debugPort, `${baseUrl}/boards`, cookieHeader);
   await writeReports("boards", boards);
   runs.push(summarize("boards", boards.lhr));
