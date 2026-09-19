@@ -20,6 +20,7 @@ export function PublicAuthLayout({
             width={280}
             height={210}
             className="auth-brand-logo"
+            style={{ width: "auto", height: "auto" }}
             sizes="(max-width: 640px) 200px, 280px"
             priority
           />
