@@ -9,18 +9,13 @@ export const LOGIN_CREDENTIALS_FORM = {
 } as const;
 
 /** True when a browser would serialize named fields into the request URL (unsafe for passwords). */
-export function credentialsWouldLeakInRequestUrl(form: {
-  method?: string | null;
-}): boolean {
+export function credentialsWouldLeakInRequestUrl(form: { method?: string | null }): boolean {
   const method = (form.method ?? "get").trim().toLowerCase();
   return method === "" || method === "get";
 }
 
 /** Credential-like query params must never linger on /login (history / referrer). */
-export function hasCredentialQueryLeak(params: {
-  password?: string;
-  username?: string;
-}): boolean {
+export function hasCredentialQueryLeak(params: { password?: string; username?: string }): boolean {
   if (typeof params.username === "string") return true;
   return typeof params.password === "string" && params.password !== "changed";
 }
