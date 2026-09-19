@@ -1,0 +1,24 @@
+# Restor_Pc Dashboard — site block for the existing restorpc-gateway Caddy.
+# Append to D:\Docker\RestorPC\gateway\Caddyfile (do not run a second public proxy).
+#
+# Prerequisites:
+# - compose stack publishes web on 127.0.0.1:3100 and realtime on 127.0.0.1:3102
+# - APP_URL=https://dashboard.restor-pc.fr
+# - DNS A/AAAA for dashboard.restor-pc.fr → this host
+
+dashboard.restor-pc.fr {
+	encode gzip zstd
+	handle /api/realtime/ws* {
+		uri strip_prefix /api/realtime
+		reverse_proxy host.docker.internal:3102 {
+			flush_interval -1
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	reverse_proxy host.docker.internal:3100 {
+		flush_interval -1
+		header_up Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

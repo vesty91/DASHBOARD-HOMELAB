@@ -87,6 +87,7 @@ services:
     volumes:
       - appdata:/appdata
     ports:
+      # Loopback only. Set WEB_PORT=3100 when host :3000 is used by next dev.
       - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
       migrate:
@@ -186,6 +187,9 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    ports:
+      # Loopback only — gateway must proxy /api/realtime/ws here (Next rewrites skip Upgrade).
+      - "127.0.0.1:${REALTIME_HOST_PORT:-3102}:3002"
     healthcheck:
       test:
         [

@@ -98,9 +98,9 @@ Points déploiement :
 | postgres | aucun            | Volume `postgres-data`        |
 | redis    | aucun            | `--save ""`, pas d'AOF        |
 | migrate  | aucun            | Oneshot, pas de restart-loop  |
-| web      | `127.0.0.1:3000` | Reverse proxy sur l'hôte      |
+| web      | `127.0.0.1:${WEB_PORT:-3000}` | Reverse proxy sur l'hôte ; `3100` recommandé si `next dev` occupe `:3000` |
 | worker   | aucun            | Health interne `:3001`        |
-| realtime | aucun            | Atteint via rewrite/proxy web |
+| realtime | `127.0.0.1:${REALTIME_HOST_PORT:-3102}` | Gateway doit proxy `/api/realtime/ws` (Upgrade) |
 
 Réseau Compose `internal`. Pas de `/var/run/docker.sock` dans le dashboard.
 L'intégration Docker continue d'utiliser un socket proxy HTTP(S) externe.
@@ -149,7 +149,12 @@ Compose :
 - `POSTGRES_USER` / `POSTGRES_DB` / `POSTGRES_PASSWORD` (password obligatoire,
   jamais hardcodé)
 - `WEB_PORT`
+- `REALTIME_HOST_PORT` (loopback, pour le reverse proxy WebSocket)
 - `DASHBOARD_IMAGE_PREFIX` (ex. `ghcr.io/vesty91/dashboard-homelab`)
+
+Déploiement Restor_Pc (Windows + `restorpc-gateway`) : voir
+`deploy/restor-pc/README.md` (`APP_URL=https://dashboard.restor-pc.fr`,
+`WEB_PORT=3100`).
 
 `DATABASE_URL` est interpolé. Un mot de passe contenant `@ : / #` doit être
 URL-encodé.
