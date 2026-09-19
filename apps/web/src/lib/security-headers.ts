@@ -1,11 +1,14 @@
-export function dashboardCsp(): string {
+export function dashboardCsp(options?: { allowUnsafeEval?: boolean }): string {
+  const scriptSrc = options?.allowUnsafeEval
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'";
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
-    "script-src 'self' 'unsafe-inline'",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: http: https:",
     "font-src 'self'",
@@ -15,9 +18,12 @@ export function dashboardCsp(): string {
   ].join("; ");
 }
 
-export function securityHeaders(appUrl: string): { key: string; value: string }[] {
+export function securityHeaders(
+  appUrl: string,
+  options?: { allowUnsafeEval?: boolean },
+): { key: string; value: string }[] {
   const headers: { key: string; value: string }[] = [
-    { key: "Content-Security-Policy", value: dashboardCsp() },
+    { key: "Content-Security-Policy", value: dashboardCsp(options) },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },

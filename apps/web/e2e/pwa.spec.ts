@@ -159,5 +159,6 @@ test("CSP still allows workers and optionally scopes manifests", async ({ reques
   expect(csp).toContain("default-src 'self'");
   expect(csp).toContain("worker-src 'self' blob:");
   expect(csp).toContain("manifest-src 'self'");
-  expect(csp).not.toContain("unsafe-eval");
+  // next dev allows unsafe-eval for React; production CSP forbids it.
+  expect(csp).toContain("unsafe-eval");
 });

@@ -56,7 +56,7 @@ export function LoginForm({
               callbackUrl: "/admin",
             });
             setPending(false);
-            if (result?.ok) location.assign(result.url ?? "/admin");
+            if (result?.ok) location.assign("/admin");
             else setError(true);
           }}
         >

@@ -16,6 +16,7 @@ describe("HTTP security headers", () => {
     expect(csp).toContain("worker-src 'self' blob:");
     expect(csp).toContain("manifest-src 'self'");
     expect(csp).not.toContain("unsafe-eval");
+    expect(dashboardCsp({ allowUnsafeEval: true })).toContain("unsafe-eval");
     const http = securityHeaders("http://localhost:3000").map((header) => header.key);
     expect(http).not.toContain("Strict-Transport-Security");
     const https = securityHeaders("https://dashboard.example");
