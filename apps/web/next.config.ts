@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import { parseAllowedDevOrigins } from "./src/lib/allowed-dev-origins";
 import { securityHeaders, serverActionAllowedOrigins } from "./src/lib/security-headers";
 
 const realtimeUrl = process.env.REALTIME_URL?.replace(/\/$/u, "");
@@ -14,9 +15,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   output: "standalone",
   outputFileTracingRoot: path.join(configDir, "../.."),
-  // Localhost vs 127.0.0.1: allow HMR when the browser origin differs from the
-  // host Next binds to (otherwise client auth forms can fail to hydrate).
-  allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.108"],
+  // Cross-origin HMR hosts for next dev only. Defaults: localhost + 127.0.0.1.
+  // Optional extras via ALLOWED_DEV_ORIGINS (never commit machine-specific LAN IPs).
+  allowedDevOrigins: parseAllowedDevOrigins(),
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
