@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { Alert, Button, Field, Input } from "@dashboard/ui";
+import { LOGIN_CREDENTIALS_FORM } from "./login-credentials-form";
 
 const ERROR_MESSAGES: Record<string, string> = {
   oidc: "Connexion OpenID Connect impossible.",
@@ -24,12 +25,14 @@ export function LoginForm({
   allowLocalLogin,
   errorCode,
   passwordChanged,
+  csrfToken,
 }: {
   oidcEnabled: boolean;
   oidcDisplayName: string | null;
   allowLocalLogin: boolean;
   errorCode?: string;
   passwordChanged: boolean;
+  csrfToken: string;
 }) {
   const [error, setError] = useState(Boolean(errorCode && ERROR_MESSAGES[errorCode]));
   const [pending, setPending] = useState(false);
@@ -44,6 +47,8 @@ export function LoginForm({
       {allowLocalLogin ? (
         <form
           className="ui-form"
+          method={LOGIN_CREDENTIALS_FORM.method}
+          action={LOGIN_CREDENTIALS_FORM.action}
           onSubmit={async (event) => {
             event.preventDefault();
             setError(false);
@@ -53,13 +58,15 @@ export function LoginForm({
               username: String(data.get("username")),
               password: String(data.get("password")),
               redirect: false,
-              callbackUrl: "/admin",
+              callbackUrl: LOGIN_CREDENTIALS_FORM.callbackUrl,
             });
             setPending(false);
-            if (result?.ok) location.assign("/admin");
+            if (result?.ok) location.assign(LOGIN_CREDENTIALS_FORM.callbackUrl);
             else setError(true);
           }}
         >
+          <input type="hidden" name="csrfToken" value={csrfToken} />
+          <input type="hidden" name="callbackUrl" value={LOGIN_CREDENTIALS_FORM.callbackUrl} />
           <Field label="Identifiant">
             <Input name="username" required autoComplete="username" />
           </Field>
@@ -80,7 +87,7 @@ export function LoginForm({
           disabled={pending}
           onClick={() => {
             setPending(true);
-            void signIn("oidc", { callbackUrl: "/admin" });
+            void signIn("oidc", { callbackUrl: LOGIN_CREDENTIALS_FORM.callbackUrl });
           }}
         >
           Continuer avec {oidcDisplayName ?? "OpenID Connect"}
