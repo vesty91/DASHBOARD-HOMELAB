@@ -93,14 +93,14 @@ Points déploiement :
 
 ## 5. Services et réseau
 
-| Service  | Ports publiés    | Notes                         |
-| -------- | ---------------- | ----------------------------- |
-| postgres | aucun            | Volume `postgres-data`        |
-| redis    | aucun            | `--save ""`, pas d'AOF        |
-| migrate  | aucun            | Oneshot, pas de restart-loop  |
-| web      | `127.0.0.1:${WEB_PORT:-3000}` | Reverse proxy sur l'hôte ; `3100` recommandé si `next dev` occupe `:3000` |
-| worker   | aucun            | Health interne `:3001`        |
-| realtime | `127.0.0.1:${REALTIME_HOST_PORT:-3102}` | Gateway doit proxy `/api/realtime/ws` (Upgrade) |
+| Service  | Ports publiés                           | Notes                                                                     |
+| -------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| postgres | aucun                                   | Volume `postgres-data`                                                    |
+| redis    | aucun                                   | `--save ""`, pas d'AOF                                                    |
+| migrate  | aucun                                   | Oneshot, pas de restart-loop                                              |
+| web      | `127.0.0.1:${WEB_PORT:-3000}`           | Reverse proxy sur l'hôte ; `3100` recommandé si `next dev` occupe `:3000` |
+| worker   | aucun                                   | Health interne `:3001`                                                    |
+| realtime | `127.0.0.1:${REALTIME_HOST_PORT:-3102}` | Gateway doit proxy `/api/realtime/ws` (Upgrade)                           |
 
 Réseau Compose `internal`. Pas de `/var/run/docker.sock` dans le dashboard.
 L'intégration Docker continue d'utiliser un socket proxy HTTP(S) externe.

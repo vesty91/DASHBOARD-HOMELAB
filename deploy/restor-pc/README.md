@@ -33,10 +33,10 @@ docker exec restorpc-gateway caddy reload --config /etc/caddy/Caddyfile
 
 Create at your DNS provider:
 
-| Type | Name        | Value                          |
-| ---- | ----------- | ------------------------------ |
-| A    | `dashboard` | public IPv4 of this PC / WAN   |
-| AAAA | `dashboard` | optional IPv6                  |
+| Type | Name        | Value                        |
+| ---- | ----------- | ---------------------------- |
+| A    | `dashboard` | public IPv4 of this PC / WAN |
+| AAAA | `dashboard` | optional IPv6                |
 
 Verify: `nslookup dashboard.restor-pc.fr`
 
