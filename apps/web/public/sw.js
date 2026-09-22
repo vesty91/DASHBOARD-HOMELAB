@@ -122,6 +122,11 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const requestUrl = new URL(event.request.url);
+
+  // Let the browser handle cross-origin resources directly.
+  // This avoids routing external app icons through the service worker fetch().
+  if (requestUrl.origin !== self.location.origin) return;
   const decision = decideCachePolicy(event.request);
   if (decision === "ignore") return;
 

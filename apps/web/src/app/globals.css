@@ -2328,3 +2328,9 @@ button[aria-pressed="true"] {
 .public-status-maintenance-list p {
   margin: 0.25rem 0 0;
 }
+
+.entity-card .app-card-icon {
+  width: 4rem;
+  height: 4rem;
+  flex-shrink: 0;
+}
