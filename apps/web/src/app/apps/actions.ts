@@ -23,6 +23,82 @@ const input = (formData: FormData) => ({
     expectedStatusMax: Number(formData.get("expectedStatusMax") ?? 399),
   },
 });
+
+type QuickAppPreset = {
+  url: string;
+  healthPath: string;
+  expectedStatusMin: number;
+  expectedStatusMax: number;
+};
+
+const quickAppPresets: Record<string, QuickAppPreset> = {
+  portainer: {
+    url: "https://portainer.restor-pc.fr/",
+    healthPath: "/api/status",
+    expectedStatusMin: 200,
+    expectedStatusMax: 299,
+  },
+  vaultwarden: {
+    url: "https://mdp.restor-pc.fr/",
+    healthPath: "/alive",
+    expectedStatusMin: 200,
+    expectedStatusMax: 299,
+  },
+  "uptime-kuma": {
+    url: "https://uptime.restor-pc.fr/",
+    healthPath: "/",
+    expectedStatusMin: 200,
+    expectedStatusMax: 399,
+  },
+  dozzle: {
+    url: "https://dozzle.restor-pc.fr/",
+    healthPath: "/",
+    expectedStatusMin: 401,
+    expectedStatusMax: 401,
+  },
+};
+
+export async function quickCreateAppAction(templateId: string) {
+  const preset = quickAppPresets[templateId];
+  if (!preset) redirect(`/apps/new?template=${encodeURIComponent(templateId)}`);
+
+  const caller = await getBoardCaller();
+  const template = await caller.app.library.get({ id: templateId });
+  const normalizedUrl = new URL(preset.url).toString();
+  const existing = await caller.app.list({ limit: 100 });
+
+  if (existing.items.some((app) => app.url === normalizedUrl)) {
+    redirect("/apps");
+  }
+
+  const created = await caller.app.create({
+    name: template.name,
+    description: template.description,
+    url: normalizedUrl,
+    iconRef: template.icon.path,
+    color: null,
+    target: template.defaults?.target ?? "new-tab",
+    tags: [...template.tags],
+    healthcheckEnabled: true,
+    healthcheckConfig: {
+      path: preset.healthPath,
+      method: "GET",
+      timeoutMs: 5000,
+      expectedStatusMin: preset.expectedStatusMin,
+      expectedStatusMax: preset.expectedStatusMax,
+    },
+  });
+
+  try {
+    await caller.app.test({ id: created.id });
+  } catch {
+    // Keep the app even if the first health probe is temporarily unavailable.
+  }
+
+  revalidatePath("/apps");
+  redirect("/apps");
+}
+
 export async function createAppAction(formData: FormData) {
   await (await getBoardCaller()).app.create(input(formData));
   redirect("/apps");
