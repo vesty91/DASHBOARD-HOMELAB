@@ -34,11 +34,11 @@ const tones = {
 export default async function AppsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cursor?: string }>;
+  searchParams: Promise<{ cursor?: string; quickAdd?: "created" | "exists" | "failed" }>;
 }) {
   try {
     const caller = await getBoardCaller();
-    const { cursor } = await searchParams;
+    const { cursor, quickAdd } = await searchParams;
     const [page, canManage] = await Promise.all([
       caller.app.list({ limit: 50, cursor }),
       caller.app.canManage(),
@@ -64,6 +64,23 @@ export default async function AppsPage({
               }
             : {})}
         />
+        {quickAdd ? (
+          <p
+            role="status"
+            style={{
+              margin: "0 0 1rem",
+              padding: "0.75rem 1rem",
+              border: "1px solid var(--border)",
+              borderRadius: "0.65rem",
+            }}
+          >
+            {quickAdd === "created"
+              ? "Application ajoutée automatiquement."
+              : quickAdd === "exists"
+                ? "Cette application est déjà enregistrée."
+                : "Ajout automatique impossible. Aucune page d’erreur n’a été ouverte."}
+          </p>
+        ) : null}
         {apps.length === 0 ? (
           <EmptyState
             icon={<AppWindow />}
