@@ -5,6 +5,9 @@ import Link from "next/link";
 import type { AppLibraryCategory, AppLibraryView } from "@dashboard/app-library";
 import { Badge, Card, CardBody, CardFooter, EmptyState, Input } from "@dashboard/ui";
 import { AppIcon } from "../app-icon";
+import { quickCreateAppAction } from "../actions";
+
+const QUICK_ADD_IDS = new Set(["portainer", "vaultwarden", "uptime-kuma", "dozzle"]);
 
 const CATEGORY_LABELS: Record<AppLibraryCategory, string> = {
   media: "Média",
@@ -204,9 +207,17 @@ export function LibraryBrowser({
               </CardBody>
               <CardFooter>
                 {canManage ? (
-                  <Link className="ui-btn ui-btn-primary" href={`/apps/new?template=${item.id}`}>
-                    Ajouter
-                  </Link>
+                  QUICK_ADD_IDS.has(item.id) ? (
+                    <form action={quickCreateAppAction.bind(null, item.id)}>
+                      <button className="ui-btn ui-btn-primary" type="submit">
+                        Ajouter
+                      </button>
+                    </form>
+                  ) : (
+                    <Link className="ui-btn ui-btn-primary" href={`/apps/new?template=${item.id}`}>
+                      Ajouter
+                    </Link>
+                  )
                 ) : (
                   <span className="ui-muted">Lecture seule</span>
                 )}
