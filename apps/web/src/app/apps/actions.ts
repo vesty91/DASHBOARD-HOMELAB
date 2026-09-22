@@ -11,7 +11,7 @@ const input = (formData: FormData) => ({
   color: String(formData.get("color") ?? "") || null,
   target: String(formData.get("target") ?? "new-tab") as "same-tab" | "new-tab",
   tags: String(formData.get("tags") ?? "")
-    .split(",")
+    .split(/[,·•]/u)
     .map((tag) => tag.trim())
     .filter(Boolean),
   healthcheckEnabled: formData.get("healthcheckEnabled") === "on",
