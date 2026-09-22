@@ -13,6 +13,14 @@ const allowUnsafeEval = process.env.NODE_ENV !== "production";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "assets.restor-pc.fr",
+      },
+    ],
+  },
   output: "standalone",
   outputFileTracingRoot: path.join(configDir, "../.."),
   // Cross-origin HMR hosts for next dev only. Defaults: localhost + 127.0.0.1.
