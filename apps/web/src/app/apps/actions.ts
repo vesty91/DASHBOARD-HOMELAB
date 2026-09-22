@@ -11,7 +11,7 @@ const input = (formData: FormData) => ({
   color: String(formData.get("color") ?? "") || null,
   target: String(formData.get("target") ?? "new-tab") as "same-tab" | "new-tab",
   tags: String(formData.get("tags") ?? "")
-    .split(",")
+    .split(/[,·•]/u)
     .map((tag) => tag.trim())
     .filter(Boolean),
   healthcheckEnabled: formData.get("healthcheckEnabled") === "on",
@@ -62,41 +62,56 @@ export async function quickCreateAppAction(templateId: string) {
   const preset = quickAppPresets[templateId];
   if (!preset) redirect(`/apps/new?template=${encodeURIComponent(templateId)}`);
 
-  const caller = await getBoardCaller();
-  const template = await caller.app.library.get({ id: templateId });
-  const normalizedUrl = new URL(preset.url).toString();
-  const existing = await caller.app.list({ limit: 100 });
-
-  if (existing.items.some((app) => app.url === normalizedUrl)) {
-    redirect("/apps");
-  }
-
-  const created = await caller.app.create({
-    name: template.name,
-    description: template.description,
-    url: normalizedUrl,
-    iconRef: template.icon.path,
-    color: null,
-    target: template.defaults?.target ?? "new-tab",
-    tags: [...template.tags],
-    healthcheckEnabled: true,
-    healthcheckConfig: {
-      path: preset.healthPath,
-      method: "GET",
-      timeoutMs: 5000,
-      expectedStatusMin: preset.expectedStatusMin,
-      expectedStatusMax: preset.expectedStatusMax,
-    },
-  });
+  let destination = "/apps";
 
   try {
-    await caller.app.test({ id: created.id });
-  } catch {
-    // Keep the app even if the first health probe is temporarily unavailable.
+    const caller = await getBoardCaller();
+    const template = await caller.app.library.get({ id: templateId });
+    const normalizedUrl = new URL(preset.url).toString();
+    const existing = await caller.app.list({ limit: 100 });
+
+    if (existing.items.some((app) => app.url === normalizedUrl)) {
+      destination = "/apps?quickAdd=exists";
+    } else {
+      const created = await caller.app.create({
+        name: template.name,
+        description: template.description,
+        url: normalizedUrl,
+        iconRef: template.icon.path,
+        color: null,
+        target: template.defaults?.target ?? "new-tab",
+        tags: [...template.tags],
+        healthcheckEnabled: true,
+        healthcheckConfig: {
+          path: preset.healthPath,
+          method: "GET",
+          timeoutMs: 5000,
+          expectedStatusMin: preset.expectedStatusMin,
+          expectedStatusMax: preset.expectedStatusMax,
+        },
+      });
+
+      try {
+        await caller.app.test({ id: created.id });
+      } catch (error) {
+        console.error("quick_app_healthcheck_failed", {
+          templateId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      destination = "/apps?quickAdd=created";
+      revalidatePath("/apps");
+    }
+  } catch (error) {
+    console.error("quick_app_create_failed", {
+      templateId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    destination = "/apps?quickAdd=failed";
   }
 
-  revalidatePath("/apps");
-  redirect("/apps");
+  redirect(destination);
 }
 
 export async function createAppAction(formData: FormData) {
