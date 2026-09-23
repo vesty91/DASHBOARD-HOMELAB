@@ -1424,6 +1424,10 @@ a.ui-btn-ghost:hover {
   grid-template-columns: 1fr;
 }
 
+.card-grid.apps-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+
 .beszel-host-list {
   display: grid;
   gap: 0.75rem;

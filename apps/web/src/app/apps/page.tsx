@@ -45,7 +45,7 @@ export default async function AppsPage({
     ]);
     const apps = page.items;
     return (
-      <PageContainer>
+      <PageContainer wide>
         <PageHeader
           title="Apps"
           description="Services et raccourcis de votre homelab."
@@ -100,7 +100,7 @@ export default async function AppsPage({
             }
           />
         ) : (
-          <section className="card-grid">
+          <section className="card-grid apps-grid">
             {apps.map((app) => (
               <Card
                 key={app.id}
